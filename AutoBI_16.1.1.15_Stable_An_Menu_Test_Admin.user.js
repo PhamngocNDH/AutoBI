@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         AutoBI 16.1.1.15 Stable - Ẩn Menu & Test Admin
+// @name         AutoBI 16.1.1.15
 // @version      16.1.1.15
 // @description  Stable 16.1.1.11 + chỉ ẩn giao diện Tiện ích, Kế hoạch truyền thông, hướng dẫn YouTube và Báo cáo Test (Admin), không xóa chức năng.
 // @author       38967 _ Mr Phạm
