@@ -16,7 +16,7 @@
 // @grant        GM_xmlhttpRequest
 // @require      https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js
-// @require      https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_16.1.1.44.user.js
+// @require      https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @require      https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_health_shop_fix.user.js
 // @require      https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_data_integrity.user.js
 // @require      https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_version_badge.user.js

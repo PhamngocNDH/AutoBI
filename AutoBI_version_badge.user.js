@@ -11,7 +11,7 @@
         const badge = document.createElement('div');
         badge.id = BADGE_ID;
         badge.textContent = 'AutoBI v' + VERSION;
-        badge.title = 'Phiên bản đang sử dụng: AutoBI ' + VERSION + ' (nền ổn định 16.1.1.44)';
+        badge.title = 'Phiên bản đang sử dụng: AutoBI ' + VERSION;
         badge.style.cssText = [
             'position:fixed',
             'right:14px',
