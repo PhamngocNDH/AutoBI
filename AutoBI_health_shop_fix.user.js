@@ -1,4 +1,4 @@
-/* AutoBI 16.1.1.53 - quét nhiều lần và giữ dữ liệu Sức khỏe ST đầy đủ nhất. */
+/* AutoBI 16.1.1.54 - quét nhiều lần và giữ dữ liệu Sức khỏe ST đầy đủ nhất. */
 (function () {
     'use strict';
 

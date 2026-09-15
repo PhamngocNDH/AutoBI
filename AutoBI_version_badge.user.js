@@ -1,8 +1,8 @@
-/* AutoBI 16.1.1.53 - nhãn phiên bản; không can thiệp dữ liệu báo cáo. */
+/* AutoBI 16.1.1.54 - nhãn phiên bản; không can thiệp dữ liệu báo cáo. */
 (function () {
     'use strict';
 
-    const VERSION = '16.1.1.53';
+    const VERSION = '16.1.1.54';
     const BADGE_ID = 'autobi-version-badge';
 
     function showVersionBadge() {

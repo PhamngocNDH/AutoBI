@@ -1,4 +1,4 @@
-/* AutoBI 16.1.1.53 - đồng bộ trạng thái và bảo vệ dữ liệu báo cáo. */
+/* AutoBI 16.1.1.54 - khóa chéo Realtime/Lũy kế theo doanh thu thực tế. */
 (function () {
     'use strict';
 
@@ -14,7 +14,7 @@
         const button = event.target && event.target.closest && event.target.closest('button');
         const label = norm(text(button));
         if (label === 'realtime' || label === 'luyke') {
-            window.__AutoBIDataMode53 = label;
+            window.__AutoBIDataMode54 = label;
         }
     }, true);
 
@@ -49,20 +49,20 @@
             classes.includes('bgblue') || classes.includes('bgprimary');
     }
 
-    async function selectMode(mode, options = {}) {
-        const requireChange = options.requireChange !== false;
+    async function selectMode(mode) {
         for (let attempt = 1; attempt <= 3; attempt++) {
             const button = modeButton(mode);
             if (!button) throw new Error('Không tìm thấy nút ' + mode);
 
             const before = reportSignature();
-            button.click();
+            const alreadyActive = buttonLooksActive(button);
+            if (!alreadyActive || attempt > 1) button.click();
             const started = Date.now();
             let stable = 0;
             let previous = '';
             let changed = false;
 
-            while (Date.now() - started < 22000) {
+            while (Date.now() - started < 30000) {
                 await sleep(350);
                 const signature = reportSignature();
                 if (signature && signature !== before) changed = true;
@@ -70,14 +70,17 @@
                 else stable = 0;
                 previous = signature;
 
-                const confirmed = buttonLooksActive(button) || changed || !requireChange;
-                if (confirmed && signature && !loading() && stable >= 4 &&
-                    (!requireChange || changed || Date.now() - started > 4500)) {
-                    window.__AutoBIDataMode53 = norm(mode);
+                // Luôn tìm lại nút vì React có thể thay node sau khi tải dữ liệu.
+                const activeNow = buttonLooksActive(modeButton(mode));
+                const modeReady = alreadyActive
+                    ? Date.now() - started >= 2500
+                    : changed;
+                if (activeNow && modeReady && signature && !loading() && stable >= 4) {
+                    window.__AutoBIDataMode54 = norm(mode);
                     return;
                 }
             }
-            console.warn('[AutoBI 53] Chuyển chế độ chưa ổn định, thử lại:', mode, attempt);
+            console.warn('[AutoBI 54] Chưa xác nhận bảng đã đổi đúng chế độ:', mode, attempt);
         }
         throw new Error('Bảng ' + mode + ' không tải ổn định');
     }
@@ -95,6 +98,14 @@
             }).join('|');
     }
 
+    function actualRevenueFingerprint(data) {
+        return ['total', 'shop1', 'shop2', 'shop3', 'shop4', 'shop5']
+            .map(key => {
+                const value = Number(data?.[key]?.r);
+                return key + ':' + (Number.isFinite(value) ? value : '');
+            }).join('|');
+    }
+
     function usableRevenue(data) {
         if (!data || typeof data !== 'object') return false;
         return ['total', 'shop1', 'shop2', 'shop3', 'shop4', 'shop5']
@@ -102,6 +113,33 @@
                 const row = data[key];
                 return row && Object.values(row).some(value => Number.isFinite(Number(value)) && Number(value) !== 0);
             });
+    }
+
+    function purgeMixedRealtimeCache() {
+        const cache = GM_getValue(CACHE_KEY, {}) || {};
+        if (!usableRevenue(cache.link1) || !usableRevenue(cache.link2)) return;
+        if (actualRevenueFingerprint(cache.link1) !== actualRevenueFingerprint(cache.link2)) return;
+        delete cache.link1;
+        GM_setValue(CACHE_KEY, cache);
+        console.warn('[AutoBI 54] Đã xóa cache Realtime cũ trùng dữ liệu Lũy kế');
+    }
+
+    async function scrapeStableRevenue(DATA, config, realtimeMode, label) {
+        let previous = '';
+        let stable = 0;
+        let result = null;
+        for (let attempt = 1; attempt <= 5; attempt++) {
+            await sleep(attempt === 1 ? 700 : 1000);
+            const candidate = DATA.scrapeRevenueTableDMX(config, realtimeMode);
+            const fingerprint = dataFingerprint(candidate);
+            if (usableRevenue(candidate) && fingerprint && fingerprint === previous) stable++;
+            else stable = 0;
+            if (usableRevenue(candidate)) result = candidate;
+            previous = fingerprint;
+            if (stable >= 1) return result;
+        }
+        if (!usableRevenue(result)) throw new Error('Dữ liệu ' + label + ' rỗng');
+        throw new Error('Dữ liệu ' + label + ' còn thay đổi, đã chặn lưu');
     }
 
     function healthScore(data) {
@@ -139,7 +177,7 @@
             await sleep(1600);
         }
         if (!best || bestScore <= 0) throw new Error(label + ' không có dữ liệu ngành hàng');
-        console.info('[AutoBI 53] Chọn bảng ngành hàng tốt nhất', label, 'điểm', bestScore);
+        console.info('[AutoBI 54] Chọn bảng ngành hàng tốt nhất', label, 'điểm', bestScore);
         return best;
     }
 
@@ -182,39 +220,29 @@
         });
     }
 
-    function saveSection(name, value) {
+    function saveRevenuePair(realtime, cumulative) {
         const cache = GM_getValue(CACHE_KEY, {}) || {};
-        cache[name] = clone(value);
+        cache.link1 = clone(realtime);
+        cache.link2 = clone(cumulative);
         GM_setValue(CACHE_KEY, cache);
     }
 
     async function robustRevenueRun(DATA, UI, config, done) {
         try {
+            purgeMixedRealtimeCache();
             UI.showToast('🛡️ Đang đồng bộ bộ lọc và trạng thái báo cáo...', 0);
             await callbackAsPromise(cb => DATA.runFilterAllSequenceDMX(cb), 45000);
             await callbackAsPromise(cb => DATA.ensureRevenueOptionsDMX(cb), 30000);
 
             UI.showToast('⚡ Đang quét Doanh thu Realtime...', 0);
             await selectMode('Realtime');
-            let realtime = DATA.scrapeRevenueTableDMX(config, true);
-            if (!usableRevenue(realtime)) {
-                await selectMode('Realtime', { requireChange: false });
-                realtime = DATA.scrapeRevenueTableDMX(config, true);
-            }
-            if (!usableRevenue(realtime)) throw new Error('Dữ liệu Realtime rỗng');
-            saveSection('link1', realtime);
+            const realtime = await scrapeStableRevenue(DATA, config, true, 'Realtime');
 
             UI.showToast('📊 Đang quét Doanh thu Lũy kế...', 0);
             await selectMode('Lũy kế');
-            let cumulative = DATA.scrapeRevenueTableDMX(config, false);
-            if (!usableRevenue(cumulative) || dataFingerprint(cumulative) === dataFingerprint(realtime)) {
-                await sleep(1200);
-                await selectMode('Lũy kế', { requireChange: false });
-                cumulative = DATA.scrapeRevenueTableDMX(config, false);
-            }
-            if (!usableRevenue(cumulative)) throw new Error('Dữ liệu Lũy kế rỗng');
-            if (dataFingerprint(cumulative) === dataFingerprint(realtime)) {
-                throw new Error('Realtime và Lũy kế trùng hoàn toàn; đã chặn lưu nhầm');
+            const cumulative = await scrapeStableRevenue(DATA, config, false, 'Lũy kế');
+            if (actualRevenueFingerprint(cumulative) === actualRevenueFingerprint(realtime)) {
+                throw new Error('Doanh thu Realtime đang trùng Lũy kế; đã chặn lưu nhầm');
             }
 
             const tlpvtc = readTlpvtc();
@@ -222,7 +250,9 @@
             ['shop1', 'shop2', 'shop3', 'shop4', 'shop5'].forEach(key => {
                 if (cumulative[key]) cumulative[key].tlpvtc = tlpvtc;
             });
-            saveSection('link2', cumulative);
+            // Chỉ ghi cache sau khi cả hai chế độ đã ổn định và khác nhau.
+            // Nếu có lỗi ở bất kỳ bước nào, dữ liệu hợp lệ trước đó được giữ nguyên.
+            saveRevenuePair(realtime, cumulative);
 
             if (window.__AutoBIFastRealtime43?.enabled()) {
                 await window.__AutoBIFastRealtime43.finishRevenue(config, done, UI);
@@ -261,7 +291,7 @@
             UI.showToast('✅ Hoàn tất và đã kiểm tra dữ liệu Doanh thu!', 3000);
             if (done) done();
         } catch (error) {
-            console.error('[AutoBI 53 Revenue]', error);
+            console.error('[AutoBI 54 Revenue]', error);
             UI.showToast('❌ Đã chặn dữ liệu sai: ' + error.message + '. Hãy chạy lại.', 12000);
             if (done) done();
         }
@@ -269,9 +299,9 @@
 
     function strengthenWaits() {
         window.__AutoBIStableWait = callback => {
-            const mode = window.__AutoBIDataMode53;
-            if (mode === 'realtime') selectMode('Realtime', { requireChange: false }).then(callback);
-            else if (mode === 'luyke') selectMode('Lũy kế', { requireChange: false }).then(callback);
+            const mode = window.__AutoBIDataMode54;
+            if (mode === 'realtime') selectMode('Realtime').then(callback);
+            else if (mode === 'luyke') selectMode('Lũy kế').then(callback);
             else window.__AutoBIStable.wait(callback, { minWait: 1200, maxWait: 18000, poll: 300, requireChange: true });
         };
         window.__AutoBIStableWaitDetail = callback => {
@@ -283,11 +313,11 @@
         const page = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
         const DATA = page.DATA || window.DATA;
         const UI = page.UI || window.UI;
-        if (!DATA || !UI || DATA.__integrity53) return false;
-        DATA.__integrity53 = true;
+        if (!DATA || !UI || DATA.__integrity54) return false;
+        DATA.__integrity54 = true;
         strengthenWaits();
         DATA.runRevenueSequenceDMX = (config, done) => robustRevenueRun(DATA, UI, config, done);
-        console.info('[AutoBI 16.1.1.53] Data integrity guard ready');
+        console.info('[AutoBI 16.1.1.54] Data integrity guard ready');
         return true;
     }
 

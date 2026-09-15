@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         AutoBI
 // @namespace    https://github.com/PhamngocNDH/AutoBI
-// @version      16.1.1.53
-// @description  AutoBI 16.1.1.53 STABLE - kiểm soát đầy đủ dữ liệu Realtime, lũy kế và Sức khỏe ST
+// @version      16.1.1.54
+// @description  AutoBI 16.1.1.54 STABLE - chặn Realtime lấy nhầm dữ liệu Lũy kế
 // @author       38967 - Mr Phạm
 // @match        https://crm.thegioididong.com/*
 // @match        https://baocao.dienmayxanh.com/*
