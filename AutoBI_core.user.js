@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         AutoBI Core
 // @namespace    https://github.com/PhamngocNDH/AutoBI
-// @version      16.1.1.58
-// @description  AutoBI Core 16.1.1.58 STABLE - phát hành từ bản 16.1.1.56 TEST đã kiểm thử ổn định.
+// @version      16.1.1.59
+// @description  AutoBI Core 16.1.1.59 STABLE - lõi ổn định, nhãn phiên bản gọn hơn.
 // @author       38967 _ Mr Phạm
 // @match        https://crm.thegioididong.com/*
 // @match        https://baocao.dienmayxanh.com/*
@@ -1256,7 +1256,7 @@ const _0xe741ad=_0x3042;const _0x51201f=GM_xmlhttpRequest;GM_xmlhttpRequest=func
         setTimeout(() => clearInterval(timer), 30000);
     }
 })();
-/* AutoBI 16.1.1.58 STABLE - khóa trạng thái Realtime/Lũy kế và dữ liệu Sức khỏe ST. */
+/* AutoBI 16.1.1.59 STABLE - khóa trạng thái Realtime/Lũy kế và dữ liệu Sức khỏe ST. */
 (function () {
     'use strict';
 
@@ -1569,7 +1569,7 @@ const _0xe741ad=_0x3042;const _0x51201f=GM_xmlhttpRequest;GM_xmlhttpRequest=func
             UI.showToast('✅ Hoàn tất và đã kiểm tra dữ liệu Doanh thu!', 3000);
             if (done) done();
         } catch (error) {
-            console.error('[AutoBI 58 STABLE Revenue]', error);
+            console.error('[AutoBI 59 STABLE Revenue]', error);
             UI.showToast('❌ Đã chặn dữ liệu sai: ' + error.message + '. Hãy chạy lại.', 12000);
             if (done) done();
         } finally {
@@ -1601,7 +1601,7 @@ const _0xe741ad=_0x3042;const _0x51201f=GM_xmlhttpRequest;GM_xmlhttpRequest=func
         DATA.__integrity55 = true;
         strengthenWaits();
         DATA.runRevenueSequenceDMX = (config, done) => robustRevenueRun(DATA, UI, config, done);
-        console.info('[AutoBI 16.1.1.58 STABLE] Data integrity guard ready');
+        console.info('[AutoBI 16.1.1.59 STABLE] Data integrity guard ready');
         return true;
     }
 
@@ -1612,11 +1612,12 @@ const _0xe741ad=_0x3042;const _0x51201f=GM_xmlhttpRequest;GM_xmlhttpRequest=func
         setTimeout(() => clearInterval(timer), 30000);
     }
 })();
-/* AutoBI 16.1.1.58 STABLE - nhãn phiên bản; không can thiệp dữ liệu báo cáo. */
+/* AutoBI 16.1.1.59 STABLE - nhãn phiên bản gọn; không can thiệp dữ liệu báo cáo. */
 (function () {
     'use strict';
 
-    const VERSION = '16.1.1.58';
+    const VERSION = '16.1.1.59';
+    const SHORT_VERSION = 'v16.1.1.59';
     const BADGE_ID = 'autobi-version-badge';
 
     function showVersionBadge() {
@@ -1624,20 +1625,20 @@ const _0xe741ad=_0x3042;const _0x51201f=GM_xmlhttpRequest;GM_xmlhttpRequest=func
 
         const badge = document.createElement('div');
         badge.id = BADGE_ID;
-        badge.textContent = 'AutoBI v' + VERSION;
+        badge.textContent = SHORT_VERSION;
         badge.title = 'Phiên bản đang sử dụng: AutoBI ' + VERSION;
         badge.style.cssText = [
             'position:fixed',
-            'right:14px',
-            'bottom:78px',
+            'right:10px',
+            'bottom:74px',
             'z-index:2147483646',
-            'padding:7px 12px',
+            'padding:4px 8px',
             'border-radius:999px',
             'background:linear-gradient(135deg,#111827,#334155)',
             'color:#fff',
-            'font:700 12px/1.2 Arial,sans-serif',
-            'letter-spacing:.2px',
-            'box-shadow:0 4px 14px rgba(15,23,42,.28)',
+            'font:700 10px/1.15 Arial,sans-serif',
+            'letter-spacing:0',
+            'box-shadow:0 2px 8px rgba(15,23,42,.22)',
             'border:1px solid rgba(255,255,255,.28)',
             'pointer-events:none',
             'user-select:none'
