@@ -1,4 +1,4 @@
-/* AutoBI 16.1.1.52 - sửa quét Sức khỏe ST từng siêu thị. */
+/* AutoBI 16.1.1.53 - quét nhiều lần và giữ dữ liệu Sức khỏe ST đầy đủ nhất. */
 (function () {
     'use strict';
 
@@ -45,6 +45,22 @@
         ));
     }
 
+    function healthScore(data) {
+        if (!data || typeof data !== 'object') return 0;
+        let populated = 0;
+        let anchors = 0;
+        Object.values(data).forEach(row => {
+            if (row && (Number(row.sl) !== 0 || Number(row.dtqd) !== 0)) populated++;
+        });
+        ['Smartphone', 'Laptop', 'Phụ kiện', 'SIM', 'Điện tử', 'Điện lạnh',
+            'Máy giặt', 'Máy lạnh', 'Điện gia dụng', 'Máy lọc nước']
+            .forEach(name => {
+                const row = data[name];
+                if (row && (Number(row.sl) !== 0 || Number(row.dtqd) !== 0)) anchors++;
+            });
+        return populated * 10 + anchors * 25;
+    }
+
     function scrapeOnce(scrapeFn, timeout = 90000) {
         return new Promise(resolve => {
             let settled = false;
@@ -65,7 +81,7 @@
             } catch (error) {
                 clearTimeout(timer);
                 settled = true;
-                console.error('[AutoBI Health 52] Lỗi đọc bảng:', error);
+                console.error('[AutoBI Health 53] Lỗi đọc bảng:', error);
                 resolve(null);
             }
         });
@@ -124,25 +140,37 @@
                         selected = await health.selectSingleShop(config, index);
                     }
                     if (!selected.ok || !isExpectedShop(config, index)) {
-                        console.warn('[AutoBI Health 52] Không xác nhận được đúng shop', key, name);
+                        console.warn('[AutoBI Health 53] Không xác nhận được đúng shop', key, name);
                         continue;
                     }
 
+                    // Không gọi Online scan ở đây: thao tác đó từng trừ nhầm
+                    // doanh thu shop. Sức khỏe ST chỉ cần bảng Ngành hàng.
                     await health.waitBI(20000);
                     await sleep(1400);
 
                     let data = null;
+                    let bestScore = -1;
+                    let stableScoreCount = 0;
                     for (let attempt = 1; attempt <= 3; attempt++) {
-                        data = await scrapeOnce(scrapeFn);
-                        if (hasHealthData(data)) break;
-                        console.warn('[AutoBI Health 52] Bảng rỗng, đọc lại', key, 'lần', attempt + 1);
-                        if (toastFn) toastFn('⏳ ' + name + ': bảng chưa có số, đang đọc lại...', 3000);
+                        const candidate = await scrapeOnce(scrapeFn);
+                        const score = healthScore(candidate);
+                        if (score > bestScore) {
+                            data = candidate;
+                            bestScore = score;
+                            stableScoreCount = 0;
+                        } else if (score === bestScore && score > 0) {
+                            stableScoreCount++;
+                        }
+                        if (attempt >= 2 && stableScoreCount >= 1 && hasHealthData(data)) break;
+                        console.warn('[AutoBI Health 53] Đang kiểm tra độ đầy đủ', key, 'lượt', attempt + 1, 'điểm', score);
+                        if (toastFn) toastFn('⏳ ' + name + ': đang kiểm tra đủ nhóm ngành hàng...', 3000);
                         await health.waitBI(20000);
                         await sleep(1800);
                     }
 
                     if (!data || !hasHealthData(data)) {
-                        console.warn('[AutoBI Health 52] Không lưu dữ liệu rỗng cho', key);
+                        console.warn('[AutoBI Health 53] Không lưu dữ liệu rỗng cho', key);
                         continue;
                     }
 
@@ -150,16 +178,16 @@
                     if (!cache.link8_health) cache.link8_health = {};
                     cache.link8_health[key] = data;
                     GM_setValue(DATA_KEY, cache);
-                    console.info('[AutoBI Health 52] Đã lưu đúng', key, name, data);
+                    console.info('[AutoBI Health 53] Đã lưu đúng', key, name, data);
                     await sleep(500);
                 }
             } catch (error) {
-                console.error('[AutoBI Health 52]', error);
+                console.error('[AutoBI Health 53]', error);
                 if (toastFn) toastFn('⚠️ Sức khỏe ST: ' + error.message, 8000);
             } finally {
                 if (toastFn) toastFn('🔄 Đang khôi phục tất cả siêu thị...', 1800);
                 try { await health.restoreAllShops(); } catch (error) {
-                    console.warn('[AutoBI Health 52] Không khôi phục được bộ lọc', error);
+                    console.warn('[AutoBI Health 53] Không khôi phục được bộ lọc', error);
                 }
                 if (done) done();
             }
