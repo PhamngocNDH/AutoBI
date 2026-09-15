@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         AutoBI
 // @namespace    https://github.com/PhamngocNDH/AutoBI
-// @version      16.1.1.51
-// @description  AutoBI 16.1.1.51 STABLE - nền ổn định 16.1.1.44, có nhãn phiên bản
+// @version      16.1.1.52
+// @description  AutoBI 16.1.1.52 STABLE - sửa Sức khỏe ST từng siêu thị
 // @author       38967 - Mr Phạm
 // @match        https://crm.thegioididong.com/*
 // @match        https://baocao.dienmayxanh.com/*
@@ -17,6 +17,7 @@
 // @require      https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js
 // @require      https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_16.1.1.44.user.js
+// @require      https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_health_shop_fix.user.js
 // @require      https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_version_badge.user.js
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI.user.js
