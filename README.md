@@ -2,8 +2,8 @@
 
 Kho lưu AutoBI của 38967 - Mr Phạm.
 
-Bản hiện tại: **16.1.1.57**.
+Bản hiện tại: **16.1.1.58**.
 
-Điểm mới: giữ nguyên lõi 16.1.1.56 đã kiểm thử ổn định và bổ sung giữ sáng màn hình trong lúc AutoBI quét dữ liệu.
+Nền phát hành: **AutoBI 16.1.1.56 TEST** đã được kiểm thử và xác nhận ổn định. Bản 16.1.1.58 không chứa mô-đun giữ sáng của 16.1.1.57.
 
 Link cài cố định: [AutoBI.user.js](https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI.user.js)
