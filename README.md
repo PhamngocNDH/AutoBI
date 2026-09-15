@@ -2,8 +2,8 @@
 
 Kho lưu AutoBI của 38967 - Mr Phạm.
 
-Bản hiện tại: **16.1.1.54**.
+Bản hiện tại: **16.1.1.55**.
 
-Điểm mới: chặn Realtime lấy nhầm dữ liệu Lũy kế, chỉ lưu sau khi cả hai chế độ đã được xác nhận ổn định.
+Điểm mới: toàn bộ phần kiểm soát Realtime, Lũy kế và Sức khỏe ST đã được tích hợp trực tiếp vào lõi ổn định.
 
 Link cài cố định: [AutoBI.user.js](https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI.user.js)
