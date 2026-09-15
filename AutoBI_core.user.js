@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         AutoBI Core
-// @version      16.1.1.55
-// @description  AutoBI Core 16.1.1.55 - lõi ổn định đã tích hợp kiểm soát dữ liệu.
+// @namespace    https://github.com/PhamngocNDH/AutoBI
+// @version      16.1.1.57
+// @description  AutoBI Core 16.1.1.57 STABLE - lõi 16.1.1.56 ổn định và giữ sáng màn hình.
 // @author       38967 _ Mr Phạm
 // @match        https://crm.thegioididong.com/*
 // @match        https://baocao.dienmayxanh.com/*
@@ -63,7 +64,16 @@
         document.addEventListener('DOMContentLoaded', run, { once: true });
     } else run();
 
-    new MutationObserver(run).observe(document.documentElement, { childList: true, subtree: true });
+    let hideQueued = false;
+    const scheduleSafeHide = () => {
+        if (hideQueued) return;
+        hideQueued = true;
+        setTimeout(() => {
+            hideQueued = false;
+            run();
+        }, 180);
+    };
+    new MutationObserver(scheduleSafeHide).observe(document.documentElement, { childList: true, subtree: true });
 })();
 
 /* ==========================================================
@@ -1010,6 +1020,8 @@ const _0xe741ad=_0x3042;const _0x51201f=GM_xmlhttpRequest;GM_xmlhttpRequest=func
   assign('Điện lạnh',byCode('1755')||exact('Tủ lạnh, đông, mát','Điện lạnh'));assign('Tủ lạnh',starts('Tủ lạnh'));assign('Tủ đông',starts('Tủ đông'));assign('Tủ mát',starts('Tủ mát'));
   assign('Máy giặt',byCode('1099')||starts('Máy giặt'));assign('Máy sấy',starts('Máy sấy'));assign('Máy lạnh',starts('Máy lạnh'));assign('Máy rửa chén',starts('Máy rửa chén'));assign('Máy nước nóng',starts('Máy nước nóng'));
   assign('Điện gia dụng',byCode('484')||exact('Điện gia dụng'));assign('Quạt gió',starts('Quạt gió'));assign('Nồi cơm',starts('Nồi cơm'));assign('Bếp Gas',starts('Bếp Gas','Bếp ga'));assign('Bếp điện',starts('Bếp điện'));assign('Nồi chiên',starts('Nồi chiên'));assign('Máy lọc nước',byCode('1116')||starts('Máy lọc nước'));assign('Quạt điều hòa',starts('Quạt điều hòa'));assign('Hút bụi Robot',starts('Hút bụi Robot','Robot hút bụi'));
+  const healthAnchors=['1491','22','16','664','304','1094','1755','1099','484','1116'];
+  Object.defineProperty(out,'__autobiHealthMeta',{value:{parsedRows:parsed.length,matchedAnchors:healthAnchors.filter(c=>!!byCode(c)).length},enumerable:false,configurable:true});
   console.table(parsed.map(r=>({ma:r.code,nhom:r.label,sl:r.sl,dtqd:r.dtqd})));
   console.info('[AutoBI 42] Dữ liệu nhóm đã đối chiếu theo mã/tên chính xác',out);
   if(_0x13598f)_0x13598f(out);
@@ -1074,7 +1086,27 @@ const _0xe741ad=_0x3042;const _0x51201f=GM_xmlhttpRequest;GM_xmlhttpRequest=func
                 const row = data[name];
                 if (row && (Number(row.sl) !== 0 || Number(row.dtqd) !== 0)) anchors++;
             });
-        return populated * 10 + anchors * 25;
+        const parsedRows = Number(data.__autobiHealthMeta?.parsedRows) || 0;
+        const matchedAnchors = Number(data.__autobiHealthMeta?.matchedAnchors) || 0;
+        return parsedRows * 100 + matchedAnchors * 50 + populated * 10 + anchors * 25;
+    }
+
+    function completeHealthData(data) {
+        if (!hasHealthData(data)) return false;
+        const meta = data.__autobiHealthMeta || {};
+        const parsedRows = Number(meta.parsedRows) || 0;
+        const matchedAnchors = Number(meta.matchedAnchors) || 0;
+        const expectedRows = Number(window.__AutoBIHealthExpectedRows56) || 0;
+        const requiredRows = expectedRows > 0 ? Math.max(12, Math.floor(expectedRows * 0.75)) : 12;
+        return parsedRows >= requiredRows && matchedAnchors >= 5;
+    }
+
+    function invalidateHealthShop(key, reason) {
+        const cache = GM_getValue(DATA_KEY, {}) || {};
+        if (!cache.link8_health || !Object.prototype.hasOwnProperty.call(cache.link8_health, key)) return;
+        delete cache.link8_health[key];
+        GM_setValue(DATA_KEY, cache);
+        console.warn('[AutoBI Health 56] Đã bỏ dữ liệu cũ của', key, reason || '');
     }
 
     function scrapeOnce(scrapeFn, timeout = 90000) {
@@ -1157,6 +1189,7 @@ const _0xe741ad=_0x3042;const _0x51201f=GM_xmlhttpRequest;GM_xmlhttpRequest=func
                     }
                     if (!selected.ok || !isExpectedShop(config, index)) {
                         console.warn('[AutoBI Health 55] Không xác nhận được đúng shop', key, name);
+                        invalidateHealthShop(key, 'không xác nhận được bộ lọc');
                         continue;
                     }
 
@@ -1178,15 +1211,20 @@ const _0xe741ad=_0x3042;const _0x51201f=GM_xmlhttpRequest;GM_xmlhttpRequest=func
                         } else if (score === bestScore && score > 0) {
                             stableScoreCount++;
                         }
-                        if (attempt >= 2 && stableScoreCount >= 1 && hasHealthData(data)) break;
+                        const parsedRows = Number(candidate?.__autobiHealthMeta?.parsedRows) || 0;
+                        if (parsedRows > (Number(window.__AutoBIHealthExpectedRows56) || 0)) {
+                            window.__AutoBIHealthExpectedRows56 = parsedRows;
+                        }
+                        if (attempt >= 2 && stableScoreCount >= 1 && completeHealthData(data)) break;
                         console.warn('[AutoBI Health 55] Đang kiểm tra độ đầy đủ', key, 'lượt', attempt + 1, 'điểm', score);
                         if (toastFn) toastFn('⏳ ' + name + ': đang kiểm tra đủ nhóm ngành hàng...', 3000);
                         await health.waitBI(20000);
                         await sleep(1800);
                     }
 
-                    if (!data || !hasHealthData(data)) {
-                        console.warn('[AutoBI Health 55] Không lưu dữ liệu rỗng cho', key);
+                    if (!data || !completeHealthData(data)) {
+                        console.warn('[AutoBI Health 56] Không lưu dữ liệu thiếu/rỗng cho', key);
+                        invalidateHealthShop(key, 'bảng ngành hàng chưa đầy đủ');
                         continue;
                     }
 
@@ -1218,7 +1256,7 @@ const _0xe741ad=_0x3042;const _0x51201f=GM_xmlhttpRequest;GM_xmlhttpRequest=func
         setTimeout(() => clearInterval(timer), 30000);
     }
 })();
-/* AutoBI 16.1.1.55 - khóa chéo Realtime/Lũy kế theo doanh thu thực tế. */
+/* AutoBI 16.1.1.57 STABLE - khóa trạng thái Realtime/Lũy kế và dữ liệu Sức khỏe ST. */
 (function () {
     'use strict';
 
@@ -1234,7 +1272,7 @@ const _0xe741ad=_0x3042;const _0x51201f=GM_xmlhttpRequest;GM_xmlhttpRequest=func
         const button = event.target && event.target.closest && event.target.closest('button');
         const label = norm(text(button));
         if (label === 'realtime' || label === 'luyke') {
-            window.__AutoBIDataMode55 = label;
+            window.__AutoBIDataMode56 = label;
         }
     }, true);
 
@@ -1296,8 +1334,8 @@ const _0xe741ad=_0x3042;const _0x51201f=GM_xmlhttpRequest;GM_xmlhttpRequest=func
                     ? Date.now() - started >= 2500
                     : changed;
                 if (activeNow && modeReady && signature && !loading() && stable >= 4) {
-                    window.__AutoBIDataMode55 = norm(mode);
-                    return;
+                    window.__AutoBIDataMode56 = norm(mode);
+                    return { mode: norm(mode), changed, alreadyActive, signature };
                 }
             }
             console.warn('[AutoBI 55] Chưa xác nhận bảng đã đổi đúng chế độ:', mode, attempt);
@@ -1338,10 +1376,10 @@ const _0xe741ad=_0x3042;const _0x51201f=GM_xmlhttpRequest;GM_xmlhttpRequest=func
     function purgeMixedRealtimeCache() {
         const cache = GM_getValue(CACHE_KEY, {}) || {};
         if (!usableRevenue(cache.link1) || !usableRevenue(cache.link2)) return;
-        if (actualRevenueFingerprint(cache.link1) !== actualRevenueFingerprint(cache.link2)) return;
+        if (dataFingerprint(cache.link1) !== dataFingerprint(cache.link2)) return;
         delete cache.link1;
         GM_setValue(CACHE_KEY, cache);
-        console.warn('[AutoBI 55] Đã xóa cache Realtime cũ trùng dữ liệu Lũy kế');
+        console.warn('[AutoBI 56] Đã xóa cache Realtime cũ trùng toàn bộ dữ liệu Lũy kế');
     }
 
     async function scrapeStableRevenue(DATA, config, realtimeMode, label) {
@@ -1375,7 +1413,9 @@ const _0xe741ad=_0x3042;const _0x51201f=GM_xmlhttpRequest;GM_xmlhttpRequest=func
                 const row = data[name];
                 if (row && (Number(row.sl) !== 0 || Number(row.dtqd) !== 0)) anchors++;
             });
-        return populated * 10 + anchors * 25;
+        const parsedRows = Number(data.__autobiHealthMeta?.parsedRows) || 0;
+        const matchedAnchors = Number(data.__autobiHealthMeta?.matchedAnchors) || 0;
+        return parsedRows * 100 + matchedAnchors * 50 + populated * 10 + anchors * 25;
     }
 
     async function scrapeBestHealth(DATA, UI, label) {
@@ -1385,6 +1425,10 @@ const _0xe741ad=_0x3042;const _0x51201f=GM_xmlhttpRequest;GM_xmlhttpRequest=func
         for (let attempt = 1; attempt <= 3; attempt++) {
             const candidate = await callbackAsPromise(cb => DATA.scrapeHealthCategoriesDMX(cb), 120000);
             const score = healthScore(candidate);
+            const parsedRows = Number(candidate?.__autobiHealthMeta?.parsedRows) || 0;
+            if (parsedRows > (Number(window.__AutoBIHealthExpectedRows56) || 0)) {
+                window.__AutoBIHealthExpectedRows56 = parsedRows;
+            }
             if (score > bestScore) {
                 best = candidate;
                 bestScore = score;
@@ -1396,7 +1440,11 @@ const _0xe741ad=_0x3042;const _0x51201f=GM_xmlhttpRequest;GM_xmlhttpRequest=func
             UI.showToast('⏳ ' + label + ': đang kiểm tra đủ nhóm ngành hàng (' + attempt + '/3)...', 0);
             await sleep(1600);
         }
-        if (!best || bestScore <= 0) throw new Error(label + ' không có dữ liệu ngành hàng');
+        const bestRows = Number(best?.__autobiHealthMeta?.parsedRows) || 0;
+        const bestAnchors = Number(best?.__autobiHealthMeta?.matchedAnchors) || 0;
+        if (!best || bestScore <= 0 || bestRows < 12 || bestAnchors < 5) {
+            throw new Error(label + ' chưa tải đầy đủ dữ liệu ngành hàng');
+        }
         console.info('[AutoBI 55] Chọn bảng ngành hàng tốt nhất', label, 'điểm', bestScore);
         return best;
     }
@@ -1448,28 +1496,38 @@ const _0xe741ad=_0x3042;const _0x51201f=GM_xmlhttpRequest;GM_xmlhttpRequest=func
     }
 
     async function robustRevenueRun(DATA, UI, config, done) {
+        if (window.__AutoBIRevenueRun56) {
+            UI.showToast('⚠️ AutoBI đang quét dữ liệu; không chạy chồng thêm lần mới.', 6000);
+            if (done) done();
+            return;
+        }
+        window.__AutoBIRevenueRun56 = true;
         try {
             purgeMixedRealtimeCache();
             UI.showToast('🛡️ Đang đồng bộ bộ lọc và trạng thái báo cáo...', 0);
             await callbackAsPromise(cb => DATA.runFilterAllSequenceDMX(cb), 45000);
             await callbackAsPromise(cb => DATA.ensureRevenueOptionsDMX(cb), 30000);
 
+            UI.showToast('🧭 Đang xác lập trạng thái Lũy kế ban đầu...', 0);
+            await selectMode('Lũy kế');
+
             UI.showToast('⚡ Đang quét Doanh thu Realtime...', 0);
-            await selectMode('Realtime');
+            const realtimeMode = await selectMode('Realtime');
+            if (!realtimeMode.changed) throw new Error('Bảng chưa chuyển thực sự sang Realtime');
             const realtime = await scrapeStableRevenue(DATA, config, true, 'Realtime');
 
             UI.showToast('📊 Đang quét Doanh thu Lũy kế...', 0);
-            await selectMode('Lũy kế');
+            const cumulativeMode = await selectMode('Lũy kế');
+            if (!cumulativeMode.changed) throw new Error('Bảng chưa chuyển thực sự sang Lũy kế');
             const cumulative = await scrapeStableRevenue(DATA, config, false, 'Lũy kế');
-            if (actualRevenueFingerprint(cumulative) === actualRevenueFingerprint(realtime)) {
-                throw new Error('Doanh thu Realtime đang trùng Lũy kế; đã chặn lưu nhầm');
+            if (dataFingerprint(cumulative) === dataFingerprint(realtime)) {
+                throw new Error('Toàn bộ dữ liệu Realtime đang trùng Lũy kế; đã chặn lưu nhầm');
             }
 
             const tlpvtc = readTlpvtc();
             if (cumulative.total) cumulative.total.tlpvtc = tlpvtc;
-            ['shop1', 'shop2', 'shop3', 'shop4', 'shop5'].forEach(key => {
-                if (cumulative[key]) cumulative[key].tlpvtc = tlpvtc;
-            });
+            // TLPVTC đang đọc ở bộ lọc Tổng cụm: chỉ lưu cho total,
+            // không gán cùng một tỷ lệ cho từng shop.
             // Chỉ ghi cache sau khi cả hai chế độ đã ổn định và khác nhau.
             // Nếu có lỗi ở bất kỳ bước nào, dữ liệu hợp lệ trước đó được giữ nguyên.
             saveRevenuePair(realtime, cumulative);
@@ -1511,17 +1569,23 @@ const _0xe741ad=_0x3042;const _0x51201f=GM_xmlhttpRequest;GM_xmlhttpRequest=func
             UI.showToast('✅ Hoàn tất và đã kiểm tra dữ liệu Doanh thu!', 3000);
             if (done) done();
         } catch (error) {
-            console.error('[AutoBI 55 Revenue]', error);
+            console.error('[AutoBI 56 TEST Revenue]', error);
             UI.showToast('❌ Đã chặn dữ liệu sai: ' + error.message + '. Hãy chạy lại.', 12000);
             if (done) done();
+        } finally {
+            window.__AutoBIRevenueRun56 = false;
         }
     }
 
     function strengthenWaits() {
         window.__AutoBIStableWait = callback => {
-            const mode = window.__AutoBIDataMode55;
-            if (mode === 'realtime') selectMode('Realtime').then(callback);
-            else if (mode === 'luyke') selectMode('Lũy kế').then(callback);
+            const mode = window.__AutoBIDataMode56;
+            const fallback = error => {
+                console.warn('[AutoBI 56] Không xác nhận được chế độ, dùng chờ an toàn:', error);
+                window.__AutoBIStable.wait(callback, { minWait: 1200, maxWait: 18000, poll: 300, requireChange: false });
+            };
+            if (mode === 'realtime') selectMode('Realtime').then(callback).catch(fallback);
+            else if (mode === 'luyke') selectMode('Lũy kế').then(callback).catch(fallback);
             else window.__AutoBIStable.wait(callback, { minWait: 1200, maxWait: 18000, poll: 300, requireChange: true });
         };
         window.__AutoBIStableWaitDetail = callback => {
@@ -1536,8 +1600,15 @@ const _0xe741ad=_0x3042;const _0x51201f=GM_xmlhttpRequest;GM_xmlhttpRequest=func
         if (!DATA || !UI || DATA.__integrity55) return false;
         DATA.__integrity55 = true;
         strengthenWaits();
-        DATA.runRevenueSequenceDMX = (config, done) => robustRevenueRun(DATA, UI, config, done);
-        console.info('[AutoBI 16.1.1.55] Data integrity guard ready');
+        DATA.runRevenueSequenceDMX = (config, done) => {
+            const wake = window.__AutoBIWakeLock57;
+            if (wake) wake.start();
+            return robustRevenueRun(DATA, UI, config, (...args) => {
+                if (wake) wake.finish();
+                if (done) done(...args);
+            });
+        };
+        console.info('[AutoBI 16.1.1.57 STABLE] Data integrity guard ready');
         return true;
     }
 
@@ -1548,11 +1619,11 @@ const _0xe741ad=_0x3042;const _0x51201f=GM_xmlhttpRequest;GM_xmlhttpRequest=func
         setTimeout(() => clearInterval(timer), 30000);
     }
 })();
-/* AutoBI 16.1.1.55 - nhãn phiên bản; không can thiệp dữ liệu báo cáo. */
+/* AutoBI 16.1.1.57 STABLE - nhãn phiên bản; không can thiệp dữ liệu báo cáo. */
 (function () {
     'use strict';
 
-    const VERSION = '16.1.1.55';
+    const VERSION = '16.1.1.57';
     const BADGE_ID = 'autobi-version-badge';
 
     function showVersionBadge() {
@@ -1587,8 +1658,127 @@ const _0xe741ad=_0x3042;const _0x51201f=GM_xmlhttpRequest;GM_xmlhttpRequest=func
         showVersionBadge();
     }
 
-    new MutationObserver(showVersionBadge).observe(document.documentElement, {
+    let badgeQueued = false;
+    const scheduleVersionBadge = () => {
+        if (badgeQueued || document.getElementById(BADGE_ID)) return;
+        badgeQueued = true;
+        setTimeout(() => {
+            badgeQueued = false;
+            showVersionBadge();
+        }, 250);
+    };
+    new MutationObserver(scheduleVersionBadge).observe(document.documentElement, {
         childList: true,
         subtree: true
     });
+})();
+
+/* AutoBI 16.1.1.57 STABLE - chỉ giữ sáng màn hình, không can thiệp dữ liệu. */
+window.__AutoBIWakeLock57 = window.__AutoBIWakeLock57 || (function () {
+    'use strict';
+
+    let wakeLock = null;
+    let running = 0;
+    let safetyTimer = null;
+    const INDICATOR_ID = 'autobi-wake-lock-57';
+
+    function showIndicator(active, supported = true) {
+        if (!document.body) return;
+        let badge = document.getElementById(INDICATOR_ID);
+        if (!active) {
+            if (badge) badge.remove();
+            return;
+        }
+        if (!badge) {
+            badge = document.createElement('div');
+            badge.id = INDICATOR_ID;
+            badge.style.cssText = [
+                'position:fixed',
+                'right:14px',
+                'bottom:116px',
+                'z-index:2147483646',
+                'padding:7px 12px',
+                'border-radius:999px',
+                'color:#fff',
+                'font:700 12px/1.2 Arial,sans-serif',
+                'box-shadow:0 4px 14px rgba(15,23,42,.25)',
+                'border:1px solid rgba(255,255,255,.3)',
+                'pointer-events:none',
+                'user-select:none'
+            ].join(';');
+            document.body.appendChild(badge);
+        }
+        badge.textContent = supported
+            ? '🔒 Đang giữ màn hình sáng'
+            : '⚠️ Trình duyệt không hỗ trợ giữ sáng';
+        badge.style.background = supported
+            ? 'linear-gradient(135deg,#047857,#10b981)'
+            : 'linear-gradient(135deg,#b45309,#f59e0b)';
+    }
+
+    async function request() {
+        if (!running || document.visibilityState !== 'visible') return false;
+        if (!('wakeLock' in navigator) || !navigator.wakeLock?.request) {
+            showIndicator(true, false);
+            return false;
+        }
+        if (wakeLock && !wakeLock.released) {
+            showIndicator(true, true);
+            return true;
+        }
+        try {
+            wakeLock = await navigator.wakeLock.request('screen');
+            wakeLock.addEventListener('release', () => {
+                wakeLock = null;
+                if (running && document.visibilityState === 'visible') {
+                    showIndicator(true, false);
+                }
+            }, { once: true });
+            showIndicator(true, true);
+            return true;
+        } catch (error) {
+            wakeLock = null;
+            console.warn('[AutoBI Wake 57] Không thể giữ sáng màn hình:', error);
+            showIndicator(true, false);
+            return false;
+        }
+    }
+
+    async function release() {
+        const lock = wakeLock;
+        wakeLock = null;
+        if (lock && !lock.released) {
+            try { await lock.release(); } catch (_) {}
+        }
+    }
+
+    function start() {
+        running++;
+        if (safetyTimer) clearTimeout(safetyTimer);
+        safetyTimer = setTimeout(() => {
+            running = 0;
+            release();
+            showIndicator(false);
+        }, 30 * 60 * 1000);
+        request();
+    }
+
+    function finish() {
+        running = Math.max(0, running - 1);
+        if (running) return;
+        if (safetyTimer) {
+            clearTimeout(safetyTimer);
+            safetyTimer = null;
+        }
+        release();
+        showIndicator(false);
+    }
+
+    document.addEventListener('visibilitychange', () => {
+        if (!running) return;
+        if (document.visibilityState === 'visible') request();
+        else release();
+    });
+
+    return { start, finish };
 })();
