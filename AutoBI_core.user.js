@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         AutoBI Core
 // @namespace    https://github.com/PhamngocNDH/AutoBI
-// @version      16.1.1.59
-// @description  AutoBI Core 16.1.1.59 STABLE - lõi ổn định, nhãn phiên bản gọn hơn.
+// @version      16.1.1.61
+// @description  AutoBI Core 16.1.1.61 STABLE - chặn Realtime cũ và giữ đúng luồng Thi đua.
 // @author       38967 _ Mr Phạm
 // @match        https://crm.thegioididong.com/*
 // @match        https://baocao.dienmayxanh.com/*
@@ -74,6 +74,205 @@
         }, 180);
     };
     new MutationObserver(scheduleSafeHide).observe(document.documentElement, { childList: true, subtree: true });
+})();
+
+/* AutoBI 16.1.1.61 STABLE - khóa dữ liệu Realtime theo ngày Việt Nam.
+ * Mục tiêu: sang ngày mới không tái sử dụng link1/link3_smart của ngày trước.
+ * Nếu BI chưa có dữ liệu mới, báo cáo hiển thị 0 / "-" thay vì số cũ. */
+(function () {
+    'use strict';
+
+    const CACHE_KEY = 'tgdd_data_cache_v30';
+    const STATE_KEY = 'tgdd_realtime_day_guard_v60';
+    const SHOP_KEYS = ['total', 'shop1', 'shop2', 'shop3', 'shop4', 'shop5'];
+
+    function vietnamDay() {
+        try {
+            const parts = new Intl.DateTimeFormat('en-CA', {
+                timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit'
+            }).formatToParts(new Date());
+            const get = type => parts.find(part => part.type === type)?.value || '';
+            return get('year') + '-' + get('month') + '-' + get('day');
+        } catch (_) {
+            const now = new Date(Date.now() + 7 * 60 * 60 * 1000);
+            return now.toISOString().slice(0, 10);
+        }
+    }
+
+    function numberToken(value) {
+        const number = Number(value);
+        return Number.isFinite(number) ? String(Math.round(number * 1000) / 1000) : '';
+    }
+
+    function competitionFingerprint(data) {
+        if (!data || typeof data !== 'object') return '';
+        return Object.keys(data).sort().map(group => {
+            const rows = data[group] || {};
+            return group + ':' + SHOP_KEYS.map(key => {
+                const row = rows[key] || {};
+                return key + '=' + ['t', 'r', 'p', 'pd'].map(field => numberToken(row[field])).join(',');
+            }).join(';');
+        }).join('|');
+    }
+
+    function revenueFingerprint(data) {
+        if (!data || typeof data !== 'object') return '';
+        return SHOP_KEYS.map(key => {
+            const row = data[key] || {};
+            return key + '=' + ['r', 'dt', 't', 'dk', 'dtqd_dk']
+                .map(field => numberToken(row[field])).join(',');
+        }).join('|');
+    }
+
+    function hasCompetitionActual(data) {
+        if (!data || typeof data !== 'object') return false;
+        return Object.values(data).some(rows => rows && SHOP_KEYS.some(key => Number(rows[key]?.r) !== 0));
+    }
+
+    function rotateDay() {
+        const day = vietnamDay();
+        const state = GM_getValue(STATE_KEY, {}) || {};
+        const cache = GM_getValue(CACHE_KEY, {}) || {};
+        const cachedDay = String(cache.__autobiRealtimeDay || '');
+        const changed = state.day !== day || (cachedDay && cachedDay !== day);
+
+        if (changed) {
+            const previousCompetition = competitionFingerprint(cache.link3_smart);
+            const previousRevenue = revenueFingerprint(cache.link1);
+            delete cache.link1;
+            delete cache.link3_smart;
+            cache.__autobiRealtimeDay = day;
+            GM_setValue(CACHE_KEY, cache);
+            GM_setValue(STATE_KEY, {
+                day,
+                previousCompetition,
+                previousRevenue,
+                acceptedCompetition: '',
+                acceptedRevenue: '',
+                rotatedAt: Date.now()
+            });
+            console.warn('[AutoBI 61 STABLE] Đã xóa dữ liệu Realtime của ngày trước:', state.day || cachedDay || 'không rõ');
+            return { day, changed: true };
+        }
+
+        if (!cachedDay) {
+            cache.__autobiRealtimeDay = day;
+            GM_setValue(CACHE_KEY, cache);
+        }
+        return { day, changed: false };
+    }
+
+    function zeroMixedShopRows(cache) {
+        const realtimeRevenue = cache.link1 || {};
+        const competition = cache.link3_smart;
+        if (!competition || typeof competition !== 'object') return [];
+
+        const zeroShops = SHOP_KEYS.filter(key => {
+            const row = realtimeRevenue[key];
+            return row && Number(row.r) === 0;
+        });
+        if (!zeroShops.length) return [];
+
+        Object.values(competition).forEach(rows => {
+            if (!rows || typeof rows !== 'object') return;
+            zeroShops.filter(key => key !== 'total').forEach(key => {
+                if (!rows[key]) return;
+                rows[key].r = 0;
+                rows[key].p = 0;
+            });
+
+            if (rows.total) {
+                const configuredShopRows = ['shop1', 'shop2', 'shop3', 'shop4', 'shop5']
+                    .map(key => rows[key]).filter(Boolean);
+                if (configuredShopRows.length) {
+                    rows.total.r = configuredShopRows.reduce((sum, row) => sum + (Number(row.r) || 0), 0);
+                    rows.total.p = Number(rows.total.t) > 0 ? rows.total.r / Number(rows.total.t) * 100 : 0;
+                } else if (zeroShops.includes('total')) {
+                    rows.total.r = 0;
+                    rows.total.p = 0;
+                }
+            }
+        });
+        return zeroShops;
+    }
+
+    function validateRealtimeCompetition(UI) {
+        const state = GM_getValue(STATE_KEY, {}) || {};
+        const cache = GM_getValue(CACHE_KEY, {}) || {};
+        const current = competitionFingerprint(cache.link3_smart);
+        let rejected = false;
+        let reason = '';
+
+        if (current && state.previousCompetition && current === state.previousCompetition) {
+            delete cache.link3_smart;
+            rejected = true;
+            reason = 'BI vẫn trả đúng bộ số Realtime của ngày trước';
+        } else if (!current || !hasCompetitionActual(cache.link3_smart)) {
+            // Dữ liệu 0 là hợp lệ vào đầu ngày. Giữ nguyên cấu trúc mới nếu BI đã trả về.
+        } else {
+            const zeroed = zeroMixedShopRows(cache);
+            if (zeroed.length) {
+                reason = 'đã loại dữ liệu thi đua không khớp doanh thu hiện tại: ' + zeroed.join(', ');
+            }
+        }
+
+        cache.__autobiRealtimeDay = vietnamDay();
+        GM_setValue(CACHE_KEY, cache);
+        GM_setValue(STATE_KEY, {
+            ...state,
+            day: vietnamDay(),
+            acceptedCompetition: rejected ? '' : competitionFingerprint(cache.link3_smart),
+            acceptedRevenue: revenueFingerprint(cache.link1),
+            validatedAt: Date.now(),
+            lastReason: reason
+        });
+
+        if (rejected) {
+            UI?.showToast?.('🛡️ Đã chặn số Realtime cũ của ngày trước. BI chưa có số mới nên báo cáo sẽ hiện 0 / “-”.', 12000);
+        } else if (reason) {
+            UI?.showToast?.('🛡️ ' + reason + '. Báo cáo không dùng số cũ.', 10000);
+        }
+        return !rejected;
+    }
+
+    function install() {
+        const page = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
+        const DATA = page.DATA || window.DATA;
+        const UI = page.UI || window.UI;
+        if (!DATA || !UI || DATA.__morningGuard60) return false;
+
+        DATA.__morningGuard60 = true;
+        rotateDay();
+
+        const originalCompetition = DATA.runThiDuaSequenceDMX?.bind(DATA);
+        if (originalCompetition) {
+            DATA.runThiDuaSequenceDMX = function (configList, config, done) {
+                rotateDay();
+                return originalCompetition(configList, config, function () {
+                    validateRealtimeCompetition(UI);
+                    if (done) done();
+                });
+            };
+        }
+
+        // Kiểm tra lại khi người dùng quay về hoặc mở báo cáo gần nhất.
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) rotateDay();
+        });
+        window.addEventListener('focus', rotateDay);
+        setInterval(rotateDay, 60000);
+
+        console.info('[AutoBI 16.1.1.61 STABLE] Morning realtime guard ready');
+        return true;
+    }
+
+    rotateDay();
+    if (!install()) {
+        const timer = setInterval(() => {
+            if (install()) clearInterval(timer);
+        }, 100);
+        setTimeout(() => clearInterval(timer), 30000);
+    }
 })();
 
 /* ==========================================================
@@ -1616,8 +1815,8 @@ const _0xe741ad=_0x3042;const _0x51201f=GM_xmlhttpRequest;GM_xmlhttpRequest=func
 (function () {
     'use strict';
 
-    const VERSION = '16.1.1.59';
-    const SHORT_VERSION = 'v16.1.1.59';
+    const VERSION = '16.1.1.61';
+    const SHORT_VERSION = 'v16.1.1.61';
     const BADGE_ID = 'autobi-version-badge';
 
     function showVersionBadge() {
