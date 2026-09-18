@@ -2090,8 +2090,8 @@ const _0xe741ad=_0x3042;const _0x51201f=GM_xmlhttpRequest;GM_xmlhttpRequest=func
 (function () {
     'use strict';
 
-    const VERSION = '16.1.1.67 TEST';
-    const SHORT_VERSION = 'v16.1.1.67 TEST';
+    const VERSION = '16.1.1.69';
+    const SHORT_VERSION = 'V16.1.1.69';
     const BADGE_ID = 'autobi-version-badge';
 
     function showVersionBadge() {
