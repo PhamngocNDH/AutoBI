@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         AutoBI Core V16.1.1.71
+// @name         AutoBI Core V16.1.1.72
 // @namespace    https://github.com/PhamngocNDH/AutoBI
-// @version      16.1.1.71
-// @description  AutoBI V16.1.1.71 - phát hành từ TEST2 đã được người dùng kiểm tra.
+// @version      16.1.1.72
+// @description  AutoBI V16.1.1.72
 // @author       38967 _ Mr Phạm
 // @match        https://crm.thegioididong.com/*
 // @match        https://baocao.dienmayxanh.com/*
@@ -41,7 +41,7 @@ window.__AutoBILog5 = (() => {
   const line=e=>`${stamp(e.at)} ${icon[e.level]||'ℹ️'} ${e.shop} → ${e.step}: ${e.detail}`;
   function exportText(){
     if(!state)return 'Chưa có nhật ký AutoBI.';
-    return ['AutoBI V16.1.1.71 | Phiên '+state.id,'Trạng thái: '+state.status+' | OK '+state.ok+' | Retry '+state.retries+' | Cảnh báo '+state.errors,
+    return ['AutoBI V16.1.1.72 VUNG | Phiên '+state.id,'Trạng thái: '+state.status+' | OK '+state.ok+' | Retry '+state.retries+' | Cảnh báo '+state.errors,
       state.dropped?'Chỉ giữ '+LIMIT+' dòng gần nhất; đã bỏ '+state.dropped+' dòng cũ.':'',...state.entries.map(line)].filter(Boolean).join('\n');
   }
   function begin(){
@@ -1401,7 +1401,62 @@ window.__AutoBIInstallment41 = (() => {
     }finally{if(opened)button.click();}
   }
 
+  const filterSettings71={timeout:8000,poll:150};
   async function selectAllFilter(label) {
+    if(norm(label)!=='vung')return selectAllFilterOriginal71(label);
+    const own=el=>!!el.closest('[data-autobi-ui],[id^="tgdd-"],#capture-area');
+    const shown=el=>visible(el)&&!own(el);
+    const trigger=()=>[...document.querySelectorAll('button,[role="button"]')].find(el=>shown(el)&&([el.getAttribute('aria-label'),text(el)].some(s=>norm(s)===norm(label))||[...el.querySelectorAll('span')].some(s=>norm(text(s))===norm(label))));
+    const boxes=p=>p?[...p.querySelectorAll('input[type="checkbox"],[role="checkbox"]')].filter(b=>!b.querySelector('input[type="checkbox"]')&&!own(b)&&(visible(b)||visible(b.closest('label')))).filter(b=>!['chontatca','bochontatca','bochondangloc'].includes(norm(text(b.closest('label')||b.parentElement)))):[];
+    const checked=b=>b.matches('input')?b.checked:b.getAttribute('aria-checked')==='true';
+    const panel=()=>{
+      const b=trigger();if(!b)return null;
+      const ids=(b.getAttribute('aria-controls')||'').split(/\s+/).filter(Boolean);
+      if(ids.length)return ids.map(id=>document.getElementById(id)).find(p=>p&&shown(p)&&boxes(p).length)||null;
+      if(b.getAttribute('aria-expanded')==='false')return null;
+      const other=[...document.querySelectorAll('button[aria-expanded="true"]')].some(el=>el!==b&&shown(el));
+      if(other)return null;
+      const candidates=[...document.querySelectorAll('div,section,aside,ul,[role="dialog"],[role="listbox"]')].filter(shown).filter(p=>!p.contains(b)&&boxes(p).length&&norm(text(p)).includes('chontatca'));
+      const leaves=candidates.filter(p=>!candidates.some(q=>q!==p&&p.contains(q)));
+      return leaves.length===1?leaves[0]:null;
+    };
+    const wait=async(read,description,timeout=filterSettings71.timeout)=>{
+      const until=Date.now()+timeout;
+      do{const result=read();if(result)return result;await sleep(filterSettings71.poll);}while(Date.now()<until);
+      throw new Error('Timeout '+label+' → '+description);
+    };
+    const close=async()=>{
+      const b=trigger();
+      if(b&&(panel()||b.getAttribute('aria-expanded')==='true'))b.click();
+      await wait(()=>!panel()&&trigger()?.getAttribute('aria-expanded')!=='true','đóng bộ lọc',3000);
+    };
+    for(let attempt=0;attempt<2;attempt++){
+      try{
+        window.__AutoBILog5.wait('Đang mở và chờ danh sách '+label);
+        const b=await wait(trigger,'nút bộ lọc');
+        if(!panel()&&b.getAttribute('aria-expanded')!=='true')b.click();
+        await wait(panel,'danh sách lựa chọn');
+        // Resolve nodes again on every check because BI can replace the popup.
+        if(!boxes(panel()).every(checked)){
+          const action=await wait(()=>{
+            const p=panel();return p&&[...p.querySelectorAll('button,[role="button"],a,label,span')].find(el=>shown(el)&&!el.disabled&&el.getAttribute('aria-disabled')!=='true'&&norm(el.getAttribute('aria-label')||text(el))==='chontatca');
+          },'nút Chọn tất cả');
+          action.click();
+        }
+        window.__AutoBILog5.wait('Đang xác nhận đã chọn đủ '+label);
+        await wait(()=>{const p=panel(),bs=boxes(p);return p&&bs.length&&bs.every(checked);},'xác nhận lựa chọn');
+        await close();
+        return;
+      }catch(error){
+        try{await close();}catch(cleanup){throw new Error(error.message+'; '+cleanup.message);}
+        if(attempt===1)throw error;
+        window.__AutoBILog5.retry(1,label+': '+error.message+' — thử lại đúng bộ lọc');
+      }
+    }
+  }
+
+
+  async function selectAllFilterOriginal71(label) {
     if (norm(label) === 'sieuthi') return clearShopFilter();
     const wanted = norm(label);
     let button = null;
@@ -1505,7 +1560,7 @@ window.__AutoBIInstallment41 = (() => {
     console.info('[AutoBI Trả chậm 41] Tự lưu bảng đang hiển thị', state.rows);
     return true;
   }
-  return {number, matchShop, read, save, waitRows, selectAllFilter, passiveCapture, run, controlSettings72, findControl72, waitControl72};
+  return {number, matchShop, read, save, waitRows, selectAllFilter, passiveCapture, run, controlSettings72, findControl72, waitControl72, filterSettings71};
 })();
 
 /* AutoBI 16.1.1.41 - reliable Online 18001060 capture. */
@@ -3306,8 +3361,8 @@ const _0x195ded=_0xe741ad;const _0x9d5ded=GM_getValue(_0x5f4a62['KEYS']["AUTO_ST
 (function () {
     'use strict';
 
-    const VERSION = '16.1.1.71';
-    const SHORT_VERSION = 'V16.1.1.71';
+    const VERSION = '16.1.1.72';
+    const SHORT_VERSION = 'V16.1.1.72';
     const BADGE_ID = 'autobi-version-badge';
 
     function showVersionBadge() {
