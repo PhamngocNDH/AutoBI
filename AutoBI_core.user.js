@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AutoBI Core V16.1.1.73
 // @namespace    https://github.com/PhamngocNDH/AutoBI
-// @version      16.1.1.72
+// @version      16.1.1.73
 // @description  AutoBI V16.1.1.73
 // @author       38967 _ Mr Phạm
 // @match        https://crm.thegioididong.com/*
@@ -3361,7 +3361,7 @@ const _0x195ded=_0xe741ad;const _0x9d5ded=GM_getValue(_0x5f4a62['KEYS']["AUTO_ST
 (function () {
     'use strict';
 
-    const VERSION = '16.1.1.72';
+    const VERSION = '16.1.1.73';
     const SHORT_VERSION = 'V16.1.1.73';
     const BADGE_ID = 'autobi-version-badge';
 
