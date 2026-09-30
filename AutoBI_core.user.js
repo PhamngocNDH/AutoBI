@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V16.2.5
+// @name         AutoBI Core V16.2.6
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      16.2.5
+// @version      16.2.6
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://crm.thegioididong.com/*
@@ -11273,7 +11273,35 @@ window.__AutoBIBiTarget99 = (function () {
     const shown = (int ? new Intl.NumberFormat('en-US').format(parseInt(int, 10)) : '0') + '.' + dec;
     queueMicrotask(() => { el.value = shown; });
   }, true);
+  /* V16.2.6: ẩn "Dữ liệu năm" trong Menu và dòng "Tháng báo cáo" ở bảng Chạy báo cáo (luôn chạy tháng hiện tại) */
+  try { GM_addStyle('#btn-menu-yearly { display: none !important; } div:has(> #sel-report-month) { display: none !important; }'); } catch (_) { }
+  /* V16.2.6: đồng hồ khi chạy luôn đếm lên từ 00:01 cho mọi loại báo cáo (trước đây Lũy kế/Realtime/ALL đếm ngược từ 05:00, Giờ công đếm lên từ 00:00) */
+  function runStart() {
+    try { const st = window.__AutoBILog5 && window.__AutoBILog5.snapshot && window.__AutoBILog5.snapshot(); if (st && st.status === 'running' && st.startedAt) return Number(st.startedAt); } catch (_) { }
+    try { if (GM_getValue('tgdd_auto_state_run_v30', -1) >= 0) { const t = Number(GM_getValue('tgdd_auto_start_time', 0)); if (t > 0) return t; } } catch (_) { }
+    try { const j = GM_getValue('autobi_wt73_job', null); if (j && j.at && !j.cancelled && !['done', 'warning', 'error'].includes(j.phase)) return Number(j.at); } catch (_) { }
+    return 0;
+  }
+  function timerText() {
+    const start = runStart();
+    if (!(start > 0)) return '';
+    const sec = Math.max(0, Math.floor((Date.now() - start) / 1000)) + 1;
+    return String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0');
+  }
+  let timerObs = null, timerEl = null;
+  function fixTimer() {
+    const el = document.getElementById('tgdd-top-right-timer');
+    if (!el) return;
+    const text = timerText();
+    if (text && el.textContent !== text) el.textContent = text;
+    if (el !== timerEl) {
+      if (timerObs) timerObs.disconnect();
+      timerEl = el;
+      timerObs = new MutationObserver(() => { const t = timerText(); if (t && timerEl.textContent !== t) timerEl.textContent = t; });
+      timerObs.observe(el, { childList: true, characterData: true, subtree: true });
+    }
+  }
   try { hookReport(); hookCompetition(); sync(); } catch (_) { }
-  if (window.__AutoBITick96) { window.__AutoBITick96(install, 1000); window.__AutoBITick96(hookReport, 2000); window.__AutoBITick96(hookCompetition, 2000); }
+  if (window.__AutoBITick96) { window.__AutoBITick96(install, 1000); window.__AutoBITick96(hookReport, 2000); window.__AutoBITick96(hookCompetition, 2000); window.__AutoBITick96(fixTimer, 500); }
   return { sync };
 })();
