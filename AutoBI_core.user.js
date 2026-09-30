@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V16.2
+// @name         AutoBI Core V16.2.5
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      16.2
+// @version      16.2.5
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://crm.thegioididong.com/*
@@ -11063,7 +11063,7 @@ window.__AutoBIRunning88 = function () {
   } catch (_) { }
 })();
 
-/* V100: nút "Lấy Target từ BI" trong Khai báo (một nút, phía trên Shop 1) — điền Target tháng/ngày từng shop (bảng Lũy kế Doanh thu) và Target tháng nhóm hàng S1–S5 (bảng Thi đua Lũy kế). Chỉ điền vào ô, phải bấm LƯU CẤU HÌNH mới lưu. */
+/* V100 → V16.2.3: tự lấy Target theo BI mỗi lần đổ số (Target tháng/ngày siêu thị từ Lũy kế Doanh thu, Target nhóm hàng S1–S5 từ Thi đua Lũy kế); ô bật/tắt trong Khai báo, bỏ nút 🎯 và ô Target BI */
 window.__AutoBIBiTarget99 = (function () {
   'use strict';
   if (window.top !== window.self) return null;
@@ -11086,95 +11086,167 @@ window.__AutoBIBiTarget99 = (function () {
     return map;
   }
 
-  function setVal(input, value) {
-    if (!input || !(value > 0)) return false;
-    const v = fmt(value);
-    if (input.value === v) return false;
-    input.value = v;
-    input.style.background = '#fff7cc';
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-    return true;
+  /* V16.2.1: tự lấy Target BI mỗi lần đổ số — ghi Target tháng/ngày siêu thị + Target nhóm hàng vào cấu hình trước khi dựng báo cáo, công thức phía sau giữ nguyên */
+  const AUTO_KEY = 'autobi_auto_bi_target100';
+  const PERM_KEY = 'TGDD_BI_STORE_PERMANENT_CONFIG_GM_V1';
+  const RUN_KEY = 'tgdd_active_run_config';
+  const autoOn = () => GM_getValue(AUTO_KEY, true) !== false;
+  const readObj = key => { try { let v = GM_getValue(key, null); if (typeof v === 'string') v = JSON.parse(v); return v && typeof v === 'object' ? v : null; } catch (_) { return null; } };
+  const core = name => { try { return (typeof unsafeWindow !== 'undefined' && unsafeWindow[name]) || window[name]; } catch (_) { return window[name]; } };
+
+  /* V16.2.5: chặn số lấy nhầm khi BI lỗi hoặc chưa tải xong */
+  const note = msg => { try { console.warn('[AutoBI 16.2.5] ' + msg); } catch (_) { } try { const st = window.__AutoBILog5 && window.__AutoBILog5.snapshot && window.__AutoBILog5.snapshot(); if (st && st.status === 'running' && window.__AutoBILog5.note) window.__AutoBILog5.note(msg); } catch (_) { } };
+  const SHOPS = ['shop1', 'shop2', 'shop3', 'shop4', 'shop5'];
+  /* Bảng Thi đua "Lũy kế" mà thật ra vẫn là bảng Realtime (bấm Lũy kế chưa ăn): target Lũy kế phải gấp ~số ngày trong tháng target Realtime */
+  function cumulativeLooksRealtime(lk, rt) {
+    if (!lk || !rt || typeof lk !== 'object' || typeof rt !== 'object') return false;
+    let n = 0, low = 0;
+    Object.keys(lk).forEach(g => {
+      if (g.startsWith('__') || !rt[g]) return;
+      SHOPS.forEach(k => {
+        const a = Number(lk[g] && lk[g][k] && lk[g][k].t) || 0, b = Number(rt[g][k] && rt[g][k].t) || 0;
+        if (a > 0 && b > 0) { n++; if (a / b < 5) low++; }
+      });
+    });
+    return n >= 3 && low / n > 0.6;
+  }
+  /* Số mới so với số đang có: lệch quá 3 lần ở phần lớn các ô = đọc nhầm bảng/đơn vị, không nhận cả lượt */
+  function mostlyAbnormal(pairs) {
+    let n = 0, bad = 0;
+    pairs.forEach(([nv, ov]) => { if (nv > 0 && ov > 0) { n++; const r = nv / ov; if (r < 1 / 3 || r > 3) bad++; } });
+    return n >= 1 && bad / n > 0.5;
   }
 
-  function lastRun() {
-    try {
-      const st = window.__AutoBILog5 && window.__AutoBILog5.snapshot && window.__AutoBILog5.snapshot();
-      const at = st && (st.endedAt || st.startedAt);
-      return at ? new Date(at) : null;
-    } catch (_) { return null; }
-  }
-
-  function fill() {
-    const cache = GM_getValue('tgdd_data_cache_v30', {}) || {};
-    const lk = cache.link2 || {};
-    const td = cache.link4_smart || {};
+  function applyBI(cfg, cache) {
+    if (!cfg || typeof cfg !== 'object' || !cache || typeof cache !== 'object') return false;
+    const lk = cache.link2 || {}, td = cache.link4_smart || {};
     const days = daysInMonth();
-    const notes = [];
-    let shops = 0, groups = 0;
+    let changed = false;
+    const set = (o, k, v) => { if (o[k] !== v) { o[k] = v; changed = true; } };
 
+    const shopNew = {};
     for (let i = 1; i <= 5; i++) {
-      const input = document.getElementById('cfg-target-' + i);
-      if (!input) continue;
-      const name = (document.getElementById('cfg-name-' + i) || {}).value || '';
+      if (!cfg['shop' + i]) continue;
       const t = Number(lk['shop' + i] && lk['shop' + i].t) || 0;
-      if (t <= 0) { if (name.trim()) notes.push('Shop ' + i + ': BI chưa có Target tháng'); continue; }
-      const a = setVal(input, t);
-      const b = setVal(document.getElementById('cfg-target-day-' + i), t / days);
-      if (a || b) shops++;
+      if (t > 0) shopNew[i] = Math.round(t);
+    }
+    const shopIdx = Object.keys(shopNew);
+    let shopOk = shopIdx.length > 0;
+    if (shopOk && mostlyAbnormal(shopIdx.map(i => [shopNew[i], Number(cfg['target' + i]) || 0]))) { shopOk = false; note('Bỏ qua Target tháng siêu thị: số BI lệch quá 3 lần so với số đang dùng (có thể BI chưa tải xong)'); }
+    if (shopOk) {
+      let total = 0;
+      shopIdx.forEach(i => { set(cfg, 'target' + i, shopNew[i]); set(cfg, 'targetDay' + i, Math.round(shopNew[i] / days)); });
+      for (let i = 1; i <= 5; i++) if (cfg['shop' + i]) total += Number(cfg['target' + i]) || 0;
+      set(cfg, 'totalTarget', total);
     }
 
     const byKey = new Map(Object.keys(td).filter(k => !k.startsWith('__')).map(k => [norm(k), td[k]]));
-    const isRev = revenueGroups();
-    const missing = [];
-    document.querySelectorAll('#tbl-target-body .cfg-target-row').forEach(row => {
-      const label = row.cells[1] ? row.cells[1].textContent.trim() : '';
-      const key = norm(label);
-      const g = byKey.get(key);
-      if (!g) { if (label) missing.push(label); return; }
-      let rev = isRev.get(key);
-      if (rev === undefined) { const vals = [1, 2, 3, 4, 5].map(i => Number(g['shop' + i] && g['shop' + i].t) || 0).filter(v => v > 0); rev = vals.length > 0 && vals.every(v => v >= 1000 && v % 100 === 0); }
-      let any = false;
-      for (let i = 1; i <= 5; i++) {
-        const v = Number(g['shop' + i] && g['shop' + i].t) || 0;
-        if (setVal(row.querySelector('.t-s' + i), rev ? v / 1000 : v)) any = true;
-      }
-      if (any) groups++;
-    });
-
-    if (!Object.keys(lk).length && !byKey.size) {
-      toast('⚠️ Chưa có số BI để lấy Target. Hãy đổ số một lượt rồi mở lại Khai báo.', 8000);
-      return;
+    let groupOk = byKey.size > 0;
+    if (groupOk && cumulativeLooksRealtime(td, cache.link3_smart)) { groupOk = false; note('Bỏ qua Target nhóm hàng: bảng Thi đua Lũy kế đang giống bảng Realtime (BI chưa chuyển sang Lũy kế)'); }
+    const rows = (Array.isArray(cfg.compData) ? cfg.compData : []).filter(r => r && r.group);
+    const updates = [];
+    if (groupOk) {
+      const isRev = revenueGroups();
+      let found = 0;
+      rows.forEach(row => {
+        const key = norm(row.group);
+        const g = byKey.get(key);
+        if (!g) return;
+        found++;
+        let rev = isRev.get(key);
+        if (rev === undefined) { const vals = [1, 2, 3, 4, 5].map(i => Number(g['shop' + i] && g['shop' + i].t) || 0).filter(v => v > 0); rev = vals.length > 0 && vals.every(v => v >= 1000 && v % 100 === 0); }
+        for (let i = 1; i <= 5; i++) {
+          if (!cfg['shop' + i]) continue;
+          const v = Number(g['shop' + i] && g['shop' + i].t) || 0;
+          if (v > 0) updates.push([row, 't' + i, rev ? Math.round(v) / 1000 : Math.round(v)]);
+        }
+      });
+      if (rows.length >= 4 && found < rows.length / 2) { groupOk = false; note('Bỏ qua Target nhóm hàng: BI mới đọc được ' + found + '/' + rows.length + ' nhóm (bảng chưa tải hết)'); }
+      else if (mostlyAbnormal(updates.map(([row, k, v]) => [v, Number(row[k]) || 0]))) { groupOk = false; note('Bỏ qua Target nhóm hàng: số BI lệch quá 3 lần so với số đang dùng (sai bảng hoặc sai đơn vị)'); }
     }
-    if (!byKey.size) notes.push('Target nhóm hàng: chưa có số Thi đua Lũy kế — đổ số một lượt rồi lấy lại');
-    else if (missing.length) notes.push('Không thấy trên BI: ' + missing.slice(0, 4).join(', ') + (missing.length > 4 ? '…' : ''));
+    if (groupOk) updates.forEach(([row, k, v]) => set(row, k, v));
 
-    const run = lastRun();
-    let when = '';
-    if (run) {
-      when = ' (đổ số lúc ' + run.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) + ')';
-      if (monthOf(run) !== monthOf(new Date())) notes.unshift('⚠️ Lần đổ số gần nhất là tháng trước — nên đổ số lại rồi lấy');
+    /* Không bật chế độ Target BI của báo cáo: ở chế độ đó đầu báo cáo đọc cột Target Realtime (là target tháng) làm Mục tiêu ngày và cột %HT làm Dự kiến. Số BI đã nằm trong cấu hình nên dùng công thức gốc: ngày = tháng ÷ số ngày của tháng, dự kiến = thực hiện ÷ ngày đã qua × số ngày */
+    if (shopOk || groupOk) set(cfg, 'defaultTargetBI', false);
+    return changed;
+  }
+
+  /* V16.2.5: sau khi đọc Thi đua, nếu bảng "Lũy kế" thật ra vẫn là Realtime thì không dùng (giữ bản Lũy kế trước đó nếu có) để báo cáo khỏi hiện số sai */
+  function hookCompetition() {
+    const DATA = core('DATA');
+    if (!DATA || !DATA.runThiDuaSequenceDMX || DATA.runThiDuaSequenceDMX.__autobiGuard125) return;
+    const run = DATA.runThiDuaSequenceDMX;
+    const wrapped = function (list, config, done) {
+      let before = {};
+      try { before = JSON.parse(JSON.stringify((GM_getValue('tgdd_data_cache_v30', {}) || {}).link4_smart || {})); } catch (_) { }
+      return run.call(this, list, config, function (...a) {
+        try {
+          const cache = GM_getValue('tgdd_data_cache_v30', {}) || {};
+          if (cumulativeLooksRealtime(cache.link4_smart, cache.link3_smart)) {
+            if (Object.keys(before).length && !cumulativeLooksRealtime(before, cache.link3_smart)) cache.link4_smart = before; else delete cache.link4_smart;
+            GM_setValue('tgdd_data_cache_v30', cache);
+            note('Thi đua Lũy kế đọc ra số Realtime (BI chưa chuyển bảng) — không dùng lượt đọc này');
+            toast('🛡️ Bảng Thi đua Lũy kế chưa tải đúng nên không dùng số vừa đọc. Nếu báo cáo thiếu số, hãy chạy lại một lần.', 10000);
+          }
+        } catch (e) { try { console.warn('[AutoBI 16.2.5] Kiểm tra Thi đua Lũy kế lỗi:', e); } catch (_) { } }
+        if (done) return done.apply(this, a);
+      });
+    };
+    wrapped.__autobiGuard125 = true;
+    DATA.runThiDuaSequenceDMX = wrapped;
+  }
+
+  function sync(cache) {
+    if (!autoOn()) return false;
+    cache = cache && typeof cache === 'object' && Object.keys(cache).length ? cache : (GM_getValue('tgdd_data_cache_v30', {}) || {});
+    let changed = false;
+    const perm = readObj(PERM_KEY);
+    if (perm && applyBI(perm, cache)) {
+      const U = core('UTILS');
+      if (U && U.savePersistentConfig) U.savePersistentConfig(perm); else GM_setValue(PERM_KEY, perm);
+      changed = true;
     }
-    const msg = (shops || groups ? '✅ Đã điền Target ' + shops + ' shop, ' + groups + ' nhóm hàng' : 'ℹ️ Target trên BI giống số đang có, không đổi gì') + when + '.' +
-      (notes.length ? '\n' + notes.join('\n') : '') + (shops || groups ? '\nÔ vàng là ô vừa đổi — kiểm tra rồi bấm LƯU CẤU HÌNH.' : '');
-    toast(msg, 9000);
+    const raw = GM_getValue(RUN_KEY, null);
+    const run = readObj(RUN_KEY);
+    if (run && Object.keys(run).length && applyBI(run, cache)) { GM_setValue(RUN_KEY, typeof raw === 'string' ? JSON.stringify(run) : run); changed = true; }
+    if (changed) { try { console.log('[AutoBI 16.2.1] Đã cập nhật Target từ BI vào cấu hình'); } catch (_) { } }
+    return changed;
+  }
+
+  function hookReport() {
+    const UI = core('UI');
+    if (!UI || !UI.renderReport || UI.renderReport.__autobiBiTarget) return;
+    const render = UI.renderReport;
+    const wrapped = function (...args) {
+      try { if (autoOn()) { sync(args[0]); if (args[2] && typeof args[2] === 'object') applyBI(args[2], args[0] && Object.keys(args[0]).length ? args[0] : (GM_getValue('tgdd_data_cache_v30', {}) || {})); } } catch (e) { try { console.warn('[AutoBI 16.2.1] Tự lấy Target BI lỗi:', e); } catch (_) { } }
+      return render.apply(this, args);
+    };
+    wrapped.__autobiBiTarget = true;
+    UI.renderReport = wrapped;
   }
 
   function install() {
+    /* Ô "Tự động theo BI mỗi lần đổ số" phía trên Shop 1 (V16.2.3: bỏ nút 🎯 Lấy Target từ BI) */
     const card = document.getElementById('shop-card-1');
-    if (card && !document.getElementById('btn-bi-target99')) {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.id = 'btn-bi-target99';
-      b.textContent = '🎯 Lấy Target từ BI';
-      b.title = 'Điền Target tháng shop và Target nhóm hàng từ lần đổ số gần nhất';
-      b.style.cssText = 'background:#d63031;color:#fff;border:0;border-radius:6px;font-weight:bold;font-size:12px;padding:8px 12px;min-height:36px;cursor:pointer;';
-      b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); fill(); });
+    if (card && !document.getElementById('cfg-auto-bi-target100')) {
       const bar = document.createElement('div');
-      bar.style.cssText = 'display:flex;justify-content:flex-end;margin:0 0 8px;';
-      bar.appendChild(b);
+      bar.style.cssText = 'display:flex;justify-content:flex-end;align-items:center;margin:0 0 8px;';
+      const lab = document.createElement('label');
+      lab.style.cssText = 'display:flex;align-items:center;gap:5px;font-size:12px;font-weight:bold;color:#166534;cursor:pointer;';
+      lab.title = 'Mỗi lần đổ số: Target tháng siêu thị, Target ngày (tháng ÷ số ngày của tháng) và Target nhóm hàng tự lấy theo BI. Bỏ tick nếu muốn tự nhập tay.';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.id = 'cfg-auto-bi-target100';
+      cb.checked = autoOn();
+      cb.addEventListener('click', e => e.stopPropagation());
+      cb.addEventListener('change', e => { e.stopPropagation(); GM_setValue(AUTO_KEY, cb.checked); toast(cb.checked ? '✅ Đã bật: mỗi lần đổ số sẽ tự lấy Target theo BI.' : 'Đã tắt: dùng Target nhập tay trong Khai báo.', 5000); });
+      lab.append(cb, document.createTextNode('Tự động theo BI mỗi lần đổ số'));
+      bar.appendChild(lab);
       card.before(bar);
     }
+    /* V16.2.3: bỏ ô "Target BI" ở mục Target Thi đua (khi lưu, lõi đọc ô không tồn tại = tắt) */
+    const tbi = document.getElementById('cfg-target-bi-check');
+    if (tbi) { const l = tbi.closest('label'); (l || tbi).remove(); }
     /* "+ Thêm nhóm hàng" đứng sát "Load Nhóm hàng" (gom 2 nút vào một cụm bên phải) */
     const load = document.getElementById('btn-load-groups');
     const add = document.getElementById('btn-add-sheet-group');
@@ -11187,6 +11259,21 @@ window.__AutoBIBiTarget99 = (function () {
       wrap.append(add, load);
     }
   }
-  if (window.__AutoBITick96) window.__AutoBITick96(install, 1000);
-  return { fill };
+  /* V16.2.4: ẩn hẳn ô "Target BI" trên thanh báo cáo và trong bảng chọn báo cáo (lõi vẫn đọc ô nên chỉ ẩn, trạng thái theo cấu hình = tắt) */
+  try { GM_addStyle('label:has(> #tgdd-cb-target-bi), label:has(> #modal-cb-target-bi) { display: none !important; }'); } catch (_) { }
+  /* V16.2.4: ô Target nhóm hàng trong Khai báo nhận số lẻ (171.7) — lõi xóa dấu chấm khi gõ, nên ghi lại giá trị có số lẻ ngay sau đó */
+  document.addEventListener('input', e => {
+    const el = e.target;
+    if (!el || !el.matches || !el.matches('#tbl-target-body .cfg-target-row input.formatted-input')) return;
+    const v = String(el.value || '').replace(/[^0-9.]/g, '');
+    if (v.indexOf('.') < 0) return;
+    const parts = v.split('.');
+    const int = parts[0];
+    const dec = parts.slice(1).join('').slice(0, 3);
+    const shown = (int ? new Intl.NumberFormat('en-US').format(parseInt(int, 10)) : '0') + '.' + dec;
+    queueMicrotask(() => { el.value = shown; });
+  }, true);
+  try { hookReport(); hookCompetition(); sync(); } catch (_) { }
+  if (window.__AutoBITick96) { window.__AutoBITick96(install, 1000); window.__AutoBITick96(hookReport, 2000); window.__AutoBITick96(hookCompetition, 2000); }
+  return { sync };
 })();
