@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V16.2.6
+// @name         AutoBI Core V16.2.13
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      16.2.6
+// @version      16.2.13
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://crm.thegioididong.com/*
@@ -234,7 +234,24 @@ window.__AutoBIFilterGuard75 = (() => {
         const b = await G.wait('B\u1ED9 l\u1ECDc ' + label, () => { const e = trigger(label); return e && !e.disabled && e; }, { key: () => label });
         if (!popup(label))
             b.click();
-        await G.wait('Danh s\u00E1ch ' + label, () => { const p = popup(label); return p && boxes(p).length && p; }, { settle: 240, key: p => boxes(p).map(x => text(x.closest('label') || x.parentElement)).join('|'), expected: 'danh s\u00E1ch h\u1EBFt \u0110ang t\u1EA3i' });
+        /* V16.2.13: danh sách không mở/không hiện mục (bấm lọc bị trượt khi BI vừa đổi tháng) → bấm mở lại, thử tối đa 3 lần (20s/lần) thay vì chờ 60s rồi dừng */
+        for (let attempt129 = 1; ; attempt129++) {
+            try {
+                await G.wait('Danh s\u00E1ch ' + label, () => { const p = popup(label); return p && boxes(p).length && p; }, { timeout: attempt129 < 3 ? 20000 : 40000, settle: 240, key: p => boxes(p).map(x => text(x.closest('label') || x.parentElement)).join('|'), expected: 'danh s\u00E1ch h\u1EBFt \u0110ang t\u1EA3i' });
+                break;
+            }
+            catch (e) {
+                if (e?.code !== 'AUTOBI_LOADING_TIMEOUT' || attempt129 >= 3)
+                    throw e;
+                try { window.__AutoBILog5?.note?.('Danh s\u00E1ch ' + label + ' ch\u01B0a m\u1EDF \u2014 b\u1EA5m m\u1EDF l\u1EA1i (l\u1EA7n ' + (attempt129 + 1) + ')'); } catch (_) { }
+                const t = trigger(label);
+                if (t) {
+                    if (popup(label)) { t.click(); await new Promise(r => setTimeout(r, 600)); }
+                    trigger(label)?.click();
+                }
+                await new Promise(r => setTimeout(r, 800));
+            }
+        }
         const p = popup(label), select = all('button', p).find(e => norm(text(e)) === 'chon tat ca');
         const ticket = G.arm();
         let changed = false;
@@ -3716,7 +3733,7 @@ window.__AutoBIRun67 = (function () {
                 }
                 if (_0x3cf3ef)
                     _0x3cf3ef(_0x53d7e0);
-            } } }); }, saveMonthlyGroupConfig: (_0x3fa5a7, _0x100f60, _0x11b92d) => {
+            } } }); }, saveMonthlyGroupConfig: (_0x3fa5a7, _0x100f60, _0x11b92d, _0xmonth129) => {
             const _0x41e2b6 = CONSTANTS.GSHEET.CONFIG_API;
             if (!_0x41e2b6) {
                 if (_0x11b92d)
@@ -3726,7 +3743,7 @@ window.__AutoBIRun67 = (function () {
                 return;
             }
             const _0x1d0a73 = new Date();
-            const _0x4b2cf5 = _0x1d0a73.getMonth() + 1;
+            const _0x4b2cf5 = (_0xmonth129 >= 1 && _0xmonth129 <= 12) ? _0xmonth129 : _0x1d0a73.getMonth() + 1; /* V16.2.10: lưu được cho tháng cũ */
             DATA.getStandardUserName(_0x42100a => {
                 if (!_0x42100a) {
                     if (_0x11b92d)
@@ -3910,25 +3927,9 @@ window.__AutoBIRun67 = (function () {
                     console.log('[Auto BI] \u2705 \u0110\u00E3 k\u00EDch ho\u1EA1t phi\u00EAn ch\u1EA1y Th\u00E1ng ' + _0x365665 + ' (Target: ' + _0x190d9d.target1 + ', Nh\u00F3m h\u00E0ng: ' + _0x4d7be3.length + ')');
                     _0xb0716();
                 }
-                else {
-                    GM_setValue(CONSTANTS.KEYS.AUTO_STATE, -1);
-                    GM_deleteValue(CONSTANTS.KEYS.RUN_QUEUE);
-                    GM_deleteValue('tgdd_custom_report_month');
-                    GM_deleteValue('tgdd_active_run_config');
-                    UI.exitFocusMode();
-                    document.body.classList.remove('tgdd-body-lock');
-                    UI.showMsg('\u26A0\uFE0F KH\u00D4NG C\u00D3 D\u1EEE LI\u1EC6U', 'Kh\u00F4ng th\u1EC3 xem d\u1EEF li\u1EC7u <b>Th\u00E1ng ' + _0x365665 + '</b> do ch\u01B0a l\u01B0u c\u1EA5u h\u00ECnh l\u00EAn Cloud!', 'error');
-                }
+                else { /* V16.2.9: tháng cũ chưa lưu Cloud → dùng cấu hình hiện tại + nạp lại danh sách nhóm hàng từ Google Sheet, Target lấy theo BI */ let _cf = null; try { _cf = GM_getValue(CONSTANTS.STORAGE_KEY_PERMANENT); if (typeof _cf === 'string') _cf = JSON.parse(_cf); } catch (_e) { } if (!_cf) _cf = _0x218727; _cf = JSON.parse(JSON.stringify(_cf)); const _go = () => { GM_setValue('tgdd_active_run_config', _cf); GM_setValue('tgdd_custom_report_month', _0x29d341); try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Tháng ' + _0x365665 + ' chưa lưu Cloud: dùng cấu hình hiện tại (' + ((_cf.compData || []).length) + ' nhóm cấu hình, ' + ((GM_getValue(CONSTANTS.KEYS.CONFIG_LIST) || []).length) + ' nhóm danh mục)'); } catch (_e) { } UI.showToast('\u2139\uFE0F Th\u00E1ng ' + _0x365665 + ' ch\u01B0a l\u01B0u Cloud: d\u00F9ng c\u1EA5u h\u00ECnh hi\u1EC7n t\u1EA1i, Target l\u1EA5y theo BI'); _0xb0716(); }; GM_xmlhttpRequest({ method: 'GET', url: 'https://docs.google.com/spreadsheets/d/' + CONSTANTS.GSHEET.DATA.ID + '/export?format=csv&gid=' + CONSTANTS.GSHEET.DATA.GID + '&_t=' + Date.now(), timeout: 8000, onload: _r => { try { if (_r.status === 200 && !_r.responseText.includes('<html')) { const _list = []; _r.responseText.split('\n').slice(1).forEach(_ln => { if (!_ln.trim()) return; const _c = UTILS.parseCSVLine(_ln.trim()); if (_c.length >= 3) _list.push({ full: _c[0], short: _c[1], type: UTILS.toUltraSlug(_c[2]), color: _c[3] ? _c[3].trim() : '#FFF2CC', category: _c[4] ? _c[4].trim() : '', channel: _c.length > 5 && _c[5] ? _c[5].trim().toUpperCase() : 'T', customSlug: _c.length > 6 && _c[6] ? UTILS.toUltraSlug(_c[6]) : '' }); }); if (_list.length > 0) GM_setValue(CONSTANTS.KEYS.CONFIG_LIST, _list); } } catch (_e) { } _go(); }, onerror: _go, ontimeout: _go }); }
             }
-            else {
-                GM_setValue(CONSTANTS.KEYS.AUTO_STATE, -1);
-                GM_deleteValue(CONSTANTS.KEYS.RUN_QUEUE);
-                GM_deleteValue('tgdd_custom_report_month');
-                GM_deleteValue('tgdd_active_run_config');
-                UI.exitFocusMode();
-                document.body.classList.remove('tgdd-body-lock');
-                UI.showMsg('\u26A0\uFE0F KH\u00D4NG C\u00D3 D\u1EEE LI\u1EC6U', 'Kh\u00F4ng t\u00ECm th\u1EA5y d\u1EEF li\u1EC7u <b>Th\u00E1ng ' + _0x365665 + '</b> tr\u00EAn Cloud!', 'error');
-            } });
+            else { /* V16.2.9: tháng cũ chưa lưu Cloud → dùng cấu hình hiện tại + nạp lại danh sách nhóm hàng từ Google Sheet, Target lấy theo BI */ let _cf = null; try { _cf = GM_getValue(CONSTANTS.STORAGE_KEY_PERMANENT); if (typeof _cf === 'string') _cf = JSON.parse(_cf); } catch (_e) { } if (!_cf) _cf = _0x218727; _cf = JSON.parse(JSON.stringify(_cf)); const _go = () => { GM_setValue('tgdd_active_run_config', _cf); GM_setValue('tgdd_custom_report_month', _0x29d341); try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Tháng ' + _0x365665 + ' chưa lưu Cloud: dùng cấu hình hiện tại (' + ((_cf.compData || []).length) + ' nhóm cấu hình, ' + ((GM_getValue(CONSTANTS.KEYS.CONFIG_LIST) || []).length) + ' nhóm danh mục)'); } catch (_e) { } UI.showToast('\u2139\uFE0F Th\u00E1ng ' + _0x365665 + ' ch\u01B0a l\u01B0u Cloud: d\u00F9ng c\u1EA5u h\u00ECnh hi\u1EC7n t\u1EA1i, Target l\u1EA5y theo BI'); _0xb0716(); }; GM_xmlhttpRequest({ method: 'GET', url: 'https://docs.google.com/spreadsheets/d/' + CONSTANTS.GSHEET.DATA.ID + '/export?format=csv&gid=' + CONSTANTS.GSHEET.DATA.GID + '&_t=' + Date.now(), timeout: 8000, onload: _r => { try { if (_r.status === 200 && !_r.responseText.includes('<html')) { const _list = []; _r.responseText.split('\n').slice(1).forEach(_ln => { if (!_ln.trim()) return; const _c = UTILS.parseCSVLine(_ln.trim()); if (_c.length >= 3) _list.push({ full: _c[0], short: _c[1], type: UTILS.toUltraSlug(_c[2]), color: _c[3] ? _c[3].trim() : '#FFF2CC', category: _c[4] ? _c[4].trim() : '', channel: _c.length > 5 && _c[5] ? _c[5].trim().toUpperCase() : 'T', customSlug: _c.length > 6 && _c[6] ? UTILS.toUltraSlug(_c[6]) : '' }); }); if (_list.length > 0) GM_setValue(CONSTANTS.KEYS.CONFIG_LIST, _list); } } catch (_e) { } _go(); }, onerror: _go, ontimeout: _go }); } });
         }
         else {
             GM_deleteValue('tgdd_custom_report_month');
@@ -5218,9 +5219,9 @@ window.__AutoBIRun67 = (function () {
             document.body.appendChild(_0x2aa6dd);
         } let _0x469bec = ''; if (AUTH_STATE.userName && AUTH_STATE.userName.includes('38967')) {
             _0x469bec = '<div class="tgdd-chk-group" style="background: #fff0f0; border-color: #ffcccc;"><input type="checkbox" id="chk-test"><label for="chk-test" style="color: #d63031;">\uD83D\uDEE0 B\u00E1o c\u00E1o Test (Admin)</label></div>';
-        } const _0x29b045 = new Date(); const _0x564a36 = _0x29b045.getMonth() + 1; const _0x4c4ee8 = _0x29b045.getFullYear(); let _0x441708 = '<option value="current" selected>\u26A1 Th\u00E1ng hi\u1EC7n t\u1EA1i (T\u1EF1 \u0111\u1ED9ng)</option>'; for (let _0x28fecb = _0x564a36 - 1; _0x28fecb >= 1; _0x28fecb--) {
+        } const _0x29b045 = new Date(); const _0x564a36 = _0x29b045.getMonth() + 1; const _0x4c4ee8 = _0x29b045.getFullYear(); let _0x441708 = '<option value="current" selected>\u26A1 Th\u00E1ng hi\u1EC7n t\u1EA1i (T\u1EF1 \u0111\u1ED9ng)</option>'; /* V16.2.11: ô Tháng báo cáo chỉ còn Tháng hiện tại + tháng trước */ for (let _0x28fecb = (_0x564a36 === 1 ? 12 : _0x564a36 - 1), _0xstop131 = 0; _0xstop131 < 1; _0xstop131++) { const _0x4c4ee8b = _0x564a36 === 1 ? _0x4c4ee8 - 1 : _0x4c4ee8;
             const _0x3bcd6b = String(_0x28fecb).padStart(2, '0');
-            _0x441708 += '<option value="' + _0x3bcd6b + '/' + _0x4c4ee8 + '">\uD83D\uDCC5 Th\u00E1ng ' + _0x3bcd6b + '/' + _0x4c4ee8 + '</option>';
+            _0x441708 += '<option value="' + _0x3bcd6b + '/' + _0x4c4ee8b + '">\uD83D\uDCC5 Th\u00E1ng ' + _0x3bcd6b + '/' + _0x4c4ee8b + '</option>';
         } _0x2aa6dd.innerHTML = '\n                <div class="tgdd-select-content" style="padding:0; overflow:hidden;">\n                    <div style="display:flex; background:#f4f6f8; border-bottom:1px solid #e2e8f0;">\n                        <div id="md-tab-auto" style="flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; background:#fff; color:#007bff; border-bottom:3px solid #007bff;">\uD83E\uDD16 CH\u1EA0Y B\u00C1O C\u00C1O</div>\n                        <div id="md-tab-excel" style="flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; color:#64748b; border-bottom:3px solid transparent;">\uD83D\uDCCA NH\u1EACP EXCEL</div>\n                    </div>\n\n                    <!-- M\u1EB6T 1: CH\u1EA0Y B\u00C1O C\u00C1O AUTO -->\n                    <div id="md-view-auto" style="padding:20px; display:block;">\n\n                        <!-- DROPDOWN CH\u1ECCN TH\u00C1NG B\u00C1O C\u00C1O -->\n                        <div style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; background: #f8fafc; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #e2e8f0;">\n                            <span style="font-size: 12.5px; font-weight: bold; color: #334155;">Th\u00E1ng b\u00E1o c\u00E1o:</span>\n                            <select id="sel-report-month" style="padding: 5px 8px; border-radius: 6px; border: 1.5px solid #007bff; font-weight: bold; color: #007bff; background: #fff; outline: none; cursor: pointer; font-size: 12px;">\n                                ' + _0x441708 + '\n                            </select>\n                        </div>\n\n                        <div class="tgdd-chk-group" id="grp-chk-all" style="background: #e6f2ff; border-color: #b8daff; transition: opacity 0.2s;">\n                            <input type="checkbox" id="chk-all-save">\n                            <label for="chk-all-save" style="color: #0056b3; font-weight: 900;">\uD83D\uDD25 B\u00E1o c\u00E1o ALL & L\u01B0u Data</label>\n                        </div>\n                        <div class="tgdd-chk-group">\n                            <input type="checkbox" id="chk-rev-thidua" checked>\n                            <label for="chk-rev-thidua" style="font-weight:bold; color:#007bff;">\uD83D\uDCC8 B\u00E1o c\u00E1o L\u0169y K\u1EBF</label>\n                        </div>\n                        <div class="tgdd-chk-group" id="grp-chk-fast-realtime" style="background:#fff7ed; border-color:#fdba74;">\n                            <input type="checkbox" id="chk-fast-realtime">\n                            <label for="chk-fast-realtime" style="font-weight:900; color:#ea580c;">\u26A1 B\u00E1o c\u00E1o Realtime</label>\n                        </div>\n                        <div class="tgdd-chk-group">\n                            <input type="checkbox" id="chk-crm">\n                            <label for="chk-crm" style="font-weight:bold;">\uD83C\uDF1F B\u00E1o c\u00E1o Ph\u1EE5c v\u1EE5 (CRM)</label>\n                        </div>\n\n                        <!-- \u26A1 T\u00D9Y CH\u1ECCN M\u1EDAI: XEM B\u00C1O C\u00C1O G\u1EA6N NH\u1EA4T -->\n                        <div class="tgdd-chk-group" id="grp-chk-last-run" style="background: #f0fdf4; border-color: #bbf7d0;">\n                            <input type="checkbox" id="chk-last-run">\n                            <label for="chk-last-run" style="color: #15803d; font-weight: 900;">\u26A1 Xem b\u00E1o c\u00E1o g\u1EA7n nh\u1EA5t</label>\n                        </div>\n\n                        ' + _0x469bec + '\n\n                        <div class="tgdd-select-btn-row">\n                            <button class="tgdd-btn-cancel btn-close-modal">\u0110\u00F3ng</button>\n                            <button class="tgdd-btn-run" id="btn-sel-run">B\u1EAFt \u0110\u1EA7u Ch\u1EA1y</button>\n                        </div>\n                    </div>\n\n                    <!-- M\u1EB6T 2: N\u1EA0P FILE EXCEL -->\n                    <div id="md-view-excel" style="padding:20px; display:none; background:#fafafa;">\n                        <div style="border: 2px dashed #3b82f6; padding: 15px; border-radius: 8px; margin-bottom: 10px; background: #eff6ff; text-align:center; position:relative;">\n                            <input type="file" id="md-file-now" accept=".xlsx, .xls, .csv" style="opacity:0; position:absolute; top:0; left:0; width:100%; height:100%; cursor:pointer;">\n                            <div style="font-size:24px; margin-bottom:5px;">\uD83D\uDCC8</div>\n                            <div style="font-weight:bold; color:#3b82f6; font-size:13px;">File Th\u00E1ng N\u00C0Y</div>\n                            <div id="md-name-now" style="font-size:11px; color:#10b981; margin-top:5px; font-weight:bold;">Ch\u01B0a ch\u1ECDn file</div>\n                        </div>\n\n                        <div style="border: 2px dashed #8b5cf6; padding: 15px; border-radius: 8px; margin-bottom: 15px; background: #f5f3ff; text-align:center; position:relative;">\n                            <input type="file" id="md-file-prev" accept=".xlsx, .xls, .csv" style="opacity:0; position:absolute; top:0; left:0; width:100%; height:100%; cursor:pointer;">\n                            <div style="font-size:24px; margin-bottom:5px;">\uD83D\uDCC9</div>\n                            <div style="font-weight:bold; color:#8b5cf6; font-size:13px;">File Th\u00E1ng TR\u01AF\u1EDAC</div>\n                            <div id="md-name-prev" style="font-size:11px; color:#10b981; margin-top:5px; font-weight:bold;">Ch\u01B0a ch\u1ECDn file</div>\n                        </div>\n\n                        <div class="tgdd-select-btn-row">\n                            <button class="tgdd-btn-cancel btn-close-modal">\u0110\u00F3ng</button>\n                            <button id="btn-fast-process" style="flex:1; padding:10px; border:none; background:linear-gradient(135deg, #10b981, #059669); color:white; font-weight:bold; border-radius:8px; cursor:pointer;">XEM B\u00C1O C\u00C1O</button>\n                        </div>\n                    </div>\n                </div>\n            '; const _0x25cc35 = document.getElementById('md-tab-auto'); const _0x5ed9ef = document.getElementById('md-tab-excel'); const _0x24403d = document.getElementById('md-view-auto'); const _0x17bf9d = document.getElementById('md-view-excel'); _0x25cc35.onclick = () => { _0x25cc35.style.cssText = 'flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; background:#fff; color:#007bff; border-bottom:3px solid #007bff;'; _0x5ed9ef.style.cssText = 'flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; color:#64748b; border-bottom:3px solid transparent;'; _0x24403d.style.display = 'block'; _0x17bf9d.style.display = 'none'; }; _0x5ed9ef.onclick = () => { _0x5ed9ef.style.cssText = 'flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; background:#fff; color:#007bff; border-bottom:3px solid #007bff;'; _0x25cc35.style.cssText = 'flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; color:#64748b; border-bottom:3px solid transparent;'; _0x17bf9d.style.display = 'block'; _0x24403d.style.display = 'none'; }; const _0x30405e = document.getElementById('chk-all-save'); const _0x124e5b = document.getElementById('grp-chk-all'); const _0xa371d7 = document.getElementById('chk-rev-thidua'); const _0x5d0357 = document.getElementById('chk-crm'); const _0x30f0b0 = document.getElementById('chk-last-run'); const _0xfast43 = document.getElementById('chk-fast-realtime'); const _0x863a4 = document.getElementById('chk-test'); const _0x43d320 = document.getElementById('sel-report-month'); if (_0x43d320) {
             _0x43d320.onchange = _0x35e4fb => { const _0x1a178a = _0x35e4fb.target.value !== 'current'; if (_0x1a178a) {
                 _0x30405e.checked = false;
@@ -6483,6 +6484,16 @@ window.__AutoBIRun67 = (function () {
                         serviceMaxPoints: parseFloat(_0x560c0c('cfg-service-max-points')) || 20,
                         bonusPointsList: JSON.parse(GM_getValue('tgdd_bonus_points_list', '[]'))
                     };
+                    const _saveMonth129 = parseInt(document.getElementById('cfg-save-month129')?.value || '0', 10) || 0;
+                    if (_saveMonth129) { /* V16.2.10: lưu nhóm hàng cho tháng cũ — chỉ lưu bảng tháng đó lên Cloud, không đổi cấu hình tháng hiện tại */
+                        if (!_0x18eaf6.length) throw new Error('Ch\u01B0a c\u00F3 nh\u00F3m h\u00E0ng n\u00E0o \u0111\u1EC3 l\u01B0u cho Th\u00E1ng ' + _saveMonth129 + '.');
+                        configStatus('\u0110ang l\u01B0u nh\u00F3m h\u00E0ng cho Th\u00E1ng ' + _saveMonth129 + '\u2026');
+                        const monthlyOld = await awaitConfig(done => DATA.saveMonthlyGroupConfig(_0xa248d9, _0x18eaf6, done, _saveMonth129), 'L\u01B0u nh\u00F3m h\u00E0ng Th\u00E1ng ' + _saveMonth129);
+                        if (monthlyOld?.status !== 'success') throw new Error('Ch\u01B0a l\u01B0u \u0111\u01B0\u1EE3c nh\u00F3m h\u00E0ng Th\u00E1ng ' + _saveMonth129 + ' l\u00EAn Cloud.');
+                        _0x1001aa('\u2713 \u0110\u00C3 L\u01AFU ' + _0x18eaf6.length + ' NH\u00D3M CHO TH\u00C1NG ' + _saveMonth129);
+                        UI.showToast('\u2705 \u0110\u00E3 l\u01B0u ' + _0x18eaf6.length + ' nh\u00F3m h\u00E0ng cho Th\u00E1ng ' + _saveMonth129 + '. C\u1EA5u h\u00ECnh th\u00E1ng hi\u1EC7n t\u1EA1i gi\u1EEF nguy\u00EAn.', 6000);
+                        return;
+                    }
                     UTILS.savePersistentConfig(_0xa248d9);
                     configStatus('\u0110ang l\u01B0u c\u1EA5u h\u00ECnh\u2026');
                     const cloud = await awaitConfig(done => DATA.saveCloudConfig(_0xa248d9, done), 'L\u01B0u c\u1EA5u h\u00ECnh');
@@ -11069,9 +11080,10 @@ window.__AutoBIBiTarget99 = (function () {
   if (window.top !== window.self) return null;
   const norm = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/\s+/g, ' ').trim();
   const fmt = n => Math.round(n).toLocaleString('en-US');
-  const toast = (m, ms) => { try { if (window.UI && window.UI.showToast) { window.UI.showToast(m, ms || 6000); return; } } catch (_) { } alert(m); };
+  const toast = (m, ms) => { try { if (window.UI && window.UI.showToast) { window.UI.showToast(m, ms || 6000); return; } } catch (_) { } try { console.warn('[AutoBI] ' + m); } catch (_) { } }; /* V16.2.12: không dùng alert (chặn lượt chạy) */
   const monthOf = d => { try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit' }).format(d).slice(0, 7); } catch (_) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); } };
-  const daysInMonth = () => { const [y, m] = monthOf(new Date()).split('-').map(Number); return new Date(y, m, 0).getDate(); };
+  const pastMonth = () => { try { const v = GM_getValue('tgdd_custom_report_month', 'current'); if (v && v !== 'current' && String(v).includes('/')) { const [mm, yy] = String(v).split('/').map(Number); if (mm >= 1 && mm <= 12 && yy > 2000) return { m: mm, y: yy }; } } catch (_) { } return null; };
+  const daysInMonth = () => { const pm = pastMonth(); if (pm) return new Date(pm.y, pm.m, 0).getDate(); const [y, m] = monthOf(new Date()).split('-').map(Number); return new Date(y, m, 0).getDate(); };
 
   /* Nhóm doanh thu/tiền: bảng Thi đua lưu số BI × 1000, còn ô Khai báo nhập theo số BI gốc (lõi nhân 1000 khi dùng) */
   function revenueGroups() {
@@ -11142,7 +11154,7 @@ window.__AutoBIBiTarget99 = (function () {
 
     const byKey = new Map(Object.keys(td).filter(k => !k.startsWith('__')).map(k => [norm(k), td[k]]));
     let groupOk = byKey.size > 0;
-    if (groupOk && cumulativeLooksRealtime(td, cache.link3_smart)) { groupOk = false; note('Bỏ qua Target nhóm hàng: bảng Thi đua Lũy kế đang giống bảng Realtime (BI chưa chuyển sang Lũy kế)'); }
+    if (groupOk && !pastMonth() && cumulativeLooksRealtime(td, cache.link3_smart)) { groupOk = false; note('Bỏ qua Target nhóm hàng: bảng Thi đua Lũy kế đang giống bảng Realtime (BI chưa chuyển sang Lũy kế)'); }
     const rows = (Array.isArray(cfg.compData) ? cfg.compData : []).filter(r => r && r.group);
     const updates = [];
     if (groupOk) {
@@ -11182,7 +11194,12 @@ window.__AutoBIBiTarget99 = (function () {
       return run.call(this, list, config, function (...a) {
         try {
           const cache = GM_getValue('tgdd_data_cache_v30', {}) || {};
-          if (cumulativeLooksRealtime(cache.link4_smart, cache.link3_smart)) {
+          if (pastMonth()) {
+            /* V16.2.12: tháng cũ BI chỉ có bảng Lũy kế (không có Realtime) nên 2 lượt đọc ra cùng một bảng — giữ Lũy kế, bỏ Realtime để báo cáo không so số cả tháng với target ngày */
+            cache.link3_smart = {};
+            GM_setValue('tgdd_data_cache_v30', cache);
+            note('Tháng cũ: dùng bảng Thi đua Lũy kế, bỏ Realtime');
+          } else if (cumulativeLooksRealtime(cache.link4_smart, cache.link3_smart)) {
             if (Object.keys(before).length && !cumulativeLooksRealtime(before, cache.link3_smart)) cache.link4_smart = before; else delete cache.link4_smart;
             GM_setValue('tgdd_data_cache_v30', cache);
             note('Thi đua Lũy kế đọc ra số Realtime (BI chưa chuyển bảng) — không dùng lượt đọc này');
@@ -11201,7 +11218,7 @@ window.__AutoBIBiTarget99 = (function () {
     cache = cache && typeof cache === 'object' && Object.keys(cache).length ? cache : (GM_getValue('tgdd_data_cache_v30', {}) || {});
     let changed = false;
     const perm = readObj(PERM_KEY);
-    if (perm && applyBI(perm, cache)) {
+    if (perm && !pastMonth() && applyBI(perm, cache)) {
       const U = core('UTILS');
       if (U && U.savePersistentConfig) U.savePersistentConfig(perm); else GM_setValue(PERM_KEY, perm);
       changed = true;
@@ -11218,6 +11235,8 @@ window.__AutoBIBiTarget99 = (function () {
     if (!UI || !UI.renderReport || UI.renderReport.__autobiBiTarget) return;
     const render = UI.renderReport;
     const wrapped = function (...args) {
+      /* V16.2.9: danh mục nhóm hàng rỗng (hay gặp khi đổ lại tháng cũ) → lấy lại từ bộ nhớ, không có thì dựng từ nhóm trong Khai báo để báo cáo vẫn hiện nhóm hàng */
+      try { if (!Array.isArray(args[1]) || !args[1].length) { let list = GM_getValue('tgdd_gsheet_list_v30') || []; if (!list.length) { const cfg = args[2] && typeof args[2] === 'object' ? args[2] : {}; list = (cfg.compData || []).filter(r => r && r.group).map(r => ({ full: r.group, short: r.group, type: norm(r.group).replace(/[^a-z0-9]/g, ''), color: '#FFF2CC', category: '', channel: 'T', customSlug: '' })); } if (list.length) { args[1] = list; note('Danh mục nhóm hàng trống — dùng ' + list.length + ' nhóm dự phòng'); } } } catch (_) { }
       try { if (autoOn()) { sync(args[0]); if (args[2] && typeof args[2] === 'object') applyBI(args[2], args[0] && Object.keys(args[0]).length ? args[0] : (GM_getValue('tgdd_data_cache_v30', {}) || {})); } } catch (e) { try { console.warn('[AutoBI 16.2.1] Tự lấy Target BI lỗi:', e); } catch (_) { } }
       return render.apply(this, args);
     };
@@ -11273,8 +11292,8 @@ window.__AutoBIBiTarget99 = (function () {
     const shown = (int ? new Intl.NumberFormat('en-US').format(parseInt(int, 10)) : '0') + '.' + dec;
     queueMicrotask(() => { el.value = shown; });
   }, true);
-  /* V16.2.6: ẩn "Dữ liệu năm" trong Menu và dòng "Tháng báo cáo" ở bảng Chạy báo cáo (luôn chạy tháng hiện tại) */
-  try { GM_addStyle('#btn-menu-yearly { display: none !important; } div:has(> #sel-report-month) { display: none !important; }'); } catch (_) { }
+  /* V16.2.7: ẩn "Dữ liệu năm" trong Menu; dòng "Tháng báo cáo" hiện lại để đổ lại tháng cũ (Target lấy theo BI, số ngày theo tháng đã chọn, không ghi đè cấu hình tháng hiện tại) */
+  try { GM_addStyle('#btn-menu-yearly { display: none !important; }'); } catch (_) { }
   /* V16.2.6: đồng hồ khi chạy luôn đếm lên từ 00:01 cho mọi loại báo cáo (trước đây Lũy kế/Realtime/ALL đếm ngược từ 05:00, Giờ công đếm lên từ 00:00) */
   function runStart() {
     try { const st = window.__AutoBILog5 && window.__AutoBILog5.snapshot && window.__AutoBILog5.snapshot(); if (st && st.status === 'running' && st.startedAt) return Number(st.startedAt); } catch (_) { }
@@ -11304,4 +11323,35 @@ window.__AutoBIBiTarget99 = (function () {
   try { hookReport(); hookCompetition(); sync(); } catch (_) { }
   if (window.__AutoBITick96) { window.__AutoBITick96(install, 1000); window.__AutoBITick96(hookReport, 2000); window.__AutoBITick96(hookCompetition, 2000); window.__AutoBITick96(fixTimer, 500); }
   return { sync };
+})();
+
+/* V16.2.10: ô "Lưu nhóm hàng cho tháng" trong Khai báo — chọn tháng cũ rồi bấm LƯU CẤU HÌNH để lưu danh sách nhóm hàng (và Target nhóm) cho tháng đó lên Cloud; không đổi cấu hình tháng hiện tại */
+(function () {
+  'use strict';
+  if (window.top !== window.self) return;
+  function install() {
+    const btn = document.getElementById('btn-save-all');
+    if (!btn || document.getElementById('cfg-save-month129')) return;
+    const row = btn.parentElement;
+    if (!row || !row.parentElement) return;
+    const now = new Date(), cur = now.getMonth() + 1, y = now.getFullYear();
+    let opts = '<option value="0">Tháng hiện tại (' + String(cur).padStart(2, '0') + '/' + y + ') — lưu như bình thường</option>';
+    for (let m = cur - 1; m >= 1; m--) opts += '<option value="' + m + '">Chỉ lưu nhóm hàng cho Tháng ' + String(m).padStart(2, '0') + '/' + y + '</option>';
+    const box = document.createElement('div');
+    box.id = 'cfg-save-month-box129';
+    box.style.cssText = 'display:flex;align-items:center;gap:8px;margin:6px 0;padding:8px 10px;border-radius:8px;background:#f8fafc;border:1.5px solid #e2e8f0;font-size:12px;';
+    box.innerHTML = '<span style="font-weight:bold;color:#334155;white-space:nowrap;">Lưu cho:</span><select id="cfg-save-month129" style="flex:1;min-width:0;padding:6px;border-radius:6px;border:1.5px solid #007bff;color:#007bff;font-weight:bold;background:#fff;font-size:12px;">' + opts + '</select>';
+    row.parentElement.insertBefore(box, row);
+    const sel = box.querySelector('select');
+    const paint = () => {
+      const m = parseInt(sel.value, 10) || 0;
+      box.style.background = m ? '#fff7ed' : '#f8fafc';
+      box.style.borderColor = m ? '#fb923c' : '#e2e8f0';
+      if (m) { btn.disabled = false; btn.style.opacity = '1'; btn.style.pointerEvents = 'auto'; btn.style.cursor = 'pointer'; btn.innerText = 'LƯU NHÓM HÀNG THÁNG ' + String(m).padStart(2, '0'); }
+      else if (/^LƯU NHÓM HÀNG THÁNG/.test(btn.innerText)) btn.innerText = 'LƯU CẤU HÌNH';
+    };
+    sel.addEventListener('change', e => { e.stopPropagation(); paint(); });
+    new MutationObserver(() => { const m = parseInt(sel.value, 10) || 0; if (m && !/ĐANG LƯU/.test(btn.innerText) && !/^LƯU NHÓM HÀNG THÁNG/.test(btn.innerText) && !btn.disabled) btn.innerText = 'LƯU NHÓM HÀNG THÁNG ' + String(m).padStart(2, '0'); }).observe(btn, { childList: true, characterData: true, subtree: true });
+  }
+  if (window.__AutoBITick96) window.__AutoBITick96(install, 1000); else setInterval(install, 1000);
 })();
