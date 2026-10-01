@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AutoBI - Kho & Xuất Bán
 // @namespace    https://github.com/PhamngocNDH/AutoBI/kho-xuatban-test
-// @version      1.4.0
+// @version      1.4.1
 // @description  Đổ tồn kho (BI 4286) và xuất bán (BI 77) theo cụm siêu thị cho máy tính: lấy thẳng dữ liệu BI có điều tốc, sổ ngày, bộ chọn tồn kho, Excel.
 // @author       AutoBI / 38967 - Mr Phạm
 // @homepageURL  https://github.com/PhamngocNDH/AutoBI
@@ -34,7 +34,7 @@
  */
 (function () {
     'use strict';
-    const VERSION = '1.4.0';
+    const VERSION = '1.4.1';
     const PREFIX = 'autobi_kxb_test_v1_';               // giữ khóa cũ để không mất khai báo shop
     const AUTH_SHEET = Object.freeze({ id: '17PxnghjkKIP36fWoSd656wo3DhlOmMiTiyjlf1g23UU', gid: '1237161146' });
     const REPORT = Object.freeze({ inventory: 4286, sales: 77 });
@@ -586,9 +586,15 @@
             records.push(...await inventoryShop(shops[i], session));
         }
         // chỉ công bố khi TẤT CẢ shop đã chọn xong
-        view.inv = { capturedAt: new Date().toISOString(), shops: shops.map(s => keyCode(s.code)), records };
+        // Gộp: chỉ thay số của siêu thị vừa đổ, giữ nguyên số các siêu thị khác (kèm giờ đổ riêng từng siêu thị)
+        const now = new Date().toISOString(), fetched = new Set(shops.map(s => keyCode(s.code)));
+        const prev = view.inv || { records: [], shops: [], shopTimes: {} };
+        const shopTimes = { ...(prev.shopTimes || Object.fromEntries((prev.shops || []).map(c => [c, prev.capturedAt]))) };
+        fetched.forEach(c => shopTimes[c] = now);
+        view.inv = { capturedAt: now, shops: [...new Set([...(prev.shops || []), ...fetched])], shopTimes,
+            records: prev.records.filter(r => !fetched.has(r.shop)).concat(records) };
         try { save('lastInventory', view.inv); } catch { log('Không lưu được tồn kho vào bộ nhớ (quá lớn); vẫn xem được tới khi tải lại trang', 'error'); }
-        renderInventory();
+        renderInventoryFilters(); renderInventory();
         return `Hoàn tất: ${shops.length} siêu thị, ${fmt(records.length)} dòng tồn`;
     }
     function salesView(range) {
@@ -750,10 +756,13 @@
         const area = ui.querySelector('[data-inv-result]'); area.replaceChildren();
         if (!view.inv) { el('div', 'Chọn siêu thị rồi bấm "Đổ tồn kho".', area, 'kxb-empty'); return; }
         const notIn = [...view.invShops].filter(c => !view.inv.shops.includes(c));
-        if (notIn.length) el('div', `Siêu thị ${notIn.join(', ')} chưa có trong lần đổ lúc ${stamp(new Date(view.inv.capturedAt))} — bấm "Đổ tồn kho" để lấy.`, area, 'kxb-warn');
+        if (notIn.length) el('div', `Siêu thị ${notIn.map(shopName).join(', ')} chưa có số tồn — bấm "Đổ tồn kho" để lấy.`, area, 'kxb-warn');
+        const f = view.invFilter, active = [f.category, f.group, f.brand, ...f.conditions, f.q].filter(Boolean);
+        if (active.length) el('div', `Đang lọc: ${active.join(' · ')} — bấm "Bỏ lọc" để xem tất cả.`, area, 'kxb-warn');
         const recs = invRecords();
         const v = inventoryViews(recs);
-        el('div', `Tồn lúc ${stamp(new Date(view.inv.capturedAt))} · đang xem ${fmt(recs.length)}/${fmt(view.inv.records.length)} dòng`, area, 'kxb-muted');
+        const times = view.inv.shops.filter(c => view.invShops.has(c)).map(c => `${shopName(c)} lúc ${stamp(new Date(view.inv.shopTimes?.[c] || view.inv.capturedAt))}`).join(' · ');
+        el('div', `Tồn: ${times || '—'} · đang xem ${fmt(recs.length)}/${fmt(view.inv.records.filter(r => view.invShops.has(r.shop)).length)} dòng`, area, 'kxb-muted');
         kpis(area, [['SL tồn', fmt(v.quantity), mil(v.cost)], ['Nhóm hàng', fmt(v.groups.length)], ['Sản phẩm', fmt(v.products.length)], ['IMEI / Serial', fmt(v.serials)]]);
         subtabs(area, [['group', 'Theo nhóm hàng'], ['product', 'Theo sản phẩm'], ['imei', 'Danh sách IMEI']], view.invTab, k => { view.invTab = k; renderInventory(); });
         const pane = el('div', undefined, area), codes = view.inv.shops.filter(c => view.invShops.has(c));
