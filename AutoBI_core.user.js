@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V16.2.13
+// @name         AutoBI Core V16.3
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      16.2.13
+// @version      16.3
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://crm.thegioididong.com/*
@@ -32,6 +32,48 @@
 window.__AutoBIAllowedSource90 = function (u) {
   try { const x = new URL(u); return x.protocol === 'https:' && ['docs.google.com', 'script.google.com', 'script.googleusercontent.com', 'raw.githubusercontent.com'].includes(x.hostname); } catch (_) { return false; }
 };
+
+/* V16.2.8: đọc JSON đã lưu an toàn — dữ liệu hỏng thì dùng giá trị mặc định thay vì làm treo giao diện */
+window.__AutoBIJson = function (raw, fallback) {
+  const def = () => { try { return JSON.parse(fallback); } catch (_) { return null; } };
+  if (raw === null || raw === undefined || raw === '') return def();
+  if (typeof raw !== 'string') return raw;
+  try { return JSON.parse(raw); } catch (e) { try { console.warn('[AutoBI] Dữ liệu lưu bị hỏng, dùng mặc định:', e && e.message); } catch (_) { } return def(); }
+};
+
+/* V16.2.8: sao lưu Khai báo — mỗi lần mở trang, nếu cấu hình khác bản sao gần nhất thì giữ lại (tối đa 5 bản).
+   Khôi phục qua menu Tampermonkey "AutoBI: Khôi phục Khai báo trước đó". */
+(function () {
+  'use strict';
+  if (window.top !== window.self || window.__AutoBIConfigBackup) return;
+  const CFG = 'TGDD_BI_STORE_PERMANENT_CONFIG_GM_V1', BAK = 'autobi_cfg_backup_v1', MAX = 5;
+  const list = () => { try { const v = GM_getValue(BAK, []); return Array.isArray(v) ? v : []; } catch (_) { return []; } };
+  const sig = v => { try { return typeof v === 'string' ? v : JSON.stringify(v); } catch (_) { return ''; } };
+  function snapshot() {
+    try {
+      const cur = GM_getValue(CFG, null);
+      if (cur === null || cur === undefined || cur === '') return;
+      const all = list();
+      if (all.length && sig(all[0].cfg) === sig(cur)) return;
+      all.unshift({ at: Date.now(), cfg: cur });
+      GM_setValue(BAK, all.slice(0, MAX));
+    } catch (_) { }
+  }
+  function restore() {
+    const all = list();
+    const cur = sig(GM_getValue(CFG, null));
+    const prev = all.find(b => sig(b.cfg) !== cur);
+    if (!prev) { alert('AutoBI: chưa có bản Khai báo cũ nào khác bản hiện tại.'); return; }
+    const when = new Date(prev.at).toLocaleString('vi-VN');
+    if (!confirm('AutoBI: khôi phục Khai báo đã sao lưu lúc ' + when + '?\nKhai báo hiện tại vẫn được giữ trong bản sao lưu.')) return;
+    snapshot();
+    GM_setValue(CFG, prev.cfg);
+    location.reload();
+  }
+  window.__AutoBIConfigBackup = { snapshot, restore, list };
+  snapshot();
+  try { GM_registerMenuCommand('AutoBI: Khôi phục Khai báo trước đó', restore); } catch (_) { }
+})();
 
 /* V75 TEST: shared bounded wait. Readiness predicates remain owned by each report. */
 window.__AutoBILoadingGuard75 = (() => {
@@ -234,24 +276,7 @@ window.__AutoBIFilterGuard75 = (() => {
         const b = await G.wait('B\u1ED9 l\u1ECDc ' + label, () => { const e = trigger(label); return e && !e.disabled && e; }, { key: () => label });
         if (!popup(label))
             b.click();
-        /* V16.2.13: danh sách không mở/không hiện mục (bấm lọc bị trượt khi BI vừa đổi tháng) → bấm mở lại, thử tối đa 3 lần (20s/lần) thay vì chờ 60s rồi dừng */
-        for (let attempt129 = 1; ; attempt129++) {
-            try {
-                await G.wait('Danh s\u00E1ch ' + label, () => { const p = popup(label); return p && boxes(p).length && p; }, { timeout: attempt129 < 3 ? 20000 : 40000, settle: 240, key: p => boxes(p).map(x => text(x.closest('label') || x.parentElement)).join('|'), expected: 'danh s\u00E1ch h\u1EBFt \u0110ang t\u1EA3i' });
-                break;
-            }
-            catch (e) {
-                if (e?.code !== 'AUTOBI_LOADING_TIMEOUT' || attempt129 >= 3)
-                    throw e;
-                try { window.__AutoBILog5?.note?.('Danh s\u00E1ch ' + label + ' ch\u01B0a m\u1EDF \u2014 b\u1EA5m m\u1EDF l\u1EA1i (l\u1EA7n ' + (attempt129 + 1) + ')'); } catch (_) { }
-                const t = trigger(label);
-                if (t) {
-                    if (popup(label)) { t.click(); await new Promise(r => setTimeout(r, 600)); }
-                    trigger(label)?.click();
-                }
-                await new Promise(r => setTimeout(r, 800));
-            }
-        }
+        await G.wait('Danh s\u00E1ch ' + label, () => { const p = popup(label); return p && boxes(p).length && p; }, { settle: 240, key: p => boxes(p).map(x => text(x.closest('label') || x.parentElement)).join('|'), expected: 'danh s\u00E1ch h\u1EBFt \u0110ang t\u1EA3i' });
         const p = popup(label), select = all('button', p).find(e => norm(text(e)) === 'chon tat ca');
         const ticket = G.arm();
         let changed = false;
@@ -3317,6 +3342,29 @@ window.__AutoBIRun67 = (function () {
         finish('idle');
     return { current, active, begin, finish };
 })();
+/* V16.2.8: phiên đổ số bị bỏ dở (Safari đóng tab, hết pin, mất mạng lâu) không tự chạy tiếp vào lúc khác.
+   Còn đánh dấu "đang chạy" nhưng đã bắt đầu quá 30 phút và nhật ký im quá 10 phút thì dọn sạch trạng thái. */
+(function () {
+  'use strict';
+  if (window.top !== window.self) return;
+  try {
+    const step = GM_getValue('tgdd_auto_state_run_v30', -1);
+    if (typeof step !== 'number' || step < 0) return;
+    const now = Date.now();
+    const started = Number(GM_getValue('tgdd_auto_start_time', 0)) || 0;
+    let last = 0;
+    try { const st = window.__AutoBILog5 && window.__AutoBILog5.snapshot && window.__AutoBILog5.snapshot(); last = Number(st && (st.updatedAt || st.startedAt)) || 0; } catch (_) { }
+    const oldStart = started > 0 ? now - started > 30 * 60000 : true;
+    const quiet = last > 0 ? now - last > 10 * 60000 : true;
+    if (!(oldStart && quiet)) return;
+    try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Dọn phiên bị bỏ dở (bước ' + step + ')'); } catch (_) { }
+    window.__AutoBIRun67.finish('abandoned');
+    GM_setValue('tgdd_all_save_retries', 99);
+    GM_deleteValue('tgdd_is_pending_render');
+    console.warn('[AutoBI] Đã dọn phiên đổ số bị bỏ dở ở bước', step);
+  } catch (e) { try { console.warn('[AutoBI] stale guard', e); } catch (_) { } }
+})();
+
 (function () {
     'use strict';
     GM_addStyle(`
@@ -3733,7 +3781,7 @@ window.__AutoBIRun67 = (function () {
                 }
                 if (_0x3cf3ef)
                     _0x3cf3ef(_0x53d7e0);
-            } } }); }, saveMonthlyGroupConfig: (_0x3fa5a7, _0x100f60, _0x11b92d, _0xmonth129) => {
+            } } }); }, saveMonthlyGroupConfig: (_0x3fa5a7, _0x100f60, _0x11b92d) => {
             const _0x41e2b6 = CONSTANTS.GSHEET.CONFIG_API;
             if (!_0x41e2b6) {
                 if (_0x11b92d)
@@ -3743,7 +3791,7 @@ window.__AutoBIRun67 = (function () {
                 return;
             }
             const _0x1d0a73 = new Date();
-            const _0x4b2cf5 = (_0xmonth129 >= 1 && _0xmonth129 <= 12) ? _0xmonth129 : _0x1d0a73.getMonth() + 1; /* V16.2.10: lưu được cho tháng cũ */
+            const _0x4b2cf5 = _0x1d0a73.getMonth() + 1;
             DATA.getStandardUserName(_0x42100a => {
                 if (!_0x42100a) {
                     if (_0x11b92d)
@@ -3927,9 +3975,25 @@ window.__AutoBIRun67 = (function () {
                     console.log('[Auto BI] \u2705 \u0110\u00E3 k\u00EDch ho\u1EA1t phi\u00EAn ch\u1EA1y Th\u00E1ng ' + _0x365665 + ' (Target: ' + _0x190d9d.target1 + ', Nh\u00F3m h\u00E0ng: ' + _0x4d7be3.length + ')');
                     _0xb0716();
                 }
-                else { /* V16.2.9: tháng cũ chưa lưu Cloud → dùng cấu hình hiện tại + nạp lại danh sách nhóm hàng từ Google Sheet, Target lấy theo BI */ let _cf = null; try { _cf = GM_getValue(CONSTANTS.STORAGE_KEY_PERMANENT); if (typeof _cf === 'string') _cf = JSON.parse(_cf); } catch (_e) { } if (!_cf) _cf = _0x218727; _cf = JSON.parse(JSON.stringify(_cf)); const _go = () => { GM_setValue('tgdd_active_run_config', _cf); GM_setValue('tgdd_custom_report_month', _0x29d341); try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Tháng ' + _0x365665 + ' chưa lưu Cloud: dùng cấu hình hiện tại (' + ((_cf.compData || []).length) + ' nhóm cấu hình, ' + ((GM_getValue(CONSTANTS.KEYS.CONFIG_LIST) || []).length) + ' nhóm danh mục)'); } catch (_e) { } UI.showToast('\u2139\uFE0F Th\u00E1ng ' + _0x365665 + ' ch\u01B0a l\u01B0u Cloud: d\u00F9ng c\u1EA5u h\u00ECnh hi\u1EC7n t\u1EA1i, Target l\u1EA5y theo BI'); _0xb0716(); }; GM_xmlhttpRequest({ method: 'GET', url: 'https://docs.google.com/spreadsheets/d/' + CONSTANTS.GSHEET.DATA.ID + '/export?format=csv&gid=' + CONSTANTS.GSHEET.DATA.GID + '&_t=' + Date.now(), timeout: 8000, onload: _r => { try { if (_r.status === 200 && !_r.responseText.includes('<html')) { const _list = []; _r.responseText.split('\n').slice(1).forEach(_ln => { if (!_ln.trim()) return; const _c = UTILS.parseCSVLine(_ln.trim()); if (_c.length >= 3) _list.push({ full: _c[0], short: _c[1], type: UTILS.toUltraSlug(_c[2]), color: _c[3] ? _c[3].trim() : '#FFF2CC', category: _c[4] ? _c[4].trim() : '', channel: _c.length > 5 && _c[5] ? _c[5].trim().toUpperCase() : 'T', customSlug: _c.length > 6 && _c[6] ? UTILS.toUltraSlug(_c[6]) : '' }); }); if (_list.length > 0) GM_setValue(CONSTANTS.KEYS.CONFIG_LIST, _list); } } catch (_e) { } _go(); }, onerror: _go, ontimeout: _go }); }
+                else {
+                    GM_setValue(CONSTANTS.KEYS.AUTO_STATE, -1);
+                    GM_deleteValue(CONSTANTS.KEYS.RUN_QUEUE);
+                    GM_deleteValue('tgdd_custom_report_month');
+                    GM_deleteValue('tgdd_active_run_config');
+                    UI.exitFocusMode();
+                    document.body.classList.remove('tgdd-body-lock');
+                    UI.showMsg('\u26A0\uFE0F KH\u00D4NG C\u00D3 D\u1EEE LI\u1EC6U', 'Kh\u00F4ng th\u1EC3 xem d\u1EEF li\u1EC7u <b>Th\u00E1ng ' + _0x365665 + '</b> do ch\u01B0a l\u01B0u c\u1EA5u h\u00ECnh l\u00EAn Cloud!', 'error');
+                }
             }
-            else { /* V16.2.9: tháng cũ chưa lưu Cloud → dùng cấu hình hiện tại + nạp lại danh sách nhóm hàng từ Google Sheet, Target lấy theo BI */ let _cf = null; try { _cf = GM_getValue(CONSTANTS.STORAGE_KEY_PERMANENT); if (typeof _cf === 'string') _cf = JSON.parse(_cf); } catch (_e) { } if (!_cf) _cf = _0x218727; _cf = JSON.parse(JSON.stringify(_cf)); const _go = () => { GM_setValue('tgdd_active_run_config', _cf); GM_setValue('tgdd_custom_report_month', _0x29d341); try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Tháng ' + _0x365665 + ' chưa lưu Cloud: dùng cấu hình hiện tại (' + ((_cf.compData || []).length) + ' nhóm cấu hình, ' + ((GM_getValue(CONSTANTS.KEYS.CONFIG_LIST) || []).length) + ' nhóm danh mục)'); } catch (_e) { } UI.showToast('\u2139\uFE0F Th\u00E1ng ' + _0x365665 + ' ch\u01B0a l\u01B0u Cloud: d\u00F9ng c\u1EA5u h\u00ECnh hi\u1EC7n t\u1EA1i, Target l\u1EA5y theo BI'); _0xb0716(); }; GM_xmlhttpRequest({ method: 'GET', url: 'https://docs.google.com/spreadsheets/d/' + CONSTANTS.GSHEET.DATA.ID + '/export?format=csv&gid=' + CONSTANTS.GSHEET.DATA.GID + '&_t=' + Date.now(), timeout: 8000, onload: _r => { try { if (_r.status === 200 && !_r.responseText.includes('<html')) { const _list = []; _r.responseText.split('\n').slice(1).forEach(_ln => { if (!_ln.trim()) return; const _c = UTILS.parseCSVLine(_ln.trim()); if (_c.length >= 3) _list.push({ full: _c[0], short: _c[1], type: UTILS.toUltraSlug(_c[2]), color: _c[3] ? _c[3].trim() : '#FFF2CC', category: _c[4] ? _c[4].trim() : '', channel: _c.length > 5 && _c[5] ? _c[5].trim().toUpperCase() : 'T', customSlug: _c.length > 6 && _c[6] ? UTILS.toUltraSlug(_c[6]) : '' }); }); if (_list.length > 0) GM_setValue(CONSTANTS.KEYS.CONFIG_LIST, _list); } } catch (_e) { } _go(); }, onerror: _go, ontimeout: _go }); } });
+            else {
+                GM_setValue(CONSTANTS.KEYS.AUTO_STATE, -1);
+                GM_deleteValue(CONSTANTS.KEYS.RUN_QUEUE);
+                GM_deleteValue('tgdd_custom_report_month');
+                GM_deleteValue('tgdd_active_run_config');
+                UI.exitFocusMode();
+                document.body.classList.remove('tgdd-body-lock');
+                UI.showMsg('\u26A0\uFE0F KH\u00D4NG C\u00D3 D\u1EEE LI\u1EC6U', 'Kh\u00F4ng t\u00ECm th\u1EA5y d\u1EEF li\u1EC7u <b>Th\u00E1ng ' + _0x365665 + '</b> tr\u00EAn Cloud!', 'error');
+            } });
         }
         else {
             GM_deleteValue('tgdd_custom_report_month');
@@ -4476,12 +4540,14 @@ window.__AutoBIRun67 = (function () {
                     UI.showToast('\uD83D\uDCC5 \u0110ang ch\u1ECDn th\u00E1ng CRM: ' + _0x33dd5f + '...');
                     _0x7d0bdf.value = _0x33dd5f;
                     _0x7d0bdf.dispatchEvent(new Event('change', { bubbles: true }));
-                    if (typeof GetArea === 'function') {
+                    /* V16.2.8: hàm của trang CRM nằm ở unsafeWindow (Tampermonkey chạy tách biệt) */
+                    { const getArea = (typeof unsafeWindow !== 'undefined' && unsafeWindow.GetArea) || (typeof GetArea === 'function' ? GetArea : null);
+                    if (typeof getArea === 'function') {
                         try {
-                            GetArea();
+                            getArea();
                         }
                         catch (_0x26404d) { }
-                    }
+                    } }
                     setTimeout(_0x5ce9b6, 1500);
                     return;
                 }
@@ -4553,12 +4619,13 @@ window.__AutoBIRun67 = (function () {
                     UI.showToast('\uD83D\uDCC5 \u0110ang ch\u1ECDn th\u00E1ng CRM: ' + _0x394406 + '...');
                     _0x3a0ba0.value = _0x394406;
                     _0x3a0ba0.dispatchEvent(new Event('change', { bubbles: true }));
-                    if (typeof GetArea === 'function') {
+                    { const getArea = (typeof unsafeWindow !== 'undefined' && unsafeWindow.GetArea) || (typeof GetArea === 'function' ? GetArea : null);
+                    if (typeof getArea === 'function') {
                         try {
-                            GetArea();
+                            getArea();
                         }
                         catch (_0x1547f0) { }
-                    }
+                    } }
                     setTimeout(_0x2857eb, 1500);
                     return;
                 }
@@ -4712,7 +4779,7 @@ window.__AutoBIRun67 = (function () {
                 }
             }
         } return _0x4c02e2; } };
-    const UI = { openTargetCalculatorModal: _0x336e8c => { const _0x456335 = document.querySelectorAll('#tbl-staff-body tr.staff-row'); let _0x3401b2 = []; _0x456335.forEach(_0x46c106 => { const _0x8f171c = (_0x46c106.querySelector('.st-name')?.['value']).trim(); const _0x280fb2 = _0x46c106.querySelector('.st-shop')?.['value'] || '1'; const _0x18b8fc = (_0x46c106.querySelector('.st-rate')?.['value']).trim(); if (_0x8f171c) {
+    const UI = { openTargetCalculatorModal: _0x336e8c => { const _0x456335 = document.querySelectorAll('#tbl-staff-body tr.staff-row'); let _0x3401b2 = []; _0x456335.forEach(_0x46c106 => { const _0x8f171c = (_0x46c106.querySelector('.st-name')?.['value'] ?? '').trim(); const _0x280fb2 = _0x46c106.querySelector('.st-shop')?.['value'] || '1'; const _0x18b8fc = (_0x46c106.querySelector('.st-rate')?.['value'] ?? '').trim(); if (_0x8f171c) {
             _0x3401b2.push({ name: _0x8f171c, shopIdx: _0x280fb2, rate: _0x18b8fc });
         } }); if (_0x3401b2.length === 0) {
             alert('\u26A0\uFE0F Ch\u01B0a c\u00F3 nh\u00E2n vi\u00EAn n\u00E0o trong b\u1EA3ng Khai b\u00E1o! Vui l\u00F2ng th\u00EAm nh\u00E2n vi\u00EAn \u1EDF B\u1EA3ng 3 tr\u01B0\u1EDBc khi t\u00EDnh to\u00E1n.');
@@ -4729,7 +4796,7 @@ window.__AutoBIRun67 = (function () {
         else {
             _0x51d9e2++;
         } }); const _0x518a40 = Math.max(0, 100 - _0x24e116); const _0x53b7dc = _0x51d9e2 > 0 ? _0x518a40 / _0x51d9e2 : 0; const _0x239c67 = _0x24e116 + _0x53b7dc * _0x51d9e2; _0x34e4cd.innerText = Math.round(_0x239c67) + '%'; _0x34e4cd.style.color = Math.round(_0x239c67) === 100 ? '#10b981' : '#ef4444'; _0x3e3c90.innerText = _0x53b7dc.toFixed(1) + '% (' + _0x51d9e2 + ' b\u1EA1n)'; let _0x483150 = ''; _0x280dc8.forEach((_0x1ea95e, _0x5f24e5) => { const _0x58d2e9 = document.querySelector('.calc-rate-inp[data-name="' + _0x1ea95e.name + '"]'); const _0x45e6e8 = _0x58d2e9 ? _0x58d2e9.value : _0x1ea95e.rate || ''; const _0x31d555 = _0x45e6e8 !== '' && parseFloat(_0x45e6e8) > 0; const _0x54fbf6 = _0x31d555 ? parseFloat(_0x45e6e8) : _0x53b7dc; const _0x57245c = _0x54fbf6 / 100 * _0x5ba0a9; _0x483150 += '\n                        <tr>\n                            <td style="text-align:center; font-weight:bold; color:#64748b;">' + (_0x5f24e5 + 1) + '</td>\n                            <td style="text-align:left; font-weight:bold; color:#1e293b; padding-left:10px;">' + _0x1ea95e.name + '</td>\n                            <td style="text-align:center; color:#0284c7; font-weight:bold; background:#f0f9ff;">' + _0x4da4f4.toFixed(1) + '%</td>\n                            <td style="text-align:center; color:#0284c7; font-weight:bold; background:#f0f9ff;">' + _0x48fbc5.toFixed(1) + '</td>\n                            <td style="padding: 4px;">\n                                <input type="number" class="calc-rate-inp" data-name="' + _0x1ea95e.name + '" value="' + _0x45e6e8 + '" placeholder="Auto" min="0" max="100" style="width:100%; padding:6px; border:1.5px solid #cbd5e1; border-radius:6px; text-align:center; font-weight:bold; color:#d97706; background:#fff; outline:none; box-sizing:border-box;">\n                            </td>\n                            <td style="text-align:center; font-weight:900; color:#15803d; background:#f0fdf4; font-size:13.5px;">\n                                ' + _0x57245c.toFixed(1) + ' <span style="font-size:10.5px; font-weight:normal; color:#64748b;">(' + _0x54fbf6.toFixed(1) + '%)</span>\n                            </td>\n                        </tr>\n                    '; }); _0x3718f2.innerHTML = _0x483150; _0x3718f2.querySelectorAll('.calc-rate-inp').forEach(_0x19eedc => { _0x19eedc.addEventListener('input', () => { const _0x1d0d84 = _0x19eedc.getAttribute('data-name'); const _0x3b9bcb = _0x3401b2.find(_0x2e5a54 => _0x2e5a54.name === _0x1d0d84); if (_0x3b9bcb)
-            _0x3b9bcb.rate = _0x19eedc.value.trim(); _0x51141c(); }); }); }; _0x1c64ac.onchange = _0x51141c; _0x36f414.oninput = _0x51141c; _0x51141c(); const _0x4d9b90 = () => _0x1dfa67.remove(); document.getElementById('btn-close-calc-modal').onclick = _0x4d9b90; document.getElementById('btn-calc-cancel').onclick = _0x4d9b90; document.getElementById('btn-calc-apply').onclick = () => { const _0x5c9bb1 = _0x1c64ac.value; const _0x168ad8 = _0x3401b2.filter(_0xf94b09 => _0xf94b09.shopIdx === _0x5c9bb1); let _0x2cd047 = 0; _0x168ad8.forEach(_0x1fc5fc => { const _0x48cdb6 = document.querySelector('.calc-rate-inp[data-name="' + _0x1fc5fc.name + '"]'); const _0x1a6adc = _0x48cdb6 ? _0x48cdb6.value.trim() : ''; const _0x217df2 = document.querySelectorAll('#tbl-staff-body tr.staff-row'); _0x217df2.forEach(_0x1ff942 => { const _0x17a03c = (_0x1ff942.querySelector('.st-name')?.['value']).trim(); const _0x1eb5c9 = _0x1ff942.querySelector('.st-shop')?.['value']; if (_0x17a03c === _0x1fc5fc.name && _0x1eb5c9 === _0x5c9bb1) {
+            _0x3b9bcb.rate = _0x19eedc.value.trim(); _0x51141c(); }); }); }; _0x1c64ac.onchange = _0x51141c; _0x36f414.oninput = _0x51141c; _0x51141c(); const _0x4d9b90 = () => _0x1dfa67.remove(); document.getElementById('btn-close-calc-modal').onclick = _0x4d9b90; document.getElementById('btn-calc-cancel').onclick = _0x4d9b90; document.getElementById('btn-calc-apply').onclick = () => { const _0x5c9bb1 = _0x1c64ac.value; const _0x168ad8 = _0x3401b2.filter(_0xf94b09 => _0xf94b09.shopIdx === _0x5c9bb1); let _0x2cd047 = 0; _0x168ad8.forEach(_0x1fc5fc => { const _0x48cdb6 = document.querySelector('.calc-rate-inp[data-name="' + _0x1fc5fc.name + '"]'); const _0x1a6adc = _0x48cdb6 ? _0x48cdb6.value.trim() : ''; const _0x217df2 = document.querySelectorAll('#tbl-staff-body tr.staff-row'); _0x217df2.forEach(_0x1ff942 => { const _0x17a03c = (_0x1ff942.querySelector('.st-name')?.['value'] ?? '').trim(); const _0x1eb5c9 = _0x1ff942.querySelector('.st-shop')?.['value']; if (_0x17a03c === _0x1fc5fc.name && _0x1eb5c9 === _0x5c9bb1) {
             const _0x4a7ef1 = _0x1ff942.querySelector('.st-rate');
             if (_0x4a7ef1) {
                 _0x4a7ef1.value = _0x1a6adc;
@@ -4805,7 +4872,7 @@ window.__AutoBIRun67 = (function () {
             } };
             document.getElementById('btn-menu-rerun-logic').onclick = () => { _0x182dd8(); UI.createReportSelectModal(); document.getElementById(CONSTANTS.DOM_IDS.SELECT_MODAL).style.display = 'flex'; document.body.classList.add('tgdd-body-lock'); };
         }  }, createAppElement: (_0x2d9f81, _0x4fa931 = false) => { const _0x741a84 = document.createElement('div'); _0x741a84.className = 'tgdd-app-item'; if (_0x4fa931)
-            _0x741a84.classList.add('is-pinned-sidebar'); let _0x16ef53 = JSON.parse(GM_getValue(CONSTANTS.KEYS.PINNED_TOOLS, '[]')); let _0x1190f6 = _0x2d9f81.id ? _0x16ef53.includes(_0x2d9f81.id) : false; let _0x9931c1 = !_0x4fa931 && _0x1190f6 ? '<div class="pinned-badge">\uD83D\uDCCC</div>' : ''; _0x741a84.innerHTML = '<div class="tgdd-app-icon" style="background-color:' + (_0x2d9f81.bgColor || '#999') + '">' + (_0x2d9f81.icon || '?') + _0x9931c1 + '</div><div class="tgdd-app-name">' + _0x2d9f81.name + '</div>'; _0x741a84.onclick = () => { if (_0x2d9f81.action)
+            _0x741a84.classList.add('is-pinned-sidebar'); let _0x16ef53 = window.__AutoBIJson(GM_getValue(CONSTANTS.KEYS.PINNED_TOOLS, '[]'), '[]'); let _0x1190f6 = _0x2d9f81.id ? _0x16ef53.includes(_0x2d9f81.id) : false; let _0x9931c1 = !_0x4fa931 && _0x1190f6 ? '<div class="pinned-badge">\uD83D\uDCCC</div>' : ''; _0x741a84.innerHTML = '<div class="tgdd-app-icon" style="background-color:' + (_0x2d9f81.bgColor || '#999') + '">' + (_0x2d9f81.icon || '?') + _0x9931c1 + '</div><div class="tgdd-app-name">' + _0x2d9f81.name + '</div>'; _0x741a84.onclick = () => { if (_0x2d9f81.action)
             _0x2d9f81.action(); }; if (!_0x4fa931 && _0x2d9f81.id) {
             let _0x1daf15;
             const _0x5ee9c6 = (_0x583807, _0x21eaf7, _0x2c0942) => { _0x583807.preventDefault(); UI.showContextMenu(_0x21eaf7, _0x2c0942, _0x2d9f81); };
@@ -4814,7 +4881,7 @@ window.__AutoBIRun67 = (function () {
             _0x741a84.addEventListener('touchend', () => clearTimeout(_0x1daf15));
             _0x741a84.addEventListener('touchmove', () => clearTimeout(_0x1daf15));
         } return _0x741a84; }, showContextMenu: (_0x23d843, _0x2f467b, _0x11bb3c) => { let _0x475b3e = document.getElementById('tgdd-context-menu'); if (_0x475b3e)
-            _0x475b3e.remove(); let _0x4000e9 = JSON.parse(GM_getValue(CONSTANTS.KEYS.PINNED_TOOLS, '[]')); let _0x5b1bc0 = _0x4000e9.includes(_0x11bb3c.id); let _0x3a0859 = document.createElement('div'); _0x3a0859.id = 'tgdd-context-menu'; _0x3a0859.innerHTML = '<div class="ctx-item">' + (_0x5b1bc0 ? '\u274C B\u1ECF ghim ti\u1EC7n \u00EDch' : '\uD83D\uDCCC Ghim ra Menu (Max 4)') + '</div>'; _0x3a0859.style.left = _0x23d843 + 'px'; _0x3a0859.style.top = _0x2f467b + 'px'; document.body.appendChild(_0x3a0859); _0x3a0859.onclick = () => { if (_0x5b1bc0) {
+            _0x475b3e.remove(); let _0x4000e9 = window.__AutoBIJson(GM_getValue(CONSTANTS.KEYS.PINNED_TOOLS, '[]'), '[]'); let _0x5b1bc0 = _0x4000e9.includes(_0x11bb3c.id); let _0x3a0859 = document.createElement('div'); _0x3a0859.id = 'tgdd-context-menu'; _0x3a0859.innerHTML = '<div class="ctx-item">' + (_0x5b1bc0 ? '\u274C B\u1ECF ghim ti\u1EC7n \u00EDch' : '\uD83D\uDCCC Ghim ra Menu (Max 4)') + '</div>'; _0x3a0859.style.left = _0x23d843 + 'px'; _0x3a0859.style.top = _0x2f467b + 'px'; document.body.appendChild(_0x3a0859); _0x3a0859.onclick = () => { if (_0x5b1bc0) {
             _0x4000e9 = _0x4000e9.filter(_0x238b01 => _0x238b01 !== _0x11bb3c.id);
             UI.showToast('\u2705 \u0110\u00E3 b\u1ECF ghim: ' + _0x11bb3c.name);
         }
@@ -4830,7 +4897,7 @@ window.__AutoBIRun67 = (function () {
             }
         } GM_setValue(CONSTANTS.KEYS.PINNED_TOOLS, JSON.stringify(_0x4000e9)); _0x3a0859.remove(); UI.renderPinnedTools(); UI.renderToolsGrid(); }; setTimeout(() => { document.addEventListener('click', function _0xed512a() { let _0x32f388 = document.getElementById('tgdd-context-menu'); if (_0x32f388)
             _0x32f388.remove(); document.removeEventListener('click', _0xed512a); }); }, 100); }, renderPinnedTools: () => { const _0x1300e5 = document.querySelectorAll('.tgdd-pinned-container'); if (_0x1300e5.length === 0)
-            return; let _0x1c3875 = JSON.parse(GM_getValue(CONSTANTS.KEYS.PINNED_TOOLS, '[]')); _0x1300e5.forEach(_0x30fc2d => { if (_0x1c3875.length === 0) {
+            return; let _0x1c3875 = window.__AutoBIJson(GM_getValue(CONSTANTS.KEYS.PINNED_TOOLS, '[]'), '[]'); _0x1300e5.forEach(_0x30fc2d => { if (_0x1c3875.length === 0) {
             _0x30fc2d.innerHTML = '';
             _0x30fc2d.style.display = 'none';
             return;
@@ -5219,9 +5286,9 @@ window.__AutoBIRun67 = (function () {
             document.body.appendChild(_0x2aa6dd);
         } let _0x469bec = ''; if (AUTH_STATE.userName && AUTH_STATE.userName.includes('38967')) {
             _0x469bec = '<div class="tgdd-chk-group" style="background: #fff0f0; border-color: #ffcccc;"><input type="checkbox" id="chk-test"><label for="chk-test" style="color: #d63031;">\uD83D\uDEE0 B\u00E1o c\u00E1o Test (Admin)</label></div>';
-        } const _0x29b045 = new Date(); const _0x564a36 = _0x29b045.getMonth() + 1; const _0x4c4ee8 = _0x29b045.getFullYear(); let _0x441708 = '<option value="current" selected>\u26A1 Th\u00E1ng hi\u1EC7n t\u1EA1i (T\u1EF1 \u0111\u1ED9ng)</option>'; /* V16.2.11: ô Tháng báo cáo chỉ còn Tháng hiện tại + tháng trước */ for (let _0x28fecb = (_0x564a36 === 1 ? 12 : _0x564a36 - 1), _0xstop131 = 0; _0xstop131 < 1; _0xstop131++) { const _0x4c4ee8b = _0x564a36 === 1 ? _0x4c4ee8 - 1 : _0x4c4ee8;
+        } const _0x29b045 = new Date(); const _0x564a36 = _0x29b045.getMonth() + 1; const _0x4c4ee8 = _0x29b045.getFullYear(); let _0x441708 = '<option value="current" selected>\u26A1 Th\u00E1ng hi\u1EC7n t\u1EA1i (T\u1EF1 \u0111\u1ED9ng)</option>'; for (let _0x28fecb = _0x564a36 - 1; _0x28fecb >= 1; _0x28fecb--) {
             const _0x3bcd6b = String(_0x28fecb).padStart(2, '0');
-            _0x441708 += '<option value="' + _0x3bcd6b + '/' + _0x4c4ee8b + '">\uD83D\uDCC5 Th\u00E1ng ' + _0x3bcd6b + '/' + _0x4c4ee8b + '</option>';
+            _0x441708 += '<option value="' + _0x3bcd6b + '/' + _0x4c4ee8 + '">\uD83D\uDCC5 Th\u00E1ng ' + _0x3bcd6b + '/' + _0x4c4ee8 + '</option>';
         } _0x2aa6dd.innerHTML = '\n                <div class="tgdd-select-content" style="padding:0; overflow:hidden;">\n                    <div style="display:flex; background:#f4f6f8; border-bottom:1px solid #e2e8f0;">\n                        <div id="md-tab-auto" style="flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; background:#fff; color:#007bff; border-bottom:3px solid #007bff;">\uD83E\uDD16 CH\u1EA0Y B\u00C1O C\u00C1O</div>\n                        <div id="md-tab-excel" style="flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; color:#64748b; border-bottom:3px solid transparent;">\uD83D\uDCCA NH\u1EACP EXCEL</div>\n                    </div>\n\n                    <!-- M\u1EB6T 1: CH\u1EA0Y B\u00C1O C\u00C1O AUTO -->\n                    <div id="md-view-auto" style="padding:20px; display:block;">\n\n                        <!-- DROPDOWN CH\u1ECCN TH\u00C1NG B\u00C1O C\u00C1O -->\n                        <div style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; background: #f8fafc; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #e2e8f0;">\n                            <span style="font-size: 12.5px; font-weight: bold; color: #334155;">Th\u00E1ng b\u00E1o c\u00E1o:</span>\n                            <select id="sel-report-month" style="padding: 5px 8px; border-radius: 6px; border: 1.5px solid #007bff; font-weight: bold; color: #007bff; background: #fff; outline: none; cursor: pointer; font-size: 12px;">\n                                ' + _0x441708 + '\n                            </select>\n                        </div>\n\n                        <div class="tgdd-chk-group" id="grp-chk-all" style="background: #e6f2ff; border-color: #b8daff; transition: opacity 0.2s;">\n                            <input type="checkbox" id="chk-all-save">\n                            <label for="chk-all-save" style="color: #0056b3; font-weight: 900;">\uD83D\uDD25 B\u00E1o c\u00E1o ALL & L\u01B0u Data</label>\n                        </div>\n                        <div class="tgdd-chk-group">\n                            <input type="checkbox" id="chk-rev-thidua" checked>\n                            <label for="chk-rev-thidua" style="font-weight:bold; color:#007bff;">\uD83D\uDCC8 B\u00E1o c\u00E1o L\u0169y K\u1EBF</label>\n                        </div>\n                        <div class="tgdd-chk-group" id="grp-chk-fast-realtime" style="background:#fff7ed; border-color:#fdba74;">\n                            <input type="checkbox" id="chk-fast-realtime">\n                            <label for="chk-fast-realtime" style="font-weight:900; color:#ea580c;">\u26A1 B\u00E1o c\u00E1o Realtime</label>\n                        </div>\n                        <div class="tgdd-chk-group">\n                            <input type="checkbox" id="chk-crm">\n                            <label for="chk-crm" style="font-weight:bold;">\uD83C\uDF1F B\u00E1o c\u00E1o Ph\u1EE5c v\u1EE5 (CRM)</label>\n                        </div>\n\n                        <!-- \u26A1 T\u00D9Y CH\u1ECCN M\u1EDAI: XEM B\u00C1O C\u00C1O G\u1EA6N NH\u1EA4T -->\n                        <div class="tgdd-chk-group" id="grp-chk-last-run" style="background: #f0fdf4; border-color: #bbf7d0;">\n                            <input type="checkbox" id="chk-last-run">\n                            <label for="chk-last-run" style="color: #15803d; font-weight: 900;">\u26A1 Xem b\u00E1o c\u00E1o g\u1EA7n nh\u1EA5t</label>\n                        </div>\n\n                        ' + _0x469bec + '\n\n                        <div class="tgdd-select-btn-row">\n                            <button class="tgdd-btn-cancel btn-close-modal">\u0110\u00F3ng</button>\n                            <button class="tgdd-btn-run" id="btn-sel-run">B\u1EAFt \u0110\u1EA7u Ch\u1EA1y</button>\n                        </div>\n                    </div>\n\n                    <!-- M\u1EB6T 2: N\u1EA0P FILE EXCEL -->\n                    <div id="md-view-excel" style="padding:20px; display:none; background:#fafafa;">\n                        <div style="border: 2px dashed #3b82f6; padding: 15px; border-radius: 8px; margin-bottom: 10px; background: #eff6ff; text-align:center; position:relative;">\n                            <input type="file" id="md-file-now" accept=".xlsx, .xls, .csv" style="opacity:0; position:absolute; top:0; left:0; width:100%; height:100%; cursor:pointer;">\n                            <div style="font-size:24px; margin-bottom:5px;">\uD83D\uDCC8</div>\n                            <div style="font-weight:bold; color:#3b82f6; font-size:13px;">File Th\u00E1ng N\u00C0Y</div>\n                            <div id="md-name-now" style="font-size:11px; color:#10b981; margin-top:5px; font-weight:bold;">Ch\u01B0a ch\u1ECDn file</div>\n                        </div>\n\n                        <div style="border: 2px dashed #8b5cf6; padding: 15px; border-radius: 8px; margin-bottom: 15px; background: #f5f3ff; text-align:center; position:relative;">\n                            <input type="file" id="md-file-prev" accept=".xlsx, .xls, .csv" style="opacity:0; position:absolute; top:0; left:0; width:100%; height:100%; cursor:pointer;">\n                            <div style="font-size:24px; margin-bottom:5px;">\uD83D\uDCC9</div>\n                            <div style="font-weight:bold; color:#8b5cf6; font-size:13px;">File Th\u00E1ng TR\u01AF\u1EDAC</div>\n                            <div id="md-name-prev" style="font-size:11px; color:#10b981; margin-top:5px; font-weight:bold;">Ch\u01B0a ch\u1ECDn file</div>\n                        </div>\n\n                        <div class="tgdd-select-btn-row">\n                            <button class="tgdd-btn-cancel btn-close-modal">\u0110\u00F3ng</button>\n                            <button id="btn-fast-process" style="flex:1; padding:10px; border:none; background:linear-gradient(135deg, #10b981, #059669); color:white; font-weight:bold; border-radius:8px; cursor:pointer;">XEM B\u00C1O C\u00C1O</button>\n                        </div>\n                    </div>\n                </div>\n            '; const _0x25cc35 = document.getElementById('md-tab-auto'); const _0x5ed9ef = document.getElementById('md-tab-excel'); const _0x24403d = document.getElementById('md-view-auto'); const _0x17bf9d = document.getElementById('md-view-excel'); _0x25cc35.onclick = () => { _0x25cc35.style.cssText = 'flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; background:#fff; color:#007bff; border-bottom:3px solid #007bff;'; _0x5ed9ef.style.cssText = 'flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; color:#64748b; border-bottom:3px solid transparent;'; _0x24403d.style.display = 'block'; _0x17bf9d.style.display = 'none'; }; _0x5ed9ef.onclick = () => { _0x5ed9ef.style.cssText = 'flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; background:#fff; color:#007bff; border-bottom:3px solid #007bff;'; _0x25cc35.style.cssText = 'flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; color:#64748b; border-bottom:3px solid transparent;'; _0x17bf9d.style.display = 'block'; _0x24403d.style.display = 'none'; }; const _0x30405e = document.getElementById('chk-all-save'); const _0x124e5b = document.getElementById('grp-chk-all'); const _0xa371d7 = document.getElementById('chk-rev-thidua'); const _0x5d0357 = document.getElementById('chk-crm'); const _0x30f0b0 = document.getElementById('chk-last-run'); const _0xfast43 = document.getElementById('chk-fast-realtime'); const _0x863a4 = document.getElementById('chk-test'); const _0x43d320 = document.getElementById('sel-report-month'); if (_0x43d320) {
             _0x43d320.onchange = _0x35e4fb => { const _0x1a178a = _0x35e4fb.target.value !== 'current'; if (_0x1a178a) {
                 _0x30405e.checked = false;
@@ -6025,7 +6092,7 @@ window.__AutoBIRun67 = (function () {
                     _0xc77438('cfg-target-bi-check', _0x2d25d6.defaultTargetBI !== false);
                     _0xc77438('cfg-use-target-rate', _0x2d25d6.useTargetRate);
                     _0x1811b7('cfg-target-rate', _0x2d25d6.targetRate || '100');
-                    const _0x24f5dd = JSON.parse(GM_getValue('tgdd_user_available_themes', '[{"name":"M\u1EB7c \u0111\u1ECBnh","url":"default"}]'));
+                    const _0x24f5dd = window.__AutoBIJson(GM_getValue('tgdd_user_available_themes', '[{"name":"M\u1EB7c \u0111\u1ECBnh","url":"default"}]'), '[{"name":"M\u1EB7c \u0111\u1ECBnh","url":"default"}]');
                     const _0x2e6790 = GM_getValue('tgdd_active_theme_url', 'default');
                     const _0x2cbd90 = document.getElementById('cfg-active-theme');
                     if (_0x2cbd90) {
@@ -6299,12 +6366,42 @@ window.__AutoBIRun67 = (function () {
                         if (!Array.isArray(list) || !list.some(g => String(g.short || '').trim()))
                             throw new Error('Sheet ch\u01B0a tr\u1EA3 v\u1EC1 danh m\u1EE5c nh\u00F3m h\u00E0ng.');
                         const dmx = Array.from({ length: 5 }, (_, i) => (document.getElementById('cfg-name-' + (i + 1))?.value || _0x29c64e['shop' + (i + 1)] || '').trim().toUpperCase()).some(name => name.startsWith('\u0110'));
+                        /* V16.2.7: Load Nhóm hàng = thay bằng danh sách tháng mới — xóa nhóm không còn trong Sheet, giữ Target nhóm trùng tên, xếp theo thứ tự Sheet */
+                        const gkey = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/\s+/g, ' ').trim();
+                        const wanted = [];
+                        for (const group of list) {
+                            const name = String(group.short || '').trim();
+                            if (name && (dmx || group.channel === 'T') && !wanted.some(w => gkey(w) === gkey(name)))
+                                wanted.push(name);
+                        }
+                        if (!wanted.length)
+                            throw new Error('Sheet ch\u01B0a c\u00F3 nh\u00F3m h\u00E0ng cho k\u00EAnh n\u00E0y \u2014 gi\u1EEF nguy\u00EAn danh s\u00E1ch c\u0169.');
+                        const wantedKeys = new Set(wanted.map(gkey));
+                        const body = document.getElementById('tbl-target-body');
+                        let removed = 0;
+                        Array.from(body.querySelectorAll('.cfg-target-row')).forEach(row => {
+                            if (!wantedKeys.has(gkey(row.cells[1].textContent))) {
+                                row.remove();
+                                removed++;
+                            }
+                        });
                         let added = 0;
-                        for (const group of list)
-                            if ((dmx || group.channel === 'T') && appendSheetGroup70(group.short))
+                        for (const name of wanted)
+                            if (appendSheetGroup70(name))
                                 added++;
-                        configStatus(added ? '\u0110\u00E3 th\u00EAm ' + added + ' nh\u00F3m; gi\u1EEF nguy\u00EAn Target c\u0169. C\u00F3 thay \u0111\u1ED5i ch\u01B0a l\u01B0u.' : 'Danh s\u00E1ch \u0111\u00E3 c\u00F3 \u0111\u1EE7 nh\u00F3m; Target v\u00E0 d\u1EEF li\u1EC7u \u0111ang nh\u1EADp \u0111\u01B0\u1EE3c gi\u1EEF nguy\u00EAn.');
-                        UI.showToast('\u2705 \u0110\u00E3 t\u1EA3i nh\u00F3m h\u00E0ng: th\u00EAm ' + added + ' nh\u00F3m, gi\u1EEF nguy\u00EAn Target c\u0169.');
+                        const rows = Array.from(body.querySelectorAll('.cfg-target-row'));
+                        for (const name of wanted) {
+                            const row = rows.find(r => gkey(r.cells[1].textContent) === gkey(name));
+                            if (row)
+                                body.appendChild(row);
+                        }
+                        _0x4dc606();
+                        if (added || removed)
+                            _0x144116();
+                        const kept = wanted.length - added;
+                        const summary = 'th\u00EAm ' + added + ', x\u00F3a ' + removed + ' nh\u00F3m c\u0169, gi\u1EEF ' + kept + ' nh\u00F3m (gi\u1EEF Target).';
+                        configStatus(added || removed ? '\u0110\u00E3 c\u1EADp nh\u1EADt nh\u00F3m h\u00E0ng: ' + summary + ' C\u00F3 thay \u0111\u1ED5i ch\u01B0a l\u01B0u \u2014 b\u1EA5m L\u01AFU C\u1EA4U H\u00CCNH.' : 'Danh s\u00E1ch \u0111\u00E3 \u0111\u00FAng th\u00E1ng m\u1EDBi; Target \u0111\u01B0\u1EE3c gi\u1EEF nguy\u00EAn.');
+                        UI.showToast('\u2705 Nh\u00F3m h\u00E0ng: ' + summary);
                     }
                     catch (error) {
                         configStatus('\u26A0\uFE0F ' + error.message);
@@ -6365,7 +6462,7 @@ window.__AutoBIRun67 = (function () {
                     let _0x1ebbb8 = false;
                     if (_0x5c932d !== _0x3d64ff) {
                         GM_setValue('tgdd_active_theme_url', _0x5c932d);
-                        const _0x547797 = JSON.parse(GM_getValue('tgdd_cached_theme_sources', '{}'));
+                        const _0x547797 = window.__AutoBIJson(GM_getValue('tgdd_cached_theme_sources', '{}'), '{}');
                         const _0xe4712f = _0x5c932d === 'default' ? '' : _0x547797[_0x5c932d] || '';
                         GM_setValue('tgdd_active_theme_code', _0xe4712f);
                         _0x1ebbb8 = true;
@@ -6385,15 +6482,15 @@ window.__AutoBIRun67 = (function () {
                     const _0xb2262e = [];
                     document.querySelectorAll('.staff-row').forEach(_0x292834 => {
                         _0xb2262e.push({
-                            name: (_0x292834.querySelector('.st-name')?.['value']).trim() || '',
+                            name: (_0x292834.querySelector('.st-name')?.['value'] ?? '').trim() || '',
                             shopIdx: _0x292834.querySelector('.st-shop')?.['value'] || '1',
-                            rate: (_0x292834.querySelector('.st-rate')?.['value']).trim() || ''
+                            rate: (_0x292834.querySelector('.st-rate')?.['value'] ?? '').trim() || ''
                         });
                     });
                     const _0x5cbffa = [];
                     document.querySelectorAll('.line-group-row').forEach(_0xee3b71 => {
-                        const _0x4793ac = (_0xee3b71.querySelector('.lg-name')?.['value']).trim();
-                        const _0x59af03 = (_0xee3b71.querySelector('.lg-id')?.['value']).trim();
+                        const _0x4793ac = (_0xee3b71.querySelector('.lg-name')?.['value'] ?? '').trim();
+                        const _0x59af03 = (_0xee3b71.querySelector('.lg-id')?.['value'] ?? '').trim();
                         if (_0x4793ac || _0x59af03)
                             _0x5cbffa.push({
                                 name: _0x4793ac,
@@ -6482,18 +6579,8 @@ window.__AutoBIRun67 = (function () {
                         groupMaxPoints: parseInt(_0x560c0c('cfg-group-max-points')) || 3,
                         serviceMinRate: parseFloat(_0x560c0c('cfg-service-min-rate')) || 10,
                         serviceMaxPoints: parseFloat(_0x560c0c('cfg-service-max-points')) || 20,
-                        bonusPointsList: JSON.parse(GM_getValue('tgdd_bonus_points_list', '[]'))
+                        bonusPointsList: window.__AutoBIJson(GM_getValue('tgdd_bonus_points_list', '[]'), '[]')
                     };
-                    const _saveMonth129 = parseInt(document.getElementById('cfg-save-month129')?.value || '0', 10) || 0;
-                    if (_saveMonth129) { /* V16.2.10: lưu nhóm hàng cho tháng cũ — chỉ lưu bảng tháng đó lên Cloud, không đổi cấu hình tháng hiện tại */
-                        if (!_0x18eaf6.length) throw new Error('Ch\u01B0a c\u00F3 nh\u00F3m h\u00E0ng n\u00E0o \u0111\u1EC3 l\u01B0u cho Th\u00E1ng ' + _saveMonth129 + '.');
-                        configStatus('\u0110ang l\u01B0u nh\u00F3m h\u00E0ng cho Th\u00E1ng ' + _saveMonth129 + '\u2026');
-                        const monthlyOld = await awaitConfig(done => DATA.saveMonthlyGroupConfig(_0xa248d9, _0x18eaf6, done, _saveMonth129), 'L\u01B0u nh\u00F3m h\u00E0ng Th\u00E1ng ' + _saveMonth129);
-                        if (monthlyOld?.status !== 'success') throw new Error('Ch\u01B0a l\u01B0u \u0111\u01B0\u1EE3c nh\u00F3m h\u00E0ng Th\u00E1ng ' + _saveMonth129 + ' l\u00EAn Cloud.');
-                        _0x1001aa('\u2713 \u0110\u00C3 L\u01AFU ' + _0x18eaf6.length + ' NH\u00D3M CHO TH\u00C1NG ' + _saveMonth129);
-                        UI.showToast('\u2705 \u0110\u00E3 l\u01B0u ' + _0x18eaf6.length + ' nh\u00F3m h\u00E0ng cho Th\u00E1ng ' + _saveMonth129 + '. C\u1EA5u h\u00ECnh th\u00E1ng hi\u1EC7n t\u1EA1i gi\u1EEF nguy\u00EAn.', 6000);
-                        return;
-                    }
                     UTILS.savePersistentConfig(_0xa248d9);
                     configStatus('\u0110ang l\u01B0u c\u1EA5u h\u00ECnh\u2026');
                     const cloud = await awaitConfig(done => DATA.saveCloudConfig(_0xa248d9, done), 'L\u01B0u c\u1EA5u h\u00ECnh');
@@ -6532,7 +6619,7 @@ window.__AutoBIRun67 = (function () {
             _0x3debd = document.createElement('div');
             _0x3debd.id = 'tgdd-bonus-modal';
             document.body.appendChild(_0x3debd);
-        } _0x3debd.style.cssText = '\n                display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;\n                background: radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.25), transparent 50%), radial-gradient(circle at 85% 30%, rgba(236, 72, 153, 0.25), transparent 50%), rgba(15, 23, 42, 0.8) !important;\n                backdrop-filter: blur(12px) !important; -webkit-backdrop-filter: blur(12px) !important;\n                z-index: 70000; justify-content: center; align-items: center; padding: 20px; overflow-y: auto; animation: fadeIn 0.3s ease-out;\n            '; const _0x3c6409 = UTILS.getPersistentConfig(); const _0x4b5d6e = JSON.parse(GM_getValue('tgdd_bonus_points_list', '[]')); _0x3debd.innerHTML = '\n                <div class="tgdd-modal-content" style="background: white; border-radius: 20px; width: 100%; max-width: 480px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); transform: scale(0.9); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; position: relative;">\n                    <button class="tgdd-btn-close" id="btn-bonus-close">\u00D7</button>\n                    <div class="tgdd-modal-header" style="border-bottom: 2px solid #ff9f43; padding-bottom: 10px; margin-bottom: 15px; font-weight: 900; font-size: 18px; color: #333; text-align: center;">\uD83D\uDCDD B\u1ED4 SUNG \u0110I\u1EC2M NH\u00C2N VI\u00CAN</div>\n\n                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">\n                        <span style="font-size:12px; font-weight:bold; color:#666;">Danh s\u00E1ch \u0111i\u1EC3m s\u1ED1 b\u1ED5 sung</span>\n                        <button id="btn-bonus-add-row" class="tgdd-btn-add" style="margin:0; background:#28a745; color:white; font-weight:bold;">+ Th\u00EAm nh\u00E2n vi\u00EAn</button>\n                    </div>\n\n                    <div style="max-height: 250px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px; background:#fff;">\n                        <table class="tgdd-input-table" id="tbl-bonus-points" style="margin-bottom: 0;">\n                            <thead>\n                                <tr>\n                                    <th style="width: 150px;">Nh\u00E2n vi\u00EAn</th>\n                                    <th>L\u00FD do</th>\n                                    <th style="width: 75px;">\u0110i\u1EC3m s\u1ED1</th>\n                                    <th style="width: 35px;">X\u00F3a</th>\n                                </tr>\n                            </thead>\n                            <tbody id="tbl-bonus-body"></tbody>\n                        </table>\n                    </div>\n\n                    <div style="display:flex; gap:10px;">\n                        <button id="btn-bonus-cancel" class="tgdd-btn-cancel" style="flex:1; padding:12px; font-weight:bold; border-radius:8px; border:none; background:#ccc; color:white; cursor:pointer;">H\u1EE6Y</button>\n                        <button id="btn-bonus-save" class="tgdd-btn-run" style="flex:1; padding:12px; font-weight:bold; border-radius:8px; border:none; background:#28a745; color:white; cursor:pointer;">L\u01AFU \u0110I\u1EC2M S\u1ED0</button>\n                    </div>\n                </div>\n            '; _0x3debd.style.display = 'flex'; document.body.classList.add('tgdd-body-lock'); const _0xd3051a = (_0x43b569 = '', _0x113694 = '', _0x72c7cc = '') => { const _0x27b553 = document.getElementById('tbl-bonus-body'); if (!_0x27b553)
+        } _0x3debd.style.cssText = '\n                display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;\n                background: radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.25), transparent 50%), radial-gradient(circle at 85% 30%, rgba(236, 72, 153, 0.25), transparent 50%), rgba(15, 23, 42, 0.8) !important;\n                backdrop-filter: blur(12px) !important; -webkit-backdrop-filter: blur(12px) !important;\n                z-index: 70000; justify-content: center; align-items: center; padding: 20px; overflow-y: auto; animation: fadeIn 0.3s ease-out;\n            '; const _0x3c6409 = UTILS.getPersistentConfig(); const _0x4b5d6e = window.__AutoBIJson(GM_getValue('tgdd_bonus_points_list', '[]'), '[]'); _0x3debd.innerHTML = '\n                <div class="tgdd-modal-content" style="background: white; border-radius: 20px; width: 100%; max-width: 480px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); transform: scale(0.9); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; position: relative;">\n                    <button class="tgdd-btn-close" id="btn-bonus-close">\u00D7</button>\n                    <div class="tgdd-modal-header" style="border-bottom: 2px solid #ff9f43; padding-bottom: 10px; margin-bottom: 15px; font-weight: 900; font-size: 18px; color: #333; text-align: center;">\uD83D\uDCDD B\u1ED4 SUNG \u0110I\u1EC2M NH\u00C2N VI\u00CAN</div>\n\n                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">\n                        <span style="font-size:12px; font-weight:bold; color:#666;">Danh s\u00E1ch \u0111i\u1EC3m s\u1ED1 b\u1ED5 sung</span>\n                        <button id="btn-bonus-add-row" class="tgdd-btn-add" style="margin:0; background:#28a745; color:white; font-weight:bold;">+ Th\u00EAm nh\u00E2n vi\u00EAn</button>\n                    </div>\n\n                    <div style="max-height: 250px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px; background:#fff;">\n                        <table class="tgdd-input-table" id="tbl-bonus-points" style="margin-bottom: 0;">\n                            <thead>\n                                <tr>\n                                    <th style="width: 150px;">Nh\u00E2n vi\u00EAn</th>\n                                    <th>L\u00FD do</th>\n                                    <th style="width: 75px;">\u0110i\u1EC3m s\u1ED1</th>\n                                    <th style="width: 35px;">X\u00F3a</th>\n                                </tr>\n                            </thead>\n                            <tbody id="tbl-bonus-body"></tbody>\n                        </table>\n                    </div>\n\n                    <div style="display:flex; gap:10px;">\n                        <button id="btn-bonus-cancel" class="tgdd-btn-cancel" style="flex:1; padding:12px; font-weight:bold; border-radius:8px; border:none; background:#ccc; color:white; cursor:pointer;">H\u1EE6Y</button>\n                        <button id="btn-bonus-save" class="tgdd-btn-run" style="flex:1; padding:12px; font-weight:bold; border-radius:8px; border:none; background:#28a745; color:white; cursor:pointer;">L\u01AFU \u0110I\u1EC2M S\u1ED0</button>\n                    </div>\n                </div>\n            '; _0x3debd.style.display = 'flex'; document.body.classList.add('tgdd-body-lock'); const _0xd3051a = (_0x43b569 = '', _0x113694 = '', _0x72c7cc = '') => { const _0x27b553 = document.getElementById('tbl-bonus-body'); if (!_0x27b553)
             return; const _0xf7bcd7 = document.createElement('tr'); _0xf7bcd7.className = 'bonus-row'; const _0x57a32f = _0x3c6409.staffList || []; const _0x1a8b22 = _0x57a32f.map(_0x35e8af => { const _0x271a2e = _0x35e8af.name === _0x43b569 ? 'selected' : ''; return '<option value="' + _0x35e8af.name + '" ' + _0x271a2e + '>' + _0x35e8af.name + '</option>'; }).join(''); _0xf7bcd7.innerHTML = '\n                    <td>\n                        <select class="bonus-name" style="width:100%; padding:5px; border-radius:4px; border:1px solid #ccc; font-size:12px;">\n                            ' + _0x1a8b22 + '\n                        </select>\n                    </td>\n                    <td><input type="text" class="bonus-reason" value="' + _0x113694 + '" placeholder="VD: T\u0103ng ca t\u1ED1i" style="width:100%; padding:5px; border:1px solid #ccc; border-radius:4px; font-size:12px;"></td>\n                    <td><input type="number" class="bonus-score" value="' + _0x72c7cc + '" placeholder="1" style="width:100%; padding:5px; border:1px solid #ccc; border-radius:4px; font-size:12px; text-align:center; font-weight:bold;"></td>\n                    <td><button class="tgdd-btn-del" style="padding:2px 8px;">X</button></td>\n                '; _0xf7bcd7.querySelector('.tgdd-btn-del').onclick = () => _0xf7bcd7.remove(); _0x27b553.appendChild(_0xf7bcd7); }; document.getElementById('btn-bonus-add-row').onclick = () => _0xd3051a(); if (_0x4b5d6e && _0x4b5d6e.length > 0) {
             _0x4b5d6e.forEach(_0x2eddbf => _0xd3051a(_0x2eddbf.name, _0x2eddbf.reason, _0x2eddbf.points));
         }
@@ -6720,7 +6807,7 @@ window.__AutoBIRun67 = (function () {
             const _0x389651 = (_0x13b9c3[_0x197e7a] || '').trim().toUpperCase();
             if (_0x389651.startsWith('\u0110'))
                 _0x3fc31d = true;
-        } const _0x2d1efc = _0x37b477.filter(_0x3bbb7a => _0x3fc31d ? true : _0x3bbb7a.channel === 'T'); const _0x48ea5b = UTILS.filterActiveGroups(_0x2d1efc, _0x13b9c3).map(_0x55f85e => _0x55f85e.short); const _0x47e81e = JSON.parse(GM_getValue('tgdd_favorite_report_groups', 'null')); if ((!window.tgdd_hidden_report_groups || window.tgdd_hidden_report_groups.length === 0) && _0x47e81e && Array.isArray(_0x47e81e)) {
+        } const _0x2d1efc = _0x37b477.filter(_0x3bbb7a => _0x3fc31d ? true : _0x3bbb7a.channel === 'T'); const _0x48ea5b = UTILS.filterActiveGroups(_0x2d1efc, _0x13b9c3).map(_0x55f85e => _0x55f85e.short); const _0x47e81e = window.__AutoBIJson(GM_getValue('tgdd_favorite_report_groups', 'null'), 'null'); if ((!window.tgdd_hidden_report_groups || window.tgdd_hidden_report_groups.length === 0) && _0x47e81e && Array.isArray(_0x47e81e)) {
             window.tgdd_hidden_report_groups = _0x48ea5b.filter(_0xf12822 => _0xf12822 && !_0x47e81e.includes(_0xf12822));
         } const _0x522dab = _0x450ffb === 'nlnv' && (_0x197e7a === 'overview' || _0x197e7a === 'daily'); let _0x469731 = '<div style="max-height: 48vh; overflow-y: auto; text-align: left; padding-right: 5px;">'; _0x469731 += '<div style="font-weight:bold; color:#007bff; margin-bottom:10px; font-size:12.5px; border-bottom:1px dashed #ddd; padding-bottom:5px;">\u2699\uFE0F T\u00D9Y CH\u1ECCN HI\u1EC2N TH\u1ECA:</div>'; _0x469731 += '<div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px;">'; if (_0x450ffb === 'oneshop') {
             _0x469731 += '\n                        <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:bold; font-size:13px; color:#000;">\n                            <input type="checkbox" id="modal-cb-lk" ' + (_0x17901a ? 'checked' : '') + ' style="width:18px; height:18px; accent-color:#007bff;">\n                            \u1EA8n LK\n                        </label>\n                    ';
@@ -6808,7 +6895,7 @@ window.__AutoBIRun67 = (function () {
         } if (_0x53918e) {
             _0x53918e.onclick = () => { _0x319160.forEach(_0x2c1eba => _0x2c1eba.checked = false); _0x4eb2c4(); };
         } if (_0xf49dc7) {
-            _0xf49dc7.onclick = () => { const _0x209932 = JSON.parse(GM_getValue('tgdd_favorite_report_groups', 'null')); if (_0x209932 && Array.isArray(_0x209932) && _0x209932.length > 0) {
+            _0xf49dc7.onclick = () => { const _0x209932 = window.__AutoBIJson(GM_getValue('tgdd_favorite_report_groups', 'null'), 'null'); if (_0x209932 && Array.isArray(_0x209932) && _0x209932.length > 0) {
                 _0x319160.forEach(_0x60091b => _0x60091b.checked = _0x209932.includes(_0x60091b.value));
                 UI.showToast('\u2764\uFE0F \u0110\u00E3 \u00E1p nhanh danh s\u00E1ch Y\u00EAu Th\u00EDch!');
                 _0x4eb2c4();
@@ -7349,7 +7436,7 @@ window.__AutoBIRun67 = (function () {
                 _0x45b231.innerHTML = _0x45525b;
                 const _0x30c9d8 = _0x45b231.querySelectorAll('.comment-col');
                 let _0x4e1174 = '';
-                _0x30c9d8.forEach(_0x5e74c9 => { const _0x631379 = (_0x5e74c9.querySelector('.comment-header')?.['innerText']).trim(); if (_0xae56cf.includes(_0x631379)) {
+                _0x30c9d8.forEach(_0x5e74c9 => { const _0x631379 = (_0x5e74c9.querySelector('.comment-header')?.['innerText'] ?? '').trim(); if (_0xae56cf.includes(_0x631379)) {
                     const _0x41c40b = _0x5e74c9.querySelector('.comment-body')?.['innerHTML'] || '';
                     _0x4e1174 += _0x3f4f50(_0x41c40b) + '\n';
                 } });
@@ -7749,7 +7836,7 @@ window.__AutoBIRun67 = (function () {
                 if (_0x1f44c7.startsWith('\u0110'))
                     _0x5db70c = true;
             } const _0x45adcc = (_0x1b411c || []).filter(_0x5d726e => _0x5db70c ? true : _0x5d726e.channel === 'T').map(_0x5e22f6 => _0x5e22f6.short); let _0x295381 = []; if (_0x3e00fc.compData && _0x3e00fc.compData.length > 0)
-                _0x295381 = _0x3e00fc.compData.map(_0x4a45aa => _0x4a45aa.group); const _0x1d738f = [...new Set(_0x295381.filter(_0x2e4d82 => _0x45adcc.includes(_0x2e4d82)))]; const _0x532a40 = parseFloat(_0x3e00fc.revPointStep) || 20; const _0x17b826 = parseFloat(_0x3e00fc.revPointValue) || 1; const _0x5d3167 = parseInt(_0x3e00fc.groupMinPoints) || 3; const _0x4fe791 = parseInt(_0x3e00fc.groupMaxPoints) || 3; const _0xd902d8 = parseFloat(_0x3e00fc.serviceMinRate) || 10; const _0x476ed2 = parseFloat(_0x3e00fc.serviceMaxPoints) || 20; const _0x389d32 = JSON.parse(GM_getValue('tgdd_bonus_points_list', '[]')); const _0x45675c = _0x32fe27 => { let _0x21e804 = 0; _0x389d32.forEach(_0x311758 => { if (_0x311758.name === _0x32fe27)
+                _0x295381 = _0x3e00fc.compData.map(_0x4a45aa => _0x4a45aa.group); const _0x1d738f = [...new Set(_0x295381.filter(_0x2e4d82 => _0x45adcc.includes(_0x2e4d82)))]; const _0x532a40 = parseFloat(_0x3e00fc.revPointStep) || 20; const _0x17b826 = parseFloat(_0x3e00fc.revPointValue) || 1; const _0x5d3167 = parseInt(_0x3e00fc.groupMinPoints) || 3; const _0x4fe791 = parseInt(_0x3e00fc.groupMaxPoints) || 3; const _0xd902d8 = parseFloat(_0x3e00fc.serviceMinRate) || 10; const _0x476ed2 = parseFloat(_0x3e00fc.serviceMaxPoints) || 20; const _0x389d32 = window.__AutoBIJson(GM_getValue('tgdd_bonus_points_list', '[]'), '[]'); const _0x45675c = _0x32fe27 => { let _0x21e804 = 0; _0x389d32.forEach(_0x311758 => { if (_0x311758.name === _0x32fe27)
                 _0x21e804 += parseFloat(_0x311758.points) || 0; }); return _0x21e804; }; _0x2afa36.forEach(_0x311003 => { const _0x10bcc6 = _0x36ffe3.filter(_0xf0be0c => _0xf0be0c.shopIdx == _0x311003.id); const _0x3b878a = 'shop' + _0x311003.id; const _0x26d19a = _0x1c337c[_0x3b878a]?.['competition'] || {}; const _0x46f445 = _0x1c337c[_0x3b878a]?.['revenue'] || {}; let _0x205dd1 = _0x51d47b && _0x51d47b.link2 && _0x51d47b.link2[_0x3b878a] ? _0x51d47b.link2[_0x3b878a].t || 0 : 0; if (_0x205dd1 === 0)
                 _0x205dd1 = _0x3e00fc['target' + _0x311003.id] || 0; let _0x2b9900 = _0x4f48c5 ? _0x205dd1 : _0x3e00fc['target' + _0x311003.id] || _0x205dd1; const _0xaa29f8 = _0x10bcc6.filter(_0x5392fa => { const _0x571b07 = parseFloat(_0x5392fa.rate); return !isNaN(_0x571b07) && _0x571b07 > 0; }); const _0x9021b5 = _0x10bcc6.filter(_0x432f82 => { const _0x14cfa0 = parseFloat(_0x432f82.rate); return isNaN(_0x14cfa0) || _0x14cfa0 <= 0; }); let _0xea9d99 = 0; _0xaa29f8.forEach(_0x3cdd5e => { const _0x1147a6 = parseFloat(_0x3cdd5e.rate) || 0; _0xea9d99 += Math.round(_0x2b9900 * _0x1147a6 / 100); }); _0x10bcc6.forEach(_0x4fe591 => { let _0x432e7f = 0; let _0x2918aa = 0; _0x1d738f.forEach(_0x5feada => { let _0x5b407d = _0x26d19a[_0x4fe591.name]?.[_0x5feada] || _0x52d644[_0x4fe591.name]?.[_0x5feada] || 0; const _0x3ab186 = (_0x1b411c || []).find(_0x2fdf58 => _0x2fdf58.short === _0x5feada); const _0x37d0f7 = !!(_0x3ab186 && _0x3ab186.type && (_0x3ab186.type.toLowerCase().includes('doanhthu') || _0x3ab186.type.toLowerCase().includes('ti\u1EC1n'))); let _0xae3d79 = 0; if (_0x51d47b && _0x51d47b.link4_smart && _0x51d47b.link4_smart[_0x5feada] && _0x51d47b.link4_smart[_0x5feada][_0x3b878a]) {
                 _0xae3d79 = _0x51d47b.link4_smart[_0x5feada][_0x3b878a].t || 0;
@@ -8776,7 +8863,7 @@ window.__AutoBIRun67 = (function () {
                     _0x5877d9 += _0x13a141(_0x2d89ee, _0x4d6ac5, 0);
                 }
                 return _0x5877d9;
-            } let _0x22cca4 = ''; let _0x5b1715 = []; const _0x2cbbbf = 'overflow: hidden; white-space: nowrap; text-overflow: ellipsis; display: block;'; const _0x6e9058 = parseFloat(_0x14a060.revPointStep) || 20; const _0x8ca776 = parseFloat(_0x14a060.revPointValue) || 1; const _0x151a87 = parseInt(_0x14a060.groupMinPoints) || 3; const _0x49dd83 = parseInt(_0x14a060.groupMaxPoints) || 3; const _0x3d8c92 = parseFloat(_0x14a060.serviceMinRate) || 10; const _0xcd50c2 = parseFloat(_0x14a060.serviceMaxPoints) || 20; const _0x189bed = JSON.parse(GM_getValue('tgdd_bonus_points_list', '[]')); const _0x43e026 = _0x1e4cf9 => { let _0x1cd705 = 0; _0x189bed.forEach(_0x2a758c => { if (_0x2a758c.name === _0x1e4cf9)
+            } let _0x22cca4 = ''; let _0x5b1715 = []; const _0x2cbbbf = 'overflow: hidden; white-space: nowrap; text-overflow: ellipsis; display: block;'; const _0x6e9058 = parseFloat(_0x14a060.revPointStep) || 20; const _0x8ca776 = parseFloat(_0x14a060.revPointValue) || 1; const _0x151a87 = parseInt(_0x14a060.groupMinPoints) || 3; const _0x49dd83 = parseInt(_0x14a060.groupMaxPoints) || 3; const _0x3d8c92 = parseFloat(_0x14a060.serviceMinRate) || 10; const _0xcd50c2 = parseFloat(_0x14a060.serviceMaxPoints) || 20; const _0x189bed = window.__AutoBIJson(GM_getValue('tgdd_bonus_points_list', '[]'), '[]'); const _0x43e026 = _0x1e4cf9 => { let _0x1cd705 = 0; _0x189bed.forEach(_0x2a758c => { if (_0x2a758c.name === _0x1e4cf9)
                 _0x1cd705 += parseFloat(_0x2a758c.points) || 0; }); return _0x1cd705; }; _0x313790.forEach(_0x417f5a => { const _0xad6da6 = _0x4ece6c.filter(_0xee5dc9 => _0xee5dc9.shopIdx == _0x417f5a.id); const _0x32978f = 'shop' + _0x417f5a.id; const _0x2194ec = _0x4a3af5[_0x32978f]?.['competition'] || {}; const _0x1e9bdb = _0x4a3af5[_0x32978f]?.['revenue'] || {}; const _0x11c06a = _0x4b94fb[_0x32978f] || {}; const _0x49d19a = _0x4a3af5[_0x32978f]?.['crossSell'] || {}; let _0x16c452 = _0x443696 && _0x443696.link2 && _0x443696.link2[_0x32978f] ? _0x443696.link2[_0x32978f].t || 0 : 0; if (_0x16c452 === 0)
                 _0x16c452 = _0x14a060['target' + _0x417f5a.id] || 0; let _0x5932e4 = _0x4a8347 ? _0x16c452 : _0x14a060['target' + _0x417f5a.id] || _0x16c452; const _0x56ff96 = _0xad6da6.filter(_0x966fe3 => { const _0x497bd8 = parseFloat(_0x966fe3.rate); return !isNaN(_0x497bd8) && _0x497bd8 > 0; }); const _0x1b2a27 = _0xad6da6.filter(_0x2855ab => { const _0x17c551 = parseFloat(_0x2855ab.rate); return isNaN(_0x17c551) || _0x17c551 <= 0; }); let _0xfa5844 = 0; _0x56ff96.forEach(_0x2c5a47 => { const _0x2e2cd5 = parseFloat(_0x2c5a47.rate) || 0; _0xfa5844 += Math.round(_0x5932e4 * _0x2e2cd5 / 100); }); _0xad6da6.forEach(_0x500e5a => { let _0x426b1e = 0; let _0x5e12f9 = 0; let _0x37de96 = 0; let _0x252c30 = 0; let _0x57a903 = {}; _0x4da672.forEach(_0x4d3056 => { let _0x452624 = _0x2194ec[_0x500e5a.name]?.[_0x4d3056] || _0x5d024d[_0x500e5a.name]?.[_0x4d3056] || 0; const _0x272325 = (_0x5b1d16 || []).find(_0x38b090 => _0x38b090.short === _0x4d3056); const _0x372a06 = !!(_0x272325 && _0x272325.type && (_0x272325.type.toLowerCase().includes('doanhthu') || _0x272325.type.toLowerCase().includes('ti\u1EC1n'))); let _0x4bee97 = 0; if (_0x443696 && _0x443696.link4_smart && _0x443696.link4_smart[_0x4d3056] && _0x443696.link4_smart[_0x4d3056][_0x32978f]) {
                 _0x4bee97 = _0x443696.link4_smart[_0x4d3056][_0x32978f].t || 0;
@@ -8888,7 +8975,7 @@ window.__AutoBIRun67 = (function () {
                 }
                 _0x3861f4 += '<tr class="st-row-cluster-total">\n                        <td colspan="2" style="text-align:center">T\u1ED4NG C\u1EE4M</td>\n                        <td>' + UTILS.formatNumber(_0x3ceedc.target) + '</td><td>' + UTILS.formatNumber(_0x3ceedc.real) + '</td><td class="' + (_0x4b1fcb >= 100 ? 'txt-green' : 'txt-red') + '">' + _0x4b1fcb + '%</td>\n                        <td style="color:#007bff;">' + UTILS.formatNumber(_0x3ceedc.dtThuc) + '</td><td class="bold">' + UTILS.formatPercent(_0x4a5c22) + '</td>\n\n                        <td>' + _0x4ad488 + '%</td><td>-</td><td>-</td><td>-</td>\n\n                        <td></td><td></td><td></td><td></td><td></td>\n                        <td>' + _0x1afa2e.s5 + '</td><td>' + _0x1afa2e.s4 + '</td><td>' + _0x1afa2e.s3 + '</td><td>' + _0x1afa2e.s2 + '</td><td>' + _0x1afa2e.s1 + '</td><td>' + _0x1afa2e.total + '</td>\n                        <td class="bg-yellow bold" style="color:black">-</td><td class="bold txt-red">' + _0xd0a65f + '</td>\n                    </tr>';
             } _0x1a51a9 += '<table class="st-table" style="table-layout:fixed; width:100%; margin-bottom:10px;">' + _0x2068fe + _0x3861f4 + '</tbody></table></div>'; _0x1a51a9 += '</div>'; return _0x1a51a9; }, getNLNVReport: (_0x52e16f, _0x7ff5ec, _0x1d0ef4, _0x3d3737, _0x22b237) => { const _0x2e1195 = _0x1d0ef4.staffList || []; if (_0x2e1195.length === 0)
-                return '<div style="text-align:center; padding: 20px; font-weight:bold; color:red;">Ch\u01B0a khai b\u00E1o danh s\u00E1ch nh\u00E2n vi\u00EAn!</div>'; const _0x599f8c = UI.HTML.resolveTimeContext(_0x1d0ef4); const _0x4feda5 = _0x599f8c.daysPassed; const _0xbd22f8 = _0x599f8c.daysInMonth; const _0x148968 = _0x599f8c.dateStr; let _0x517468 = window.tgdd_nlnv_selected_staff || _0x2e1195[0].name; const _0x1d1187 = _0x2e1195.find(_0x4c4331 => _0x4c4331.name === _0x517468) || _0x2e1195[0]; _0x517468 = _0x1d1187.name; const _0x231822 = _0x1d1187.shopIdx; const _0xaf4cd9 = 'shop' + _0x231822; const _0x573cc4 = _0x52e16f || {}; const _0x468594 = _0x52e16f && _0x52e16f.link6 ? _0x52e16f.link6 : _0x573cc4.link6 || {}; const _0x4af110 = _0x52e16f && _0x52e16f.link8 ? _0x52e16f.link8 : _0x573cc4.link8 || {}; const _0x3010ea = _0x52e16f && _0x52e16f.link7 ? _0x52e16f.link7 : _0x573cc4.link7 || {}; const _0x534552 = _0x573cc4.staffReal || {}; const _0xd41fdc = parseFloat(_0x1d0ef4.revPointStep) || 20; const _0x311616 = parseFloat(_0x1d0ef4.revPointValue) || 1; const _0x1ef7a5 = parseInt(_0x1d0ef4.groupMinPoints) || 3; const _0x2bb83b = parseInt(_0x1d0ef4.groupMaxPoints) || 3; const _0x107294 = parseFloat(_0x1d0ef4.serviceMinRate) || 10; const _0x292f0f = parseFloat(_0x1d0ef4.serviceMaxPoints) || 20; const _0x41dafe = JSON.parse(GM_getValue('tgdd_bonus_points_list', '[]')); const _0x415a62 = _0x23f679 => { let _0x33619d = 0; _0x41dafe.forEach(_0x39f21e => { if (_0x39f21e.name === _0x23f679)
+                return '<div style="text-align:center; padding: 20px; font-weight:bold; color:red;">Ch\u01B0a khai b\u00E1o danh s\u00E1ch nh\u00E2n vi\u00EAn!</div>'; const _0x599f8c = UI.HTML.resolveTimeContext(_0x1d0ef4); const _0x4feda5 = _0x599f8c.daysPassed; const _0xbd22f8 = _0x599f8c.daysInMonth; const _0x148968 = _0x599f8c.dateStr; let _0x517468 = window.tgdd_nlnv_selected_staff || _0x2e1195[0].name; const _0x1d1187 = _0x2e1195.find(_0x4c4331 => _0x4c4331.name === _0x517468) || _0x2e1195[0]; _0x517468 = _0x1d1187.name; const _0x231822 = _0x1d1187.shopIdx; const _0xaf4cd9 = 'shop' + _0x231822; const _0x573cc4 = _0x52e16f || {}; const _0x468594 = _0x52e16f && _0x52e16f.link6 ? _0x52e16f.link6 : _0x573cc4.link6 || {}; const _0x4af110 = _0x52e16f && _0x52e16f.link8 ? _0x52e16f.link8 : _0x573cc4.link8 || {}; const _0x3010ea = _0x52e16f && _0x52e16f.link7 ? _0x52e16f.link7 : _0x573cc4.link7 || {}; const _0x534552 = _0x573cc4.staffReal || {}; const _0xd41fdc = parseFloat(_0x1d0ef4.revPointStep) || 20; const _0x311616 = parseFloat(_0x1d0ef4.revPointValue) || 1; const _0x1ef7a5 = parseInt(_0x1d0ef4.groupMinPoints) || 3; const _0x2bb83b = parseInt(_0x1d0ef4.groupMaxPoints) || 3; const _0x107294 = parseFloat(_0x1d0ef4.serviceMinRate) || 10; const _0x292f0f = parseFloat(_0x1d0ef4.serviceMaxPoints) || 20; const _0x41dafe = window.__AutoBIJson(GM_getValue('tgdd_bonus_points_list', '[]'), '[]'); const _0x415a62 = _0x23f679 => { let _0x33619d = 0; _0x41dafe.forEach(_0x39f21e => { if (_0x39f21e.name === _0x23f679)
                 _0x33619d += parseFloat(_0x39f21e.points) || 0; }); return _0x33619d; }; const _0x206eb3 = []; if (_0x1d0ef4.shop1)
                 _0x206eb3.push({ id: '1', key: 'shop1' }); if (_0x1d0ef4.shop2)
                 _0x206eb3.push({ id: '2', key: 'shop2' }); if (_0x1d0ef4.shop3)
@@ -9414,7 +9501,7 @@ window.__AutoBIRun67 = (function () {
                     _0x51f587.filter(_0x3bbf43 => _0x3bbf43.priority === 1).forEach(_0x57186a => { _0x3c5357.push(_0x57186a); });
                 }
                 GM_setValue('tgdd_user_available_themes', JSON.stringify(_0x3c5357));
-                const _0x18662f = JSON.parse(GM_getValue('tgdd_cached_theme_sources', '{}'));
+                const _0x18662f = window.__AutoBIJson(GM_getValue('tgdd_cached_theme_sources', '{}'), '{}');
                 let _0x27b74c = 0;
                 const _0x3e7807 = _0x3c5357.filter(_0x7d5a2 => _0x7d5a2.url !== 'default' && window.__AutoBIAllowedSource90(_0x7d5a2.url));
                 if (_0x4c7f40) {
@@ -11080,10 +11167,9 @@ window.__AutoBIBiTarget99 = (function () {
   if (window.top !== window.self) return null;
   const norm = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/\s+/g, ' ').trim();
   const fmt = n => Math.round(n).toLocaleString('en-US');
-  const toast = (m, ms) => { try { if (window.UI && window.UI.showToast) { window.UI.showToast(m, ms || 6000); return; } } catch (_) { } try { console.warn('[AutoBI] ' + m); } catch (_) { } }; /* V16.2.12: không dùng alert (chặn lượt chạy) */
+  const toast = (m, ms) => { try { if (window.UI && window.UI.showToast) { window.UI.showToast(m, ms || 6000); return; } } catch (_) { } alert(m); };
   const monthOf = d => { try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit' }).format(d).slice(0, 7); } catch (_) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); } };
-  const pastMonth = () => { try { const v = GM_getValue('tgdd_custom_report_month', 'current'); if (v && v !== 'current' && String(v).includes('/')) { const [mm, yy] = String(v).split('/').map(Number); if (mm >= 1 && mm <= 12 && yy > 2000) return { m: mm, y: yy }; } } catch (_) { } return null; };
-  const daysInMonth = () => { const pm = pastMonth(); if (pm) return new Date(pm.y, pm.m, 0).getDate(); const [y, m] = monthOf(new Date()).split('-').map(Number); return new Date(y, m, 0).getDate(); };
+  const daysInMonth = () => { const [y, m] = monthOf(new Date()).split('-').map(Number); return new Date(y, m, 0).getDate(); };
 
   /* Nhóm doanh thu/tiền: bảng Thi đua lưu số BI × 1000, còn ô Khai báo nhập theo số BI gốc (lõi nhân 1000 khi dùng) */
   function revenueGroups() {
@@ -11154,7 +11240,7 @@ window.__AutoBIBiTarget99 = (function () {
 
     const byKey = new Map(Object.keys(td).filter(k => !k.startsWith('__')).map(k => [norm(k), td[k]]));
     let groupOk = byKey.size > 0;
-    if (groupOk && !pastMonth() && cumulativeLooksRealtime(td, cache.link3_smart)) { groupOk = false; note('Bỏ qua Target nhóm hàng: bảng Thi đua Lũy kế đang giống bảng Realtime (BI chưa chuyển sang Lũy kế)'); }
+    if (groupOk && cumulativeLooksRealtime(td, cache.link3_smart)) { groupOk = false; note('Bỏ qua Target nhóm hàng: bảng Thi đua Lũy kế đang giống bảng Realtime (BI chưa chuyển sang Lũy kế)'); }
     const rows = (Array.isArray(cfg.compData) ? cfg.compData : []).filter(r => r && r.group);
     const updates = [];
     if (groupOk) {
@@ -11194,12 +11280,7 @@ window.__AutoBIBiTarget99 = (function () {
       return run.call(this, list, config, function (...a) {
         try {
           const cache = GM_getValue('tgdd_data_cache_v30', {}) || {};
-          if (pastMonth()) {
-            /* V16.2.12: tháng cũ BI chỉ có bảng Lũy kế (không có Realtime) nên 2 lượt đọc ra cùng một bảng — giữ Lũy kế, bỏ Realtime để báo cáo không so số cả tháng với target ngày */
-            cache.link3_smart = {};
-            GM_setValue('tgdd_data_cache_v30', cache);
-            note('Tháng cũ: dùng bảng Thi đua Lũy kế, bỏ Realtime');
-          } else if (cumulativeLooksRealtime(cache.link4_smart, cache.link3_smart)) {
+          if (cumulativeLooksRealtime(cache.link4_smart, cache.link3_smart)) {
             if (Object.keys(before).length && !cumulativeLooksRealtime(before, cache.link3_smart)) cache.link4_smart = before; else delete cache.link4_smart;
             GM_setValue('tgdd_data_cache_v30', cache);
             note('Thi đua Lũy kế đọc ra số Realtime (BI chưa chuyển bảng) — không dùng lượt đọc này');
@@ -11218,7 +11299,7 @@ window.__AutoBIBiTarget99 = (function () {
     cache = cache && typeof cache === 'object' && Object.keys(cache).length ? cache : (GM_getValue('tgdd_data_cache_v30', {}) || {});
     let changed = false;
     const perm = readObj(PERM_KEY);
-    if (perm && !pastMonth() && applyBI(perm, cache)) {
+    if (perm && applyBI(perm, cache)) {
       const U = core('UTILS');
       if (U && U.savePersistentConfig) U.savePersistentConfig(perm); else GM_setValue(PERM_KEY, perm);
       changed = true;
@@ -11235,8 +11316,6 @@ window.__AutoBIBiTarget99 = (function () {
     if (!UI || !UI.renderReport || UI.renderReport.__autobiBiTarget) return;
     const render = UI.renderReport;
     const wrapped = function (...args) {
-      /* V16.2.9: danh mục nhóm hàng rỗng (hay gặp khi đổ lại tháng cũ) → lấy lại từ bộ nhớ, không có thì dựng từ nhóm trong Khai báo để báo cáo vẫn hiện nhóm hàng */
-      try { if (!Array.isArray(args[1]) || !args[1].length) { let list = GM_getValue('tgdd_gsheet_list_v30') || []; if (!list.length) { const cfg = args[2] && typeof args[2] === 'object' ? args[2] : {}; list = (cfg.compData || []).filter(r => r && r.group).map(r => ({ full: r.group, short: r.group, type: norm(r.group).replace(/[^a-z0-9]/g, ''), color: '#FFF2CC', category: '', channel: 'T', customSlug: '' })); } if (list.length) { args[1] = list; note('Danh mục nhóm hàng trống — dùng ' + list.length + ' nhóm dự phòng'); } } } catch (_) { }
       try { if (autoOn()) { sync(args[0]); if (args[2] && typeof args[2] === 'object') applyBI(args[2], args[0] && Object.keys(args[0]).length ? args[0] : (GM_getValue('tgdd_data_cache_v30', {}) || {})); } } catch (e) { try { console.warn('[AutoBI 16.2.1] Tự lấy Target BI lỗi:', e); } catch (_) { } }
       return render.apply(this, args);
     };
@@ -11292,8 +11371,8 @@ window.__AutoBIBiTarget99 = (function () {
     const shown = (int ? new Intl.NumberFormat('en-US').format(parseInt(int, 10)) : '0') + '.' + dec;
     queueMicrotask(() => { el.value = shown; });
   }, true);
-  /* V16.2.7: ẩn "Dữ liệu năm" trong Menu; dòng "Tháng báo cáo" hiện lại để đổ lại tháng cũ (Target lấy theo BI, số ngày theo tháng đã chọn, không ghi đè cấu hình tháng hiện tại) */
-  try { GM_addStyle('#btn-menu-yearly { display: none !important; }'); } catch (_) { }
+  /* V16.2.6: ẩn "Dữ liệu năm" trong Menu và dòng "Tháng báo cáo" ở bảng Chạy báo cáo (luôn chạy tháng hiện tại) */
+  try { GM_addStyle('#btn-menu-yearly { display: none !important; } div:has(> #sel-report-month) { display: none !important; }'); } catch (_) { }
   /* V16.2.6: đồng hồ khi chạy luôn đếm lên từ 00:01 cho mọi loại báo cáo (trước đây Lũy kế/Realtime/ALL đếm ngược từ 05:00, Giờ công đếm lên từ 00:00) */
   function runStart() {
     try { const st = window.__AutoBILog5 && window.__AutoBILog5.snapshot && window.__AutoBILog5.snapshot(); if (st && st.status === 'running' && st.startedAt) return Number(st.startedAt); } catch (_) { }
@@ -11323,35 +11402,4 @@ window.__AutoBIBiTarget99 = (function () {
   try { hookReport(); hookCompetition(); sync(); } catch (_) { }
   if (window.__AutoBITick96) { window.__AutoBITick96(install, 1000); window.__AutoBITick96(hookReport, 2000); window.__AutoBITick96(hookCompetition, 2000); window.__AutoBITick96(fixTimer, 500); }
   return { sync };
-})();
-
-/* V16.2.10: ô "Lưu nhóm hàng cho tháng" trong Khai báo — chọn tháng cũ rồi bấm LƯU CẤU HÌNH để lưu danh sách nhóm hàng (và Target nhóm) cho tháng đó lên Cloud; không đổi cấu hình tháng hiện tại */
-(function () {
-  'use strict';
-  if (window.top !== window.self) return;
-  function install() {
-    const btn = document.getElementById('btn-save-all');
-    if (!btn || document.getElementById('cfg-save-month129')) return;
-    const row = btn.parentElement;
-    if (!row || !row.parentElement) return;
-    const now = new Date(), cur = now.getMonth() + 1, y = now.getFullYear();
-    let opts = '<option value="0">Tháng hiện tại (' + String(cur).padStart(2, '0') + '/' + y + ') — lưu như bình thường</option>';
-    for (let m = cur - 1; m >= 1; m--) opts += '<option value="' + m + '">Chỉ lưu nhóm hàng cho Tháng ' + String(m).padStart(2, '0') + '/' + y + '</option>';
-    const box = document.createElement('div');
-    box.id = 'cfg-save-month-box129';
-    box.style.cssText = 'display:flex;align-items:center;gap:8px;margin:6px 0;padding:8px 10px;border-radius:8px;background:#f8fafc;border:1.5px solid #e2e8f0;font-size:12px;';
-    box.innerHTML = '<span style="font-weight:bold;color:#334155;white-space:nowrap;">Lưu cho:</span><select id="cfg-save-month129" style="flex:1;min-width:0;padding:6px;border-radius:6px;border:1.5px solid #007bff;color:#007bff;font-weight:bold;background:#fff;font-size:12px;">' + opts + '</select>';
-    row.parentElement.insertBefore(box, row);
-    const sel = box.querySelector('select');
-    const paint = () => {
-      const m = parseInt(sel.value, 10) || 0;
-      box.style.background = m ? '#fff7ed' : '#f8fafc';
-      box.style.borderColor = m ? '#fb923c' : '#e2e8f0';
-      if (m) { btn.disabled = false; btn.style.opacity = '1'; btn.style.pointerEvents = 'auto'; btn.style.cursor = 'pointer'; btn.innerText = 'LƯU NHÓM HÀNG THÁNG ' + String(m).padStart(2, '0'); }
-      else if (/^LƯU NHÓM HÀNG THÁNG/.test(btn.innerText)) btn.innerText = 'LƯU CẤU HÌNH';
-    };
-    sel.addEventListener('change', e => { e.stopPropagation(); paint(); });
-    new MutationObserver(() => { const m = parseInt(sel.value, 10) || 0; if (m && !/ĐANG LƯU/.test(btn.innerText) && !/^LƯU NHÓM HÀNG THÁNG/.test(btn.innerText) && !btn.disabled) btn.innerText = 'LƯU NHÓM HÀNG THÁNG ' + String(m).padStart(2, '0'); }).observe(btn, { childList: true, characterData: true, subtree: true });
-  }
-  if (window.__AutoBITick96) window.__AutoBITick96(install, 1000); else setInterval(install, 1000);
 })();
