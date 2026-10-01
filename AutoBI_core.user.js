@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V16.3
+// @name         AutoBI Core V16.3.1
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      16.3
+// @version      16.3.1
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://crm.thegioididong.com/*
@@ -1330,7 +1330,8 @@ window.__AutoBIWorktime73 = (() => {
             write(K.job, { ...old, cancelled: true });
         const cumulative = !options.fastRealtime && (options.allSave || options.revThidua);
         write('autobi_wt73_revenue_context', cumulative ? { parent: runId, range: hoursPeriod(read('tgdd_custom_report_month', 'current')) } : null);
-        if (cumulative)
+        /* V16.3: Giờ công chỉ chạy nối tiếp khi chọn "Báo cáo ALL & Lưu Data"; "Báo cáo Lũy kế" chạy riêng, không kéo theo Giờ công */
+        if (cumulative && options.allSave)
             write(K.job, { schema: 1, id: 'wt-' + Date.now() + '-' + Math.random().toString(36).slice(2), parent: runId, at: Date.now(), phase: 'core', range: hoursPeriod(read('tgdd_custom_report_month', 'current')), combined: true, wantRevenue: false });
     }
     function afterReport() {
@@ -1460,7 +1461,7 @@ window.__AutoBIWorktime73 = (() => {
         if (status?.message)
             html += '<div class="notice" role="status">' + esc(status.message) + '</div>';
         if (!result)
-            return html + '<p class="empty">Ch\u1ECDn B\u00E1o c\u00E1o Gi\u1EDD c\u00F4ng \u0111\u1EC3 ch\u1EA1y ri\u00EAng, ho\u1EB7c B\u00E1o c\u00E1o L\u0169y k\u1EBF \u0111\u1EC3 ch\u1EA1y li\u1EC1n m\u1EA1ch.</p></div>';
+            return html + '<p class="empty">Ch\u1ECDn B\u00E1o c\u00E1o Gi\u1EDD c\u00F4ng \u0111\u1EC3 ch\u1EA1y ri\u00EAng, ho\u1EB7c B\u00E1o c\u00E1o ALL & L\u01B0u Data \u0111\u1EC3 ch\u1EA1y li\u1EC1n m\u1EA1ch.</p></div>';
         if (result.partial)
             html += '<div class="notice">D\u1EEF li\u1EC7u c\u0169 m\u1EDBi c\u00F3 ' + result.rows + '/' + result.total + ' d\u00F2ng. H\u00E3y ch\u1EA1y l\u1EA1i \u0111\u1EC3 l\u1EA5y \u0111\u1EE7.</div>';
         const stat = (icon, label, value, unit, kind) => '<div class="stat ' + kind + '"><span class="stat-icon">' + icon + '</span><div><small>' + label + '</small><strong>' + value + '</strong><span class="unit">' + unit + '</span></div></div>';
