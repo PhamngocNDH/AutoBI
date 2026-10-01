@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AutoBI - Kho & Xuất Bán
 // @namespace    https://github.com/PhamngocNDH/AutoBI/kho-xuatban-test
-// @version      1.4.2
+// @version      1.4.3
 // @description  Đổ tồn kho (BI 4286) và xuất bán (BI 77) theo cụm siêu thị cho máy tính: lấy thẳng dữ liệu BI có điều tốc, sổ ngày, bộ chọn tồn kho, Excel.
 // @author       AutoBI / 38967 - Mr Phạm
 // @homepageURL  https://github.com/PhamngocNDH/AutoBI
@@ -34,7 +34,7 @@
  */
 (function () {
     'use strict';
-    const VERSION = '1.4.2';
+    const VERSION = '1.4.3';
     const PREFIX = 'autobi_kxb_test_v1_';               // giữ khóa cũ để không mất khai báo shop
     const AUTH_SHEET = Object.freeze({ id: '17PxnghjkKIP36fWoSd656wo3DhlOmMiTiyjlf1g23UU', gid: '1237161146' });
     const REPORT = Object.freeze({ inventory: 4286, sales: 77 });
@@ -318,11 +318,75 @@
         return { user, name: clean(matches[0][1]), checkedAt: Date.now(), source: 'Auth!A:D', status: 'ACTIVE' };
     }
 
+
+    /* ---------- Phiếu kiểm tồn kho (in A4 đứng) ---------- */
+    function escHtml(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+    // Gom theo Siêu thị → Nhóm hàng, sắp theo Hãng · Tên SP · IMEI để nhân viên đi theo kệ cho dễ
+    function inventoryChecklist(records, shopOrder) {
+        const cmp = (a, b) => String(a || '').localeCompare(String(b || ''), 'vi', { numeric: true });
+        const order = new Map((shopOrder || []).map((c, i) => [keyCode(c), i]));
+        const shops = new Map();
+        for (const r of records) {
+            const s = keyCode(r.shop);
+            if (!shops.has(s)) shops.set(s, new Map());
+            const g = shops.get(s), k = r.group || '(Không rõ nhóm)';
+            if (!g.has(k)) g.set(k, []);
+            g.get(k).push(r);
+        }
+        return [...shops.entries()].sort((a, b) => (order.get(a[0]) ?? 999) - (order.get(b[0]) ?? 999) || cmp(a[0], b[0])).map(([shop, groups]) => {
+            const gs = [...groups.entries()].sort((a, b) => cmp(a[0], b[0])).map(([group, rows]) => {
+                rows = rows.slice().sort((a, b) => cmp(a.brand, b.brand) || cmp(a.productName, b.productName) || cmp(a.product, b.product) || cmp(a.serial, b.serial));
+                return { group, rows, lines: rows.length, quantity: rows.reduce((t, r) => t + (Number(r.qty) || 0), 0) };
+            });
+            return { shop, groups: gs, lines: gs.reduce((t, g) => t + g.lines, 0), quantity: gs.reduce((t, g) => t + g.quantity, 0) };
+        });
+    }
+    function inventoryPrintHtml(records, meta) {
+        const m = meta || {}, nameOf = m.nameOf || (c => c), num = v => new Intl.NumberFormat('vi-VN').format(v);
+        const list = inventoryChecklist(records, m.shopOrder);
+        invariant(list.length, 'Không có dòng tồn nào để in (kiểm tra lại siêu thị / bộ lọc)');
+        const box = '<span class="box"></span>';
+        const shopHtml = list.map((s, si) => {
+            let stt = 0;
+            const body = s.groups.map(g => `<tbody class="grp"><tr class="gh"><td colspan="7">${escHtml(g.group)} <span>— ${num(g.lines)} dòng · SL ${num(g.quantity)}</span></td></tr>`
+                + g.rows.map(r => `<tr><td class="c">${++stt}</td><td class="code">${escHtml(r.product)}</td><td>${escHtml(r.productName)}</td><td class="code imei">${escHtml(r.serial) || '<i>—</i>'}</td><td class="st">${escHtml(r.condition)}</td><td class="c b">${num(Number(r.qty) || 0)}</td><td class="c">${box}</td></tr>`).join('')
+                + '</tbody>').join('');
+            return `<section class="${si ? 'brk' : ''}">
+<div class="head"><div><h1>PHIẾU KIỂM TỒN KHO</h1><div class="shop">${escHtml(s.shop)} · ${escHtml(nameOf(s.shop))}</div></div>
+<div class="meta"><div>Tồn lúc: <b>${escHtml((m.times || {})[s.shop] || m.capturedAt || '')}</b></div><div>Lọc: ${escHtml(m.filter || 'Không lọc')}</div><div>Tổng: <b>${num(s.lines)}</b> dòng · SL <b>${num(s.quantity)}</b> · ${num(s.groups.length)} nhóm hàng</div></div></div>
+<table><colgroup><col style="width:10mm"><col style="width:27mm"><col><col style="width:37mm"><col style="width:20mm"><col style="width:10mm"><col style="width:13mm"></colgroup>
+<thead><tr><th>STT</th><th>Mã SP</th><th>Tên sản phẩm</th><th>IMEI / Serial</th><th>Trạng thái</th><th>SL</th><th>KIỂM</th></tr></thead>${body}</table>
+<div class="sign"><div>Người kiểm<br><span>(ký, ghi rõ họ tên)</span></div><div>Ngày kiểm: ....../....../........<br>Số dòng lệch: ............</div><div>Quản lý siêu thị<br><span>(ký, ghi rõ họ tên)</span></div></div>
+<div class="note">Ghi chú chênh lệch: ..........................................................................................................................................................................................<br>................................................................................................................................................................................................................................</div>
+</section>`;
+        }).join('');
+        return `<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Phiếu kiểm tồn kho</title><style>
+@page{size:A4 portrait;margin:10mm 9mm 12mm 9mm;@bottom-right{content:"Trang " counter(page) "/" counter(pages);font:8pt Arial,sans-serif;color:#555}@bottom-left{content:${JSON.stringify('AutoBI V' + (m.version || '') + ' · In lúc ' + (m.printedAt || ''))};font:8pt Arial,sans-serif;color:#555}}
+*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{margin:0;font:9.5pt/1.3 Arial,"Segoe UI",sans-serif;color:#000}
+.head{display:flex;justify-content:space-between;gap:8mm;align-items:flex-end;border-bottom:1.5pt solid #000;padding-bottom:2mm;margin-bottom:2mm}
+h1{font-size:15pt;margin:0;letter-spacing:.5pt}.shop{font-size:12pt;font-weight:bold;margin-top:1mm}
+.meta{text-align:right;font-size:8.5pt;line-height:1.45}
+table{width:100%;border-collapse:collapse;table-layout:fixed}
+th,td{border:.6pt solid #444;padding:1mm 1.2mm;vertical-align:middle;overflow-wrap:anywhere;word-break:break-word}
+thead{display:table-header-group}th{background:#e8e8e8;font-size:8.5pt;text-align:center}
+tr{break-inside:avoid;page-break-inside:avoid}
+.gh td{background:#f1f1f1;font-weight:bold;font-size:9.5pt;break-after:avoid;page-break-after:avoid}.gh span{font-weight:normal;font-size:8.5pt}
+.c{text-align:center;white-space:nowrap;overflow-wrap:normal;word-break:normal}.b{font-weight:bold}.code{font-family:Consolas,"Courier New",monospace;font-size:8pt;word-break:break-all}.imei{font-size:9pt}
+.st{font-size:8.5pt}.sub{font-size:7.5pt;color:#555}
+.box{display:inline-block;width:5mm;height:5mm;border:1pt solid #000;border-radius:.8mm;vertical-align:middle}
+.sign{display:flex;justify-content:space-between;margin-top:6mm;text-align:center;font-weight:bold;break-inside:avoid}.sign>div{width:32%;min-height:24mm}.sign span{font-weight:normal;font-style:italic;font-size:8pt}
+.note{font-size:8.5pt;margin-top:2mm;line-height:2;break-inside:avoid}
+.brk{break-before:page;page-break-before:always}
+@media screen{body{background:#888;padding:10px}section{background:#fff;width:210mm;margin:0 auto 10px;padding:10mm 9mm}}
+</style></head><body>${shopHtml}</body></html>`;
+    }
+
     // Hàm thuần cho kiểm thử offline; không cài global trên website thật.
     if (typeof module === 'object' && module.exports) {
         module.exports = { clean, norm, hasCode, day, toBI, addDays, validateRange, daysIn, apiNumber, parseDelimited,
             lineFromApi, reasons, pending, validateSalesLines, splitSales, summarizeSales, inPeriod, dayStatus, daysToFetch,
-            parseRateLimit, waitBeforeCall, inventoryRecordFromApi, summarizeInventory, filterInventory, inventoryOptions, inventoryViews, validateShops, authorizeSheetRows };
+            parseRateLimit, waitBeforeCall, inventoryRecordFromApi, summarizeInventory, filterInventory, inventoryOptions, inventoryViews, validateShops, authorizeSheetRows, escHtml, inventoryChecklist, inventoryPrintHtml };
         return;
     }
 
@@ -779,6 +843,24 @@
             recs.map(r => [shopName(r.shop), r.group, r.brand, r.product, r.productName, r.serial, r.condition, fmt(r.qty), fmt(Math.round(r.cost)), r.input]), { num: [7, 8] });
     }
 
+    /* ---------- In phiếu kiểm tồn (A4 đứng) ---------- */
+    function printInventory() {
+        invariant(!running, 'Đang đổ số, chờ xong rồi in');
+        invariant(view.inv, 'Chưa có số tồn kho — bấm "Đổ tồn kho" trước');
+        const recs = invRecords(), f = view.invFilter;
+        const filter = [f.category && 'Ngành ' + f.category, f.group && 'Nhóm ' + f.group, f.brand && 'Hãng ' + f.brand, f.conditions.length && 'Trạng thái ' + f.conditions.join(', '), f.q && 'Tìm "' + f.q + '"'].filter(Boolean).join(' · ');
+        const times = {}; view.inv.shops.forEach(c => { times[c] = stamp(new Date(view.inv.shopTimes?.[c] || view.inv.capturedAt)); });
+        const html = inventoryPrintHtml(recs, { nameOf: shopName, shopOrder: config.shops.map(s => s.code), filter, times, capturedAt: stamp(new Date(view.inv.capturedAt)), printedAt: stamp(new Date()), version: VERSION });
+        document.getElementById('kxb-print')?.remove();
+        const fr = document.createElement('iframe'); fr.id = 'kxb-print'; fr.dataset.kxbUi = '';
+        fr.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+        document.body.append(fr);
+        const d = fr.contentWindow.document; d.open(); d.write(html); d.close();
+        setTimeout(() => { try { fr.contentWindow.focus(); fr.contentWindow.print(); } catch (e) { status('Không mở được hộp thoại in: ' + e.message, 'err'); } }, 300);
+        log(`In phiếu kiểm tồn: ${recs.length} dòng${filter ? ' · ' + filter : ''}`);
+        status(`Đã mở hộp thoại in phiếu kiểm (${fmt(recs.length)} dòng). Chọn khổ A4, hướng dọc.`, 'ok');
+    }
+
     /* ---------- Excel ---------- */
     function exportExcel() {
         const X = XL(); invariant(X, 'Chưa tải được thư viện Excel (SheetJS)');
@@ -938,7 +1020,7 @@
             <div data-sales-result></div></div>
           <div data-pane="inventory" hidden>
             <div class="filters" data-inv-filters>
-              <div class="group"><b>Siêu thị</b><span class="group" data-inv-shops></span><span class="sp" style="flex:1"></span><button type="button" class="primary idle-only" data-run-inv>Đổ tồn kho</button></div>
+              <div class="group"><b>Siêu thị</b><span class="group" data-inv-shops></span><span class="sp" style="flex:1"></span><button type="button" class="idle-only" data-print-inv title="In danh sách đang lọc ra giấy A4 dọc, có ô KIỂM để tích">🖨 In phiếu kiểm</button><button type="button" class="primary idle-only" data-run-inv>Đổ tồn kho</button></div>
               <div class="group"><b>Lọc</b><select data-f="category"></select><select data-f="group"></select><select data-f="brand"></select>
                 <input type="search" data-f="q" placeholder="Tìm IMEI, mã hoặc tên sản phẩm" style="min-width:280px"><button type="button" data-clear>Bỏ lọc</button></div>
               <div class="group"><b>Trạng thái</b><span class="group" data-inv-conds></span></div></div>
@@ -981,6 +1063,7 @@
         if (config.shops.length) view.sales = salesView(selectedRange());
         ui.querySelector('[data-run-sales]').onclick = safely(() => { validateShops(config.shops); selectedRange(); return withSession('sales', s => runSales(s, ui.querySelector('[data-refetch]').checked)); });
         ui.querySelector('[data-view]').onclick = safely(() => { validateShops(config.shops); view.sales = salesView(selectedRange()); renderSales(); status(view.sales.missing ? `Còn ${view.sales.missing} ngày chưa lấy trong kỳ` : 'Số đã lưu trên máy này', view.sales.missing ? 'warn' : 'ok'); });
+        ui.querySelector('[data-print-inv]').onclick = safely(printInventory);
         ui.querySelector('[data-run-inv]').onclick = safely(() => { validateShops(config.shops); return withSession('inventory', runInventory); });
         for (const k of ['category', 'group', 'brand']) ui.querySelector(`[data-f="${k}"]`).onchange = e => { view.invFilter[k] = e.target.value; if (k === 'category') view.invFilter.group = ''; renderInventoryFilters(); renderInventory(); };
         let tq; ui.querySelector('[data-f="q"]').oninput = e => { clearTimeout(tq); tq = setTimeout(() => { view.invFilter.q = e.target.value; renderInventory(); }, 250); };
