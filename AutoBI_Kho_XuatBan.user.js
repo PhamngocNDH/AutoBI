@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AutoBI - Kho & Xuất Bán
 // @namespace    https://github.com/PhamngocNDH/AutoBI/kho-xuatban-test
-// @version      1.4.1
+// @version      1.4.2
 // @description  Đổ tồn kho (BI 4286) và xuất bán (BI 77) theo cụm siêu thị cho máy tính: lấy thẳng dữ liệu BI có điều tốc, sổ ngày, bộ chọn tồn kho, Excel.
 // @author       AutoBI / 38967 - Mr Phạm
 // @homepageURL  https://github.com/PhamngocNDH/AutoBI
@@ -34,7 +34,7 @@
  */
 (function () {
     'use strict';
-    const VERSION = '1.4.1';
+    const VERSION = '1.4.2';
     const PREFIX = 'autobi_kxb_test_v1_';               // giữ khóa cũ để không mất khai báo shop
     const AUTH_SHEET = Object.freeze({ id: '17PxnghjkKIP36fWoSd656wo3DhlOmMiTiyjlf1g23UU', gid: '1237161146' });
     const REPORT = Object.freeze({ inventory: 4286, sales: 77 });
@@ -336,7 +336,8 @@
     let config = { ...defaults, ...load('config', {}) };
     let ui, running = null, auth = null;
     const view = { tab: 'sales', sales: null, salesTab: 'brand', salesShops: null, salesQuery: '', openStaff: new Set(), inv: null, invTab: 'group', invShops: null, invFilter: { category: '', group: '', brand: '', conditions: [], q: '' } };
-    const journal = load('journal', []).slice(-300);
+    let journal = load('journal', []).slice(-300);
+    if (load('journalVersion', '') !== VERSION) { journal = []; try { save('journal', journal); save('journalVersion', VERSION); } catch { /* bỏ qua */ } }
     function log(message, kind = 'info') {
         journal.push({ time: new Date().toISOString(), run: running?.id || null, kind, message: clean(message) });
         if (journal.length > 300) journal.shift();
@@ -500,7 +501,8 @@
         const today = new Date();
         const rows = await runReport(REPORT.inventory, {
             p_todate: `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()} 23:59`, p_storeidlist: keyCode(shop.code),
-            p_ischeckrealinput: 'true', p_instockstatus: '-1', p_storetype: '-1', p_languageid: '2'
+            p_ischeckrealinput: 'false',   // KHÔNG tính hàng đang chuyển kho (bỏ tick ô trên web)
+            p_instockstatus: '-1', p_storetype: '-1', p_languageid: '2'
         }, session, 240000, sec => status(`Tồn kho ${shop.code}: chờ lượt BI ${sec} giây`));
         check(session);
         const records = rows.map(inventoryRecordFromApi);
@@ -591,7 +593,7 @@
         const prev = view.inv || { records: [], shops: [], shopTimes: {} };
         const shopTimes = { ...(prev.shopTimes || Object.fromEntries((prev.shops || []).map(c => [c, prev.capturedAt]))) };
         fetched.forEach(c => shopTimes[c] = now);
-        view.inv = { capturedAt: now, shops: [...new Set([...(prev.shops || []), ...fetched])], shopTimes,
+        view.inv = { noTransit: true, capturedAt: now, shops: [...new Set([...(prev.shops || []), ...fetched])], shopTimes,
             records: prev.records.filter(r => !fetched.has(r.shop)).concat(records) };
         try { save('lastInventory', view.inv); } catch { log('Không lưu được tồn kho vào bộ nhớ (quá lớn); vẫn xem được tới khi tải lại trang', 'error'); }
         renderInventoryFilters(); renderInventory();
@@ -941,7 +943,7 @@
                 <input type="search" data-f="q" placeholder="Tìm IMEI, mã hoặc tên sản phẩm" style="min-width:280px"><button type="button" data-clear>Bỏ lọc</button></div>
               <div class="group"><b>Trạng thái</b><span class="group" data-inv-conds></span></div></div>
             <div data-inv-result></div></div>
-          <details data-logbox><summary class="logbar">📋 Nhật ký <button type="button" data-copy-log>Sao chép</button></summary><pre data-log></pre></details>
+          <details data-logbox><summary class="logbar">📋 Nhật ký <button type="button" data-copy-log>Sao chép</button><button type="button" data-clear-log>Xóa nhật ký</button></summary><pre data-log></pre></details>
         </div>`;
         const today = isoDate(new Date());
         ui.querySelector('[data-from]').value = today.slice(0, 8) + '01'; ui.querySelector('[data-to]').value = today;
@@ -963,7 +965,7 @@
             b.onclick = safely(() => { setRange(f, t); presets.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === b)); validateShops(config.shops); view.sales = salesView(selectedRange()); renderSales(); });
         });
         const last = load('lastInventory', null);
-        if (last && Array.isArray(last.records)) view.inv = last;
+        if (last && Array.isArray(last.records) && last.noTransit) view.inv = last;   // số tồn cũ có hàng đang chuyển kho → bỏ, đổ lại
         const open = on => { back.hidden = !on; launch.hidden = on; if (on) renderAll(); };
         launch.onclick = () => open(true);
         ui.querySelector('[data-close]').onclick = () => open(false);
@@ -975,6 +977,7 @@
         ui.querySelector('[data-save]').onclick = safely(saveConfig);
         ui.querySelector('[data-excel]').onclick = safely(exportExcel);
         ui.querySelector('[data-copy-log]').onclick = e => { e.preventDefault(); e.stopPropagation(); copyLog(); };
+        ui.querySelector('[data-clear-log]').onclick = e => { e.preventDefault(); e.stopPropagation(); journal.length = 0; try { save('journal', journal); } catch { /* bỏ qua */ } log('Đã xóa nhật ký cũ'); };
         if (config.shops.length) view.sales = salesView(selectedRange());
         ui.querySelector('[data-run-sales]').onclick = safely(() => { validateShops(config.shops); selectedRange(); return withSession('sales', s => runSales(s, ui.querySelector('[data-refetch]').checked)); });
         ui.querySelector('[data-view]').onclick = safely(() => { validateShops(config.shops); view.sales = salesView(selectedRange()); renderSales(); status(view.sales.missing ? `Còn ${view.sales.missing} ngày chưa lấy trong kỳ` : 'Số đã lưu trên máy này', view.sales.missing ? 'warn' : 'ok'); });
