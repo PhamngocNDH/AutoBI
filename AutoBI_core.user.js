@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V16.3.3
+// @name         AutoBI Core V16.3.4
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      16.3.3
+// @version      16.3.4
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://crm.thegioididong.com/*
@@ -237,7 +237,11 @@ window.__AutoBILoadingGuard75 = (() => {
     }
     document.addEventListener('TGDD_BI_SYS_ERROR', event => { event.stopImmediatePropagation(); stop(Error('BI y\u00EAu c\u1EA7u \u0111\u0103ng nh\u1EADp l\u1EA1i; \u0111\u00E3 d\u1EEBng, kh\u00F4ng t\u1EF1 t\u1EA3i l\u1EA1i ho\u1EB7c b\u1ECF qua b\u01B0\u1EDBc')); }, true);
     function callbackWait(callback, options = {}) {
-        const task = tableReady(options.label || 'B\u1EA3ng BI', { ticket: lastTicket(), ...options }).then(() => callback());
+        /* V16.3.4: tôn trọng requireChange:false (bản cũ bỏ qua nên chờ "bảng đổi" theo một cú bấm cũ không liên quan);
+           phiếu đoán từ cú bấm gần nhất được chờ tối đa 8s, sau đó dùng bảng hợp lệ đang hiện */
+        const { requireChange, ...opts } = options;
+        const ticket = requireChange === false ? null : lastTicket();
+        const task = tableReady(opts.label || 'B\u1EA3ng BI', { ticket, freshAfterMs: ticket && requireChange !== true ? 8000 : 0, ...opts }).then(() => callback());
         task.catch(error => { if (options.onError)
             options.onError(error);
         else
