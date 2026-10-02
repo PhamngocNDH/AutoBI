@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V16.3.4
+// @name         AutoBI Core V16.9
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      16.3.4
+// @version      16.9
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://crm.thegioididong.com/*
@@ -1187,25 +1187,56 @@ window.__AutoBIWorktime73 = (() => {
         write(K.job, { ...job, phase: 'collecting' });
         let error = null;
         try {
-            await wait(() => filterButton('V\u00F9ng') && filterButton('Khu v\u1EF1c') && filterButton('Si\u00EAu th\u1ECB') && viewButton(), 'Trang Gi\u1EDD c\u00F4ng ch\u01B0a t\u1EA3i \u0111\u1EE7 b\u1ED9 l\u1ECDc', 30000);
-            progress('\u0110ang ch\u1ECDn ng\u00E0y ' + displayDate(job.range.from) + ' \u2192 ' + displayDate(job.range.to));
-            await setDates(job.range);
-            for (const label of ['V\u00F9ng', 'Khu v\u1EF1c', 'Si\u00EAu th\u1ECB'])
-                await selectAllFilter(label);
-            progress('\u0110ang l\u1EA5y Gi\u1EDD c\u00F4ng\u2026');
-            await query(job.range);
-            const collected = await collect(job.range), rows = collected.rows;
+            /* V16.6: lấy Giờ công bằng API (timekeeping-get); API lỗi (trừ hết phiên) thì đọc bảng như cũ */
+            let collected = null;
+            const apiTk = window.__AutoBIApi && window.__AutoBIApi.timekeepingRows;
+            if (apiTk && GM_getValue('autobi_api_source', true) !== false) {
+                try {
+                    progress('\u0110ang l\u1EA5y Gi\u1EDD c\u00F4ng b\u1EB1ng API ' + displayDate(job.range.from) + ' \u2192 ' + displayDate(job.range.to) + '\u2026');
+                    collected = await apiTk(job.range);
+                    try { window.__AutoBILog5?.note('Gi\u1EDD c\u00F4ng: \u0111\u00E3 l\u1EA5y b\u1EB1ng API (' + collected.rows.length + ' d\u00F2ng)'); } catch (_) { }
+                } catch (apiError) {
+                    if (apiError && apiError.code === 'AUTH') throw apiError;
+                    try { window.__AutoBILog5?.note('Gi\u1EDD c\u00F4ng: API l\u1ED7i \u2014 \u0111\u1ECDc b\u1EA3ng nh\u01B0 c\u0169 (' + (apiError && apiError.message) + ')'); } catch (_) { }
+                    collected = null;
+                }
+            }
+            if (!collected) {
+                await wait(() => filterButton('V\u00F9ng') && filterButton('Khu v\u1EF1c') && filterButton('Si\u00EAu th\u1ECB') && viewButton(), 'Trang Gi\u1EDD c\u00F4ng ch\u01B0a t\u1EA3i \u0111\u1EE7 b\u1ED9 l\u1ECDc', 30000);
+                progress('\u0110ang ch\u1ECDn ng\u00E0y ' + displayDate(job.range.from) + ' \u2192 ' + displayDate(job.range.to));
+                await setDates(job.range);
+                for (const label of ['V\u00F9ng', 'Khu v\u1EF1c', 'Si\u00EAu th\u1ECB'])
+                    await selectAllFilter(label);
+                progress('\u0110ang l\u1EA5y Gi\u1EDD c\u00F4ng\u2026');
+                await query(job.range);
+                collected = await collect(job.range);
+            }
+            const rows = collected.rows;
             check();
             const dateCoverage = validateDates(rows, job.range);
             progress('\u0110\u00E3 \u0111\u1ED1i chi\u1EBFu c\u1ED9t NG\u00C0Y \u0111\u1EBFn ' + job.range.to.replace(/-/g, '/') + '. \u0110ang c\u1ED9ng Gi\u1EDD c\u00F4ng\u2026');
             const staff = aggregate(rows);
             progress('\u0110ang gh\u00E9p Doanh thu nh\u00E2n vi\u00EAn\u2026');
             const storedRevenue = read(K.revenue), capture = read('autobi_wt73_revenue_context');
-            const revenue = job.wantRevenue ? null : storedRevenue?.runId === job.parent && capture?.parent === job.parent && capture.captured === true ? storedRevenue : null;
+            let revenue = job.wantRevenue ? null : storedRevenue?.runId === job.parent && capture?.parent === job.parent && capture.captured === true ? storedRevenue : null;
+            /* V16.8: doanh thu nhân viên cho Giờ công lấy bằng API đúng kỳ Giờ công — không chuyển sang trang Doanh thu */
+            if (!revenue && window.__AutoBIApi && window.__AutoBIApi.staffRevenueMap && GM_getValue('autobi_api_source', true) !== false) {
+                try {
+                    progress('\u0110ang l\u1EA5y doanh thu nh\u00E2n vi\u00EAn b\u1EB1ng API\u2026');
+                    const cfgE = employeeConfig({ staff });
+                    const map = await window.__AutoBIApi.staffRevenueMap(cfgE, job.range);
+                    revenue = revenueSnapshot(map, cfgE, job.range, job.id, 'Tri\u1EC7u \u0111\u1ED3ng');
+                    try { window.__AutoBILog5?.note('Gi\u1EDD c\u00F4ng: doanh thu nh\u00E2n vi\u00EAn l\u1EA5y b\u1EB1ng API (' + revenue.entries.length + ' ng\u01B0\u1EDDi)'); } catch (_) { }
+                } catch (apiError) {
+                    if (apiError && apiError.code === 'AUTH') throw apiError;
+                    try { window.__AutoBILog5?.note('Gi\u1EDD c\u00F4ng: API doanh thu nh\u00E2n vi\u00EAn l\u1ED7i \u2014 ' + (apiError && apiError.message)); } catch (_) { }
+                    revenue = null;
+                }
+            }
             const joined = join(staff, revenue, job.range);
             let result = { schema: 1, range: job.range, dateCoverage, at: Date.now(), rows: rows.length, total: collected.total, pages: collected.pages, partial: collected.partial, staff: joined, unit: samePeriod(revenue?.range, job.range) ? revenue.unit : '\u0110\u01A1n v\u1ECB g\u1ED1c BI', matched: joined.filter(r => r.revenue !== null).length };
             check();
-            if (job.wantRevenue) {
+            if (job.wantRevenue && !revenue) {
                 const draft = { ...result, jobId: job.id, revenuePending: true };
                 write('autobi_wt73_draft', draft);
                 write(K.result, draft);
@@ -3782,7 +3813,8 @@ window.__AutoBIRun67 = (function () {
                 _0x45667d(); }, onerror: () => { if (_0x45667d)
                 _0x45667d(); } }); }; if (_0x206e84) {
             const _0x35f068 = new Date();
-            if (_0x35f068.getDate() >= 1 && _0x35f068.getDate() <= 3)
+            /* V16.8.3: chỉ hiện ngày 01, mỗi máy một lần trong ngày (sau khi bấm ĐÃ HIỂU thì không hiện lại) */
+            if (_0x35f068.getDate() === 1 && GM_getValue('autobi_som_notice_seen', '') !== _0x35f068.toDateString())
                 window.tgdd_pending_start_of_month_notice = true;
         } _0x34f323(); }, getStandardUserName: _0x12088e => { let _0xe26698 = AUTH_STATE.userName; if (!_0xe26698 || _0xe26698 === '---') {
             AuthService.restoreCachedAuth();
@@ -3956,12 +3988,20 @@ window.__AutoBIRun67 = (function () {
                 _0x348883(null); }, onerror: () => { if (_0x348883)
                 _0x348883(null); }, ontimeout: () => { if (_0x348883)
                 _0x348883(null); } }); }); }, loadConfigAndRun: (_0x218727, _0x29d341 = null) => { if (!window.__AutoBIRun67.active())
-            return; const _0x3ef13c = GM_getValue(CONSTANTS.KEYS.RUN_QUEUE, [2]); const _0x2b696e = _0x3ef13c.length > 0 ? _0x3ef13c[0] : 2; GM_setValue(CONSTANTS.KEYS.AUTO_STATE, _0x2b696e); GM_setValue(CONSTANTS.KEYS.DATA_CACHE, {}); const _0x4b85e9 = UTILS.getStepUrl(_0x2b696e, _0x218727); const _0x230d82 = () => { if (_0x4b85e9) {
+            return; const _0x3ef13c = GM_getValue(CONSTANTS.KEYS.RUN_QUEUE, [2]); const _0x2b696e = _0x3ef13c.length > 0 ? _0x3ef13c[0] : 2; GM_setValue(CONSTANTS.KEYS.AUTO_STATE, _0x2b696e); GM_setValue(CONSTANTS.KEYS.DATA_CACHE, {}); const _0x4b85e9 = UTILS.getStepUrl(_0x2b696e, _0x218727); const __fastHere = !!(window.__AutoBIApi && window.__AutoBIApi.fastOn && window.__AutoBIApi.fastOn() && [0, 2, 3, 17, 18].includes(_0x2b696e) && location.hostname === 'baocao.dienmayxanh.com'); let __navDone = false; const _0x230d82 = () => { if (__navDone)
+            return; __navDone = true; if (__fastHere) {
+            /* V16.8.5: chạy nhanh bằng API ngay trên trang đang mở, không tải trang Doanh thu */
+            setTimeout(() => APP.checkAutoProcess(), 0);
+        }
+        else if (_0x4b85e9) {
             window.location.replace(_0x4b85e9);
         }
         else {
             alert('L\u1ED7i: Kh\u00F4ng t\u00ECm th\u1EA5y link b\u00E1o c\u00E1o!');
-        } }; const _0xb0716 = () => { if (window.TGDD_THEME && typeof window.TGDD_THEME.finishLoading === 'function') {
+        } }; const _0xb0716 = () => { if (__fastHere) {
+            _0x230d82();
+            return;
+        } if (window.TGDD_THEME && typeof window.TGDD_THEME.finishLoading === 'function') {
             try {
                 window.TGDD_THEME.finishLoading(_0x230d82);
             }
@@ -4052,7 +4092,10 @@ window.__AutoBIRun67 = (function () {
             if (!_0x5f53e4)
                 _0x5f53e4 = _0x218727;
             const _0x4000ac = 'https://docs.google.com/spreadsheets/d/' + CONSTANTS.GSHEET.DATA.ID + '/export?format=csv&gid=' + CONSTANTS.GSHEET.DATA.GID + '&_t=' + Date.now();
-            GM_xmlhttpRequest({ method: 'GET', url: _0x4000ac, timeout: 5000, onload: _0x3e7c57 => { if (_0x3e7c57.status === 200 && !_0x3e7c57.responseText.includes('<html')) {
+            /* V16.8.5: danh sách nhóm hàng đã tải trong 30 phút thì dùng lại, không chờ tải Google Sheet mỗi lần bấm chạy */
+            const __cfgList = GM_getValue(CONSTANTS.KEYS.CONFIG_LIST, []);
+            const __cfgFresh = Array.isArray(__cfgList) && __cfgList.length > 0 && Date.now() - (Number(GM_getValue('autobi_cfglist_at', 0)) || 0) < 30 * 60000;
+            (__cfgFresh ? (o => setTimeout(() => o.onload({ status: 0, responseText: '' }), 0)) : GM_xmlhttpRequest)({ method: 'GET', url: _0x4000ac, timeout: 5000, onload: _0x3e7c57 => { if (_0x3e7c57.status === 200 && !_0x3e7c57.responseText.includes('<html')) {
                     let _0x32ec7c = [];
                     const _0x43913f = _0x3e7c57.responseText.split('\n');
                     for (let _0x32f2e7 = 1; _0x32f2e7 < _0x43913f.length; _0x32f2e7++) {
@@ -4063,8 +4106,10 @@ window.__AutoBIRun67 = (function () {
                             }
                         }
                     }
-                    if (_0x32ec7c.length > 0)
+                    if (_0x32ec7c.length > 0) {
                         GM_setValue(CONSTANTS.KEYS.CONFIG_LIST, _0x32ec7c);
+                        GM_setValue('autobi_cfglist_at', Date.now());
+                    }
                 } GM_setValue('tgdd_active_run_config', _0x5f53e4); console.log('[Auto BI] \u2705 \u0110\u00E3 n\u1EA1p c\u1EA5u h\u00ECnh chu\u1EA9n c\u1EE7a Th\u00E1ng hi\u1EC7n t\u1EA1i (Target: ' + _0x5f53e4.target1 + ')'); _0xb0716(); }, onerror: () => { GM_setValue('tgdd_active_run_config', _0x5f53e4); _0xb0716(); }, ontimeout: () => { GM_setValue('tgdd_active_run_config', _0x5f53e4); _0xb0716(); } });
         } }, ensureRevenueOptionsDMX: _0x440e7c => { UI.showToast('\u2699\uFE0F \u0110ang tick ch\u1ECDn Target, D\u1EF1 ki\u1EBFn, Tr\u1EA3 g\u00F3p, T\u0103ng tr\u01B0\u1EDFng...'); const _0x3fe241 = Array.from(document.querySelectorAll('button')); const _0x8859c4 = _0x3fe241.find(_0x502ee6 => { const _0x240bef = (_0x502ee6.textContent || _0x502ee6.innerText || '').trim().toLowerCase(); return _0x240bef === 'dt quy \u0111\u1ED5i' || _0x240bef === 'quy \u0111\u1ED5i'; }); if (_0x8859c4 && !_0x8859c4.classList.contains('bg-blue-600')) {
             _0x8859c4.click();
@@ -9785,7 +9830,7 @@ const _0x133c09 = '<div style="font-size:15px; color:#333; line-height:1.6; text
                     UI.updateLoadingStatus('\u274C T\u00E0i kho\u1EA3n ch\u01B0a \u0111\u01B0\u1EE3c c\u1EA5p quy\u1EC1n s\u1EED d\u1EE5ng!');
                     return;
                 } UI.initHome(); const _0x580f4e = document.getElementById(CONSTANTS.DOM_IDS.BOTTOM_NAV); if (_0x580f4e)
-                    _0x580f4e.classList.add('instant-show'); UI.updateLoadingStatus('\u0110ang qu\u00E9t sinh nh\u1EADt si\u00EAu th\u1ECB...'); setTimeout(() => { APP.checkBirthdays(() => { UI.updateLoadingStatus('\u0110ang \u0111\u1ED3ng b\u1ED9 th\u00F4ng b\u00E1o h\u1EC7 th\u1ED1ng...'); DATA.checkNotification(() => { UI.updateLoadingStatus('Kh\u1EDFi t\u1EA1o ho\u00E0n t\u1EA5t!'); setTimeout(() => { APP.showQueuedPopups(); }, 500); }); }); }, 200); });
+                    _0x580f4e.classList.add('instant-show'); /* V16.8.4: bỏ bước kiểm tra sinh nhật khi khởi động (gọi Apps Script làm chậm) */ UI.updateLoadingStatus('\u0110ang \u0111\u1ED3ng b\u1ED9 th\u00F4ng b\u00E1o h\u1EC7 th\u1ED1ng...'); DATA.checkNotification(() => { UI.updateLoadingStatus('Kh\u1EDFi t\u1EA1o ho\u00E0n t\u1EA5t!'); setTimeout(() => { APP.showQueuedPopups(); }, 500); }); });
             }
             else {
                 if (_0x44379a) {
@@ -9905,7 +9950,9 @@ const _0x133c09 = '<div style="font-size:15px; color:#333; line-height:1.6; text
             GM_setValue('tgdd_auto_start_time', Date.now());
             GM_setValue('tgdd_total_auto_seconds', _0x176fe2);
             const _0x3fa3a3 = GM_getValue('tgdd_custom_report_month', 'current');
-            AuthService.check(_0x264183 => { if (!window.__AutoBIRun67.active(startRunId67))
+            /* V16.8.5: quyền đã kiểm tra khi mở trang (≤ 10 phút trước) thì dùng lại, không tải lại Google Sheet lần 2 khi bấm chạy */
+            const __authFresh = (() => { try { const c = AuthService.getAuthCache(); return !!(AUTH_STATE && AUTH_STATE.checked && AUTH_STATE.isAuthorized && c && c.isAuthorized && Date.now() - (c.timestamp || 0) < 10 * 60000 && AuthService.extractUserId(c.user) === AuthService.extractUserId(AUTH_STATE.userName)); } catch (_) { return false; } })();
+            (__authFresh ? (cb => cb(AUTH_STATE)) : AuthService.check)(_0x264183 => { if (!window.__AutoBIRun67.active(startRunId67))
                 return; if (_0x264183.isAuthorized) {
                 DATA.loadConfigAndRun(_0x1c190f, _0x3fa3a3);
             }
@@ -9915,7 +9962,7 @@ const _0x133c09 = '<div style="font-size:15px; color:#333; line-height:1.6; text
         }, checkAutoProcess: () => { if (!window.__AutoBIRun67.active())
             return; const runId67 = window.__AutoBIRun67.current().id; const _0x509d19 = GM_getValue(CONSTANTS.KEYS.AUTO_STATE); if (typeof _0x509d19 !== 'number' || _0x509d19 < 0)
             return; const _0x85e9c8 = UTILS.getPersistentConfig(); const _0x2e2bb0 = GM_getValue(CONSTANTS.KEYS.RUN_QUEUE, []); const _0x3b9c7d = GM_getValue(CONSTANTS.KEYS.CONFIG_LIST) || []; const _0x351723 = GM_getValue('tgdd_auto_start_time', Date.now()); const _0xa20620 = GM_getValue('tgdd_total_auto_seconds', 60); const _0x511741 = () => { if (!window.__AutoBIRun67.active(runId67))
-            return; const _0x183eb7 = Math.floor((Date.now() - _0x351723) / 1000); const _0x542bcf = Math.max(1, _0xa20620 - _0x183eb7); UI.updateTimer(_0x542bcf); }; _0x511741(); const _0x3111b4 = setInterval(_0x511741, 1000); if (_0x509d19 === 3) {
+            return; const _0x183eb7 = Math.floor((Date.now() - _0x351723) / 1000); const _0x542bcf = Math.max(1, _0xa20620 - _0x183eb7); UI.updateTimer(_0x542bcf); }; _0x511741(); const _0x3111b4 = setInterval(_0x511741, 1000);  const __autobiDispatch = () => { if (_0x509d19 === 3) {
             window.__AutoBIInstallment41.run(_0x85e9c8, DATA, UI, () => _0x497e3b(null, true));
             return;
         } if (_0x509d19 === 0) {
@@ -9930,7 +9977,36 @@ const _0x133c09 = '<div style="font-size:15px; color:#333; line-height:1.6; text
         } if (_0x509d19 === 18) {
             DATA.runCrmServiceScoreSequence(_0x85e9c8, () => _0x497e3b(null, true));
             return;
-        } function _0x497e3b(_0x431b49, _0x5b4090) { if (!window.__AutoBIRun67.active(runId67) || GM_getValue('tgdd_auto_state_run_v30', -1) !== _0x509d19) {
+        } };
+        /* V16.8: chạy nhanh bằng API cho các bước 0/2/3, không chuyển trang; bước nào API lỗi thì chạy giao diện như cũ */
+        const __skip = GM_getValue('autobi_fast_skip', null);
+        const __autobiGo = () => { const __u = UTILS.getStepUrl(_0x509d19, _0x85e9c8); let __here = true; try { __here = !__u || new URL(__u, location.href).pathname === location.pathname; } catch (_) { } if (__here) __autobiDispatch(); else { GM_setValue('autobi_fast_skip', { run: runId67, step: _0x509d19 }); window.location.replace(__u); } };
+        const __autobiFast = window.__AutoBIApi && window.__AutoBIApi.fastOn && window.__AutoBIApi.fastOn() && [0, 2, 3, 17, 18].includes(_0x509d19) && !window.__AutoBIFastTried && !(__skip && __skip.run === runId67 && __skip.step === _0x509d19);
+        if (__autobiFast) {
+            window.__AutoBIFastTried = true;
+            try { window.__AutoBILog5.stage('API', 'Tổng cụm', 'Đang lấy số bằng API (không chuyển trang)'); } catch (_) { }
+            window.__AutoBIApi.fastRun(_0x2e2bb0, _0x509d19, _0x85e9c8).then(res => {
+                if (!window.__AutoBIRun67.active(runId67) || GM_getValue('tgdd_auto_state_run_v30', -1) !== _0x509d19) { clearInterval(_0x3111b4); return; }
+                if (!res.handled) { __autobiGo(); return; }
+                clearInterval(_0x3111b4);
+                const __cache = GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {};
+                const __idx = _0x2e2bb0.indexOf(_0x509d19);
+                let __next = 99, __url = '';
+                for (let __i = __idx + 1; __i < _0x2e2bb0.length; __i++) {
+                    const __st = _0x2e2bb0[__i];
+                    if (res.done.has(__st)) continue;
+                    if (UTILS.isStepValid(__st, _0x85e9c8)) { __next = __st; __url = UTILS.getStepUrl(__st, _0x85e9c8); break; }
+                }
+                if (__next < 99 && __url) { GM_setValue(CONSTANTS.KEYS.AUTO_STATE, __next); window.location.replace(__url); }
+                else { GM_deleteValue('tgdd_auto_start_time'); GM_deleteValue('tgdd_total_auto_seconds'); finishRunAndReturnHome(__cache, _0x85e9c8); }
+            }).catch(err => {
+                if (err && err.code === 'AUTH') { clearInterval(_0x3111b4); try { window.__AutoBILoadingGuard75.stop(err); } catch (_) { } UI.showToast('\u26A0\uFE0F ' + err.message, 12000); return; }
+                try { window.__AutoBILog5.note('API ch\u1EA1y nhanh l\u1ED7i: ' + (err && err.message) + ' \u2014 ch\u1EA1y giao di\u1EC7n'); } catch (_) { }
+                __autobiGo();
+            });
+            return;
+        }
+        __autobiDispatch(); function _0x497e3b(_0x431b49, _0x5b4090) { if (!window.__AutoBIRun67.active(runId67) || GM_getValue('tgdd_auto_state_run_v30', -1) !== _0x509d19) {
             clearInterval(_0x3111b4);
             return;
         } clearInterval(_0x3111b4); const _0x426eec = GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {}; const _0x5d827e = _0x2e2bb0.indexOf(_0x509d19); let _0x5988a6 = 99; let _0x134796 = ''; if (_0x5d827e !== -1 && _0x5d827e < _0x2e2bb0.length - 1) {
@@ -9950,7 +10026,7 @@ const _0x133c09 = '<div style="font-size:15px; color:#333; line-height:1.6; text
             GM_deleteValue('tgdd_auto_start_time');
             GM_deleteValue('tgdd_total_auto_seconds');
             finishRunAndReturnHome(_0x426eec, _0x85e9c8);
-        } } }, checkBirthdays: _0x5aabe0 => { const _0x19f792 = new Date().toDateString(); const _0x42b9a5 = GM_getValue('tgdd_bday_last_closed_date', ''); if (_0x42b9a5 === _0x19f792 || window.tgdd_bday_checked) {
+        } } }, checkBirthdays: _0x5aabe0 => { /* V16.8.4: đã bỏ kiểm tra sinh nhật */ if (_0x5aabe0) _0x5aabe0(); return; const _0x19f792 = new Date().toDateString(); const _0x42b9a5 = GM_getValue('tgdd_bday_last_closed_date', ''); if (_0x42b9a5 === _0x19f792 || window.tgdd_bday_checked) {
             if (_0x5aabe0)
                 _0x5aabe0();
             return;
@@ -10007,7 +10083,7 @@ const _0x133c09 = '<div style="font-size:15px; color:#333; line-height:1.6; text
                 _0x51c874.style.setProperty('display', 'none', 'important');
             setTimeout(() => { const _0x29f90c = document.getElementById('btn-confirm-start-month'); if (_0x29f90c) {
                 _0x29f90c.onclick = () => { const _0x4ae274 = document.getElementById(CONSTANTS.DOM_IDS.MSG_MODAL); if (_0x4ae274)
-                    _0x4ae274.style.display = 'none'; document.body.classList.remove('tgdd-body-lock'); window.tgdd_pending_start_of_month_notice = false; setTimeout(_0x23005a, 300); };
+                    _0x4ae274.style.display = 'none'; document.body.classList.remove('tgdd-body-lock'); window.tgdd_pending_start_of_month_notice = false; try { GM_setValue('autobi_som_notice_seen', new Date().toDateString()); } catch (_) { } setTimeout(_0x23005a, 300); };
             } }, 100);
         }
         else {
@@ -11343,7 +11419,9 @@ window.__AutoBIBiTarget99 = (function () {
     cache = cache && typeof cache === 'object' && Object.keys(cache).length ? cache : (GM_getValue('tgdd_data_cache_v30', {}) || {});
     let changed = false;
     const perm = readObj(PERM_KEY);
-    if (perm && applyBI(perm, cache)) {
+    /* V16.4.1: Khai báo GM không có shop nào thì không ghi (tránh ghi đè cấu hình thật đang nằm ở localStorage) */
+    const hasShop = c => !!c && [1, 2, 3, 4, 5].some(i => String(c['shop' + i] || c['makho' + i] || '').trim());
+    if (perm && hasShop(perm) && applyBI(perm, cache)) {
       const U = core('UTILS');
       if (U && U.savePersistentConfig) U.savePersistentConfig(perm); else GM_setValue(PERM_KEY, perm);
       changed = true;
@@ -11446,4 +11524,833 @@ window.__AutoBIBiTarget99 = (function () {
   try { hookReport(); hookCompetition(); sync(); } catch (_) { }
   if (window.__AutoBITick96) { window.__AutoBITick96(install, 1000); window.__AutoBITick96(hookReport, 2000); window.__AutoBITick96(hookCompetition, 2000); window.__AutoBITick96(fixTimer, 500); }
   return { sync };
+})();
+
+/* ==========================================================================
+   V16.4 — __AutoBIApi: đọc số trực tiếp từ dữ liệu gốc của BI (/kb-api) và SO KHỚP
+   với số AutoBI đang đọc từ giao diện. Chưa thay luồng đổ số, chưa đổi báo cáo.
+   - Menu Tampermonkey: "AutoBI: So khớp số API" (chạy ngay, hiện bảng kết quả)
+                        "AutoBI: Xem so khớp gần nhất" / "AutoBI: Bật/Tắt tự so khớp sau đổ số"
+   - Tự so khớp sau mỗi lượt đổ số hoàn tất (mặc định bật), ghi tóm tắt vào nhật ký.
+   - Phiên BI hết hạn (401/403): dừng, báo đăng nhập lại; không tự thử lại.
+   - Mã nội bộ shop ở Thi đua (salegroupid) lấy lại mỗi lượt, không lưu cố định.
+   ========================================================================== */
+(function () {
+  'use strict';
+  if (window.top !== window.self || window.__AutoBIApi) return;
+  if (!/(^|\.)baocao\.dienmayxanh\.com$/.test(location.hostname)) return;
+
+  const CFG_KEY = 'TGDD_BI_STORE_PERMANENT_CONFIG_GM_V1';
+  const CACHE_KEY = 'tgdd_data_cache_v30';
+  const LAST_KEY = 'autobi_api_compare_last';
+  const PEND_KEY = 'autobi_api_compare_pending';
+  const AUTO_KEY = 'autobi_api_compare_auto';
+  const page = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
+
+  const slug = v => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  const readObj = key => { const v = GM_getValue(key, null); if (!v) return {}; if (typeof v === 'string') { try { return JSON.parse(v) || {}; } catch (_) { return {}; } } return v; };
+  const num = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+  const pct = (a, b) => (num(b) ? num(a) / num(b) * 100 : 0);
+  const note = text => { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note(text); } catch (_) { } };
+  const running = () => { try { return Number(GM_getValue('tgdd_auto_state_run_v30', -1)) >= 0 || (window.__AutoBIRunning88 && window.__AutoBIRunning88()); } catch (_) { return false; } };
+
+  /* Ngày theo giờ Việt Nam, dạng 20261002 */
+  function vnDay(offset = 0) { const d = new Date(Date.now() + 7 * 3600e3 + offset * 86400e3); return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate(); }
+  const monthStart = ymd => Math.floor(ymd / 100) * 100 + 1;
+  const monthKey = ymd => Math.floor(ymd / 100);
+
+  /* V16.8: tự thử lại 2 lần (1,5s rồi 3s) khi mạng lỗi hoặc máy chủ BI lỗi 5xx; 401/403 dừng ngay */
+  async function api(path, body) {
+    const token = (page.localStorage && page.localStorage.getItem('access_token')) || '';
+    let lastError = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt) await new Promise(r => setTimeout(r, attempt * 1500));
+      let res;
+      try {
+        res = await fetch('/kb-api/' + path, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify(body) });
+      } catch (e) { lastError = new Error('Không gọi được BI (' + path + '): ' + (e && e.message)); continue; }
+      if (res.status === 401 || res.status === 403) { const e = new Error('Phiên BI hết hạn — đăng nhập lại BI rồi chạy lại'); e.code = 'AUTH'; throw e; }
+      if (res.status >= 500 || res.status === 429) { lastError = new Error('Máy chủ BI lỗi ' + res.status + ' ở ' + path); continue; }
+      if (!res.ok) throw new Error('BI trả lỗi ' + res.status + ' ở ' + path);
+      const j = await res.json().catch(() => null);
+      if (!j || j.success === false) throw new Error('BI trả dữ liệu lỗi ở ' + path + (j && j.message ? ': ' + j.message : ''));
+      return Array.isArray(j.data) ? j.data : (j.data ? [j.data] : []);
+    }
+    throw lastError || new Error('Không gọi được BI (' + path + ')');
+  }
+  const revBody = (from, to, level, ids, groupBy) => ({ FROMDATE: from, TODATE: to, VIEWLEVEL: level, VIEWIDS: ids == null ? null : String(ids), CHAINIDS: null, MAINGROUPIDS: null, SUBGROUPIDS: null, GROUPBY: groupBy, OUTPUTTYPEIDS: null, PAGEINDEX: 1, PAGESIZE: 0 });
+  const compBody = (month, timeType, storeIds, level = 'COMPANY', ids = null) => ({ MONTHKEY: month, VIEWLEVEL: level, VIEWIDS: ids == null ? null : String(ids), ISVIEWSTORE: 0, TIMETYPE: timeType, STOREIDS: storeIds, PAGESIZE: 0 });
+
+  /* Shop trong Khai báo */
+  function shopsOf(cfg) {
+    const out = [];
+    for (let i = 1; i <= 5; i++) {
+      const code = String(cfg['makho' + i] || cfg['shopCode' + i] || cfg['code' + i] || '').trim();
+      const name = String(cfg['shop' + i] || cfg['shop' + i + 'Short'] || '').trim() || code;
+      if (name) out.push({ key: 'shop' + i, idx: i, name, short: String(cfg['shop' + i + 'Short'] || '').trim() || name, code });
+    }
+    return out;
+  }
+  function shopOf(shops, cfg, label, id) {
+    try {
+      const D = page.DATA || window.DATA;
+      const k = D && D.identifyShopFromRowData && D.identifyShopFromRowData(String(label || ''), id != null ? 'store-' + id : '', cfg);
+      if (k) { const hit = shops.find(s => s.key === k); if (hit) return hit; }
+    } catch (_) { }
+    const s = slug(label), tail = slug(String(label || '').split(' - ').pop());
+    return shops.find(x => x.code && (String(id) === x.code || s.startsWith(slug(x.code))))
+      || shops.find(x => { const n = slug(x.name), sh = slug(x.short); return (n && (s === n || s.includes(n) || n.includes(s))) || (tail.length >= 3 && (n.includes(tail) || sh.includes(tail))); })
+      || null;
+  }
+
+  /* Tìm toàn bộ siêu thị tài khoản được xem (đi xuống từng cấp, tối đa 12 lần gọi) */
+  async function discoverStores(day) {
+    const queue = [{ level: 'COMPANY', id: null }], seen = new Set(), stores = new Map();
+    let calls = 0;
+    while (queue.length && calls < 12) {
+      const q = queue.shift();
+      const rows = await api('reports/revenue-consolidated-get', revBody(day, day, q.level, q.id, 'LEVEL'));
+      calls++;
+      for (const r of rows) {
+        const key = r.rowlevel + ':' + r.rowid;
+        if (r.rowlevel === 'STORE') stores.set(String(r.rowid), r.rowname);
+        else if (!seen.has(key) && !(r.rowlevel === q.level && String(r.rowid) === String(q.id))) { seen.add(key); queue.push({ level: r.rowlevel, id: r.rowid }); }
+      }
+    }
+    return [...stores].map(([id, name]) => ({ id, name }));
+  }
+
+  /* So một ô: thử các cách tính từ API, lấy cách gần nhất */
+  function judge(ui, candidates) {
+    const u = num(ui);
+    let best = null;
+    for (const [via, raw] of Object.entries(candidates)) {
+      const a = num(raw), diff = Math.abs(a - u), rel = Math.max(Math.abs(a), Math.abs(u)) ? diff / Math.max(Math.abs(a), Math.abs(u)) : 0;
+      if (!best || rel < best.rel) best = { via, api: a, rel, diff };
+    }
+    best.ok = best.rel <= 0.01 || best.diff <= 0.2;
+    return best;
+  }
+  const fmt = v => { const n = num(v); return Math.abs(n) >= 1000 ? Math.round(n).toLocaleString('vi-VN') : (Math.round(n * 100) / 100).toLocaleString('vi-VN'); };
+
+  function revenueCandidates(r) {
+    const days = num(r.numday_cum) || num(r.numday_window), month = num(r.numday_month);
+    const forecast = (v, t) => (days && month && num(t) ? num(v) / days * month / num(t) * 100 : 0);
+    return {
+      t: { 'target_kfactor': r.target_kfactor, 'target': r.target },
+      r: { 'revenue_kfactor': r.revenue_kfactor, 'revenue': r.revenue },
+      dtlk: { 'revenue': r.revenue, 'revenue_kfactor': r.revenue_kfactor },
+      dk: { '%HT QĐ': pct(r.revenue_kfactor, r.target_kfactor), '%HT thực': pct(r.revenue, r.target), '%Dự kiến QĐ': forecast(r.revenue_kfactor, r.target_kfactor), '%Dự kiến thực': forecast(r.revenue, r.target) },
+      tg: { '%TG thực': pct(r.revenue_tragop, r.revenue), '%TG QĐ': pct(r.revenue_tragop_kfactor, r.revenue_kfactor) }
+    };
+  }
+  const SUM_FIELDS = ['quantity', 'revenue', 'revenue_kfactor', 'revenue_off', 'revenue_onl', 'revenue_tragop', 'revenue_tragop_kfactor', 'target', 'target_kfactor'];
+  function sumRows(rows) {
+    const t = {};
+    SUM_FIELDS.forEach(f => { t[f] = rows.reduce((s, r) => s + num(r[f]), 0); });
+    ['numday_window', 'numday_cum', 'numday_month'].forEach(f => { t[f] = rows.length ? num(rows[0][f]) : 0; });
+    return t;
+  }
+
+  /* V16.4.2: khớp tên chương trình theo danh sách nhóm hàng (tgdd_gsheet_list_v30) đúng như lõi (DATA.matchGroupConfigName);
+     chỉ đoán theo tên khi không có danh sách nhóm */
+  function groupList() { const v = GM_getValue('tgdd_gsheet_list_v30', []); if (Array.isArray(v)) return v; try { const a = JSON.parse(v); return Array.isArray(a) ? a : []; } catch (_) { return []; } }
+  function matchGroup(cacheGroups, programName) {
+    const raw = String(programName || '').replace(/^\d+\s*-\s*/, '').trim(), s = slug(raw);
+    const keys = Object.keys(cacheGroups || {}), list = groupList();
+    if (list.length) {
+      let m = null;
+      try { const D = page.DATA || window.DATA; if (D && D.matchGroupConfigName) m = D.matchGroupConfigName(raw, list); } catch (_) { }
+      if (!m) {
+        m = list.find(g => slug(g.short) === s || slug(g.full) === s) || list.find(g => g.customSlug && slug(g.customSlug) === s) || null;
+        if (!m) { let best = 0; for (const g of list) { const k = slug(g.short); if (k && (s.startsWith(k) || k.startsWith(s)) && k.length > best) { best = k.length; m = g; } } }
+      }
+      return m && m.short ? m.short : null;
+    }
+    return keys.find(k => slug(k) === s)
+      || keys.filter(k => slug(k).length >= 4 && (s.includes(slug(k)) || slug(k).includes(s))).sort((a, b) => slug(b).length - slug(a).length)[0]
+      || null;
+  }
+
+  /* V16.4.1: đọc Khai báo đúng thứ tự như lõi (UTILS.getPersistentConfig): cấu hình lượt chạy → GM → localStorage của trang */
+  function readConfig() {
+    const ok = v => v && typeof v === 'object' && Object.keys(v).length > 0;
+    const run = readObj('tgdd_active_run_config');
+    if (ok(run) && shopsOf(run).length) return run;
+    const gm = readObj(CFG_KEY);
+    if (ok(gm) && shopsOf(gm).length) return gm;
+    for (const ls of [page.localStorage, window.localStorage]) {
+      try { const v = ls && JSON.parse(ls.getItem(CFG_KEY) || 'null'); if (ok(v) && shopsOf(v).length) return v; } catch (_) { }
+    }
+    try { const v = page.tgdd_active_user_config || window.tgdd_active_user_config; if (ok(v) && shopsOf(v).length) return v; } catch (_) { }
+    return ok(gm) ? gm : (ok(run) ? run : {});
+  }
+
+  async function collect() {
+    const cfg = readConfig(), cache = readObj(CACHE_KEY), shops = shopsOf(cfg);
+    if (!shops.length) throw new Error('Khai báo chưa có shop nào (đã tìm ở cấu hình lượt chạy, GM và localStorage; khóa có: ' + Object.keys(cfg).filter(k => /shop|kho|code/i.test(k)).slice(0, 12).join(', ') + ')');
+    const today = vnDay(), lines = [], stats = { ok: 0, bad: 0, miss: 0 }, push = (ok, text) => { lines.push((ok === true ? '✅ ' : ok === false ? '❌ ' : '⚪ ') + text); if (ok === true) stats.ok++; else if (ok === false) stats.bad++; else stats.miss++; };
+
+    /* 1. Siêu thị */
+    const stores = await discoverStores(today);
+    const matched = [];
+    for (const shop of shops) {
+      const st = stores.find(x => shopOf([shop], cfg, x.name, x.id));
+      if (st) matched.push({ ...shop, storeId: st.id, storeName: st.name });
+      else push(null, shop.short + ': không thấy trong danh sách siêu thị BI của tài khoản');
+    }
+    if (!matched.length) throw new Error('Không khớp được shop nào trong Khai báo với siêu thị BI');
+    const storeIds = matched.map(s => s.storeId).join(',');
+    lines.push('Siêu thị: ' + matched.map(s => s.short + ' = ' + s.storeName + ' (' + s.storeId + ')').join(' · '));
+
+    /* 2. Doanh thu Realtime + Lũy kế */
+    const rt = {}, cum = {};
+    let cumTo = 0;
+    for (const s of matched) {
+      rt[s.key] = (await api('reports/revenue-consolidated-get', revBody(today, today, 'STORE', s.storeId, 'LEVEL')))[0] || null;
+      const k = String(rt[s.key] && rt[s.key].cum_as_of_date_key || '');
+      if (/^\d{8}$/.test(k)) cumTo = Math.max(cumTo, Number(k));
+    }
+    if (!cumTo) cumTo = vnDay(-1);
+    const cumFrom = monthStart(cumTo);
+    for (const s of matched) cum[s.key] = (await api('reports/revenue-consolidated-get', revBody(cumFrom, cumTo, 'STORE', s.storeId, 'LEVEL')))[0] || null;
+    lines.push('Lũy kế API: ' + cumFrom + ' → ' + cumTo + ' · Realtime: ' + today);
+
+    const compareRevenue = (title, uiData, apiRows, cumRows) => {
+      lines.push('— ' + title);
+      if (!uiData) { push(null, title + ': chưa có số giao diện để so (chạy đổ số trước)'); return; }
+      const keys = matched.map(s => s.key).filter(k => apiRows[k]);
+      const targets = keys.map(k => [k, apiRows[k]]).concat(keys.length ? [['total', sumRows(keys.map(k => apiRows[k]))]] : []);
+      for (const [k, row] of targets) {
+        const ui = uiData[k], name = k === 'total' ? 'Tổng' : (matched.find(s => s.key === k) || {}).short;
+        if (!ui) { push(null, name + ': giao diện không có dòng này'); continue; }
+        const cands = revenueCandidates(row);
+        /* Realtime: ô %HT của AutoBI là %HT Lũy kế (V16.4.2) */
+        if (cumRows) { const c = k === 'total' ? sumRows(keys.map(x => cumRows[x]).filter(Boolean)) : cumRows[k]; if (c) cands.dk = { '%HT QĐ Lũy kế': pct(c.revenue_kfactor, c.target_kfactor), ...cands.dk }; }
+        for (const f of ['t', 'r', 'dtlk', 'dk', 'tg']) {
+          if (ui[f] === undefined) continue;
+          const j = judge(ui[f], cands[f]);
+          push(j.ok, name + ' · ' + f + ': giao diện ' + fmt(ui[f]) + ' | API ' + fmt(j.api) + ' (' + j.via + ')');
+        }
+      }
+    };
+    compareRevenue('Doanh thu Lũy kế (link2)', cache.link2, cum);
+    compareRevenue('Doanh thu Realtime (link1)', cache.link1, rt, cum);
+
+    /* 3. Thi đua Lũy kế + Realtime, và mã nội bộ shop (lấy lại mỗi lượt) */
+    const month = monthKey(today), salegroups = {};
+    for (const [title, timeType, cacheKey] of [['Thi đua Lũy kế (link4_smart)', 2, 'link4_smart'], ['Thi đua Realtime (link3_smart)', 1, 'link3_smart']]) {
+      lines.push('— ' + title);
+      const rows = (await api('reports/competition-bymsg-get', compBody(month, timeType, storeIds))).filter(r => String(r.columnname || '').toUpperCase() === 'STOREID');
+      const uiGroups = cache[cacheKey];
+      const unmatched = new Set(), notInUi = new Set(), buckets = new Map();
+      const r100 = v => Math.round(num(v) * 1000 / 100) * 100, pos = v => Math.max(0, num(v));
+      for (const r of rows) {
+        const shop = shopOf(matched, cfg, r.salegroupname, null);
+        if (!shop) continue;
+        if (timeType === 2 && r.salegroupid != null) (salegroups[shop.key] = salegroups[shop.key] || new Set()).add(String(r.salegroupid));
+        if (!uiGroups) continue;
+        const g = matchGroup(uiGroups, r.programname);
+        const pname = String(r.programname || '').replace(/^\d+\s*-\s*/, '');
+        if (!g) { unmatched.add(pname); continue; }
+        if (!uiGroups[g]) { notInUi.add(g + ' ← ' + pname); continue; }
+        const ui = uiGroups[g][shop.key];
+        if (!ui) { push(null, g + ' · ' + shop.short + ': giao diện không có'); continue; }
+        const jr = judge(ui.r, { 'revenue×1000': num(r.revenue) * 1000, 'revenue×1000 (âm tính 0)': pos(r.revenue) * 1000, 'revenue×1000 làm tròn 100': r100(pos(r.revenue)), 'quantity': num(r.quantity), 'quantity (âm tính 0)': pos(r.quantity) });
+        const jt = judge(ui.t, { 'target×1000': num(r.target) * 1000, 'target×1000 làm tròn 100': r100(r.target), 'target': r.target });
+        const jp = judge(ui.p, { '%HT': r.targetpercent_month, '%HT×100': num(r.targetpercent_month) * 100 });
+        const jd = judge(ui.pd, { '%DK': r.targetpercent_predict, '%DK×100': num(r.targetpercent_predict) * 100 });
+        const fails = [jr, jt, jp, jd].filter(x => !x.ok);
+        const item = { label: g + ' · ' + shop.short, pname, jr, jt, jp, jd, ui, fails, neg: num(r.revenue) < 0 && num(ui.r) === 0 };
+        const key = g + '|' + shop.key, prev = buckets.get(key);
+        if (!prev) buckets.set(key, [item]); else prev.push(item);
+      }
+      for (const items of buckets.values()) {
+        items.sort((a, b) => a.fails.length - b.fails.length);
+        const it = items[0], ok = !it.fails.length;
+        let hint = '';
+        if (!ok) {
+          if (it.fails.includes(it.jd) && num(it.ui.pd) > 0 && num(it.jd.api) >= 1000 && Math.floor(num(it.jd.api) / 1000) === Math.floor(num(it.ui.pd))) hint = ' — giao diện đọc sai số có dấu phân cách hàng nghìn, API đúng';
+          else if (it.neg) hint = ' — API âm (hàng trả), giao diện tính 0';
+          else hint = ' (' + it.fails.map(x => x.via).join(', ') + ')';
+        }
+        push(ok, it.label + ': r ' + fmt(it.ui.r) + '/' + fmt(it.jr.api) + ' · t ' + fmt(it.ui.t) + '/' + fmt(it.jt.api) + ' · %HT ' + fmt(it.ui.p) + '/' + fmt(it.jp.api) + ' · %DK ' + fmt(it.ui.pd) + '/' + fmt(it.jd.api) + hint + (items.length > 1 ? ' [nhóm gộp ' + items.length + ' chương trình; khớp nhất: ' + it.pname + ']' : ''));
+      }
+      if (notInUi.size) push(null, 'Có trong Khai báo nhưng giao diện chưa đọc: ' + [...notInUi].slice(0, 8).join(' | '));
+      if (!uiGroups) push(null, title + ': chưa có số giao diện để so');
+      if (unmatched.size) push(null, 'Chương trình API chưa khớp tên nhóm Khai báo: ' + [...unmatched].slice(0, 8).join(' | '));
+    }
+
+    /* 4. Thi đua nhân viên từng shop (Lũy kế) */
+    lines.push('— Thi đua nhân viên');
+    for (const s of matched) {
+      const ids = [...(salegroups[s.key] || [])];
+      if (!ids.length) { push(null, s.short + ': không tìm thấy mã Thi đua của shop'); continue; }
+      let n = 0; const staff = new Set(), programs = new Set();
+      for (const id of ids) {
+        const rows = await api('reports/competition-bymsg-get', compBody(month, 2, storeIds, 'STORE', id));
+        n += rows.length; rows.forEach(r => { staff.add(String(r.staffuser)); programs.add(r.programid); });
+      }
+      push(n > 0 ? true : null, s.short + ': mã ' + ids.join('+') + ' → ' + staff.size + ' nhân viên, ' + programs.size + ' chương trình, ' + n + ' dòng');
+    }
+
+    /* 5. Nhân viên Doanh thu, Ngành hàng BI, Trả chậm, Giờ công — kiểm tra lấy được dữ liệu */
+    lines.push('— Dữ liệu khác');
+    for (const s of matched) {
+      const staff = await api('reports/revenue-consolidated-staff-get', { FROMDATE: cumFrom, TODATE: cumTo, VIEWLEVEL: 'STORE', VIEWIDS: String(s.storeId), CHAINIDS: null, MAINGROUPIDS: null, SUBGROUPIDS: null, ORDERBY: 'REVENUE', ORDERDIR: 'DESC', PAGEINDEX: 1, PAGESIZE: 500 });
+      const staffSum = staff.reduce((a, r) => a + num(r.revenue_kfactor), 0), shopQd = num(cum[s.key] && cum[s.key].revenue_kfactor);
+      const j = judge(staffSum, { 'DT QĐ shop': shopQd });
+      push(staff.length ? j.ok : null, s.short + ' · Nhân viên DT: ' + staff.length + ' người, tổng QĐ ' + fmt(staffSum) + ' / shop ' + fmt(shopQd));
+      const cat = await api('reports/revenue-consolidated-get', revBody(cumFrom, cumTo, 'STORE', s.storeId, 'BICAT'));
+      push(cat.length ? true : null, s.short + ' · Ngành hàng BI: ' + cat.length + ' dòng');
+    }
+    const tc = await api('reports/tra-cham-matrix-get', { VIEWLEVEL: 'RSMSTOREGROUP', RSMIDS: null, AMIDS: null, STOREIDS: storeIds, MONTHKEY: month });
+    push(tc.length ? true : null, 'Trả chậm: ' + tc.length + ' dòng');
+    const tk = await api('reports/timekeeping-get', { FROMDATE: monthStart(today), TODATE: today, RSMIDS: null, AMIDS: null, STOREIDS: storeIds, PAGEINDEX: 1, PAGESIZE: 50 });
+    push(tk.length ? true : null, 'Giờ công: ' + num(tk[0] && tk[0].total_rows || tk.length) + ' dòng từ ' + monthStart(today));
+
+    return { at: Date.now(), stats, lines };
+  }
+
+  function render(report) {
+    document.getElementById('autobi-api16-panel')?.remove();
+    const box = document.createElement('div');
+    box.id = 'autobi-api16-panel';
+    box.style.cssText = 'position:fixed;inset:max(12px,env(safe-area-inset-top)) 10px max(12px,env(safe-area-inset-bottom));z-index:2147483646;background:#fff;color:#111;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.35);display:flex;flex-direction:column;font:13px/1.45 -apple-system,Segoe UI,Roboto,sans-serif';
+    const s = report.stats || {};
+    const head = document.createElement('div');
+    head.style.cssText = 'padding:12px 14px;border-bottom:1px solid #eee;display:flex;gap:8px;align-items:center;flex-wrap:wrap';
+    head.innerHTML = '<b style="flex:1;min-width:160px">So khớp số API · ' + new Date(report.at).toLocaleString('vi-VN') + '<br><span style="font-weight:400;color:#555">✅ ' + (s.ok || 0) + ' khớp · ❌ ' + (s.bad || 0) + ' lệch · ⚪ ' + (s.miss || 0) + ' chưa so được</span></b>';
+    const btn = (t, bg, fn) => { const b = document.createElement('button'); b.textContent = t; b.style.cssText = 'border:0;border-radius:9px;padding:9px 14px;font-weight:600;color:#fff;background:' + bg; b.onclick = fn; return b; };
+    const text = (report.error ? '⛔ ' + report.error + '\n' : '') + (report.lines || []).join('\n');
+    head.append(btn('Chép', '#2563eb', () => { try { navigator.clipboard.writeText(text); } catch (_) { } }), btn('Đóng', '#6b7280', () => box.remove()));
+    const pre = document.createElement('pre');
+    pre.style.cssText = 'margin:0;padding:12px 14px;overflow:auto;flex:1;white-space:pre-wrap;word-break:break-word;font:12px/1.5 ui-monospace,Menlo,Consolas,monospace';
+    pre.textContent = text;
+    box.append(head, pre);
+    document.body.appendChild(box);
+  }
+
+  /* ======================================================================
+     V16.5 — LẤY SỐ BẰNG API: sau bước Doanh thu và bước Thi đua của lượt đổ số,
+     ghi đè link1/link2 (Doanh thu RT/LK) và link3_smart/link4_smart (Thi đua RT/LK) bằng số API.
+     Quy ước đã chốt: Thi đua giữ số chính xác (không làm tròn 100); doanh thu âm (hàng trả) ghi số âm.
+     Nhân viên, Ngành hàng BI, Trả chậm, Giờ công: vẫn đọc giao diện (làm ở bước sau).
+     API lỗi → giữ nguyên số giao diện, ghi nhật ký. Tắt/bật: menu "AutoBI: Bật/Tắt lấy số bằng API".
+     ====================================================================== */
+  const SRC_KEY = 'autobi_api_source';
+  const apiOn = () => GM_getValue(SRC_KEY, true) !== false;
+  const STORES_KEY = 'autobi_api_stores_v1';
+
+  async function storesToday(day) {
+    const c = GM_getValue(STORES_KEY, null);
+    if (c && c.day === day && Array.isArray(c.list) && c.list.length) return c.list;
+    const list = await discoverStores(day);
+    if (list.length) GM_setValue(STORES_KEY, { day, list });
+    return list;
+  }
+  function matchStores(shops, cfg, stores) {
+    const out = [];
+    for (const shop of shops) { const st = stores.find(x => shopOf([shop], cfg, x.name, x.id)); if (st) out.push({ ...shop, storeId: st.id, storeName: st.name }); }
+    return out;
+  }
+  /* V16.8: dùng chung 1 lần tìm shop trong 60 giây cho các phần chạy song song */
+  let baseMemo = null;
+  function baseData(cfgIn) {
+    const now = Date.now();
+    if (baseMemo && now - baseMemo.at < 60000 && baseMemo.key === JSON.stringify(shopsOf(cfgIn && shopsOf(cfgIn).length ? cfgIn : readConfig()))) return baseMemo.promise;
+    const promise = (async () => {
+      const cfg = cfgIn && shopsOf(cfgIn).length ? cfgIn : readConfig();
+      const shops = shopsOf(cfg);
+      if (!shops.length) throw new Error('Khai báo chưa có shop nào');
+      const today = vnDay();
+      const matched = matchStores(shops, cfg, await storesToday(today));
+      if (!matched.length) throw new Error('Không khớp được shop Khai báo với siêu thị BI');
+      const first = (await api('reports/revenue-consolidated-get', revBody(today, today, 'STORE', matched[0].storeId, 'LEVEL')))[0] || {};
+      const k = String(first.cum_as_of_date_key || '');
+      const cumTo = /^\d{8}$/.test(k) ? Number(k) : vnDay(-1);
+      return { cfg, today, matched, storeIds: matched.map(x => x.storeId).join(','), cum: { from: monthStart(cumTo), to: cumTo } };
+    })();
+    baseMemo = { at: now, key: JSON.stringify(shopsOf(cfgIn && shopsOf(cfgIn).length ? cfgIn : readConfig())), promise };
+    promise.catch(() => { if (baseMemo && baseMemo.promise === promise) baseMemo = null; });
+    return promise;
+  }
+  const writeCache = fn => { const cache = GM_getValue(CACHE_KEY, {}) || {}; fn(cache); GM_setValue(CACHE_KEY, cache); };
+  const pall = (items, fn) => Promise.all(items.map(fn));
+
+  function revenueCell(row, cumRow) {
+    const ht = r => pct(r.revenue_kfactor, r.target_kfactor);
+    return { t: num(row.target_kfactor), r: num(row.revenue_kfactor), dtlk: num(row.revenue), tg: Math.round(pct(row.revenue_tragop, row.revenue) * 100) / 100, dk: Math.round(ht(cumRow || row) * 10) / 10 };
+  }
+  async function applyRevenue(cfgIn) {
+    const b = await baseData(cfgIn);
+    /* V16.8.2: Realtime và Lũy kế gọi cùng lúc (trước đây 2 lượt nối tiếp) */
+    const [rtList, cumList] = await Promise.all([
+      pall(b.matched, s => api('reports/revenue-consolidated-get', revBody(b.today, b.today, 'STORE', s.storeId, 'LEVEL'))),
+      pall(b.matched, s => api('reports/revenue-consolidated-get', revBody(b.cum.from, b.cum.to, 'STORE', s.storeId, 'LEVEL')))
+    ]);
+    const rt = {}, cum = {};
+    b.matched.forEach((s, i) => { rt[s.key] = rtList[i][0] || null; cum[s.key] = cumList[i][0] || null; });
+    const keys = b.matched.map(s => s.key).filter(k => rt[k] && cum[k]);
+    if (!keys.length) throw new Error('API không trả số Doanh thu cho shop nào');
+    writeCache(cache => {
+      const merge = (dst, k, cell) => { dst[k] = Object.assign({}, dst[k] || {}, cell); };
+      const l1 = Object.assign({}, cache.link1 || {}), l2 = Object.assign({}, cache.link2 || {});
+      for (const k of keys) { merge(l2, k, revenueCell(cum[k])); merge(l1, k, revenueCell(rt[k], cum[k])); }
+      const tRt = sumRows(keys.map(k => rt[k])), tCum = sumRows(keys.map(k => cum[k]));
+      merge(l2, 'total', revenueCell(tCum)); merge(l1, 'total', revenueCell(tRt, tCum));
+      cache.link1 = l1; cache.link2 = l2;
+      cache.__apiRevenue = { at: Date.now(), shops: keys.length, cumFrom: b.cum.from, cumTo: b.cum.to, rtDay: b.today };
+    });
+    return keys.length;
+  }
+
+  function groupType(short) { const g = groupList().find(x => x.short === short); return g ? slug(g.type) : ''; }
+  async function applyCompetition(cfgIn) {
+    const b = await baseData(cfgIn), month = monthKey(b.today), list = groupList();
+    const [lk, rt] = await Promise.all([2, 1].map(tt => api('reports/competition-bymsg-get', compBody(month, tt, b.storeIds))));
+    let total = 0;
+    writeCache(cache => {
+      for (const [key, raw] of [['link4_smart', lk], ['link3_smart', rt]]) {
+        const rows = raw.filter(r => String(r.columnname || '').toUpperCase() === 'STOREID');
+        if (!rows.length) continue;
+        const pick = new Map();
+        for (const r of rows) {
+          const shop = shopOf(b.matched, b.cfg, r.salegroupname, null);
+          if (!shop) continue;
+          const g = matchGroup(cache[key] || {}, r.programname);
+          if (!g) continue;
+          const rawName = slug(String(r.programname || '').replace(/^\d+\s*-\s*/, ''));
+          const gc = list.find(x => x.short === g) || {};
+          const exact = rawName === slug(gc.full) || rawName === slug(gc.short) ? 1 : 0;
+          const id = g + '|' + shop.key, prev = pick.get(id);
+          if (!prev || exact > prev.exact) pick.set(id, { g, shop, r, exact });
+        }
+        if (!pick.size) continue;
+        const out = JSON.parse(JSON.stringify(cache[key] || {}));
+        const groups = new Set();
+        for (const { g, shop, r } of pick.values()) {
+          const type = groupType(g), money = /doanhthu|tien/.test(type) || (!type && Number(r.competitiontype) === 3), scale = money ? 1000 : 1;
+          out[g] = out[g] || {};
+          out[g][shop.key] = Object.assign({}, out[g][shop.key] || {}, { t: num(r.target) * scale, r: num(money ? r.revenue : r.quantity) * scale, p: num(r.targetpercent_month), pd: num(r.targetpercent_predict) });
+          groups.add(g);
+        }
+        for (const g of groups) {
+          const cells = b.matched.map(x => out[g][x.key]).filter(Boolean);
+          const t = cells.reduce((a, c) => a + num(c.t), 0), rr = cells.reduce((a, c) => a + num(c.r), 0), pred = cells.reduce((a, c) => a + num(c.pd) * num(c.t) / 100, 0);
+          out[g].total = Object.assign({}, out[g].total || {}, { t, r: rr, p: t ? Math.round(rr / t * 1000) / 10 : 0, pd: t ? Math.round(pred / t * 1000) / 10 : 0 });
+        }
+        cache[key] = out;
+        total += groups.size;
+      }
+      if (total) cache.__apiCompetition = { at: Date.now(), groups: total, month };
+    });
+    if (!total) throw new Error('API không trả số Thi đua khớp nhóm Khai báo');
+    return total;
+  }
+
+  /* V16.6: Giờ công bằng API — trả đúng dạng dòng mà __AutoBIWorktime73 vẫn dùng (date, shop, employee, name, department, position, hours) */
+  async function timekeepingRows(range) {
+    const b = await baseData(null);
+    const ymd = s => Number(String(s).replace(/-/g, ''));
+    const from = ymd(range.from), to = ymd(range.to);
+    const out = [];
+    let total = null, page = 1;
+    while (page <= 20) {
+      const data = await api('reports/timekeeping-get', { FROMDATE: from, TODATE: to, RSMIDS: null, AMIDS: null, STOREIDS: b.storeIds, PAGEINDEX: page, PAGESIZE: 5000 });
+      if (total === null) total = data.length ? num(data[0].total_rows) : 0;
+      for (const r of data) out.push({
+        date: String(r.ngay || ''), shop: (r.ma_sieu_thi ? r.ma_sieu_thi + ' - ' : '') + String(r.ten_sieu_thi || ''),
+        employee: String(r.ma_nv || '') + (r.ten_nv ? ' - ' + r.ten_nv : ''), name: String(r.ten || r.ten_nv || ''),
+        department: String(r.phong_ban || ''), position: String(r.chuc_vu || ''), hours: r.tong_gio_cong == null ? '' : String(r.tong_gio_cong)
+      });
+      if (!data.length || out.length >= total) break;
+      page++;
+    }
+    if (total && out.length !== total) throw new Error('API Giờ công trả ' + out.length + '/' + total + ' dòng');
+    return { rows: out, total: total || 0, pages: page, partial: false };
+  }
+
+  /* ===== V16.7/16.8: Nhân viên Doanh thu, Ngành hàng BI, Thi đua nhân viên, Trả chậm bằng API (gọi song song, ghi cache 1 lần) ===== */
+  const staffIdOf = v => { const m = String(v || '').match(/\d+/); return m ? m[0] : String(v || '').trim(); };
+
+  /* Doanh thu nhân viên theo khoảng ngày → {shopN: {tên NV: {dtqd, dtlk, hqqd, tragop}}} (dùng cho link6/link7 và Giờ công) */
+  async function staffRevenueMap(cfgIn, range) {
+    const b = await baseData(cfgIn);
+    const cfg = cfgIn && Array.isArray(cfgIn.staffList) ? cfgIn : b.cfg;
+    const staffList = Array.isArray(cfg.staffList) ? cfg.staffList : [];
+    if (!staffList.length) throw new Error('Khai báo chưa có danh sách nhân viên');
+    const ymd = v => typeof v === 'number' ? v : Number(String(v).replace(/-/g, ''));
+    const from = range ? ymd(range.from) : b.cum.from, to = range ? ymd(range.to) : b.cum.to;
+    const lists = await pall(b.matched, s => api('reports/revenue-consolidated-staff-get', { FROMDATE: from, TODATE: to, VIEWLEVEL: 'STORE', VIEWIDS: String(s.storeId), CHAINIDS: null, MAINGROUPIDS: null, SUBGROUPIDS: null, ORDERBY: 'REVENUE', ORDERDIR: 'DESC', PAGEINDEX: 1, PAGESIZE: 1000 }));
+    const byId = new Map(staffList.map(x => [staffIdOf(x.name), x]));
+    const map = {};
+    let n = 0;
+    for (const rows of lists) for (const row of rows) {
+      const st = byId.get(String(row.rowcode || row.rowid || ''));
+      if (!st) continue;
+      const key = 'shop' + (st.shopIdx || 1), dtqd = num(row.revenue_kfactor), dtlk = num(row.revenue);
+      map[key] = map[key] || {};
+      map[key][st.name] = { dtqd, dtlk, hqqd: dtlk > 0 ? (dtqd - dtlk) / dtlk * 100 : 0, tragop: num(row.revenue_tragop) };
+      n++;
+    }
+    if (!n) throw new Error('API không trả nhân viên nào khớp danh sách Khai báo');
+    return map;
+  }
+  async function applyStaffRevenue(cfgIn) {
+    const map = await staffRevenueMap(cfgIn, null);
+    let n = 0;
+    writeCache(cache => {
+      cache.link6 = cache.link6 || {}; cache.link7 = cache.link7 || {};
+      for (const [key, staff] of Object.entries(map)) for (const [name, v] of Object.entries(staff)) {
+        cache.link6[key] = cache.link6[key] || { revenue: {}, competition: {}, crossSell: {} };
+        cache.link6[key].revenue = cache.link6[key].revenue || {};
+        cache.link6[key].revenue[name] = { dtqd: v.dtqd, dtlk: v.dtlk, hqqd: v.hqqd };
+        cache.link7[key] = cache.link7[key] || {};
+        cache.link7[key][name] = { tg: v.dtlk ? Math.round(v.tragop / v.dtlk * 10000) / 100 : 0, dt_sieu_thi: v.dtlk, dt_tragop: v.tragop };
+        n++;
+      }
+    });
+    return n;
+  }
+
+  /* link8_health[shopN|total] = { <tên nhóm cũ>: {sl,dtqd,growth,tg_ratio}, __autobiHealthTree75: cây } — %TT = DT thực ÷ TB 3 tháng thực − 1 (đối chiếu BI 2/10/2026) */
+  function healthFrom(apiRows) {
+    const levelOf = l => l === 'BICAT' ? 0 : l === 'BISUB' ? 1 : 2;
+    const rows = [], idOf = new Map();
+    for (const r of apiRows) {
+      const level = levelOf(String(r.rowlevel || ''));
+      const parentId = level ? (idOf.get((level - 1) + ':' + r.parentid) || null) : null;
+      if (level && !parentId) continue;
+      const id = level === 0 ? 'p-' + r.rowid : 'cp-' + String(parentId).replace(/^c?p-/, '') + '-' + r.rowid;
+      idOf.set(level + ':' + r.rowid, id);
+      const rev = num(r.revenue), avg = num(r.avg3month);
+      const growth = avg > 0 ? Math.round((rev / avg - 1) * 1000) / 10 : null;
+      rows.push({ id, parentId, level, code: String(r.rowcode ?? r.rowid ?? ''), label: String(r.rowname || ''), sl: num(r.quantity), dtqd: num(r.revenue_kfactor), growth, tg_ratio: null });
+    }
+    if (!rows.length) return null;
+    const tree = { schema: 1, complete: true, rows, rootCount: rows.filter(x => x.level === 0).length, parsedRows: rows.length, capturedAt: Date.now(), source: 'api' };
+    const parsed = rows.map(x => ({ code: x.code, label: x.label, key: x.id, sl: x.sl, dtqd: x.dtqd, growth: x.growth ?? 0, tg_ratio: 0 }));
+                const names = ['Smartphone', 'Apple', 'Android', 'Samsung', 'OPPO', 'Xiaomi', 'Vivo', 'Realme', 'Laptop', 'Tablet', 'Ph\u1EE5 ki\u1EC7n', 'Pin s\u1EA1c d\u1EF1 ph\u00F2ng', 'Camera', 'Tai nghe', '\u0110\u00E8n n\u0103ng l\u01B0\u1EE3ng m\u1EB7t tr\u1EDDi', 'SIM', 'VAS', 'Wearable', '\u0110\u1ED3ng h\u1ED3 th\u1EDDi trang', '\u0110i\u1EC7n t\u1EED', 'Tivi', 'Loa Karaoke', 'D\u00E0n m\u00E1y', '\u0110i\u1EC7n l\u1EA1nh', 'T\u1EE7 l\u1EA1nh', 'T\u1EE7 \u0111\u00F4ng', 'T\u1EE7 m\u00E1t', 'M\u00E1y gi\u1EB7t', 'M\u00E1y s\u1EA5y', 'M\u00E1y l\u1EA1nh', 'M\u00E1y r\u1EEDa ch\u00E9n', 'M\u00E1y n\u01B0\u1EDBc n\u00F3ng', '\u0110i\u1EC7n gia d\u1EE5ng', 'Qu\u1EA1t gi\u00F3', 'N\u1ED3i c\u01A1m', 'B\u1EBFp Gas', 'B\u1EBFp \u0111i\u1EC7n', 'N\u1ED3i chi\u00EAn', 'M\u00E1y l\u1ECDc n\u01B0\u1EDBc', 'Qu\u1EA1t \u0111i\u1EC1u h\u00F2a', 'H\u00FAt b\u1EE5i Robot'];
+                const out = {};
+                names.forEach(n => out[n] = {
+                    sl: 0,
+                    dtqd: 0,
+                    growth: 0,
+                    tg_ratio: 0
+                });
+                const assign = (target, row) => {
+                    if (row)
+                        out[target] = {
+                            sl: row.sl,
+                            dtqd: row.dtqd,
+                            growth: row.growth,
+                            tg_ratio: row.tg_ratio
+                        };
+                };
+                const byCode = c => parsed.find(r => r.key === 'p-' + c) || parsed.find(r => r.code === c && !r.key.startsWith('cp-'));
+                const exact = (...labels) => parsed.find(r => labels.map(slug).includes(slug(r.label)));
+                const starts = (...labels) => parsed.find(r => labels.map(slug).some(p => slug(r.label).startsWith(p)));
+                const contains = (...parts) => parsed.find(r => parts.map(slug).some(p => slug(r.label).includes(p)));
+                const smartphone = byCode('1491') || exact('Smartphone');
+                assign('Smartphone', smartphone);
+                assign('Android', smartphone);
+                assign('Apple', exact('Apple', 'iPhone', 'Apple iPhone') || starts('Apple iPhone', 'iPhone'));
+                assign('Samsung', starts('Samsung'));
+                assign('OPPO', starts('OPPO'));
+                assign('Xiaomi', starts('Xiaomi'));
+                assign('Vivo', starts('Vivo'));
+                assign('Realme', starts('Realme'));
+                assign('Laptop', byCode('22') || starts('Laptop'));
+                assign('Tablet', starts('Tablet', 'M\u00E1y t\u00EDnh b\u1EA3ng'));
+                assign('Ph\u1EE5 ki\u1EC7n', byCode('16') || exact('Ph\u1EE5 ki\u1EC7n ti\u1EC7n \u00EDch'));
+                assign('Pin s\u1EA1c d\u1EF1 ph\u00F2ng', starts('Pin s\u1EA1c d\u1EF1 ph\u00F2ng'));
+                assign('Camera', starts('Camera'));
+                assign('Tai nghe', starts('Tai nghe'));
+                assign('\u0110\u00E8n n\u0103ng l\u01B0\u1EE3ng m\u1EB7t tr\u1EDDi', starts('\u0110\u00E8n n\u0103ng l\u01B0\u1EE3ng m\u1EB7t tr\u1EDDi'));
+                assign('SIM', byCode('664') || exact('Sim Online', 'SIM'));
+                assign('VAS', byCode('1994') || exact('VAS', 'D\u1ECBch v\u1EE5 b\u1EA3o h\u00E0nh, b\u1EA3o d\u01B0\u1EE1ng \u0110i\u1EC7n m\u00E1y xanh'));
+                assign('Wearable', byCode('23') || exact('Wearable'));
+                assign('\u0110\u1ED3ng h\u1ED3 th\u1EDDi trang', byCode('1274') || exact('\u0110\u1ED3ng h\u1ED3 th\u1EDDi trang'));
+                assign('\u0110i\u1EC7n t\u1EED', byCode('304') || exact('\u0110i\u1EC7n t\u1EED'));
+                assign('Tivi', byCode('1094') || starts('Tivi LED', 'Tivi'));
+                assign('Loa Karaoke', starts('Loa Karaoke', 'Loa k\u00E9o'));
+                assign('D\u00E0n m\u00E1y', starts('D\u00E0n m\u00E1y'));
+                assign('\u0110i\u1EC7n l\u1EA1nh', byCode('1755') || exact('T\u1EE7 l\u1EA1nh, \u0111\u00F4ng, m\u00E1t', '\u0110i\u1EC7n l\u1EA1nh'));
+                assign('T\u1EE7 l\u1EA1nh', starts('T\u1EE7 l\u1EA1nh'));
+                assign('T\u1EE7 \u0111\u00F4ng', starts('T\u1EE7 \u0111\u00F4ng'));
+                assign('T\u1EE7 m\u00E1t', starts('T\u1EE7 m\u00E1t'));
+                assign('M\u00E1y gi\u1EB7t', byCode('1099') || starts('M\u00E1y gi\u1EB7t'));
+                assign('M\u00E1y s\u1EA5y', starts('M\u00E1y s\u1EA5y'));
+                assign('M\u00E1y l\u1EA1nh', starts('M\u00E1y l\u1EA1nh'));
+                assign('M\u00E1y r\u1EEDa ch\u00E9n', starts('M\u00E1y r\u1EEDa ch\u00E9n'));
+                assign('M\u00E1y n\u01B0\u1EDBc n\u00F3ng', starts('M\u00E1y n\u01B0\u1EDBc n\u00F3ng'));
+                assign('\u0110i\u1EC7n gia d\u1EE5ng', byCode('484') || exact('\u0110i\u1EC7n gia d\u1EE5ng'));
+                assign('Qu\u1EA1t gi\u00F3', starts('Qu\u1EA1t gi\u00F3'));
+                assign('N\u1ED3i c\u01A1m', starts('N\u1ED3i c\u01A1m'));
+                assign('B\u1EBFp Gas', starts('B\u1EBFp Gas', 'B\u1EBFp ga'));
+                assign('B\u1EBFp \u0111i\u1EC7n', starts('B\u1EBFp \u0111i\u1EC7n'));
+                assign('N\u1ED3i chi\u00EAn', starts('N\u1ED3i chi\u00EAn'));
+                assign('M\u00E1y l\u1ECDc n\u01B0\u1EDBc', byCode('1116') || starts('M\u00E1y l\u1ECDc n\u01B0\u1EDBc'));
+                assign('Qu\u1EA1t \u0111i\u1EC1u h\u00F2a', starts('Qu\u1EA1t \u0111i\u1EC1u h\u00F2a'));
+                assign('H\u00FAt b\u1EE5i Robot', starts('H\u00FAt b\u1EE5i Robot', 'Robot h\u00FAt b\u1EE5i'));
+
+    out.__autobiHealthTree75 = tree;
+    return out;
+  }
+  function sumHealthRows(lists) {
+    const map = new Map();
+    for (const list of lists) for (const r of list) {
+      const k = r.rowlevel + ':' + r.rowid + ':' + r.parentid;
+      const cur = map.get(k);
+      if (!cur) map.set(k, { ...r, quantity: num(r.quantity), revenue: num(r.revenue), revenue_kfactor: num(r.revenue_kfactor), avg3month: num(r.avg3month) });
+      else { cur.quantity += num(r.quantity); cur.revenue += num(r.revenue); cur.revenue_kfactor += num(r.revenue_kfactor); cur.avg3month += num(r.avg3month); }
+    }
+    return [...map.values()];
+  }
+  async function applyHealth(cfgIn) {
+    const b = await baseData(cfgIn);
+    const lists = await pall(b.matched, s => api('reports/revenue-consolidated-get', revBody(b.cum.from, b.cum.to, 'STORE', s.storeId, 'BICAT')));
+    const data = b.matched.map((s, i) => [s.key, healthFrom(lists[i])]).filter(x => x[1]);
+    if (!data.length) throw new Error('API không trả Ngành hàng BI');
+    const total = healthFrom(sumHealthRows(lists));
+    writeCache(cache => { cache.link8_health = cache.link8_health || {}; data.forEach(([k, v]) => { cache.link8_health[k] = v; }); if (total) cache.link8_health.total = total; });
+    return data.length;
+  }
+
+  /* link6[shop].competition[tên NV][nhóm] = số đạt (nhóm tiền ×1000, số chính xác, giữ số âm) */
+  async function applyStaffCompetition(cfgIn) {
+    const b = await baseData(cfgIn), month = monthKey(b.today);
+    const staffList = Array.isArray(b.cfg.staffList) ? b.cfg.staffList : [];
+    if (!staffList.length) throw new Error('Khai báo chưa có danh sách nhân viên');
+    const shopRows = (await api('reports/competition-bymsg-get', compBody(month, 2, b.storeIds))).filter(r => String(r.columnname || '').toUpperCase() === 'STOREID');
+    const ids = {};
+    for (const r of shopRows) { const shop = shopOf(b.matched, b.cfg, r.salegroupname, null); if (shop && r.salegroupid != null) (ids[shop.key] = ids[shop.key] || new Set()).add(String(r.salegroupid)); }
+    const jobs = [];
+    for (const s of b.matched) for (const id of (ids[s.key] || [])) jobs.push({ s, id });
+    const results = await pall(jobs, j => api('reports/competition-bymsg-get', compBody(month, 2, b.storeIds, 'STORE', j.id)));
+    const outs = {}, missing = b.matched.filter(s => !ids[s.key]).map(s => s.short);
+    let n = 0;
+    jobs.forEach((j, i) => {
+      const staff = staffList.filter(x => String(x.shopIdx) === String(j.s.idx));
+      const byId = new Map(staff.map(x => [staffIdOf(x.name), x]));
+      const out = outs[j.s.key] = outs[j.s.key] || {};
+      for (const r of results[i]) {
+        const st = byId.get(String(r.staffuser || ''));
+        if (!st) continue;
+        const g = matchGroup({}, r.programname) || String(r.programname || '').replace(/^\d+\s*-\s*/, '').trim();
+        const type = groupType(g), money = /doanhthu|tien/.test(type) || (!type && Number(r.competitiontype) === 3);
+        out[st.name] = out[st.name] || {};
+        out[st.name][g] = (out[st.name][g] || 0) + (money ? num(r.revenue) * 1000 : num(r.quantity));
+        n++;
+      }
+    });
+    if (missing.length) note('Thi đua nhân viên: không tìm thấy mã Thi đua của ' + missing.join(', '));
+    if (!Object.keys(ids).length) throw new Error('API không trả mã Thi đua shop nào');
+    writeCache(cache => { cache.link6 = cache.link6 || {}; for (const [k, out] of Object.entries(outs)) { cache.link6[k] = cache.link6[k] || { revenue: {}, competition: {}, crossSell: {} }; cache.link6[k].competition = out; } });
+    return n;
+  }
+
+  /* Trả chậm: link7[shop] {_SHOP_DT,_SHOP_HC,_SHOP_FE,_SHOP_TOTAL_}, link2[shop].tg — như __AutoBIInstallment41.save */
+  async function applyInstallment(cfgIn) {
+    const b = await baseData(cfgIn), month = monthKey(b.today);
+    const rows = await api('reports/tra-cham-matrix-get', { VIEWLEVEL: 'STORE', RSMIDS: null, AMIDS: null, STOREIDS: b.storeIds, MONTHKEY: month });
+    const known = new Set(['group_id', 'group_name', 'revenue_tg', 'ratio_tg', 'total_revenue_tg', 'revenue_store', 'installment_ratio']);
+    const partnerOf = r => { const k = Object.keys(r).filter(x => !known.has(x)); const name = k.map(x => r[x]).find(v => typeof v === 'string' && /[a-zA-ZÀ-ỹ]/.test(v)); return String(name || ''); };
+    let n = 0;
+    writeCache(cache => {
+      cache.link7 = cache.link7 || {}; cache.link2 = cache.link2 || {};
+      const totals = { dt: 0, installment: 0, hc: 0, fe: 0 };
+      for (const s of b.matched) {
+        const mine = rows.filter(r => String(r.group_id) === String(s.storeId));
+        const dtStore = mine.length ? num(mine[0].revenue_store) : num(cache.link2[s.key] && cache.link2[s.key].dtlk);
+        const inst = mine.length ? num(mine[0].total_revenue_tg) : 0;
+        const hc = mine.filter(r => /home\s*credit|\(hc\)/i.test(partnerOf(r))).reduce((a, r) => a + num(r.revenue_tg), 0);
+        const fe = mine.filter(r => /fe\s*credit|\(fe\)/i.test(partnerOf(r))).reduce((a, r) => a + num(r.revenue_tg), 0);
+        const tg = mine.length ? num(mine[0].installment_ratio) : (dtStore ? inst / dtStore * 100 : 0);
+        const row = { dt_tragop: inst, dt_sieu_thi: dtStore, tg, hc, fe };
+        cache.link7[s.key] = { ...cache.link7[s.key], _SHOP_DT: dtStore, _SHOP_HC: hc, _SHOP_FE: fe, _SHOP_TOTAL_: row };
+        cache.link2[s.key] = { ...cache.link2[s.key], tg };
+        totals.dt += dtStore; totals.installment += inst; totals.hc += hc; totals.fe += fe; n++;
+      }
+      const tgAll = totals.dt ? totals.installment / totals.dt * 100 : 0;
+      cache.link2.total = { ...cache.link2.total, tg: tgAll };
+      cache.link7.total = { ...cache.link7.total, _SHOP_DT: totals.dt, _SHOP_HC: totals.hc, _SHOP_FE: totals.fe, _SHOP_TOTAL_: { dt_sieu_thi: totals.dt, dt_tragop: totals.installment, tg: tgAll, hc: totals.hc, fe: totals.fe } };
+    });
+    return n;
+  }
+
+  /* ===== V16.9: CRM bằng API (crm.thegioididong.com, gọi chéo tên miền qua GM_xmlhttpRequest, dùng phiên CRM đã đăng nhập) =====
+     - Giữ khung giờ công ty: hỏi /ReviewUser/CheckTimeIsViewFullHour trước, "false" → bỏ qua CRM.
+     - link9 (Điểm phục vụ shop): /Statistic/Assess_Service_PointTGDD_new
+     - link8 (Điểm KH đánh giá từng NV): /ReviewUser/SatisfiedUserRate
+     - Tháng: thử tháng hiện tại, chưa có số thì dùng tháng trước (giống trang CRM mặc định đầu tháng). */
+  const CRM = 'https://crm.thegioididong.com';
+  function crmPost(path, body, form = false) {
+    return new Promise((resolve, reject) => {
+      GM_xmlhttpRequest({
+        method: 'POST', url: CRM + path, timeout: 20000,
+        headers: { 'Content-Type': form ? 'application/x-www-form-urlencoded; charset=UTF-8' : 'application/json;charset=UTF-8', 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json, text/plain, */*' },
+        data: form ? body : JSON.stringify(body),
+        onload: r => {
+          const t = String(r.responseText || '').trim();
+          if (r.status === 401 || r.status === 403 || t.startsWith('<')) { const e = new Error('CRM chưa đăng nhập hoặc chưa chọn công ty trên trình duyệt này'); e.code = 'CRM_LOGIN'; return reject(e); }
+          if (r.status >= 400) return reject(new Error('CRM lỗi ' + r.status + ' ở ' + path));
+          let j = t; try { j = JSON.parse(t); if (typeof j === 'string') { try { j = JSON.parse(j); } catch (_) { } } } catch (_) { }
+          resolve(j);
+        },
+        onerror: () => reject(new Error('Không gọi được CRM (' + path + ')')),
+        ontimeout: () => reject(new Error('CRM quá 20 giây (' + path + ')'))
+      });
+    });
+  }
+  const crmMonths = () => { const t = vnDay(), y = Math.floor(t / 10000), m = Math.floor(t / 100) % 100; return [{ y, m }, m === 1 ? { y: y - 1, m: 12 } : { y, m: m - 1 }]; };
+  const mmyyyy = x => String(x.m).padStart(2, '0') + '/' + x.y;
+  const vnMidnightISO = (y, m, d) => new Date(Date.UTC(y, m - 1, d) - 7 * 3600e3).toISOString();
+  async function crmOpen() {
+    const ok = await crmPost('/ReviewUser/CheckTimeIsViewFullHour', {});
+    if (!(ok === true || String(ok).trim() === 'true')) { const e = new Error('CRM chỉ mở trước 8h sáng hoặc sau 18h — bỏ qua CRM lượt này'); e.code = 'CRM_TIME'; throw e; }
+  }
+  async function applyCrmStore(cfgIn) {
+    const b = await baseData(cfgIn);
+    await crmOpen();
+    const ids = b.matched.map(s => s.storeId).join(',');
+    let rows = [], used = null, loginErr = null, okMonths = 0;
+    for (const mo of crmMonths()) {
+      const last = new Date(Date.UTC(mo.y, mo.m, 0)).getUTCDate();
+      let data = null;
+      try { data = await crmPost('/Statistic/Assess_Service_PointTGDD_new', { strDateFrom: vnMidnightISO(mo.y, mo.m, 1), strDateTo: vnMidnightISO(mo.y, mo.m, last), strLstStoreId: ids, iCompanyID: '0', type: 1, isSuppermini: '1' }); }
+      catch (e) { if (e.code !== 'CRM_LOGIN') throw e; data = null; loginErr = e; }
+      if (Array.isArray(data)) okMonths++;
+      if (Array.isArray(data) && data.some(r => num(r.totalsend) > 0 || num(r.totalrate) > 0)) { rows = data; used = mmyyyy(mo); break; }
+    }
+    if (!rows.length && !okMonths && loginErr) throw loginErr;
+    if (!rows.length) throw new Error('CRM chưa có Điểm phục vụ tháng này và tháng trước');
+    const out = {};
+    for (const s of b.matched) {
+      const r = rows.find(x => String(x.STOREID) === String(s.storeId));
+      if (r) out[s.key] = { totalSent: num(r.totalsend), total: num(r.totalrate), s5: num(r.ratefive), s4: num(r.ratefour), s3: num(r.ratethree), s2: num(r.ratetwo), s1: num(r.rateone), ratePct: Math.round(num(r.rateevaluate) * 100) / 100, score: Math.round(num(r.FINALLASSESS) * 100) / 100 };
+    }
+    if (!Object.keys(out).length) throw new Error('CRM không trả shop nào khớp Khai báo');
+    writeCache(cache => { cache.link9 = out; cache.__apiCrm9 = { at: Date.now(), month: used }; });
+    note('CRM Điểm phục vụ: tháng ' + used);
+    return Object.keys(out).length;
+  }
+  async function applyCrmStaff(cfgIn) {
+    const b = await baseData(cfgIn);
+    await crmOpen();
+    const staffList = Array.isArray(b.cfg.staffList) ? b.cfg.staffList : [];
+    if (!staffList.length) throw new Error('Khai báo chưa có danh sách nhân viên');
+    const ids = b.matched.map(s => s.storeId).join(',') + ',';
+    let rows = [], used = null;
+    for (const mo of crmMonths()) {
+      const j = await crmPost('/ReviewUser/SatisfiedUserRate', { objPage: { Keyword: '', PageNumber: 1, PageSize: 500 }, companyID: '0', datakey: mmyyyy(mo), strStoreID: ids, lstAreaID: '', keysearch: '', isSPMini: 'true' });
+      let d = j && j.data; if (typeof d === 'string') { try { d = JSON.parse(d); } catch (_) { d = null; } }
+      if (Array.isArray(d) && d.length) { rows = d; used = mmyyyy(mo); break; }
+    }
+    if (!rows.length) throw new Error('CRM chưa có Điểm KH đánh giá nhân viên tháng này và tháng trước');
+    const byId = new Map(staffList.map(x => [staffIdOf(x.name), x]));
+    const out = {};
+    for (const r of rows) {
+      const st = byId.get(String(r.username || '').replace(/\D/g, ''));
+      if (!st) continue;
+      out[st.name] = { s5: num(r.FIVESTARTS), s4: num(r.FOURSTARTS), s3: num(r.THREESTARTS), s2: num(r.TWOSTARTS), s1: num(r.ONESTARTS), sent: num(r.TOTALSURVEY), rated: num(r.COUNTRATINGSUSSCESS), total: num(r.COUNTRATINGSUSSCESS), ratePct: Math.round(num(r.RATIOSUCCESS) * 100) / 100, score: Math.round(num(r.POINTEND) * 100) / 100 };
+    }
+    writeCache(cache => { cache.link8 = out; cache.__apiCrm8 = { at: Date.now(), month: used }; });
+    note('CRM Phục vụ nhân viên: tháng ' + used);
+    return Object.keys(out).length;
+  }
+
+  /* ===== V16.8: CHẠY NHANH — các bước Doanh thu (0), Thi đua (2), Trả chậm (3) lấy hết bằng API ngay trên trang hiện tại, không chuyển trang, không bấm.
+     Phần nào lỗi thì bước đó chạy lại bằng giao diện như cũ (dự phòng). ===== */
+  const FAST_KEY = 'autobi_api_fast';
+  const fastOn = () => apiOn(); /* V16.8.1: gộp chung công tắc API */
+  async function timed(label, fn) {
+    const t0 = Date.now();
+    try { const n = await fn(); return { label, ok: true, n, ms: Date.now() - t0 }; }
+    catch (e) { return { label, ok: false, error: e, ms: Date.now() - t0 }; }
+  }
+  async function fastRun(queue, current, config) {
+    const steps = queue.slice(Math.max(0, queue.indexOf(current))).filter(st => [0, 2, 3, 17, 18].includes(st));
+    if (!steps.includes(current)) return { handled: false, done: new Set() };
+    const t0 = Date.now();
+    baseMemo = null;
+    const tasks = [];
+    if (steps.includes(0)) tasks.push(['Doanh thu', 0, () => applyRevenue(config)], ['Nhân viên Doanh thu', 0, () => applyStaffRevenue(config)], ['Ngành hàng BI', 0, () => applyHealth(config)]);
+    if (steps.includes(2)) tasks.push(['Thi đua', 2, () => applyCompetition(config)], ['Thi đua nhân viên', 2, () => applyStaffCompetition(config)]);
+    if (steps.includes(3)) tasks.push(['Trả chậm', 3, () => applyInstallment(config)]);
+    if (steps.includes(17)) tasks.push(['CRM Phục vụ nhân viên', 17, () => applyCrmStaff(config)]);
+    if (steps.includes(18)) tasks.push(['CRM Điểm phục vụ', 18, () => applyCrmStore(config)]);
+    const results = await Promise.all(tasks.map(([label, , fn]) => timed(label, fn)));
+    const auth = results.find(r => !r.ok && r.error && r.error.code === 'AUTH');
+    if (auth) throw auth.error;
+    const done = new Set(steps);
+    results.forEach((r, i) => {
+      const step = tasks[i][1];
+      if (r.ok) note('API · ' + r.label + ': ' + r.n + ' · ' + (r.ms / 1000).toFixed(1) + 's');
+      else if (r.error && r.error.code === 'CRM_TIME') note('API · ' + r.label + ': ' + r.error.message);
+      else { note('API · ' + r.label + ' lỗi (' + (r.error && r.error.message || r.error) + ') — bước này chạy lại bằng giao diện'); if (['Doanh thu', 'Thi đua', 'Trả chậm', 'CRM Phục vụ nhân viên', 'CRM Điểm phục vụ'].includes(r.label)) done.delete(step); }
+    });
+    note('API: lấy xong số trong ' + ((Date.now() - t0) / 1000).toFixed(1) + 's');
+    return { handled: done.has(current), done };
+  }
+
+  async function safely(label, fn) {
+    if (!apiOn()) return;
+    try {
+      const n = await Promise.race([fn(), new Promise((_, rej) => setTimeout(() => rej(new Error('quá 45 giây')), 45000))]);
+      note(label + ': đã lấy số bằng API (' + n + ')');
+    } catch (e) {
+      note(label + ': API lỗi — giữ số đọc giao diện (' + (e && e.message || e) + ')');
+      if (e && e.code === 'AUTH') { try { const UI = page.UI || window.UI; UI && UI.showToast && UI.showToast('⚠️ Phiên BI hết hạn — số Doanh thu/Thi đua lượt này lấy từ giao diện. Đăng nhập lại BI cho lượt sau.', 9000); } catch (_) { } }
+    }
+  }
+  function hookRuns() {
+    const D = page.DATA || window.DATA;
+    if (!D) return;
+    const rev = D.runRevenueSequenceDMX;
+    if (typeof rev === 'function' && !rev.__api16) {
+      const w = function (config, done, ...rest) { return rev.call(this, config, function (...a) { (async () => { await safely('Doanh thu', () => applyRevenue(config)); await safely('Nhân viên Doanh thu', () => applyStaffRevenue(config)); await safely('Ngành hàng BI', () => applyHealth(config)); })().finally(() => { if (done) done.apply(this, a); }); }, ...rest); };
+      w.__api16 = true; D.runRevenueSequenceDMX = w;
+    }
+    const comp = D.runThiDuaSequenceDMX;
+    if (typeof comp === 'function' && !comp.__api16) {
+      const w = function (list, config, done, ...rest) { return comp.call(this, list, config, function (...a) { (async () => { await safely('Thi đua', () => applyCompetition(config)); await safely('Thi đua nhân viên', () => applyStaffCompetition(config)); })().finally(() => { if (done) done.apply(this, a); }); }, ...rest); };
+      w.__api16 = true; D.runThiDuaSequenceDMX = w;
+    }
+    const inst = window.__AutoBIInstallment41;
+    if (inst && typeof inst.run === 'function' && !inst.run.__api16) {
+      const orig = inst.run;
+      const w = function (config, data, ui, done, ...rest) { return orig.call(this, config, data, ui, function (...a) { safely('Trả chậm', () => applyInstallment(config)).finally(() => { if (done) done.apply(this, a); }); }, ...rest); };
+      w.__api16 = true; inst.run = w;
+    }
+  }
+  if (window.__AutoBITick96) window.__AutoBITick96(hookRuns, 1000); else setInterval(hookRuns, 1000);
+  setTimeout(hookRuns, 0);
+
+  let busy = false;
+  async function run({ show = true } = {}) {
+    if (busy) return null;
+    if (running()) { if (show) alert('AutoBI đang đổ số — chạy so khớp sau khi xong.'); return null; }
+    busy = true;
+    let report;
+    try { report = await collect(); }
+    catch (e) { report = { at: Date.now(), stats: { ok: 0, bad: 0, miss: 0 }, lines: [], error: e && e.message || String(e) }; }
+    finally { busy = false; }
+    try { GM_setValue(LAST_KEY, report); } catch (_) { }
+    const sum = report.error ? 'So khớp API lỗi: ' + report.error : 'So khớp API: ' + report.stats.ok + ' khớp, ' + report.stats.bad + ' lệch, ' + report.stats.miss + ' chưa so được';
+    note(sum);
+    console.info('[AutoBI API] ' + sum + '\n' + (report.lines || []).join('\n'));
+    if (show) render(report);
+    return report;
+  }
+
+  /* V16.8.1: bỏ tự so khớp sau đổ số (mọi số đã lấy bằng API nên so khớp chỉ tự so với chính nó) */
+  try { GM_deleteValue(PEND_KEY); GM_deleteValue(AUTO_KEY); GM_deleteValue(FAST_KEY); } catch (_) { }
+
+  try {
+    GM_registerMenuCommand('AutoBI: Bật/Tắt lấy số bằng API', () => { const on = apiOn(); GM_setValue(SRC_KEY, !on); alert('Lấy số bằng API (chạy nhanh, không chuyển trang): ' + (!on ? 'BẬT' : 'TẮT — đọc giao diện như cũ')); });
+  } catch (_) { }
+
+  window.__AutoBIApi = { api, run, collect, discoverStores, vnDay, applyRevenue, applyCompetition, timekeepingRows, applyStaffRevenue, applyHealth, applyStaffCompetition, applyInstallment, healthFrom, staffRevenueMap, fastRun, fastOn, applyCrmStore, applyCrmStaff };
 })();
