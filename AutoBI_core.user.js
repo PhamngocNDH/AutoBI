@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V16.3.2
+// @name         AutoBI Core V16.3.3
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      16.3.2
+// @version      16.3.3
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://crm.thegioididong.com/*
@@ -202,7 +202,20 @@ window.__AutoBILoadingGuard75 = (() => {
         }
         return signature() || ts.some(t => t.querySelector('.ant-empty,.ant-table-placeholder')) && 'empty';
     }
-    function tableReady(label, options = {}) { return wait(label, tableState, { settle: 360, busyGraceMs: 20000, key: String, expected: 'b\u1EA3ng \u0111\u00FAng, \u0111\u1EE7 d\u00F2ng v\u00E0 \u1ED5n \u0111\u1ECBnh', actual: () => tables().map(t => dataRows(t).length + ' d\u00F2ng').join(', '), ...options }); }
+    function tableReady(label, options = {}) {
+        /* V16.3.2: freshAfterMs — sau khi bấm Tải lại mà BI trả đúng bảng cũ (số không đổi, biểu tượng tải chớp quá nhanh) thì
+           chờ thêm rồi dùng bảng hiện tại thay vì báo lỗi sau 60s. Lỗi hết giờ ghi rõ: bảng chưa đổi / dòng phân trang lệch. */
+        const { freshAfterMs = 0, ...rest } = options;
+        const base = rest.ticket;
+        if (base && freshAfterMs > 0) {
+            const t0 = Date.now();
+            let noted = false;
+            rest.ticket = { fresh() { if (base.fresh()) return true; if (Date.now() - t0 < freshAfterMs) return false; if (!noted) { noted = true; try { window.__AutoBILog5?.note(label + ': b\u1EA3ng kh\u00F4ng \u0111\u1ED5i sau T\u1EA3i l\u1EA1i ' + Math.round(freshAfterMs / 1000) + 's \u2014 d\u00F9ng b\u1EA3ng hi\u1EC7n t\u1EA1i (b\u1ED9 l\u1ECDc \u0111\u00E3 x\u00E1c nh\u1EADn)'); } catch (_) { } } return true; }, close() { base.close(); } };
+        }
+        const pager = () => tables().map(t => text((t.closest('.ant-table-wrapper') || t.parentElement)?.querySelector('.ant-pagination-total-text'))).filter(Boolean).join(', ');
+        const actual = () => { const p = pager(); let stale = false; try { stale = !!(rest.ticket && !rest.ticket.fresh()); } catch (_) { } return tables().map(t => dataRows(t).length + ' d\u00F2ng').join(', ') + (p ? ' \u00B7 ph\u00E2n trang: ' + p : '') + (stale ? ' \u00B7 b\u1EA3ng ch\u01B0a \u0111\u1ED5i sau thao t\u00E1c' : ''); };
+        return wait(label, tableState, { settle: 360, busyGraceMs: 20000, key: String, expected: 'b\u1EA3ng \u0111\u00FAng, \u0111\u1EE7 d\u00F2ng v\u00E0 \u1ED5n \u0111\u1ECBnh', actual, ...rest });
+    }
     function stop(error) {
         log('error', error.message || String(error));
         try {
@@ -4354,7 +4367,7 @@ window.__AutoBIRun67 = (function () {
             await window.__AutoBILoadingGuard75.callbackTask(cb => DATA.selectMonthDMX(month, cb), 'Th\u00E1ng b\u00E1o c\u00E1o'); for (const label of ['Mi\u1EC1n', 'V\u00F9ng', 'Khu v\u1EF1c', 'Si\u00EAu th\u1ECB'])
             await window.__AutoBIFilterGuard75.selectAll(label); const button = await window.__AutoBILoadingGuard75.wait('N\u00FAt T\u1EA3i l\u1EA1i', () => window.__AutoBILoadingGuard75.all('button').find(b => window.__AutoBILoadingGuard75.norm(window.__AutoBILoadingGuard75.text(b)) === 'tai lai')); const ticket = window.__AutoBILoadingGuard75.arm(); try {
             button.click();
-            await window.__AutoBILoadingGuard75.tableReady('B\u1EA3ng sau b\u1ED9 l\u1ECDc', { ticket });
+            await window.__AutoBILoadingGuard75.tableReady('B\u1EA3ng sau b\u1ED9 l\u1ECDc', { ticket, freshAfterMs: 8000 });
         }
         finally {
             ticket.close();
