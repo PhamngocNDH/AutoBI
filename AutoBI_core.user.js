@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V16.3.1
+// @name         AutoBI Core V16.3.2
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      16.3.1
+// @version      16.3.2
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://crm.thegioididong.com/*
@@ -352,6 +352,26 @@ window.__AutoBIFilterGuard75 = (() => {
     }
     return { selectAll, selectConfiguredShops, trigger, popup };
 })();
+/* V16.3.2: đọc ô phần trăm của BI ở mọi dạng: "12,5%", "+1.234,5%", "1,234.5%", "▲ 12%", "12% ↑".
+   Số tăng trưởng lớn (đầu tháng, nhóm tháng trước gần bằng 0) có dấu phân cách hàng nghìn làm bản cũ báo "không hợp lệ". */
+window.__AutoBIPercent = function (value) {
+  const src = String(value ?? '').replace(/[−–]/g, '-');
+  let t = src.replace(/[^0-9.,-]/g, '');
+  const neg = /^-/.test(t) || /[▼↓]/.test(src);
+  t = t.replace(/-/g, '');
+  if (!/[0-9]/.test(t)) return NaN;
+  const dots = (t.match(/\./g) || []).length, commas = (t.match(/,/g) || []).length;
+  if (dots && commas) {
+    const dec = t.lastIndexOf('.') > t.lastIndexOf(',') ? '.' : ',';
+    t = t.split(dec === '.' ? ',' : '.').join('').replace(',', '.');
+  } else if (commas) {
+    t = commas > 1 ? t.replace(/,/g, '') : t.replace(',', '.');
+  } else if (dots > 1) {
+    t = t.replace(/\./g, '');
+  }
+  const n = Number(t);
+  return Number.isFinite(n) ? (neg ? -n : n) : NaN;
+};
 /* Dynamic BI hierarchy; legacy aliases remain available to existing summary calculations. */
 window.__AutoBIHealthTree75 = (() => {
     const G = window.__AutoBILoadingGuard75, { text, norm, visible } = G;
@@ -398,9 +418,15 @@ window.__AutoBIHealthTree75 = (() => {
                     return null;
                 if (!/[0-9]/.test(v))
                     throw Error('Nh\u00F3m ' + raw + ': c\u1ED9t ' + field + ' ch\u01B0a c\u00F3 s\u1ED1');
-                const n = percent ? Number(v.replace(/[%+\s]/g, '').replace(',', '.')) : parseNumber(v);
-                if (!Number.isFinite(n))
+                const n = percent ? window.__AutoBIPercent(v) : parseNumber(v);
+                if (!Number.isFinite(n)) {
+                    /* V16.3.2: cột % (Tăng trưởng, Trả góp) đọc không ra thì để trống, không bỏ cả cây Ngành hàng */
+                    if (percent) {
+                        try { window.__AutoBILog5?.note('Nh\u00F3m ' + raw + ': c\u1ED9t ' + field + ' = "' + v + '" kh\u00F4ng \u0111\u1ECDc \u0111\u01B0\u1EE3c, \u0111\u1EC3 tr\u1ED1ng'); } catch (_) { }
+                        return null;
+                    }
                     throw Error('Nh\u00F3m ' + raw + ': c\u1ED9t ' + field + ' kh\u00F4ng h\u1EE3p l\u1EC7');
+                }
                 return n;
             };
             const row = { id, parentId, level, code, label, sl: read('sl'), dtqd: read('dtqd'), growth: read('growth', true), tg_ratio: read('tg_ratio', true) };
