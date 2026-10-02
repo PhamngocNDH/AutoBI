@@ -1,14 +1,15 @@
 // ==UserScript==
-// @name         AutoBI Core V16.9
+// @name         AutoBI Core V17.8
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      16.9
+// @version      17.8
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
-// @match        https://crm.thegioididong.com/*
 // @match        https://baocao.dienmayxanh.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=thegioididong.com
+// @connect      crm.thegioididong.com
+// @connect      *
 // @connect      docs.google.com
 // @connect      script.google.com
 // @connect      script.googleusercontent.com
@@ -88,13 +89,7 @@ window.__AutoBILoadingGuard75 = (() => {
         (j?.[type] || j?.note)?.(msg, detail);
     }
     catch (_) { } };
-    function loadingWho97(root = document) {
-        const e = all('.ant-spin-spinning,.loading,.spinner,.animate-spin,[aria-busy="true"]', root)[0] || all('button,[role="status"],span,div', root).find(x => x.children.length < 3 && /^(dang tai(?: du lieu)?|loading)(?:\s*[.…]*)$/i.test(norm(text(x))));
-        if (!e) return 'kh\u00F4ng r\u00F5';
-        const cls = String(e.className && e.className.baseVal !== undefined ? e.className.baseVal : e.className || '').trim().split(/\s+/).slice(0, 3).join('.');
-        const near = (e.closest('button,[role="tab"],.ant-tabs-tab,section,div') || e).textContent || '';
-        return e.tagName.toLowerCase() + (cls ? '.' + cls : '') + (near.trim() ? ' g\u1EA7n "' + near.trim().replace(/\s+/g, ' ').slice(0, 40) + '"' : '');
-    }
+    
     function loading(root = document) {
         if (all('.ant-spin-spinning,.loading,.spinner,.animate-spin,[aria-busy="true"]', root).length)
             return true;
@@ -103,9 +98,8 @@ window.__AutoBILoadingGuard75 = (() => {
     const tables = () => all('table').filter(t => t.querySelector('tbody'));
     const dataRows = t => [...t.querySelectorAll('tbody tr')].filter(r => visible(r) && !r.classList.contains('ant-table-measure-row') && !r.classList.contains('grid-total-row') && !String(r.getAttribute('data-row-key')).includes('__total__'));
     function signature() { return tables().map(t => dataRows(t).map(r => text(r)).join('|')).join('###'); }
-    function identity() { return window.__AutoBIRun67?.current()?.id || null; }
-    function checkpoint(id) { const run = window.__AutoBIRun67?.current(); if (id && (run?.id !== id || run.status !== 'running') && !window.__AutoBIWorktime73?.journalRun?.())
-        throw Error('Phi\u00EAn thao t\u00E1c \u0111\u00E3 d\u1EEBng/thay \u0111\u1ED5i'); }
+    
+    
     function arm() {
         const before = signature();
         let sawLoading = loading(), changed = false, closed = false;
@@ -123,99 +117,10 @@ window.__AutoBILoadingGuard75 = (() => {
     document.addEventListener('click', e => { const b = e.target?.closest?.('button,td'); if (!b || own(b))
         return; const label = norm(text(b)); if (!b.closest('tbody') && !/^(realtime|luy ke|nhan vien|nganh hang bi|nganh hang|doanh thu theo cap|tong hop|tai lai|xem)$/.test(label))
         return; lastAction?.ticket.close(); const active = b.getAttribute('aria-pressed') === 'true' || b.getAttribute('aria-selected') === 'true' || /(^|\s)(bg-blue-600|bg-primary|active|selected)(\s|$)/.test(b.className); lastAction = active && !/^(tai lai|xem)$/.test(label) ? null : { ticket: arm(), at: Date.now() }; }, true);
-    function lastTicket() { return lastAction && Date.now() - lastAction.at < 120000 ? lastAction.ticket : null; }
-    async function wait(label, read, { timeout = 60000, poll = 120, settle = 0, key = JSON.stringify, check = () => { }, root = document, ticket = null, expected = '', actual = () => '', ignoreLoading = false, busyGraceMs = 0 } = {}) {
-        let busySince97 = 0, graceNoted97 = false;
-        const start = Date.now(), id = identity(), quiet = label.startsWith('Ng\u00E0nh h\u00E0ng BI: ch\u1EDD nh\u00F3m ');
-        let previous, stableAt = 0, status = '';
-        const state = s => { if (status !== s) {
-            status = s;
-            if (!quiet)
-                log(s, label, { elapsedMs: Date.now() - start, expected, actual: actual() });
-        } };
-        while (true) {
-            check();
-            checkpoint(id);
-            const busyRaw97 = !ignoreLoading && loading(root);
-            if (busyRaw97) { if (!busySince97) busySince97 = Date.now(); } else busySince97 = 0;
-            const grace97 = busyRaw97 && busyGraceMs > 0 && Date.now() - busySince97 > busyGraceMs;
-            if (grace97 && !graceNoted97) { graceNoted97 = true; try { window.__AutoBILog5 && window.__AutoBILog5.note(label + ': bi\u1EC3u t\u01B0\u1EE3ng \u0111ang t\u1EA3i k\u00E9o d\u00E0i >' + Math.round(busyGraceMs / 1000) + 's (' + loadingWho97(root) + '); \u0111\u1ECDc b\u1EA3ng khi \u0111\u00E3 \u1ED5n \u0111\u1ECBnh 3 gi\u00E2y'); } catch (_) { } }
-            const busy = busyRaw97 && !grace97;
-            if (busy) {
-                stableAt = 0;
-                previous = undefined;
-                state('loading');
-            }
-            else {
-                const value = read();
-                if (value && (!ticket || ticket.fresh())) {
-                    const fingerprint = settle ? key(value) : '';
-                    if (!stableAt || fingerprint !== previous) {
-                        stableAt = Date.now();
-                        previous = fingerprint;
-                    }
-                    const settle97 = grace97 ? Math.max(settle || 0, 3000) : settle;
-                    if (grace97 && !settle && !previous) { previous = key(value); }
-                    if (grace97 && key(value) !== previous) { stableAt = Date.now(); previous = key(value); }
-                    if (!settle97 || Date.now() - stableAt >= settle97) {
-                        if (!quiet)
-                            log('check', label, { elapsedMs: Date.now() - start, expected, actual: actual() });
-                        return value;
-                    }
-                    state('check');
-                }
-                else {
-                    stableAt = 0;
-                    previous = undefined;
-                    state('wait');
-                }
-            }
-            if (Date.now() - start >= timeout) {
-                const detail = actual() + (busyRaw97 ? ' \u00B7 \u0111ang t\u1EA3i: ' + loadingWho97(root) : '');
-                const error = Error(`${label} · chờ ${Math.round((Date.now() - start) / 1000)}s${expected ? ' \u00B7 c\u1EA7n ' + expected : ''}${detail ? ' \u00B7 th\u1EF1c nh\u1EADn ' + detail : ''} → Không lưu dữ liệu thiếu`);
-                error.code = 'AUTOBI_LOADING_TIMEOUT';
-                error.expected = expected;
-                error.actual = detail;
-                throw error;
-            }
-            await new Promise(r => setTimeout(r, poll));
-        }
-    }
-    function tableState() {
-        const ts = tables();
-        if (!ts.length)
-            return false;
-        for (const t of ts) {
-            const rs = dataRows(t);
-            if (!rs.length && !t.querySelector('.ant-empty,.ant-table-placeholder'))
-                return false;
-            if (rs.some(r => r.querySelector('.ant-skeleton') || /^(dang tai|loading)/.test(norm(text(r)))))
-                return false;
-            const root = t.closest('.ant-table-wrapper') || t.parentElement;
-            const info = text(root?.querySelector('.ant-pagination-total-text')).match(/([\d.,]+)\s*[-–]\s*([\d.,]+)\s*\/\s*Tổng\s*([\d.,]+)\s*dòng/i);
-            if (info) {
-                const [a, b, total] = info.slice(1, 4).map(v => Number(v.replace(/[.,]/g, '')));
-                const expected = total === 0 ? 0 : b - a + 1;
-                if (rs.filter(r => r.cells?.length > 1).length !== expected || total > 0 && (a !== 1 || b !== total))
-                    return false;
-            }
-        }
-        return signature() || ts.some(t => t.querySelector('.ant-empty,.ant-table-placeholder')) && 'empty';
-    }
-    function tableReady(label, options = {}) {
-        /* V16.3.2: freshAfterMs — sau khi bấm Tải lại mà BI trả đúng bảng cũ (số không đổi, biểu tượng tải chớp quá nhanh) thì
-           chờ thêm rồi dùng bảng hiện tại thay vì báo lỗi sau 60s. Lỗi hết giờ ghi rõ: bảng chưa đổi / dòng phân trang lệch. */
-        const { freshAfterMs = 0, ...rest } = options;
-        const base = rest.ticket;
-        if (base && freshAfterMs > 0) {
-            const t0 = Date.now();
-            let noted = false;
-            rest.ticket = { fresh() { if (base.fresh()) return true; if (Date.now() - t0 < freshAfterMs) return false; if (!noted) { noted = true; try { window.__AutoBILog5?.note(label + ': b\u1EA3ng kh\u00F4ng \u0111\u1ED5i sau T\u1EA3i l\u1EA1i ' + Math.round(freshAfterMs / 1000) + 's \u2014 d\u00F9ng b\u1EA3ng hi\u1EC7n t\u1EA1i (b\u1ED9 l\u1ECDc \u0111\u00E3 x\u00E1c nh\u1EADn)'); } catch (_) { } } return true; }, close() { base.close(); } };
-        }
-        const pager = () => tables().map(t => text((t.closest('.ant-table-wrapper') || t.parentElement)?.querySelector('.ant-pagination-total-text'))).filter(Boolean).join(', ');
-        const actual = () => { const p = pager(); let stale = false; try { stale = !!(rest.ticket && !rest.ticket.fresh()); } catch (_) { } return tables().map(t => dataRows(t).length + ' d\u00F2ng').join(', ') + (p ? ' \u00B7 ph\u00E2n trang: ' + p : '') + (stale ? ' \u00B7 b\u1EA3ng ch\u01B0a \u0111\u1ED5i sau thao t\u00E1c' : ''); };
-        return wait(label, tableState, { settle: 360, busyGraceMs: 20000, key: String, expected: 'b\u1EA3ng \u0111\u00FAng, \u0111\u1EE7 d\u00F2ng v\u00E0 \u1ED5n \u0111\u1ECBnh', actual, ...rest });
-    }
+    
+    
+    
+    
     function stop(error) {
         log('error', error.message || String(error));
         try {
@@ -236,231 +141,17 @@ window.__AutoBILoadingGuard75 = (() => {
         try { window.__AutoBIHardStop97 && window.__AutoBIHardStop97(); } catch (_) { }
     }
     document.addEventListener('TGDD_BI_SYS_ERROR', event => { event.stopImmediatePropagation(); stop(Error('BI y\u00EAu c\u1EA7u \u0111\u0103ng nh\u1EADp l\u1EA1i; \u0111\u00E3 d\u1EEBng, kh\u00F4ng t\u1EF1 t\u1EA3i l\u1EA1i ho\u1EB7c b\u1ECF qua b\u01B0\u1EDBc')); }, true);
-    function callbackWait(callback, options = {}) {
-        /* V16.3.4: tôn trọng requireChange:false (bản cũ bỏ qua nên chờ "bảng đổi" theo một cú bấm cũ không liên quan);
-           phiếu đoán từ cú bấm gần nhất được chờ tối đa 8s, sau đó dùng bảng hợp lệ đang hiện */
-        const { requireChange, ...opts } = options;
-        const ticket = requireChange === false ? null : lastTicket();
-        const task = tableReady(opts.label || 'B\u1EA3ng BI', { ticket, freshAfterMs: ticket && requireChange !== true ? 8000 : 0, ...opts }).then(() => callback());
-        task.catch(error => { if (options.onError)
-            options.onError(error);
-        else
-            stop(error); });
-        return task;
-    }
-    function callbackTask(invoke, label = 'B\u01B0\u1EDBc BI', timeout = 120000) {
-        return new Promise((resolve, reject) => {
-            let done = false;
-            const timer = setTimeout(() => finish(Error(label + ' qu\u00E1 th\u1EDDi gian; ch\u01B0a l\u01B0u d\u1EEF li\u1EC7u')), timeout);
-            const finish = (err, value) => { if (done)
-                return; done = true; clearTimeout(timer); err ? reject(err) : resolve(value); };
-            try {
-                invoke(value => value === false ? finish(Error(label + ' ch\u01B0a \u0111\u1EA1t \u0111i\u1EC1u ki\u1EC7n')) : finish(null, value));
-            }
-            catch (e) {
-                finish(e);
-            }
-        });
-    }
-    return { wait, loading, arm, visible, own, text, norm, all, tables, dataRows, signature, tableState, tableReady, callbackWait, callbackTask, stop, checkpoint, identity, lastTicket, log };
+    
+    
+    return { loading, visible, text, norm, stop };
 })();
-window.__AutoBIFilterGuard75 = (() => {
-    const G = window.__AutoBILoadingGuard75, { all, text, norm, visible } = G;
-    const trigger = label => all('button.filter-field-card,button').find(b => [...b.querySelectorAll('span')].some(s => norm(text(s)) === norm(label)) || norm(text(b)) === norm(label));
-    function popup(label) {
-        const b = trigger(label);
-        if (!b)
-            return null;
-        const id = b.getAttribute('aria-controls');
-        if (id) {
-            const e = document.getElementById(id);
-            if (visible(e))
-                return e;
-        }
-        const br = b.getBoundingClientRect();
-        const area = e => { const r = e.getBoundingClientRect(); return r.width * r.height; };
-        const base = all('div,section,aside,[role="dialog"],[role="listbox"]').filter(e => !e.contains(b) && e.querySelector('input[type="checkbox"],[role="checkbox"]') && (/chon tat ca/.test(norm(text(e))) || e.querySelector('input[placeholder]')));
-        // Desktop: danh sách mở ngay dưới nút lọc.
-        const below = base.filter(e => { const r = e.getBoundingClientRect(); return r.top >= br.top - 5 && r.left < br.right + 120 && r.right > br.left - 120; }).sort((x, y) => area(x) - area(y))[0];
-        if (below) return below;
-        // V82 điện thoại: danh sách mở dạng tấm nổi, có thể nằm trên hoặc đè lên nút lọc.
-        const __floating82 = e => { for (let x = e; x && x !== document.body; x = x.parentElement) { const p = getComputedStyle(x).position; if (p === 'fixed' || p === 'absolute') return true; } return false; };
-        return base.filter(e => /chon tat ca/.test(norm(text(e))) && __floating82(e)).sort((x, y) => area(x) - area(y))[0] || null;
-    }
-    const boxes = p => p ? [...p.querySelectorAll('input[type="checkbox"],[role="checkbox"]')].filter(b => !b.querySelector('input') && (visible(b) || visible(b.closest('label')))) : [];
-    const checked = b => b.matches('input') ? b.checked : b.getAttribute('aria-checked') === 'true';
-    async function selectAll(label, { waitData = false } = {}) {
-        const b = await G.wait('B\u1ED9 l\u1ECDc ' + label, () => { const e = trigger(label); return e && !e.disabled && e; }, { key: () => label });
-        if (!popup(label))
-            b.click();
-        await G.wait('Danh s\u00E1ch ' + label, () => { const p = popup(label); return p && boxes(p).length && p; }, { settle: 240, key: p => boxes(p).map(x => text(x.closest('label') || x.parentElement)).join('|'), expected: 'danh s\u00E1ch h\u1EBFt \u0110ang t\u1EA3i' });
-        const p = popup(label), select = all('button', p).find(e => norm(text(e)) === 'chon tat ca');
-        const ticket = G.arm();
-        let changed = false;
-        try {
-            // One deliberate select-all click preserves the report's reset/drill behavior.
-            if (select) {
-                select.click();
-                changed = true;
-            }
-            else
-                for (const box of boxes(p)) {
-                    if (!checked(box)) {
-                        if (box.disabled)
-                            throw Error(label + ': m\u1EE5c ch\u01B0a ch\u1ECDn b\u1ECB v\u00F4 hi\u1EC7u h\u00F3a');
-                        box.click();
-                        changed = true;
-                        await G.wait('X\u00E1c nh\u1EADn l\u1EF1a ch\u1ECDn ' + label, () => !box.isConnected || checked(box));
-                    }
-                }
-            await G.wait('X\u00E1c nh\u1EADn t\u1EA5t c\u1EA3 ' + label, () => { const p = popup(label), bs = boxes(p); return p && bs.length && bs.every(checked); }, { settle: 240, key: String, expected: 'm\u1ECDi l\u1EF1a ch\u1ECDn \u0111\u01B0\u1EE3c \u0111\u00E1nh d\u1EA5u', actual: () => { const bs = boxes(popup(label)); return bs.filter(checked).length + '/' + bs.length; } });
-            if (popup(label))
-                trigger(label)?.click();
-            await G.wait('\u0110\u00F3ng ' + label, () => !popup(label));
-            if (waitData)
-                await G.tableReady('D\u1EEF li\u1EC7u sau l\u1ECDc ' + label, { ticket: changed ? ticket : null });
-            return true;
-        }
-        finally {
-            ticket.close();
-        }
-    }
-    async function selectConfiguredShops(config) {
-        const code = s => String(s ?? '').trim().match(/^(\d+)(?=\s*[-–—:]|\s|$)/)?.[1] || '';
-        const declared = Object.keys(config || {}).filter(k => /^shop\d+$/.test(k) && String(config[k] || '').trim()).map(k => ({ name: norm(String(config[k])), id: code(config['makho' + k.slice(4)]) || code(config[k]) }));
-        if (!declared.length)
-            throw Error('Gi\u1EDD c\u00F4ng: ch\u01B0a khai b\u00E1o si\u00EAu th\u1ECB; kh\u00F4ng ch\u1ECDn t\u1EA5t c\u1EA3 thay th\u1EBF');
-        const label = 'Si\u00EAu th\u1ECB', b = await G.wait('B\u1ED9 l\u1ECDc ' + label, () => trigger(label));
-        if (!popup(label))
-            b.click();
-        await G.wait('Danh s\u00E1ch si\u00EAu th\u1ECB khai b\u00E1o', () => { const p = popup(label); return p && boxes(p).length && p; }, { settle: 240, key: p => text(p) });
-        const search = popup(label).querySelector('input[placeholder]');
-        if (search && search.value.trim())
-            throw Error('Gi\u1EDD c\u00F4ng: \u00F4 t\u00ECm si\u00EAu th\u1ECB \u0111ang c\u00F3 n\u1ED9i dung; h\u00E3y x\u00F3a t\u00ECm ki\u1EBFm \u0111\u1EC3 ki\u1EC3m tra \u0111\u1EE7 danh s\u00E1ch');
-        const entries = () => boxes(popup(label)).map(box => { const t = text(box.closest('label') || box.parentElement); return { box, id: code(t), name: norm(t) }; });
-        const matches = (e, d) => d.id ? e.id === d.id : e.name === d.name || norm(e.name.replace(/^\d+\s*[-–—:]\s*/, '')) === d.name;
-        function desired() {
-            const es = entries();
-            for (const d of declared) {
-                const found = es.filter(e => matches(e, d));
-                if (found.length !== 1)
-                    throw Error('Gi\u1EDD c\u00F4ng: si\u00EAu th\u1ECB khai b\u00E1o ' + (d.id || d.name) + (found.length ? ' b\u1ECB tr\u00F9ng trong b\u1ED9 l\u1ECDc' : ' kh\u00F4ng c\u00F3 trong b\u1ED9 l\u1ECDc'));
-            }
-            return es.map(e => ({ ...e, wanted: declared.some(d => matches(e, d)) }));
-        }
-        // Resolve every declared shop before changing any checkbox. Re-read after each render.
-        const initial = desired();
-        for (let i = 0; i < initial.length; i++) {
-            const e = desired()[i];
-            if (!e || e.id !== initial[i].id || e.name !== initial[i].name)
-                throw Error('Gi\u1EDD c\u00F4ng: danh s\u00E1ch si\u00EAu th\u1ECB thay \u0111\u1ED5i khi ch\u1ECDn');
-            if (checked(e.box) === e.wanted)
-                continue;
-            if (e.box.disabled)
-                throw Error('Gi\u1EDD c\u00F4ng: kh\u00F4ng \u0111\u1ED5i \u0111\u01B0\u1EE3c l\u1EF1a ch\u1ECDn ' + e.name);
-            e.box.click();
-            await G.wait('X\u00E1c nh\u1EADn si\u00EAu th\u1ECB ' + e.name, () => { const current = desired().find(x => x.id === e.id && x.name === e.name); return current && checked(current.box) === e.wanted; });
-        }
-        await G.wait('\u0110\u1ED1i chi\u1EBFu si\u00EAu th\u1ECB khai b\u00E1o', () => desired().every(e => checked(e.box) === e.wanted), { settle: 240, key: String });
-        if (popup(label))
-            trigger(label).click();
-        await G.wait('\u0110\u00F3ng b\u1ED9 l\u1ECDc Si\u00EAu th\u1ECB', () => !popup(label));
-        return true;
-    }
-    return { selectAll, selectConfiguredShops, trigger, popup };
-})();
-/* V16.3.2: đọc ô phần trăm của BI ở mọi dạng: "12,5%", "+1.234,5%", "1,234.5%", "▲ 12%", "12% ↑".
-   Số tăng trưởng lớn (đầu tháng, nhóm tháng trước gần bằng 0) có dấu phân cách hàng nghìn làm bản cũ báo "không hợp lệ". */
-window.__AutoBIPercent = function (value) {
-  const src = String(value ?? '').replace(/[−–]/g, '-');
-  let t = src.replace(/[^0-9.,-]/g, '');
-  const neg = /^-/.test(t) || /[▼↓]/.test(src);
-  t = t.replace(/-/g, '');
-  if (!/[0-9]/.test(t)) return NaN;
-  const dots = (t.match(/\./g) || []).length, commas = (t.match(/,/g) || []).length;
-  if (dots && commas) {
-    const dec = t.lastIndexOf('.') > t.lastIndexOf(',') ? '.' : ',';
-    t = t.split(dec === '.' ? ',' : '.').join('').replace(',', '.');
-  } else if (commas) {
-    t = commas > 1 ? t.replace(/,/g, '') : t.replace(',', '.');
-  } else if (dots > 1) {
-    t = t.replace(/\./g, '');
-  }
-  const n = Number(t);
-  return Number.isFinite(n) ? (neg ? -n : n) : NaN;
-};
+
+
 /* Dynamic BI hierarchy; legacy aliases remain available to existing summary calculations. */
 window.__AutoBIHealthTree75 = (() => {
     const G = window.__AutoBILoadingGuard75, { text, norm, visible } = G;
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', '\'': '&#39;' }[c]));
-    function parse(table, parseNumber) {
-        if (G.loading())
-            throw Error('Ng\u00E0nh h\u00E0ng BI \u0111ang t\u1EA3i; ch\u01B0a \u0111\u1ECDc d\u1EEF li\u1EC7u');
-        const head = [...table.querySelectorAll('thead th')].map(e => norm(text(e))), find = f => head.findIndex(f);
-        const cols = { sl: find(x => x === 'sl' || x.includes('so luong')), dtqd: find(x => /^(doanh thu qd|doanh thu quy doi|dtqd|dt quy doi)$/.test(x)), growth: find(x => /^(% tt|tt|tang truong|% tang truong)$/.test(x)), tg_ratio: find(x => /^(% tra gop|ty trong tra gop|ti trong tra gop|% tra cham)$/.test(x)) };
-        if (cols.sl < 0 || cols.dtqd < 0)
-            throw Error('Ng\u00E0nh h\u00E0ng BI thi\u1EBFu c\u1ED9t S\u1ED1 l\u01B0\u1EE3ng/Doanh thu Q\u0110');
-        if (table.closest('.ant-table-wrapper')?.querySelector('.ant-pagination-next:not(.ant-pagination-disabled)'))
-            throw Error('Ng\u00E0nh h\u00E0ng BI c\u00F2n trang ch\u01B0a qu\u00E9t');
-        const rows = [], stack = [], seen = new Set();
-        for (const tr of [...table.querySelectorAll('tbody tr')]) {
-            if (!visible(tr) || tr.classList.contains('ant-table-measure-row') || tr.classList.contains('grid-total-row'))
-                continue;
-            const cells = [...tr.cells];
-            if (!cells.length)
-                continue;
-            const raw = text(cells[0]);
-            if (/^(tong|total)(\s|\(|$)/.test(norm(raw)))
-                continue;
-            if (cells.length <= Math.max(...Object.values(cols)))
-                throw Error('Nh\u00F3m ' + raw + ' thi\u1EBFu c\u1ED9t');
-            if (tr.querySelector('button.ant-table-row-expand-icon-collapsed'))
-                throw Error('Nh\u00F3m ' + raw + ' ch\u01B0a bung h\u1EBFt');
-            const match = raw.match(/^(-?\d+)\s*[-–]\s*(.+)$/), code = match?.[1] || '', label = match?.[2]?.trim() || raw;
-            const levelMatch = String(tr.className).match(/ant-table-row-level-(\d+)/), aria = tr.getAttribute('aria-level');
-            const level = levelMatch ? +levelMatch[1] : aria ? +aria - 1 : 0;
-            if (!label || level < 0 || level > 0 && !stack[level - 1])
-                throw Error('Kh\u00F4ng x\u00E1c \u0111\u1ECBnh c\u1EA5p cha c\u1EE7a ' + raw);
-            const parentId = level ? stack[level - 1] : null, nativeId = tr.getAttribute('data-row-key');
-            const id = nativeId || JSON.stringify([parentId, level, code, label]);
-            if (seen.has(id))
-                throw Error('Tr\u00F9ng ID nh\u00F3m BI: ' + id + '; ch\u01B0a l\u01B0u \u0111\u1EC3 tr\u00E1nh g\u1ED9p nh\u1EA7m');
-            seen.add(id);
-            const read = (field, percent = false) => {
-                const i = cols[field];
-                if (i < 0)
-                    return null;
-                const v = text(cells[i]).replace(/−/g, '-');
-                if (/^(?:—|–|-|)$/.test(v))
-                    return null;
-                if (!/[0-9]/.test(v))
-                    throw Error('Nh\u00F3m ' + raw + ': c\u1ED9t ' + field + ' ch\u01B0a c\u00F3 s\u1ED1');
-                const n = percent ? window.__AutoBIPercent(v) : parseNumber(v);
-                if (!Number.isFinite(n)) {
-                    /* V16.3.2: cột % (Tăng trưởng, Trả góp) đọc không ra thì để trống, không bỏ cả cây Ngành hàng */
-                    if (percent) {
-                        try { window.__AutoBILog5?.note('Nh\u00F3m ' + raw + ': c\u1ED9t ' + field + ' = "' + v + '" kh\u00F4ng \u0111\u1ECDc \u0111\u01B0\u1EE3c, \u0111\u1EC3 tr\u1ED1ng'); } catch (_) { }
-                        return null;
-                    }
-                    throw Error('Nh\u00F3m ' + raw + ': c\u1ED9t ' + field + ' kh\u00F4ng h\u1EE3p l\u1EC7');
-                }
-                return n;
-            };
-            const row = { id, parentId, level, code, label, sl: read('sl'), dtqd: read('dtqd'), growth: read('growth', true), tg_ratio: read('tg_ratio', true) };
-            if (row.sl === null || row.dtqd === null)
-                throw Error('Nh\u00F3m ' + raw + ' ch\u01B0a c\u00F3 s\u1ED1 l\u01B0\u1EE3ng/doanh thu');
-            rows.push(row);
-            stack[level] = id;
-            stack.length = level + 1;
-        }
-        if (!rows.length)
-            throw Error('Ng\u00E0nh h\u00E0ng BI kh\u00F4ng c\u00F3 nh\u00F3m h\u1EE3p l\u1EC7');
-        const rootCount = rows.filter(r => r.level === 0).length, footer = text(table.querySelector('tfoot'));
-        const expected = footer.match(/Tổng\s*\((\d+)\s*dòng\)/i);
-        if (expected && rootCount !== +expected[1])
-            throw Error('Ng\u00E0nh h\u00E0ng BI: ' + rootCount + '/' + expected[1] + ' nh\u00F3m cha; ch\u01B0a l\u01B0u thi\u1EBFu');
-        return { schema: 1, complete: true, rows, rootCount, parsedRows: rows.length, capturedAt: Date.now() };
-    }
+    
     function valid(data) { const t = data?.__autobiHealthTree75; return t?.complete === true && t.rows?.length > 0 && t.rows.length === t.parsedRows && new Set(t.rows.map(r => r.id)).size === t.rows.length; }
     function orderedRows(rows) {
         const groups = [];
@@ -604,13 +295,13 @@ window.__AutoBIHealthTree75 = (() => {
         }
         return host.innerHTML;
     }
-    return { parse, valid, tableHTML, render, rememberRealtimeNames, shareHTML };
+    return {  valid, tableHTML, render, rememberRealtimeNames, shareHTML };
 })();
 /* AutoBI 73 WT7: independent hours/productivity module. No network export. */
 window.__AutoBIWorktime73 = (() => {
     'use strict';
     const K = { job: 'autobi_wt73_job', result: 'autobi_wt73_result', revenue: 'autobi_wt73_revenue', status: 'autobi_wt73_status' };
-    const URL = 'https://baocao.dienmayxanh.com/dashboard/timekeeping';
+    
     const settings = { poll: 250, settle: 1800, timeout: 120000, filterDelay: 900 };
     let bridge = null, running = false, token = null, progressHost = null, progressRoot = null;
     const clone = x => JSON.parse(JSON.stringify(x));
@@ -618,7 +309,7 @@ window.__AutoBIWorktime73 = (() => {
     const txt = e => String(e?.getAttribute?.('title') || e?.innerText || e?.textContent || '').replace(/\s+/g, ' ').trim();
     const visible = e => !!e?.isConnected && !e.closest('[data-autobi-ui]') && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
     const all = (selector, root = document) => Array.from(root.querySelectorAll(selector));
-    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+    
     const safe = fn => { try {
         return fn();
     }
@@ -685,7 +376,7 @@ window.__AutoBIWorktime73 = (() => {
             counts[day] = (counts[day] || 0) + 1;
         }
         if (!counts[range.to])
-            throw Error('C\u1ED9t NG\u00C0Y ch\u01B0a c\u00F3 ' + range.to.replace(/-/g, '/') + '; ch\u01B0a x\u00E1c nh\u1EADn d\u1EEF li\u1EC7u \u0111\u1EBFn h\u1EBFt ng\u00E0y k\u1EBFt th\u00FAc');
+            throw Error((rows.length ? 'BI ch\u01B0a c\u00F3 Gi\u1EDD c\u00F4ng ng\u00E0y ' : 'BI ch\u01B0a c\u1EADp nh\u1EADt Gi\u1EDD c\u00F4ng (\u0111\u1EBFn ng\u00E0y ') + range.to.split('-').reverse().join('/') + (rows.length ? '' : ')') + ' \u2014 c\u00F4ng ty ch\u01B0a \u0111\u1EA9y s\u1ED1, ch\u1EA1y l\u1EA1i sau');
         return { lastDate: range.to, days: Object.keys(counts).sort(), counts };
     }
     const samePeriod = (a, b) => !!a && !!b && a.from === b.from && a.to === b.to;
@@ -760,391 +451,41 @@ window.__AutoBIWorktime73 = (() => {
             return { ...r, revenue, convertedRevenue, perHour: revenue !== null && r.hours > 0 ? revenue / r.hours : null, convertedPerHour: convertedRevenue !== null && r.hours > 0 ? convertedRevenue / r.hours : null };
         });
     }
-    function columns(labels) {
-        const a = labels.map(norm), find = fn => a.findIndex(fn);
-        const result = {
-            shop: find(x => x === 'sieu thi'), employee: find(x => /^(nhan vien|ma nv|ma nhan vien)$/.test(x)),
-            name: find(x => /^(ten|ho ten|ten nhan vien)$/.test(x)), department: find(x => /^(phong ban|bo phan)$/.test(x)), position: find(x => x === 'chuc vu'),
-            hours: find(x => x.includes('tong gio cong') && /x\.?\s*nhan|xac nhan/.test(x)), date: find(x => x === 'ngay')
-        };
-        if (['date', 'shop', 'employee', 'department', 'position', 'hours'].some(k => result[k] < 0))
-            return null;
-        return result;
-    }
-    function headerLabels(table) {
-        const grid = [];
-        all('thead tr', table).forEach((tr, r) => { grid[r] ||= []; let c = 0; for (const cell of tr.cells) {
-            while (grid[r][c] !== undefined)
-                c++;
-            for (let y = r; y < r + cell.rowSpan; y++) {
-                grid[y] ||= [];
-                for (let x = c; x < c + cell.colSpan; x++)
-                    grid[y][x] = txt(cell);
-            }
-            c += cell.colSpan;
-        } });
-        return (grid.at(-1) || []).filter((value, index, array) => value !== '' || index < array.length - 1);
-    }
-    function table() { const header = all('table').filter(visible).find(t => columns(headerLabels(t))); if (!header)
-        return null; return header.closest('.ant-table')?.querySelector('.ant-table-body table') || header; }
-    function tableRows(t, range) {
-        const c = columns(headerLabels(t).length ? headerLabels(t) : headerLabels(t.closest('.ant-table')?.querySelector('.ant-table-header table') || t));
-        if (!c)
-            throw Error('B\u1EA3ng Gi\u1EDD c\u00F4ng thi\u1EBFu c\u1ED9t x\u00E1c nh\u1EADn');
-        const out = [];
-        for (const row of all('tbody tr', t)) {
-            if (row.classList.contains('ant-table-measure-row') || row.closest('tfoot'))
-                continue;
-            const cells = Array.from(row.cells || []);
-            if (!cells.length)
-                continue;
-            if (cells.length === 1 && /khong co du lieu|no data|trong/i.test(norm(txt(row))))
-                continue;
-            if (cells.length <= Math.max(...Object.values(c))) {
-                if (/^(tong|total)/.test(norm(txt(row))))
-                    continue;
-                throw Error('D\u00F2ng Gi\u1EDD c\u00F4ng ch\u01B0a t\u1EA3i \u0111\u1EE7 c\u1ED9t');
-            }
-            const r = {};
-            for (const [k, i] of Object.entries(c))
-                r[k] = i < 0 ? '' : txt(cells[i]);
-            if (!id(r.employee)) {
-                if (/^(tong|total)/.test(norm(r.shop)))
-                    continue;
-                throw Error('Kh\u00F4ng \u0111\u1ECDc \u0111\u01B0\u1EE3c M\u00E3 NV');
-            }
-            if (r.date) {
-                const day = dateISO(r.date);
-                if (day < range.from || day > range.to)
-                    throw Error('B\u1EA3ng c\u00F2n d\u1EEF li\u1EC7u ngo\u00E0i kho\u1EA3ng ng\u00E0y \u0111\u00E3 ch\u1ECDn');
-            }
-            hours(r.hours);
-            out.push(r);
-        }
-        return out;
-    }
-    function totalRows() {
-        const values = all('span,div,p,li').filter(visible).filter(e => e.children.length < 5 && txt(e).length < 160).map(e => txt(e).match(/Tổng\s*:?\s*([\d.,]+)\s*dòng/i)).filter(Boolean).map(m => Number(m[1].replace(/[.,]/g, '')));
-        if (!values.length)
-            return null;
-        if (new Set(values).size !== 1)
-            throw Error('T\u1ED5ng s\u1ED1 d\u00F2ng \u0111ang c\u1EADp nh\u1EADt, ch\u01B0a kh\u1EDBp');
-        return values[0];
-    }
+    
+    
+    
+    
+    
     function check() { if (token && read(K.job)?.id !== token)
         throw Error('Phi\u00EAn Gi\u1EDD c\u00F4ng \u0111\u00E3 \u0111\u01B0\u1EE3c thay th\u1EBF'); if (token && read(K.job)?.cancelled)
         throw Error('\u0110\u00E3 d\u1EEBng Gi\u1EDD c\u00F4ng'); if (token && Date.now() - read(K.job).at > 15 * 60000)
         throw Error('Phi\u00EAn Gi\u1EDD c\u00F4ng qu\u00E1 th\u1EDDi gian'); }
-    async function wait(fn, message, timeout = settings.timeout, options = {}) { return window.__AutoBILoadingGuard75.wait(message, fn, { timeout: Math.max(timeout, 120000), check, key: () => message, ...options }); }
+    
     function progress(message) {
         startRocket();
         safe(() => write(K.status, { message, at: Date.now(), running: true }));
         safe(() => window.__AutoBILog5?.stage(/doanh thu/i.test(message) ? 'Nh\u00E2n vi\u00EAn Doanh thu' : 'Gi\u1EDD c\u00F4ng', 'T\u1ED5ng c\u1EE5m', message));
     }
     // Filter discovery retained from the proven Step 5 V2: the popup is scoped to its trigger.
-    function filterButton(label) { const wanted = norm(label); return all('button').filter(visible).find(b => all('span', b).some(s => norm(txt(s)) === wanted) || norm(txt(b)) === wanted || norm(txt(b)).startsWith(wanted + ' ')); }
-    function popupFor(button) {
-        if (!button)
-            return null;
-        const br = button.getBoundingClientRect();
-        const controlled = button.getAttribute('aria-controls');
-        if (controlled) {
-            const e = document.getElementById(controlled);
-            if (visible(e))
-                return e;
-        }
-        const candidates = all('div,section,aside,ul,[role="dialog"],[role="listbox"]').filter(e => {
-            if (!visible(e) || !norm(txt(e)).includes('chon tat ca'))
-                return false;
-            if (!e.querySelector('input[type="checkbox"]') && !all('button', e).some(b => norm(txt(b)) === 'chon tat ca'))
-                return false;
-            return true;
-        });
-        const __floating82 = e => { for (let x = e; x && x !== document.body; x = x.parentElement) { const p = getComputedStyle(x).position; if (p === 'fixed' || p === 'absolute') return true; } return false; };
-        const near = candidates.filter(e => { const r = e.getBoundingClientRect(); return r.top >= br.top - 5 && r.left < br.right + 120 && r.right > br.left - 120; });
-        // V82 điện thoại: nếu không có danh sách nằm dưới nút lọc thì nhận tấm nổi ở vị trí khác.
-        const pool = near.length ? near : candidates.filter(e => !e.contains(button) && __floating82(e));
-        pool.sort((a, b) => { const x = a.getBoundingClientRect(), y = b.getBoundingClientRect(); return x.width * x.height - y.width * y.height; });
-        return pool.find(e => e.querySelector('input[type="checkbox"],[role="checkbox"]')) || pool[0] || null;
-    }
-    async function selectAllFilter(label) { progress('\u0110ang ch\u1ECDn ' + label + '\u2026'); if (label === 'Si\u00EAu th\u1ECB')
-        await window.__AutoBIFilterGuard75.selectConfiguredShops(bridge.UTILS.getPersistentConfig());
-    else
-        await window.__AutoBIFilterGuard75.selectAll(label); check(); }
-    const dateInputs = () => all('input').filter(visible).filter(e => e.type === 'date' || /^\d{2}\/\d{2}\/\d{4}$/.test(e.value) || norm(e.placeholder).includes('ngay'));
-    function nativeValue(input, value) { const proto = input.tagName === 'SELECT' ? HTMLSelectElement.prototype : HTMLInputElement.prototype; Object.getOwnPropertyDescriptor(proto, 'value').set.call(input, value); for (const type of ['input', 'change', 'blur'])
-        input.dispatchEvent(new Event(type, { bubbles: true })); }
-    async function setDates(range) {
-        let inputs = await wait(() => dateInputs().length === 2 && dateInputs(), 'Kh\u00F4ng t\u00ECm th\u1EA5y \u0111\u00FAng hai \u00F4 ng\u00E0y', 15000);
-        let old = null;
-        try {
-            old = readDates();
-        }
-        catch (e) { }
-        const order = old && range.from > old.to ? [1, 0] : [0, 1];
-        for (const i of order) {
-            inputs = dateInputs();
-            const value = i ? range.to : range.from;
-            inputs[i].focus();
-            nativeValue(inputs[i], inputs[i].type === 'date' ? value : displayDate(value));
-            inputs[i].dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
-            inputs[i].blur();
-            await sleep(settings.filterDelay);
-        }
-        if (!samePeriod(readDates(), range))
-            throw Error('Trang ch\u01B0a nh\u1EADn \u0111\u00FAng kho\u1EA3ng ng\u00E0y');
-    }
-    function readDates() { const a = dateInputs(); return a.length === 2 ? { from: dateISO(a[0].value), to: dateISO(a[1].value) } : null; }
-    const viewButton = () => all('button').filter(visible).find(b => /^(xem|xem bao cao|xem du lieu)$/.test(norm(txt(b))));
-    const loading = () => window.__AutoBILoadingGuard75.loading();
-    async function stableTable(range, started = Date.now(), before = null) {
-        let previous = '', since = 0, changed = false;
-        return wait(() => {
-            const t = table();
-            if (!t || loading()) {
-                since = 0;
-                return false;
-            }
-            const total = totalRows();
-            const signature = all('tbody tr', t).map(txt).join('|') + '#' + total;
-            if (before !== null && signature !== before)
-                changed = true;
-            if (!since || signature !== previous) {
-                previous = signature;
-                since = Date.now();
-                return false;
-            }
-            if (Date.now() - since < settings.settle || Date.now() - started < settings.settle)
-                return false;
-            // Never accept an unchanged old table after a new query without a loading transition.
-            if (before !== null && !changed)
-                return false;
-            const rows = tableRows(t, range);
-            if (!rows.length && total !== 0)
-                return false;
-            return { table: t, rows, total, signature };
-        }, 'B\u1EA3ng Gi\u1EDD c\u00F4ng ch\u01B0a t\u1EA3i xong ho\u1EB7c c\u00F2n d\u1EEF li\u1EC7u c\u0169');
-    }
-    async function query(range) {
-        if (!samePeriod(readDates(), range))
-            throw Error('Kho\u1EA3ng ng\u00E0y \u0111\u00E3 ch\u1ECDn b\u1ECB thay \u0111\u1ED5i');
-        const b = await wait(() => viewButton() && !viewButton().disabled && viewButton(), 'Kh\u00F4ng t\u00ECm th\u1EA5y n\u00FAt Xem', 10000);
-        const old = table(), before = old ? all('tbody tr', old).map(txt).join('|') + '#' + totalRows() : null;
-        let fresh = false;
-        const observer = new MutationObserver(() => { if (loading() || !old?.isConnected || !table())
-            fresh = true; });
-        observer.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'aria-busy'] });
-        const stamp92 = () => { const e = all('div,span,p').find(x => x.children.length < 4 && /c\u1EADp nh\u1EADt l\u00FAc/i.test(x.textContent || '') && (x.textContent || '').length < 60); return e ? e.textContent.replace(/\s+/g, ' ').trim() : ''; };
-        const stampBefore92 = stamp92();
-        const started = Date.now();
-        b.click();
-        try {
-            return await stableTableWithFresh(range, started, before, () => fresh || (!!stampBefore92 && stamp92() !== '' && stamp92() !== stampBefore92));
-        }
-        finally {
-            observer.disconnect();
-        }
-    }
-    async function stableTableWithFresh(range, started, before, isFresh) {
-        let previous = '', since = 0, changed = false;
-        return wait(() => {
-            const t = table();
-            if (!t || loading()) {
-                since = 0;
-                changed = true;
-                return false;
-            }
-            const total = totalRows(), signature = all('tbody tr', t).map(txt).join('|') + '#' + total;
-            if (before === null || signature !== before || isFresh())
-                changed = true;
-            if (!since || signature !== previous) {
-                previous = signature;
-                since = Date.now();
-                return false;
-            }
-            if (!changed || Date.now() - since < settings.settle || Date.now() - started < settings.settle)
-                return false;
-            if (!samePeriod(readDates(), range))
-                throw Error('Kho\u1EA3ng ng\u00E0y b\u1ECB thay \u0111\u1ED5i trong l\u00FAc ch\u1EA1y');
-            const rows = tableRows(t, range);
-            if (!rows.length && total !== 0)
-                return false;
-            return { table: t, rows, total, signature };
-        }, 'Ch\u01B0a x\u00E1c nh\u1EADn \u0111\u01B0\u1EE3c b\u1EA3ng m\u1EDBi sau khi b\u1EA5m Xem');
-    }
-    async function confirmed500(range) {
-        await wait(() => {
-            const t = table(), total = totalRows();
-            if (!t || loading() || total === null)
-                return false;
-            const rows = all('tbody tr', t).filter(r => !r.classList.contains('ant-table-measure-row') && r.cells.length > 1);
-            return rows.length === Math.min(500, total);
-        }, 'Ch\u01B0a t\u1EA3i \u0111\u1EE7 d\u00F2ng sau khi ch\u1ECDn 500/trang; ch\u01B0a l\u01B0u gi\u1EDD c\u00F4ng thi\u1EBFu');
-        return stableTable(range);
-    }
-    function clickOption(element) {
-        element.scrollIntoView?.({ block: 'nearest' });
-        for (const type of ['mousedown', 'mouseup'])
-            element.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true }));
-        element.click();
-    }
-    async function set500(range) {
-        progress('\u0110ang ch\u1ECDn 500/trang\u2026');
-        const native = all('select').filter(visible).find(s => Array.from(s.options).some(o => String(o.value) === '500' || /^500\s*(\/\s*trang)?$/.test(norm(o.textContent))));
-        if (native) {
-            const o = Array.from(native.options).find(o => String(o.value) === '500' || /^500\s*(\/\s*trang)?$/.test(norm(o.textContent)));
-            if (native.value !== o.value) {
-                nativeValue(native, o.value);
-                await sleep(settings.filterDelay);
-            }
-            if (native.value !== o.value)
-                throw Error('Ch\u01B0a ch\u1ECDn \u0111\u01B0\u1EE3c 500/trang');
-            return confirmed500(range);
-        }
-        // Only a pagination size selector can be clicked; never use a generic combobox/date picker.
-        let trigger = all('.ant-pagination-options-size-changer,.ant-pagination .ant-select,[aria-label*="page size"],button,[role="combobox"]').filter(visible).find(e => /^\d+\s*\/\s*trang$/.test(norm(txt(e))) || /^\d+\s*\/\s*trang$/.test(norm(e.getAttribute('title'))));
-        if (!trigger)
-            throw Error('Kh\u00F4ng t\u00ECm th\u1EA5y b\u1ED9 ch\u1ECDn s\u1ED1 d\u00F2ng/trang');
-        /* V89: điện thoại có thể bỏ qua cú bấm chuột giả; thử lần lượt 3 cách, mỗi cách chờ tối đa 8 giây. */
-        const sizeTexts89 = () => all('.ant-pagination-options-size-changer,.ant-pagination .ant-select,.ant-pagination .ant-select-selection-item,.ant-pagination select,[role="combobox"],button').filter(visible).map(e => norm(txt(e)));
-        const rowCount89 = () => { const t = table(); return t ? all('tbody tr', t).filter(r => !r.classList.contains('ant-table-measure-row') && r.cells.length > 1).length : 0; };
-        const accepted89 = before => sizeTexts89().some(x => /^500(\s*\/\s*trang)?$/.test(x)) || (!loading() && rowCount89() > before);
-        if (!/^500\s*\/\s*trang$/.test(norm(txt(trigger)))) {
-            const before = rowCount89();
-            const combo = trigger.matches('[role="combobox"]') ? trigger : trigger.querySelector('[role="combobox"]');
-            const key = (el, k, code) => el.dispatchEvent(new KeyboardEvent('keydown', { key: k, code: k, keyCode: code, which: code, bubbles: true }));
-            const fire = (el, types) => { for (const type of types) { try { let ev; if (type.startsWith('pointer') && window.PointerEvent) ev = new PointerEvent(type, { bubbles: true, cancelable: true, pointerType: 'touch', isPrimary: true }); else if (type.startsWith('touch') && window.TouchEvent) ev = new TouchEvent(type, { bubbles: true, cancelable: true }); else if (!type.startsWith('pointer') && !type.startsWith('touch')) ev = new MouseEvent(type, { bubbles: true, cancelable: true }); if (ev) el.dispatchEvent(ev); } catch (_) { } } };
-            const findOption = () => all('.ant-select-item-option,[role="option"]').filter(visible).find(e => /^500\s*(\/\s*trang)?$/.test(norm(txt(e))));
-            const open = async () => {
-                const selector = trigger.querySelector('.ant-select-selector') || trigger;
-                const tries = [() => { if (combo) { combo.focus(); key(combo, 'Enter', 13); } else trigger.click(); }, () => fire(selector, ['pointerdown', 'mousedown']), () => trigger.click()];
-                for (const t of tries) { if (findOption()) return; t(); for (let i = 0; i < 8 && !findOption(); i++) await sleep(125); }
-            };
-            const methods = [
-                o => clickOption(o),
-                o => { o.scrollIntoView?.({ block: 'nearest' }); fire(o, ['pointerdown', 'touchstart', 'pointerup', 'touchend', 'mousedown', 'mouseup']); o.click(); },
-                async () => { if (!combo) return; combo.focus(); for (let i = 0; i < 12; i++) { const act = document.getElementById(combo.getAttribute('aria-activedescendant') || ''); if (act && /(^|\D)500(\D|$)/.test(norm(act.getAttribute('aria-label') || act.textContent))) break; key(combo, 'ArrowDown', 40); await sleep(80); } key(combo, 'Enter', 13); }
-            ];
-            let ok = false;
-            for (let m = 0; m < methods.length && !ok; m++) {
-                check();
-                if (!findOption()) await open();
-                let option = null;
-                for (let i = 0; i < 40 && !(option = findOption()); i++) { check(); await sleep(150); }
-                if (!option && m < 2) continue;
-                await methods[m](option);
-                for (let i = 0; i < 40 && !(ok = accepted89(before)); i++) { check(); await sleep(200); }
-                if (!ok) safe(() => window.__AutoBILog5?.note('Chọn 500/trang: cách ' + (m + 1) + ' chưa được, thử cách khác'));
-            }
-            if (combo && findOption()) key(combo, 'Escape', 27);
-            if (!ok) throw Error('Website ch\u01B0a nh\u1EADn 500/trang (\u0111\u00E3 th\u1EED 3 c\u00E1ch ch\u1ECDn)');
-        }
-
-        await sleep(settings.filterDelay);
-        return confirmed500(range);
-    }
-    function pageInfo() {
-        const label = all('.ant-pagination-total-text').filter(visible)[0];
-        const match = txt(label).match(/([\d.,]+)\s*[-–]\s*([\d.,]+)\s*\/\s*Tổng\s*([\d.,]+)\s*dòng/i);
-        if (!match)
-            return null;
-        const nums = match.slice(1).map(v => Number(v.replace(/[.,]/g, '')));
-        return { start: nums[0], end: nums[1], total: nums[2], root: label.closest('.ant-pagination') };
-    }
-    async function collect(range) {
-        check();
-        let s = await set500(range);
-        const total = s.total;
-        if (total === null)
-            throw Error('Kh\u00F4ng \u0111\u1ECDc \u0111\u01B0\u1EE3c t\u1ED5ng d\u00F2ng BI');
-        const rows = [], seen = new Set();
-        let pages = 0;
-        while (true) {
-            check();
-            if (!samePeriod(readDates(), range))
-                throw Error('Ng\u00E0y \u0111\u00E3 thay \u0111\u1ED5i trong l\u00FAc qu\u00E9t');
-            const info = pageInfo(), expected = Math.min(500, total - rows.length);
-            if (s.total !== total || s.rows.length !== expected)
-                throw Error('S\u1ED1 d\u00F2ng trang kh\u00F4ng kh\u1EDBp; ch\u01B0a l\u01B0u k\u1EBFt qu\u1EA3 thi\u1EBFu');
-            if (total > 500 && (!info || info.start !== rows.length + 1 || info.end !== rows.length + expected || info.total !== total))
-                throw Error('Th\u1EE9 t\u1EF1 trang kh\u00F4ng kh\u1EDBp');
-            const key = info ? info.start : 1;
-            if (seen.has(key))
-                throw Error('Trang \u0111\u00E3 qu\u00E9t b\u1ECB l\u1EB7p');
-            seen.add(key);
-            rows.push(...s.rows);
-            pages++;
-            progress('\u0110\u00E3 qu\u00E9t trang ' + pages + ' \u00B7 ' + rows.length + '/' + total + ' d\u00F2ng');
-            if (rows.length === total)
-                break;
-            const next = info.root.querySelector('.ant-pagination-next');
-            if (!next || next.classList.contains('ant-pagination-disabled') || next.getAttribute('aria-disabled') === 'true')
-                throw Error('Ch\u01B0a \u0111\u1EE7 d\u00F2ng nh\u01B0ng kh\u00F4ng c\u00F3 trang ti\u1EBFp theo');
-            const previousSignature = s.signature;
-            const targetStart = rows.length + 1;
-            let signature = '', since = 0;
-            (next.querySelector('button') || next).click();
-            s = await wait(() => {
-                const p = pageInfo(), t = table();
-                if (!p || !t || loading()) {
-                    since = 0;
-                    return false;
-                }
-                if (p.total !== total)
-                    throw Error('T\u1ED5ng d\u00F2ng BI thay \u0111\u1ED5i khi chuy\u1EC3n trang');
-                if (p.start !== targetStart)
-                    return false;
-                const sig = all('tbody tr', t).map(txt).join('|') + '#' + p.total;
-                if (sig === previousSignature)
-                    return false;
-                if (sig !== signature) {
-                    signature = sig;
-                    since = Date.now();
-                    return false;
-                }
-                if (Date.now() - since < settings.settle)
-                    return false;
-                const data = tableRows(t, range);
-                if (data.length !== Math.min(500, total - rows.length))
-                    return false;
-                return { rows: data, total, signature: sig };
-            }, 'Trang ' + (pages + 1) + ' ch\u01B0a t\u1EA3i \u0111\u1EE7 d\u1EEF li\u1EC7u', settings.timeout, { expected: Math.min(500, total - rows.length) + ' d\u00F2ng', actual: () => table() ? all('tbody tr', table()).filter(r => !r.classList.contains('ant-table-measure-row') && r.cells.length > 1).length + ' d\u00F2ng' : 'ch\u01B0a c\u00F3 b\u1EA3ng' });
-        }
-        return { rows, total, partial: false, pages };
-    }
-    function getRangeFromRevenuePage(fallback) {
-        const month = all('.ant-picker input').filter(visible).map(e => e.value.trim()).find(v => /^\d{2}\/\d{4}$/.test(v));
-        const expectedMonth = fallback.from.slice(5, 7) + '/' + fallback.from.slice(0, 4);
-        if (month !== expectedMonth)
-            throw Error('Th\u00E1ng doanh thu ch\u01B0a kh\u1EDBp k\u1EF3 ch\u1EA1y');
-        const dates = all('div,span,p').filter(visible).map(txt).filter(x => x.length < 160).map(x => norm(x).match(/luy ke toi het ngay\s*(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?/)).filter(Boolean);
-        if (!dates.length)
-            throw Error('Ch\u01B0a x\u00E1c nh\u1EADn \u0111\u01B0\u1EE3c ng\u00E0y ch\u1ED1t doanh thu tr\u00EAn BI');
-        const cutoffs = [...new Set(dates.map(m => dateISO((m[3] || fallback.from.slice(0, 4)) + '-' + m[2].padStart(2, '0') + '-' + m[1].padStart(2, '0'))))];
-        if (cutoffs.length !== 1)
-            throw Error('Ng\u00E0y ch\u1ED1t doanh thu tr\u00EAn BI ch\u01B0a th\u1ED1ng nh\u1EA5t');
-        const to = cutoffs[0];
-        if (to < fallback.from || to > fallback.to)
-            throw Error('Ng\u00E0y ch\u1ED1t doanh thu tr\u00EAn BI n\u1EB1m ngo\u00E0i k\u1EF3 Gi\u1EDD c\u00F4ng y\u00EAu c\u1EA7u');
-        return { from: fallback.from, to };
-    }
-    function captureStaff(parsed, config) {
-        const job = read('autobi_wt73_revenue_context');
-        if (!job || job.parent !== window.__AutoBIRun67?.current()?.id || window.__AutoBIDataMode56 === 'realtime')
-            return;
-        const range = getRangeFromRevenuePage(job.range);
-        assertRevenuePeriod(range);
-        let unit = 'Tri\u1EC7u \u0111\u1ED3ng';
-        const t = all('.report-table table,.ant-table-content table').find(visible);
-        const context = norm(txt(t?.parentElement)).slice(0, 1000);
-        if (/trieu|million/.test(context))
-            unit = 'Tri\u1EC7u \u0111\u1ED3ng';
-        else if (/don vi\s*:?\s*(vnd|dong)|\(vnd\)/.test(context))
-            unit = '\u0111\u1ED3ng';
-        const snapshot = revenueSnapshot(parsed.staffRevMap, config, range, job.parent, unit);
-        write(K.revenue, snapshot);
-        write('autobi_wt73_revenue_context', { ...job, range, captured: true, error: null });
-    }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     function navigateJob(job) {
         if (job.combined) {
             const snapshot = read(K.revenue), capture = read('autobi_wt73_revenue_context');
@@ -1159,7 +500,7 @@ window.__AutoBIWorktime73 = (() => {
         if (job.combined)
             safe(() => window.__AutoBILog5?.ok('L\u0169y k\u1EBF ho\u00E0n t\u1EA5t; ti\u1EBFp t\u1EE5c Gi\u1EDD c\u00F4ng'));
         sessionStorage.removeItem('tgdd_report_active_session');
-        location.assign(URL);
+        setTimeout(() => runPending().catch(e => console.warn('[AutoBI Gi\u1EDD c\u00F4ng]', e)), 0);
     }
     function standalone() {
         if (running || window.__AutoBIRun67?.active()) {
@@ -1176,7 +517,7 @@ window.__AutoBIWorktime73 = (() => {
     }
     async function runPending() {
         const job = read(K.job);
-        if (!job || job.cancelled || !['pending', 'collecting'].includes(job.phase) || location.pathname !== '/dashboard/timekeeping' || running)
+        if (!job || job.cancelled || !['pending', 'collecting'].includes(job.phase) || location.hostname !== 'baocao.dienmayxanh.com' || running)
             return;
         if (Date.now() - job.at > 15 * 60000) {
             write(K.job, { ...job, phase: 'error', error: 'Phi\u00EAn Gi\u1EDD c\u00F4ng \u0111\u00E3 h\u1EBFt h\u1EA1n; h\u00E3y ch\u1EA1y l\u1EA1i' });
@@ -1187,30 +528,10 @@ window.__AutoBIWorktime73 = (() => {
         write(K.job, { ...job, phase: 'collecting' });
         let error = null;
         try {
-            /* V16.6: lấy Giờ công bằng API (timekeeping-get); API lỗi (trừ hết phiên) thì đọc bảng như cũ */
-            let collected = null;
-            const apiTk = window.__AutoBIApi && window.__AutoBIApi.timekeepingRows;
-            if (apiTk && GM_getValue('autobi_api_source', true) !== false) {
-                try {
-                    progress('\u0110ang l\u1EA5y Gi\u1EDD c\u00F4ng b\u1EB1ng API ' + displayDate(job.range.from) + ' \u2192 ' + displayDate(job.range.to) + '\u2026');
-                    collected = await apiTk(job.range);
-                    try { window.__AutoBILog5?.note('Gi\u1EDD c\u00F4ng: \u0111\u00E3 l\u1EA5y b\u1EB1ng API (' + collected.rows.length + ' d\u00F2ng)'); } catch (_) { }
-                } catch (apiError) {
-                    if (apiError && apiError.code === 'AUTH') throw apiError;
-                    try { window.__AutoBILog5?.note('Gi\u1EDD c\u00F4ng: API l\u1ED7i \u2014 \u0111\u1ECDc b\u1EA3ng nh\u01B0 c\u0169 (' + (apiError && apiError.message) + ')'); } catch (_) { }
-                    collected = null;
-                }
-            }
-            if (!collected) {
-                await wait(() => filterButton('V\u00F9ng') && filterButton('Khu v\u1EF1c') && filterButton('Si\u00EAu th\u1ECB') && viewButton(), 'Trang Gi\u1EDD c\u00F4ng ch\u01B0a t\u1EA3i \u0111\u1EE7 b\u1ED9 l\u1ECDc', 30000);
-                progress('\u0110ang ch\u1ECDn ng\u00E0y ' + displayDate(job.range.from) + ' \u2192 ' + displayDate(job.range.to));
-                await setDates(job.range);
-                for (const label of ['V\u00F9ng', 'Khu v\u1EF1c', 'Si\u00EAu th\u1ECB'])
-                    await selectAllFilter(label);
-                progress('\u0110ang l\u1EA5y Gi\u1EDD c\u00F4ng\u2026');
-                await query(job.range);
-                collected = await collect(job.range);
-            }
+            /* V17: Giờ công lấy bằng API (timekeeping-get), không mở trang Giờ công */
+            progress('\u0110ang l\u1EA5y Gi\u1EDD c\u00F4ng b\u1EB1ng API ' + displayDate(job.range.from) + ' \u2192 ' + displayDate(job.range.to) + '\u2026');
+            const collected = await window.__AutoBIApi.timekeepingRows(job.range);
+            try { window.__AutoBILog5?.note('Gi\u1EDD c\u00F4ng: \u0111\u00E3 l\u1EA5y b\u1EB1ng API (' + collected.rows.length + ' d\u00F2ng)'); } catch (_) { }
             const rows = collected.rows;
             check();
             const dateCoverage = validateDates(rows, job.range);
@@ -1220,7 +541,7 @@ window.__AutoBIWorktime73 = (() => {
             const storedRevenue = read(K.revenue), capture = read('autobi_wt73_revenue_context');
             let revenue = job.wantRevenue ? null : storedRevenue?.runId === job.parent && capture?.parent === job.parent && capture.captured === true ? storedRevenue : null;
             /* V16.8: doanh thu nhân viên cho Giờ công lấy bằng API đúng kỳ Giờ công — không chuyển sang trang Doanh thu */
-            if (!revenue && window.__AutoBIApi && window.__AutoBIApi.staffRevenueMap && GM_getValue('autobi_api_source', true) !== false) {
+            if (!revenue && window.__AutoBIApi && window.__AutoBIApi.staffRevenueMap) {
                 try {
                     progress('\u0110ang l\u1EA5y doanh thu nh\u00E2n vi\u00EAn b\u1EB1ng API\u2026');
                     const cfgE = employeeConfig({ staff });
@@ -1236,15 +557,6 @@ window.__AutoBIWorktime73 = (() => {
             const joined = join(staff, revenue, job.range);
             let result = { schema: 1, range: job.range, dateCoverage, at: Date.now(), rows: rows.length, total: collected.total, pages: collected.pages, partial: collected.partial, staff: joined, unit: samePeriod(revenue?.range, job.range) ? revenue.unit : '\u0110\u01A1n v\u1ECB g\u1ED1c BI', matched: joined.filter(r => r.revenue !== null).length };
             check();
-            if (job.wantRevenue && !revenue) {
-                const draft = { ...result, jobId: job.id, revenuePending: true };
-                write('autobi_wt73_draft', draft);
-                write(K.result, draft);
-                write(K.status, { message: 'Gi\u1EDD c\u00F4ng \u0111\u00E3 \u0111\u1EE7; \u0111ang l\u1EA5y doanh thu quy \u0111\u1ED5i nh\u00E2n vi\u00EAn\u2026', running: true, at: Date.now() });
-                write(K.job, { ...job, phase: 'revenue-pending' });
-                location.assign(REVENUE_URL);
-                return;
-            }
             result = finishRevenueResult(result, revenue, !revenue && capture?.parent === job.parent && capture.error ? [capture.error] : []);
             finishJournal(result.warnings);
             write(K.result, result);
@@ -1282,7 +594,7 @@ window.__AutoBIWorktime73 = (() => {
             }
         });
     }
-    const REVENUE_URL = 'https://baocao.dienmayxanh.com/dashboard/revenue-consolidated';
+    
     let rocketOwned = false, rocketNav = null, rocketTimer = null;
     function startRocket() {
         if (rocketOwned)
@@ -1311,23 +623,9 @@ window.__AutoBIWorktime73 = (() => {
         safe(() => bridge.UI.exitFocusMode?.()); if (rocketNav?.node.isConnected)
         rocketNav.node.className = rocketNav.className; rocketNav = null; rocketOwned = false; progressHost?.remove(); }
     function warnUser(message) { safe(() => bridge.UI.showToast?.('\u26A0\uFE0F ' + message, 12000)); }
-    function revenueNumber(value) {
-        const s = String(value ?? '').trim();
-        if (!/^-?(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d+)?$/.test(s))
-            return null;
-        const n = Number(s.replace(/,/g, ''));
-        return Number.isFinite(n) ? n : null;
-    }
-    function revenueColumns(labels) {
-        const names = labels.map(norm), employee = names.findIndex(x => x === 'nhan vien'), converted = names.findIndex(x => /^(doanh thu qd|doanh thu quy doi|dt quy doi|dtqd)$/.test(x)), actual = names.findIndex(x => /^(doanh thu|dt thuc|doanh thu thuc)$/.test(x));
-        return employee < 0 || converted < 0 ? null : { employee, converted, actual };
-    }
-    function revenueTable() {
-        const h = all('table').filter(visible).find(t => revenueColumns(headerLabels(t)));
-        if (!h)
-            return null;
-        return { header: h, body: h.closest('.ant-table')?.querySelector('.ant-table-body table') || h };
-    }
+    
+    
+    
     function assertRevenuePeriod(range) {
         const month = range.from.slice(5, 7) + '/' + range.from.slice(0, 4);
         if (!all('.ant-picker input').filter(visible).some(e => e.value.trim() === month))
@@ -1338,36 +636,10 @@ window.__AutoBIWorktime73 = (() => {
             throw Error('Ng\u00E0y ch\u1ED1t doanh thu tr\u00EAn BI ch\u01B0a kh\u1EDBp ' + displayDate(range.to));
         return true;
     }
-    const revenueButton = label => all('button').filter(visible).find(b => norm(txt(b)) === norm(label));
-    const selectedButton = b => b?.getAttribute('aria-pressed') === 'true' || b?.getAttribute('aria-selected') === 'true' || b?.classList.contains('bg-blue-600');
-    async function chooseRevenueTab(label) {
-        const button = await wait(() => revenueButton(label), 'Kh\u00F4ng t\u00ECm th\u1EA5y ' + label);
-        if (!selectedButton(button))
-            button.click();
-        await wait(() => selectedButton(revenueButton(label)), 'Ch\u01B0a x\u00E1c nh\u1EADn \u0111\u00E3 ch\u1ECDn ' + label);
-        await sleep(settings.filterDelay);
-    }
-    async function waitRevenuePage(shop, before = null) {
-        let signature = '', since = 0;
-        return wait(() => {
-            const t = revenueTable();
-            if (!t || loading()) {
-                since = 0;
-                return false;
-            }
-            const sig = all('tbody tr', t.body).map(txt).join('|');
-            if (before !== null && sig === before)
-                return false;
-            if (sig !== signature || !since) {
-                signature = sig;
-                since = Date.now();
-                return false;
-            }
-            if (Date.now() - since < settings.settle)
-                return false;
-            return { table: t, signature: sig, };
-        }, 'B\u1EA3ng doanh thu nh\u00E2n vi\u00EAn ch\u01B0a t\u1EA3i \u1ED5n \u0111\u1ECBnh');
-    }
+    
+    
+    
+    
     function finishRevenueResult(draft, snapshot, warnings = []) {
         warnings = warnings.slice();
         const staff = join(draft.staff, snapshot, draft.range);
@@ -1415,14 +687,7 @@ window.__AutoBIWorktime73 = (() => {
         navigateJob(j);
         return true;
     }
-    async function coreCallback(method, ...args) {
-        let done = false, result;
-        method(...args, value => { result = value; done = true; });
-        await wait(() => done, 'B\u01B0\u1EDBc l\u1EA5y d\u1EEF li\u1EC7u c\u0169 ch\u01B0a ho\u00E0n t\u1EA5t');
-        if (result === false)
-            throw Error('B\u1ED9 l\u1ECDc c\u0169 ch\u01B0a ch\u1ECDn th\u00E0nh c\u00F4ng');
-        return result;
-    }
+    
     function employeeConfig(draft) {
         // Keep the original employee-to-shop declaration; extend only IDs absent from it.
         const config = clone(bridge.UTILS.getPersistentConfig() || {});
@@ -1448,75 +713,7 @@ window.__AutoBIWorktime73 = (() => {
         }
         return config;
     }
-    async function runRevenuePending() {
-        const job = read(K.job);
-        if (!job || job.cancelled || !['revenue-pending', 'revenue-collecting'].includes(job.phase) || running || location.pathname !== '/dashboard/revenue-consolidated')
-            return;
-        const draft = read('autobi_wt73_draft');
-        if (!draft || draft.jobId !== job.id)
-            return;
-        running = true;
-        token = job.id;
-        write(K.job, { ...job, phase: 'revenue-collecting' });
-        startRocket();
-        const warnings = [];
-        let snapshot = null;
-        try {
-            await wait(() => filterButton('Mi\u1EC1n') && filterButton('Si\u00EAu th\u1ECB'), 'Trang doanh thu ch\u01B0a t\u1EA3i \u0111\u1EE7 b\u1ED9 l\u1ECDc');
-            progress('Doanh thu nh\u00E2n vi\u00EAn: d\u00F9ng b\u1ED9 l\u1ECDc v\u00E0 b\u1ED9 \u0111\u1ECDc g\u1ED1c');
-            await coreCallback(bridge.DATA.selectMonthDMX.bind(bridge.DATA), job.range.from.slice(5, 7) + '/' + job.range.from.slice(0, 4));
-            for (const label of ['Mi\u1EC1n', 'V\u00F9ng', 'Khu v\u1EF1c', 'Si\u00EAu th\u1ECB'])
-                await coreCallback(bridge.DATA.autoSelectFilterDMX.bind(bridge.DATA), label);
-            await coreCallback(bridge.DATA.ensureRevenueOptionsDMX.bind(bridge.DATA));
-            await chooseRevenueTab('L\u0169y k\u1EBF');
-            const reload = await wait(() => revenueButton('T\u1EA3i l\u1EA1i'), 'Kh\u00F4ng t\u00ECm th\u1EA5y T\u1EA3i l\u1EA1i');
-            const old = revenueTable()?.body, before = old ? txt(old) : null;
-            let refreshed = false;
-            const observer = new MutationObserver(() => { if (loading() || old && !old.isConnected)
-                refreshed = true; });
-            observer.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'aria-busy'] });
-            try {
-                reload.click();
-                await chooseRevenueTab('Nh\u00E2n vi\u00EAn');
-                if (before !== null)
-                    await wait(() => refreshed || revenueTable() && txt(revenueTable().body) !== before, 'B\u1EA3ng nh\u00E2n vi\u00EAn ch\u01B0a l\u00E0m m\u1EDBi');
-                await waitRevenuePage({});
-            }
-            finally {
-                observer.disconnect();
-            }
-            assertRevenuePeriod(job.range);
-            const config = employeeConfig(draft), parsed = bridge.DATA.scrapeStaffRevenueTableDMX(config);
-            snapshot = revenueSnapshot(parsed.staffRevMap, config, job.range, job.id, 'Tri\u1EC7u \u0111\u1ED3ng');
-            safe(() => window.__AutoBILog5?.ok('\u0110\u00E3 \u0111\u1ECDc Nh\u00E2n vi\u00EAn Doanh thu b\u1EB1ng b\u1ED9 \u0111\u1ECDc g\u1ED1c'));
-        }
-        catch (e) {
-            warnings.push(e.message);
-        }
-        try {
-            if (read(K.job)?.id !== job.id)
-                return;
-            if (read(K.job)?.cancelled)
-                warnings.push('\u0110\u00E3 d\u1EEBng; doanh thu ch\u01B0a ho\u00E0n t\u1EA5t');
-            const result = finishRevenueResult(draft, snapshot, warnings);
-            write(K.result, result);
-            finishJournal(result.warnings);
-            write(K.job, { ...read(K.job), phase: result.warnings.length ? 'warning' : 'done', endedAt: Date.now() });
-            write(K.status, { message: result.warnings.length ? '\u26A0 ' + result.warnings.join(' \u00B7 ') : '\u2713 Gi\u1EDD c\u00F4ng v\u00E0 doanh thu nh\u00E2n vi\u00EAn \u0111\u00E3 ho\u00E0n t\u1EA5t', at: Date.now(), running: false });
-            if (snapshot && !result.warnings.length)
-                write(K.revenue, snapshot);
-            if (job.combined)
-                bridge.UI.renderReport(read('tgdd_data_cache_v30', {}), read(bridge.configKey, []), bridge.UTILS.getPersistentConfig());
-            show();
-            if (result.warnings.length)
-                warnUser(result.warnings.join(' \u00B7 '));
-        }
-        finally {
-            running = false;
-            token = null;
-            stopRocket();
-        }
-    }
+    
     function uiHTML(result, status, filters = { shop: 'all', role: 'all', metric: 'converted' }) {
         const original = result?.staff || [], staff = original.filter(r => (filters.shop === 'all' || r.shopId === filters.shop) && (filters.role === 'all' || r.group === filters.role));
         const shops = new Map();
@@ -1624,24 +821,11 @@ window.__AutoBIWorktime73 = (() => {
                 callback?.();
                 return;
             } return tick.call(this, callback); };
-        const scrape = DATA.scrapeStaffRevenueTableDMX;
-        DATA.scrapeStaffRevenueTableDMX = function (config) { const out = scrape.call(this, config); try {
-            captureStaff(out, config);
-        }
-        catch (error) {
-            safe(() => { const context = read('autobi_wt73_revenue_context'); if (context?.parent === window.__AutoBIRun67?.current()?.id) {
-                write('autobi_wt73_revenue_context', { ...context, captured: false, error: error.message });
-                window.__AutoBILog5?.warning('Ch\u01B0a ghi nh\u1EADn doanh thu cho Gi\u1EDD c\u00F4ng: ' + error.message);
-            } });
-        } return out; };
         document.addEventListener('click', e => { if (e.target.closest('.rpt-nav-item:not([data-wt-menu]),#nav-home-menu,#btn-menu'))
             document.getElementById('autobi-wt-screen')?.remove(); }, true);
-        if (location.pathname === '/dashboard/revenue-consolidated')
-            setTimeout(() => runRevenuePending().catch(e => { stopRocket(); console.warn('[AutoBI Gi\u1EDD c\u00F4ng]', e); }), 0);
-        if (location.pathname === '/dashboard/timekeeping')
-            setTimeout(() => runPending().catch(e => console.warn('[AutoBI Gi\u1EDD c\u00F4ng]', e)), 0);
+        setTimeout(() => runPending().catch(e => console.warn('[AutoBI Gi\u1EDD c\u00F4ng]', e)), 0);
     }
-    return { K, settings, revenueNumber, revenueColumns, assertRevenuePeriod, finishRevenueResult, runRevenuePending, journalRun, deferCoreLog, employeeConfig, startRocket, stopRocket, period, hoursPeriod, validateDates, clickOption, dateISO, hours, role, aggregate, revenueSnapshot, join, columns, headerLabels, tableRows, uiHTML, css, prepareRun, standalone, install, runPending, afterReport, captureStaff, collect, set500, query, setDates, selectAllFilter, show, mountMenu };
+    return { K, settings,   assertRevenuePeriod, finishRevenueResult,  journalRun, deferCoreLog, employeeConfig, startRocket, stopRocket, period, hoursPeriod, validateDates,  dateISO, hours, role, aggregate, revenueSnapshot, join,    uiHTML, css, prepareRun, standalone, install, runPending, afterReport,       show, mountMenu };
 })();
 /* FIX5: local diagnostic journal. No report data, network requests or workflow timers are changed. */
 window.__AutoBILog5 = (() => {
@@ -1942,122 +1126,10 @@ window.__AutoBILog5 = (() => {
                 .map(field => numberToken(row[field])).join(',');
         }).join('|');
     }
-    function hasCompetitionActual(data) {
-        if (!data || typeof data !== 'object')
-            return false;
-        return Object.values(data).some(rows => rows && SHOP_KEYS.some(key => Number.isFinite(Number(rows[key]?.r)) && Number(rows[key]?.r) !== 0));
-    }
-    function competitionCandidateQuality(rows) {
-        let quality = 0;
-        let populated = 0;
-        for (const key of SHOP_KEYS) {
-            const row = rows?.[key];
-            if (!row)
-                continue;
-            const target = Number(row.t) || 0;
-            const actual = Number(row.r) || 0;
-            if (target > 0) {
-                populated++;
-                const ratio = actual > 0 ? actual / target : 0;
-                if (ratio > 8)
-                    quality -= 100000 + ratio * 1000;
-                else
-                    quality += 200 - ratio;
-            }
-            if (actual > 0)
-                quality += 25;
-        }
-        return populated ? quality : -1000000;
-    }
-    function competitionLooksPlausible(data) {
-        if (!data || typeof data !== 'object')
-            return true;
-        let checked = 0;
-        let abnormal = 0;
-        Object.values(data).forEach(rows => {
-            if (!rows || typeof rows !== 'object')
-                return;
-            SHOP_KEYS.forEach(key => {
-                const target = Number(rows[key]?.t) || 0;
-                const actual = Number(rows[key]?.r) || 0;
-                if (target <= 0 || actual <= 0)
-                    return;
-                checked++;
-                if (actual / target > 8)
-                    abnormal++;
-            });
-        });
-        return checked === 0 || abnormal < 3 || abnormal / checked < 0.4;
-    }
-    function installSafeCompetitionScraper(DATA, UTILS) {
-        if (!DATA?.scrapeThiDuaTablesDMX || !UTILS || DATA.__safeCompetitionScraper63)
-            return;
-        DATA.__safeCompetitionScraper63 = true;
-        DATA.scrapeThiDuaTablesDMX = function (groupConfig, config) {
-            const candidates = {};
-            const tables = document.querySelectorAll('.report-table table, .ant-table-content table');
-            const convert = (value, isRevenue) => {
-                if (value <= 0 || Number.isNaN(value))
-                    return 0;
-                if (isRevenue)
-                    return UTILS.roundCustom(value * 1000, -2);
-                return value > 0 && value < 1 ? 1 : value;
-            };
-            tables.forEach(table => {
-                const firstHeader = table.querySelector('thead tr th:first-child');
-                const secondHeader = table.querySelector('thead tr th:nth-child(2)');
-                if (!firstHeader)
-                    return;
-                const rawName = (firstHeader.getAttribute('title') || firstHeader.innerText || '')
-                    .replace(/^\d+\s*-\s*/, '').trim();
-                const matched = DATA.matchGroupConfigName(rawName, groupConfig || []);
-                const groupName = matched ? matched.short : rawName;
-                if (!groupName)
-                    return;
-                const type = String(matched?.type || '').toLowerCase();
-                const secondTitle = String(secondHeader?.getAttribute('title') || secondHeader?.innerText || '')
-                    .toUpperCase();
-                const isRevenue = secondTitle.includes('DOANH THU') ||
-                    type.includes('doanhthu') || type.includes('ti\u1EC1n');
-                const rows = {};
-                SHOP_KEYS.forEach(key => { rows[key] = { t: 0, r: 0, p: 0, pd: 0 }; });
-                table.querySelectorAll('tbody tr').forEach(tr => {
-                    if (tr.classList.contains('ant-table-measure-row'))
-                        return;
-                    const cells = tr.querySelectorAll('td');
-                    if (cells.length < 5)
-                        return;
-                    const label = (cells[0].getAttribute('title') || cells[0].innerText || '').trim();
-                    const rowKey = tr.getAttribute('data-row-key') || '';
-                    const actual = UTILS.parseNumber(cells[1].innerText);
-                    const target = UTILS.parseNumber(cells[2].innerText);
-                    const value = {
-                        t: convert(target, isRevenue),
-                        r: convert(actual, isRevenue),
-                        p: parseFloat(String(cells[3].innerText || '').replace('%', '').trim()) || 0,
-                        pd: parseFloat(String(cells[4].innerText || '').replace('%', '').trim()) || 0
-                    };
-                    if (UTILS.toUltraSlug(label) === 'tong' ||
-                        tr.classList.contains('grid-total-row') || rowKey.includes('__total__')) {
-                        rows.total = value;
-                    }
-                    else {
-                        const shopKey = DATA.identifyShopFromRowData(label, rowKey, config || {});
-                        if (shopKey)
-                            rows[shopKey] = value;
-                    }
-                });
-                if (!candidates[groupName])
-                    candidates[groupName] = [];
-                candidates[groupName].push(rows);
-            });
-            const result = {};
-            Object.entries(candidates).forEach(([groupName, options]) => {
-                result[groupName] = options.slice().sort((a, b) => competitionCandidateQuality(b) - competitionCandidateQuality(a))[0];
-            });
-            return result;
-        };
-    }
+    
+    
+    
+    
     function rotateDay() {
         const day = vietnamDay();
         const state = GM_getValue(STATE_KEY, {}) || {};
@@ -2088,87 +1160,8 @@ window.__AutoBILog5 = (() => {
         }
         return { day, changed: false };
     }
-    function zeroMixedShopRows(cache, config = {}) {
-        const competition = cache.link3_smart;
-        const evidence = cache.__autobiRealtimeRevenueEvidence72;
-        const run = window.__AutoBIRun67?.current?.();
-        // Missing parser rows and unconfigured slots are not actual zero revenue.
-        if (!competition || !evidence || !run?.id || evidence.runId !== run.id)
-            return [];
-        const keys = ['shop1', 'shop2', 'shop3', 'shop4', 'shop5'].filter(k => config[k]);
-        const zeroKeys = keys.filter(k => evidence.zeroShops?.includes(k) && cache.link1?.[k]?.r === 0 && cache.link1?.[k]?.dtlk === 0);
-        if (!zeroKeys.length)
-            return [];
-        const changed = new Set();
-        for (const rows of Object.values(competition)) {
-            if (!rows || typeof rows !== 'object')
-                continue;
-            const sumBefore = keys.reduce((sum, k) => sum + (Number(rows[k]?.r) || 0), 0);
-            const totalBefore = rows.total?.r;
-            // Never replace a BI total with a sum of incomplete/placeholder detail.
-            const canSum = keys.length > 0 && keys.every(k => rows[k] && typeof rows[k].r === 'number' && Number.isFinite(rows[k].r)) && typeof totalBefore === 'number' && Number.isFinite(totalBefore) && Math.abs(sumBefore - totalBefore) < 0.000001;
-            let touched = false;
-            for (const key of zeroKeys) {
-                const row = rows[key];
-                if (!row)
-                    continue;
-                if ((Number(row.r) || 0) !== 0 || (Number(row.p) || 0) !== 0) {
-                    row.r = 0;
-                    row.p = 0;
-                    changed.add(key);
-                    touched = true;
-                }
-            }
-            if (touched && canSum) {
-                rows.total.r = keys.reduce((sum, k) => sum + rows[k].r, 0);
-                rows.total.p = Number(rows.total.t) > 0 ? rows.total.r / Number(rows.total.t) * 100 : 0;
-                if (rows.total.r !== totalBefore)
-                    changed.add('total');
-            }
-        }
-        return [...changed];
-    }
-    function validateRealtimeCompetition(UI, config = {}) {
-        const state = GM_getValue(STATE_KEY, {}) || {};
-        const cache = GM_getValue(CACHE_KEY, {}) || {};
-        const current = competitionFingerprint(cache.link3_smart);
-        let rejected = false;
-        let reason = '';
-        if (current && state.previousCompetition && current === state.previousCompetition && hasCompetitionActual(cache.link3_smart)) {
-            delete cache.link3_smart;
-            rejected = true;
-            reason = 'BI v\u1EABn tr\u1EA3 \u0111\u00FAng b\u1ED9 s\u1ED1 Realtime c\u1EE7a ng\u00E0y tr\u01B0\u1EDBc';
-        }
-        else if (!current || !hasCompetitionActual(cache.link3_smart)) {
-            // Dữ liệu 0 là hợp lệ vào đầu ngày. Giữ nguyên cấu trúc mới nếu BI đã trả về.
-        }
-        else {
-            const zeroed = zeroMixedShopRows(cache, config);
-            if (zeroed.length) {
-                const names = zeroed.map(key => key === 'total' ? 'T\u1ED5ng c\u1EE5m' : config[key + 'Short'] || config[key] || key);
-                reason = '\u0111\u00E3 \u0111i\u1EC1u ch\u1EC9nh Thi \u0111ua Realtime t\u1EA1i ' + names.join(', ') + ' theo d\u00F2ng shop c\u00F3 doanh thu 0 \u0111\u00E3 x\u00E1c nh\u1EADn tr\u00EAn BI; T\u1ED5ng c\u1EE5m ch\u1EC9 t\u00EDnh l\u1EA1i khi s\u1ED1 chi ti\u1EBFt kh\u1EDBp t\u1ED5ng';
-            }
-        }
-        cache.__autobiRealtimeDay = vietnamDay();
-        GM_setValue(CACHE_KEY, cache);
-        GM_setValue(STATE_KEY, {
-            ...state,
-            day: vietnamDay(),
-            acceptedCompetition: rejected ? '' : competitionFingerprint(cache.link3_smart),
-            acceptedRevenue: revenueFingerprint(cache.link1),
-            validatedAt: Date.now(),
-            lastReason: reason
-        });
-        if (rejected || reason)
-            window.__AutoBILog5.stage('Ki\u1EC3m tra Thi \u0111ua Realtime', 'T\u1ED5ng c\u1EE5m', '\u0110ang ki\u1EC3m tra d\u1EEF li\u1EC7u sau khi \u0111\u1ECDc');
-        if (rejected) {
-            UI?.showToast?.('\uD83D\uDEE1\uFE0F \u0110\u00E3 ch\u1EB7n s\u1ED1 Realtime c\u0169 c\u1EE7a ng\u00E0y tr\u01B0\u1EDBc. BI ch\u01B0a c\u00F3 s\u1ED1 m\u1EDBi n\u00EAn b\u00E1o c\u00E1o s\u1EBD hi\u1EC7n 0 / \u201C-\u201D.', 12000);
-        }
-        else if (reason) {
-            UI?.showToast?.('\u2139\uFE0F ' + reason + '.', 10000);
-        }
-        return !rejected;
-    }
+    
+    
     function install() {
         const page = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
         const DATA = page.DATA || window.DATA;
@@ -2178,31 +1171,6 @@ window.__AutoBILog5 = (() => {
             return false;
         DATA.__morningGuard60 = true;
         rotateDay();
-        installSafeCompetitionScraper(DATA, UTILS);
-        const originalCompetition = DATA.runThiDuaSequenceDMX?.bind(DATA);
-        if (originalCompetition) {
-            DATA.runThiDuaSequenceDMX = function (configList, config, done) {
-                rotateDay();
-                const before = GM_getValue(CACHE_KEY, {}) || {};
-                const previousCumulative = JSON.parse(JSON.stringify(before.link4_smart || {}));
-                return originalCompetition(configList, config, function () {
-                    const cache = GM_getValue(CACHE_KEY, {}) || {};
-                    if (!competitionLooksPlausible(cache.link4_smart)) {
-                        if (competitionLooksPlausible(previousCumulative) && Object.keys(previousCumulative).length) {
-                            cache.link4_smart = previousCumulative;
-                        }
-                        else {
-                            delete cache.link4_smart;
-                        }
-                        GM_setValue(CACHE_KEY, cache);
-                        UI.showToast?.('\uD83D\uDEE1\uFE0F \u0110\u00E3 ch\u1EB7n b\u1EA3ng L\u0169y k\u1EBF 12 Nh\u00F3m sai \u0111\u01A1n v\u1ECB. Vui l\u00F2ng ch\u1EA1y l\u1EA1i m\u1ED9t l\u1EA7n.', 12000);
-                    }
-                    validateRealtimeCompetition(UI, config);
-                    if (done)
-                        done();
-                });
-            };
-        }
         // Kiểm tra lại khi người dùng quay về hoặc mở báo cáo gần nhất.
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden)
@@ -2221,62 +1189,6 @@ window.__AutoBILog5 = (() => {
         }, 100);
         setTimeout(() => clearInterval(timer), 30000);
     }
-})();
-/* AutoBI 16.1.1.64 TEST - bộ đếm tiến trình cố định 05:00. */
-(function () {
-    'use strict';
-    const TOTAL_SECONDS = 5 * 60;
-    function keepFiveMinutes() {
-        try {
-            const state = GM_getValue('tgdd_auto_state_run_v30');
-            const started = Number(GM_getValue('tgdd_auto_start_time', 0));
-            if (typeof state === 'number' && state >= 0 && started > 0 &&
-                Number(GM_getValue('tgdd_total_auto_seconds', 0)) !== TOTAL_SECONDS) {
-                GM_setValue('tgdd_total_auto_seconds', TOTAL_SECONDS);
-            }
-        }
-        catch (_) { }
-    }
-    function formatTimer(element) {
-        if (!element || element.dataset.autobiFormatting === '1')
-            return;
-        const match = String(element.textContent || '').trim().match(/^(\d+)s$/i);
-        if (!match)
-            return;
-        const seconds = Math.max(0, Number(match[1]) || 0);
-        element.dataset.autobiFormatting = '1';
-        element.textContent = String(Math.floor(seconds / 60)).padStart(2, '0') + ':' +
-            String(seconds % 60).padStart(2, '0');
-        delete element.dataset.autobiFormatting;
-    }
-    document.addEventListener('click', event => {
-        const button = event.target?.closest?.('button');
-        const label = String(button?.innerText || button?.textContent || '').trim().toLowerCase();
-        if (label.includes('b\u1EAFt \u0111\u1EA7u ch\u1EA1y')) {
-            setTimeout(() => {
-                GM_setValue('tgdd_auto_start_time', Date.now());
-                GM_setValue('tgdd_total_auto_seconds', TOTAL_SECONDS);
-            }, 0);
-        }
-    }, true);
-    const observer = new MutationObserver(mutations => {
-        mutations.forEach(mutation => {
-            const element = mutation.target?.nodeType === 1
-                ? mutation.target
-                : mutation.target?.parentElement;
-            if (element?.id === 'tgdd-top-right-timer')
-                formatTimer(element);
-            mutation.addedNodes?.forEach(node => {
-                if (node.nodeType !== 1)
-                    return;
-                if (node.id === 'tgdd-top-right-timer')
-                    formatTimer(node);
-                node.querySelectorAll?.('#tgdd-top-right-timer').forEach(formatTimer);
-            });
-        });
-    });
-    observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
-    setInterval(keepFiveMinutes, 500);
 })();
 /* ==========================================================
    AutoBI 16.1.1.5 - AUTH RIÊNG
@@ -2337,1053 +1249,14 @@ window.__AutoBILog5 = (() => {
         }
     };
 })();
-/* ==========================================================
-   AutoBI Stable Loader 16.1.1.2
-   - Không thay đổi dữ liệu / cấu hình / cách tính của AutoBI gốc.
-   - Chỉ thay 3 điểm chờ cố định trong quy trình Thi đua bằng
-     cơ chế đợi bảng BI tải xong và ổn định rồi mới scrape.
-   ========================================================== */
-window.__AutoBIStable = window.__AutoBIStable || (function () {
-    function isLoading() { return window.__AutoBILoadingGuard75.loading(); }
-    function tableSignature() {
-        const tables = Array.from(document.querySelectorAll('.report-table table, .ant-table-content table'));
-        if (!tables.length)
-            return '';
-        // Chỉ lấy lượng text vừa đủ để phát hiện bảng đã đổi,
-        // tránh đọc toàn DOM nặng mỗi lần poll.
-        return tables.slice(0, 40).map((t, i) => {
-            const head = (t.querySelector('thead')?.innerText || '').trim().slice(0, 220);
-            const rows = Array.from(t.querySelectorAll('tbody tr'))
-                .filter(r => !r.classList.contains('ant-table-measure-row'))
-                .slice(0, 4)
-                .map(r => (r.innerText || '').trim().slice(0, 180))
-                .join('|');
-            return i + ':' + head + '::' + rows;
-        }).join('###');
-    }
-    function wait(callback, options = {}) { return window.__AutoBILoadingGuard75.callbackWait(callback, { timeout: 60000, ...options }); }
-    return { wait };
-})();
-window.__AutoBIStableWait = function (callback, legacyDelay) {
-    // legacyDelay được giữ lại để patch an toàn cú pháp, nhưng không còn
-    // dùng làm thời gian chờ cứng.
-    return window.__AutoBIStable.wait(callback, {
-        minWait: 900,
-        maxWait: 9000,
-        poll: 250,
-        requireChange: false
-    });
-};
-window.__AutoBIStableWaitDetail = function (callback, legacyDelay) {
-    return window.__AutoBIStable.wait(callback, {
-        minWait: 1000,
-        maxWait: 10000,
-        poll: 250,
-        requireChange: true
-    });
-};
-/* ==========================================================
-   AutoBI Health Detail Fix 16.1.1.10
-   - Bản 16.1.1.7 chỉ lưu Sức khỏe ST vào link8_health.total.
-   - Bản này quét thêm từng siêu thị và lưu:
-       link8_health.shop1 ... link8_health.shop5
-   ========================================================== */
-/* FIX3: only the health dependencies extracted verbatim from .74; no revenue/competition/config runtime. */
-window.__AutoBIHealth74Only = (() => {
-    let context = null, generation = 0, pendingView = null, pendingFilter = null, blocked = false, filterRevision = 0;
-    const text = el => String(el?.innerText || el?.textContent || '').trim();
-    const norm = value => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/[^a-z0-9]/g, '');
-    const visible = el => !!el?.isConnected && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden' && getComputedStyle(el).display !== 'none';
-    const ownUI = el => !!el.closest('[id^="tgdd-"],#autobi-version-badge,[data-autobi-ui]');
-    const elements = (selector, root = document) => [...root.querySelectorAll(selector)].filter(visible);
-    const tables = () => elements('.report-table table,.ant-table-content table,table').filter(t => !ownUI(t));
-    const rows = table => [...table.querySelectorAll('tbody tr:not(.ant-table-measure-row)')];
-    const signature = (list = tables()) => list.map(t => [...t.querySelectorAll('thead tr,tbody tr:not(.ant-table-measure-row),tfoot tr')].map(r => {
-        const copy = r.cloneNode(true);
-        copy.querySelectorAll('.ant-table-row-expand-icon,button[aria-expanded]').forEach(e => e.remove());
-        return text(copy);
-    }).join('|')).join('###');
-    const loading = () => window.__AutoBILoadingGuard75.loading();
-    const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-    const shops = config => Object.keys(config || {}).filter(k => /^shop\d+$/.test(k) && config[k]).sort((a, b) => +a.slice(4) - +b.slice(4));
-    const settings = { timeout: 45000, poll: 250, stableSamples: 3 };
-    const runId = () => window.__AutoBIRun67?.current()?.id || 'manual-test';
-    async function until(label, read, { timeout = settings.timeout, stable = settings.stableSamples, signal, valid = Boolean, fingerprint = JSON.stringify } = {}) { const id = runId(), gen = generation; return window.__AutoBILoadingGuard75.wait(label, () => { const value = read(); return valid(value) ? value : false; }, { timeout: Math.max(timeout, 60000), settle: Math.max(0, stable - 1) * 120, key: fingerprint, check: () => { if (blocked || signal?.aborted || gen !== generation || id !== runId())
-            throw Error('Phi\u00EAn thao t\u00E1c \u0111\u00E3 h\u1EE7y/thay \u0111\u1ED5i'); } }); }
-    function arm() {
-        const before = signature();
-        let sawLoading = loading(), changed = false;
-        const sample = () => {
-            if (loading())
-                sawLoading = true;
-            if (signature() !== before)
-                changed = true;
-        };
-        const observer = new MutationObserver(sample);
-        observer.observe(document.documentElement, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['class', 'aria-busy', 'style'] });
-        return { fresh() { sample(); return changed || (sawLoading && !loading()); }, close() { observer.disconnect(); } };
-    }
-    function assertContext() {
-        if (blocked)
-            throw new Error('BI \u0111ang l\u1ED7i phi\u00EAn \u0111\u0103ng nh\u1EADp; ch\u01B0a l\u01B0u d\u1EEF li\u1EC7u');
-        if (!context)
-            throw new Error('Ch\u01B0a x\u00E1c nh\u1EADn b\u1ED9 l\u1ECDc si\u00EAu th\u1ECB');
-        if (text(filterButton('Si\u00EAu th\u1ECB')) !== context.label)
-            throw new Error('B\u1ED9 l\u1ECDc si\u00EAu th\u1ECB \u0111\u00E3 \u0111\u1ED5i trong l\u00FAc \u0111\u1ECDc');
-    }
-    async function ready(label, { ticket = null, predicate = () => true, list = tables, guard = true } = {}) {
-        return until(label, () => {
-            if (guard)
-                assertContext();
-            const selected = list();
-            return !loading() && predicate() && selected.length && selected.every(t => rows(t).length || t.querySelector('.ant-empty,.ant-table-placeholder')) && (!ticket || ticket.fresh()) ? signature(selected) : '';
-        });
-    }
-    function button(names) {
-        for (const name of Array.isArray(names) ? names : [names]) {
-            const candidates = elements('button,[role="tab"],[role="button"]').filter(el => !ownUI(el));
-            const matches = candidates.filter(el => {
-                const copy = el.cloneNode(true);
-                copy.querySelectorAll('svg,[aria-hidden="true"],.sr-only,[role="tooltip"]').forEach(n => n.remove());
-                return [text(copy), el.getAttribute('aria-label'), el.getAttribute('title')].filter(Boolean).some(value => norm(value.replace('\u2713', '')) === norm(name));
-            });
-            if (matches.length === 1)
-                return matches[0];
-            if (matches.length > 1) {
-                const enabled = matches.filter(el => !el.disabled && el.getAttribute('aria-disabled') !== 'true');
-                if (enabled.length === 1)
-                    return enabled[0];
-            }
-        }
-        return null;
-    }
-    const active = el => {
-        if (!el)
-            return false;
-        for (const attr of ['aria-pressed', 'aria-selected']) {
-            const value = el.getAttribute(attr);
-            if (value === 'true')
-                return true;
-            if (value === 'false')
-                return false;
-        }
-        return ['active', 'on', 'checked'].includes(el.getAttribute('data-state')) || /(^|\s)(active|selected|bg-blue-[5-9]00|bg-primary(?:-\d+)?)(\s|$)/.test(el.className);
-    };
-    function filterButton(label) {
-        return elements('button.filter-field-card,button').find(el => !ownUI(el) && [...el.querySelectorAll('span')].some(s => norm(text(s)) === norm(label))) || button(label);
-    }
-    let filterLabel = 'Si\u00EAu th\u1ECB';
-    function panel() {
-        const trigger = filterButton(filterLabel);
-        const controlled = (trigger?.getAttribute('aria-controls') || '').split(/\s+/).filter(Boolean).map(id => document.getElementById(id)).filter(Boolean);
-        const hasBoxes = el => !!el && visible(el) && !ownUI(el) && boxes(el).length > 0;
-        const roots = controlled.filter(hasBoxes);
-        if (roots.length === 1)
-            return roots[0];
-        return elements('div,section,aside,ul,[role="dialog"],[role="listbox"]')
-            .filter(el => hasBoxes(el) && norm(text(el)).includes('chontatca'))
-            .filter(el => !el.contains(trigger))
-            .sort((a, b) => text(a).length - text(b).length)[0] || null;
-    }
-    const boxes = p => p ? [...p.querySelectorAll('input[type="checkbox"],[role="checkbox"]')]
-        .filter(b => !ownUI(b) && !b.querySelector('input[type="checkbox"]') &&
-        (visible(b) || (b.matches('input') && b.closest('label') && visible(b.closest('label'))))) : [];
-    const checked = b => b.matches('input') ? b.checked : b.getAttribute('aria-checked') === 'true';
-    function boxLabel(b) {
-        return text([b.closest('label'), b.closest('li'), b.closest('[role="option"]'), b.parentElement, b.parentElement?.parentElement].filter(Boolean).find(el => boxes(el).length === 1));
-    }
-    const dataBoxes = p => boxes(p).filter(b => !['chontatca', 'bochontatca', 'bochondangloc'].includes(norm(boxLabel(b))));
-    function matchesShop(label, config, key) {
-        const raw = String(label || '').trim(), n = norm(raw);
-        if (!n)
-            return false;
-        const codeOf = k => String(config['makho' + k.slice(4)] || config['shopCode' + k.slice(4)] || config['code' + k.slice(4)] || '').trim();
-        const hasCode = code => code && (/^\d+$/.test(code) ? raw.split(/[^0-9]+/).includes(code) : raw.toLowerCase().split(/[^a-z0-9_]+/).includes(code.toLowerCase()));
-        const coded = shops(config).filter(k => hasCode(codeOf(k)));
-        if (coded.length)
-            return coded.length === 1 && coded[0] === key;
-        // An explicit numeric identifier must not be accepted through a similar name.
-        if (/^\d+$/.test(codeOf(key)) && /^\s*\d+\s*[-–]/.test(raw))
-            return false;
-        const named = shops(config).filter(k => [config[k], config[k + 'Short']].filter(Boolean).some(x => n === norm(x) || n.endsWith(norm(x))));
-        return named.length === 1 && named[0] === key;
-    }
-    async function openFilter(label) { filterLabel = label; const b = await until('n\u00FAt ' + label, () => filterButton(label), { stable: 1, fingerprint: () => label }); if (!panel() && b.getAttribute('aria-expanded') !== 'true')
-        b.click(); return until('popup ' + label, () => { const p = panel(); return p && dataBoxes(p).length ? p : null; }, { stable: 2, fingerprint: p => dataBoxes(p).map(boxLabel).join('|') }); }
-    async function closeFilter(label) {
-        filterLabel = label;
-        const trigger = filterButton(label);
-        if (panel() || trigger?.getAttribute('aria-expanded') === 'true')
-            trigger?.click();
-        await until('\u0111\u00F3ng b\u1ED9 l\u1ECDc ' + label, () => !panel(), { stable: 2 });
-    }
-    async function selectFilter(label, config = null, key = null, { waitData = true, clearSelection = false } = {}) {
-        context = null;
-        const identity = label + ':' + (clearSelection ? 'none' : key || 'total');
-        if (pendingFilter && pendingFilter.identity !== identity) {
-            pendingFilter.ticket.close();
-            pendingFilter = null;
-        }
-        const ticket = pendingFilter?.ticket || arm();
-        let opened = false, selectionChanged = !!pendingFilter, completed = false;
-        try {
-            await openFilter(label);
-            opened = true;
-            const wanted = b => !clearSelection && (!key || matchesShop(boxLabel(b), config, key));
-            let p = await until('danh s\u00E1ch ' + label, () => panel(), { stable: 2, timeout: 8000, fingerprint: () => label }), bs = dataBoxes(p);
-            if (!bs.length || key && bs.filter(wanted).length !== 1)
-                throw new Error('Kh\u00F4ng x\u00E1c \u0111\u1ECBnh duy nh\u1EA5t ' + (key ? config[key] : label));
-            const isCorrect = () => { const current = panel(); if (!current)
-                return false; const all = dataBoxes(current); return !!all.length && (!key || all.filter(wanted).length === 1) && all.every(b => checked(b) === wanted(b)); };
-            // Re-find nodes after every React update; never click a detached checkbox.
-            for (let count = 0; !isCorrect() && count < 300; count++) {
-                const livePanel = await until('danh s\u00E1ch ' + label + ' sau c\u1EADp nh\u1EADt', () => panel(), { stable: 2, timeout: 8000, fingerprint: () => label });
-                bs = dataBoxes(livePanel);
-                const wrong = bs.find(b => checked(b) !== wanted(b));
-                if (!wrong)
-                    break;
-                const labelBefore = boxLabel(wrong), desired = wanted(wrong);
-                wrong.click();
-                selectionChanged = true;
-                filterRevision++;
-                await until('tick ' + labelBefore, () => {
-                    const b = panel() && dataBoxes(panel()).find(x => boxLabel(x) === labelBefore);
-                    return !!b && checked(b) === desired;
-                }, { stable: 1, timeout: 8000 });
-            }
-            await until('x\u00E1c nh\u1EADn ' + label, isCorrect, { stable: 2, timeout: 10000 });
-            await closeFilter(label);
-            opened = false;
-            if (label === 'Si\u00EAu th\u1ECB')
-                context = { key: key || 'total', label: text(filterButton(label)), config };
-            if (waitData)
-                await ready(label + ' \u2192 d\u1EEF li\u1EC7u m\u1EDBi', { ticket: selectionChanged ? ticket : null, guard: label === 'Si\u00EAu th\u1ECB' });
-            completed = true;
-            return true;
-        }
-        finally {
-            if (completed) {
-                ticket.close();
-                pendingFilter = null;
-            }
-            else if (selectionChanged)
-                pendingFilter = { identity, ticket };
-            else
-                ticket.close();
-            if (opened) {
-                try {
-                    await closeFilter(label);
-                }
-                catch (_) { }
-            }
-        }
-    }
-    async function selectShop(config, key) { return selectFilter('Si\u00EAu th\u1ECB', config, key); }
-    async function allShops(config) { return selectFilter('Si\u00EAu th\u1ECB', config); }
-    async function choose(names, { list = tables } = {}) {
-        const label = Array.isArray(names) ? names[0] : names;
-        let b;
-        try {
-            b = await until('n\u00FAt ' + label, () => button(names), { stable: 1, fingerprint: () => label });
-        }
-        catch (error) {
-            const seen = elements('button,[role="tab"],[role="button"]').filter(el => !ownUI(el)).map(el => text(el).slice(0, 60)).filter(Boolean).slice(0, 18);
-            error.message += '; c\u00E1c n\u00FAt \u0111ang th\u1EA5y: ' + seen.join(' | ');
-            throw error;
-        }
-        if (pendingView && pendingView.label !== label) {
-            pendingView.ticket.close();
-            pendingView = null;
-        }
-        const wasActive = active(b), ticket = pendingView?.ticket || arm();
-        let completed = false;
-        try {
-            if (!wasActive)
-                b.click();
-            await ready(label, { ticket: wasActive && !pendingView ? null : ticket, predicate: () => active(button(names)), list });
-            completed = true;
-        }
-        finally {
-            if (completed) {
-                ticket.close();
-                pendingView = null;
-            }
-            else
-                pendingView = { label, ticket };
-        }
-    }
-    function healthTable() { return tables().find(t => { const h = norm(text(t.querySelector('thead'))); return h.includes('nganhhang') && (h.includes('doanhthuqd') || h.includes('dtqd')); }); }
-    async function prepareHealth() {
-        await choose(['Ng\u00E0nh h\u00E0ng BI', 'Ng\u00E0nh h\u00E0ng'], { list: () => healthTable() ? [healthTable()] : [] });
-        let expanded = 0;
-        const clicked = new Set();
-        while (expanded < 2000) {
-            const t = healthTable();
-            if (!t)
-                throw Error('Kh\u00F4ng c\u00F3 b\u1EA3ng Ng\u00E0nh h\u00E0ng BI');
-            const b = [...t.querySelectorAll('button.ant-table-row-expand-icon-collapsed,button[aria-expanded="false"]')].find(b => !b.classList.contains('ant-table-row-expand-icon-spaced') && visible(b) && !b.disabled);
-            if (!b) {
-                await ready('Ng\u00E0nh h\u00E0ng BI \u0111\u00E3 bung \u0111\u1EE7', { list: () => healthTable() ? [healthTable()] : [] });
-                window.__AutoBILog5.ok('Ng\u00E0nh h\u00E0ng BI: \u0111\u00E3 bung ' + expanded + ' nh\u00F3m; ' + rows(healthTable()).length + ' d\u00F2ng');
-                return;
-            }
-            const row = b.closest('tr'), key = row?.getAttribute('data-row-key') || text(row?.cells[0]);
-            if (clicked.has(key))
-                throw Error('Nh\u00F3m ' + key + ' ch\u01B0a bung \u0111\u01B0\u1EE3c; d\u1EEBng \u0111\u1EC3 tr\u00E1nh click l\u1EB7p');
-            clicked.add(key);
-            const ticket = arm();
-            try {
-                b.click();
-                await ready('Ng\u00E0nh h\u00E0ng BI: ch\u1EDD nh\u00F3m ' + key, { ticket, list: () => healthTable() ? [healthTable()] : [] });
-            }
-            finally {
-                ticket.close();
-            }
-            expanded++;
-        }
-        throw Error('C\u00E2y BI v\u01B0\u1EE3t gi\u1EDBi h\u1EA1n b\u1EA3o v\u1EC7 2000 thao t\u00E1c; ch\u01B0a l\u01B0u d\u1EEF li\u1EC7u');
-    }
-    function cancel() { generation++; context = null; pendingView?.ticket.close(); pendingFilter?.ticket.close(); pendingView = null; pendingFilter = null; }
-    async function prepareForRead() {
-        if (!context)
-            context = { key: 'total', label: text(filterButton('Si\u00EAu th\u1ECB')) };
-        await prepareHealth();
-        return healthTable();
-    }
-    function verify() { assertContext(); if (loading())
-        throw new Error('Ng\u00E0nh h\u00E0ng BI v\u1EABn \u0111ang t\u1EA3i'); }
-    return { prepareForRead, selectShop, allShops, cancel, verify, settings };
-})();
-window.__AutoBIHealthPerShop = window.__AutoBIHealthPerShop || (function () {
-    const DATA_KEY = 'tgdd_data_cache_v30';
-    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-    function visible(el) {
-        if (!el)
-            return false;
-        const st = getComputedStyle(el);
-        const r = el.getBoundingClientRect();
-        return st.display !== 'none' &&
-            st.visibility !== 'hidden' &&
-            st.opacity !== '0' &&
-            r.width > 0 && r.height > 0;
-    }
-    function slug(v) {
-        return String(v || '')
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .toLowerCase()
-            .replace(/đ/g, 'd')
-            .replace(/[^a-z0-9]/g, '');
-    }
-    function findFilterButton(label) {
-        const want = slug(label);
-        return Array.from(document.querySelectorAll('button.filter-field-card, button'))
-            .find(btn => {
-            if (!visible(btn))
-                return false;
-            const spans = Array.from(btn.querySelectorAll('span'));
-            if (spans.some(s => slug(s.innerText || s.textContent) === want))
-                return true;
-            return slug(btn.innerText || btn.textContent) === want;
-        }) || null;
-    }
-    function findReloadButton() {
-        return Array.from(document.querySelectorAll('button')).find(btn => {
-            if (!visible(btn))
-                return false;
-            const t = slug(btn.innerText || btn.textContent);
-            return t === 'xem' || t.includes('tailai') ||
-                btn.querySelector('.lucide-rotate-cw, [data-lucide="rotate-cw"]');
-        }) || null;
-    }
-    function getVisibleFilterPanel() {
-        return Array.from(document.querySelectorAll('div,section,aside,ul,[role="dialog"],[role="listbox"]'))
-            .filter(visible).filter(el => el.querySelector('input[type="checkbox"]') && slug(el.textContent).includes('bochontatca'))
-            .sort((a, b) => String(a.textContent).length - String(b.textContent).length)[0] || null;
-    }
-    function clickCheckbox(box, desired) {
-        if (!box)
-            return;
-        if (!!box.checked !== desired) {
-            try {
-                box.click();
-            }
-            catch (_) { }
-        }
-    }
-    function findTargetCheckbox(panel, tokens) {
-        const normalized = tokens.map(slug).filter(Boolean);
-        const boxes = Array.from(panel.querySelectorAll('input[type="checkbox"]'));
-        let best = null;
-        let bestScore = -1;
-        for (const box of boxes) {
-            const holders = [
-                box.closest('label'),
-                box.closest('li'),
-                box.closest('[role="option"]'),
-                box.parentElement,
-                box.parentElement && box.parentElement.parentElement
-            ].filter(Boolean);
-            for (const h of holders) {
-                if (h.querySelectorAll('input[type="checkbox"]').length > 1)
-                    continue;
-                const raw = String(h.innerText || h.textContent || '').trim();
-                const s = slug(raw);
-                if (!s)
-                    continue;
-                for (const token of normalized) {
-                    if (!token)
-                        continue;
-                    let score = -1;
-                    if (s === token)
-                        score = 1000;
-                    else if (s.includes(token)) {
-                        score = 700 - Math.abs(s.length - token.length);
-                    }
-                    if (score > bestScore) {
-                        bestScore = score;
-                        best = box;
-                    }
-                }
-            }
-        }
-        return bestScore >= 500 ? best : null;
-    }
-    function findShopRow(panel, tokens) {
-        const wants = tokens.map(slug).filter(Boolean);
-        const nodes = Array.from(panel.querySelectorAll('label, li, [role="option"], div, span'));
-        let best = null;
-        let bestScore = -1;
-        for (const el of nodes) {
-            if (!visible(el))
-                continue;
-            const raw = String(el.innerText || el.textContent || '').trim();
-            if (!raw || raw.length > 180)
-                continue;
-            const s = slug(raw);
-            for (const w of wants) {
-                let score = -1;
-                if (s === w)
-                    score = 1000;
-                else if (s.includes(w))
-                    score = 850 - Math.abs(s.length - w.length);
-                if (score > bestScore) {
-                    bestScore = score;
-                    best = el;
-                }
-            }
-        }
-        return bestScore >= 500 ? best : null;
-    }
-    async function waitForSingleShop(expectedTokens, timeout = 7000) {
-        const opened = await openShopPanel();
-        if (!opened.ok)
-            return false;
-        try {
-            const panel = opened.panel;
-            const target = findTargetCheckbox(panel, expectedTokens);
-            const checked = Array.from(panel.querySelectorAll('input[type="checkbox"]:checked'))
-                .filter(box => !/^(chon|bochon)tatca/.test(slug((box.closest('label') || box.parentElement)?.textContent)));
-            return !!target && target.checked && checked.length === 1 && checked[0] === target;
-        }
-        finally {
-            opened.btn.click();
-            await sleep(300);
-        }
-    }
-    async function waitBI(maxWait = 10000) {
-        await new Promise(resolve => {
-            if (window.__AutoBIStable && typeof window.__AutoBIStable.wait === 'function') {
-                window.__AutoBIStable.wait(resolve, {
-                    minWait: 900,
-                    maxWait,
-                    poll: 250,
-                    requireChange: false
-                });
-            }
-            else {
-                setTimeout(resolve, 2500);
-            }
-        });
-    }
-    async function openShopPanel() {
-        const btn = findFilterButton('Si\u00EAu th\u1ECB');
-        if (!btn)
-            return { ok: false, reason: 'Kh\u00F4ng t\u00ECm th\u1EA5y b\u1ED9 l\u1ECDc Si\u00EAu th\u1ECB' };
-        btn.click();
-        await sleep(450);
-        const panel = getVisibleFilterPanel();
-        if (!panel) {
-            try {
-                btn.click();
-            }
-            catch (_) { }
-            return { ok: false, reason: 'Kh\u00F4ng t\u00ECm th\u1EA5y b\u1EA3ng ch\u1ECDn Si\u00EAu th\u1ECB' };
-        }
-        return { ok: true, btn, panel };
-    }
-    async function selectSingleShop(config, idx) {
-        const opened = await openShopPanel();
-        if (!opened.ok)
-            return opened;
-        const { btn, panel } = opened;
-        const tokens = [
-            config['makho' + idx],
-            config['shopCode' + idx],
-            config['code' + idx],
-            config['shop' + idx],
-            config['shop' + idx + 'Short']
-        ].filter(Boolean);
-        // 1. Bỏ chọn tất cả.
-        const actions = Array.from(panel.querySelectorAll('button, a, label, div, span')).filter(visible);
-        const clearAll = actions
-            .filter(el => slug(el.innerText || el.textContent) === 'bochontatca')
-            .sort((a, b) => (a.innerText || '').length - (b.innerText || '').length)[0];
-        if (clearAll) {
-            try {
-                clearAll.click();
-            }
-            catch (_) { }
-            await sleep(500);
-        }
-        else {
-            const boxes = Array.from(panel.querySelectorAll('input[type="checkbox"]'));
-            for (const box of boxes) {
-                clickCheckbox(box, false);
-                await sleep(30);
-            }
-        }
-        // React có thể dựng lại popup sau khi Bỏ chọn tất cả.
-        const freshPanel = getVisibleFilterPanel() || panel;
-        let targetBox = findTargetCheckbox(freshPanel, tokens);
-        if (targetBox) {
-            clickCheckbox(targetBox, true);
-        }
-        else {
-            // Nếu BI dùng checkbox custom, click trực tiếp dòng "5243 - ... Hải Anh".
-            const row = findShopRow(freshPanel, tokens);
-            if (!row) {
-                try {
-                    btn.click();
-                }
-                catch (_) { }
-                return { ok: false, reason: 'Kh\u00F4ng t\u00ECm th\u1EA5y d\u00F2ng si\u00EAu th\u1ECB ' + (config['shop' + idx] || idx) };
-            }
-            try {
-                row.click();
-            }
-            catch (_) { }
-        }
-        await sleep(600);
-        try {
-            btn.click();
-        }
-        catch (_) { }
-        await sleep(500);
-        // 2. Bắt buộc xác nhận bộ lọc đã chuyển về đúng 1 shop.
-        const oneShop = await waitForSingleShop(tokens, 8000);
-        if (!oneShop) {
-            return { ok: false, reason: 'B\u1ED9 l\u1ECDc ch\u01B0a chuy\u1EC3n v\u1EC1 1 si\u00EAu th\u1ECB' };
-        }
-        // 3. Tải lại và chờ BI ổn định.
-        const reload = findReloadButton();
-        if (!reload)
-            return { ok: false, reason: 'Kh\u00F4ng t\u00ECm th\u1EA5y n\u00FAt T\u1EA3i l\u1EA1i' };
-        reload.click();
-        await waitBI(18000);
-        await sleep(1000);
-        return { ok: true };
-    }
-    async function restoreAllShops() {
-        const opened = await openShopPanel();
-        if (!opened.ok)
-            return false;
-        const { btn, panel } = opened;
-        const actions = Array.from(panel.querySelectorAll('button, a, label, div, span')).filter(visible);
-        const selectAll = actions.find(el => slug(el.innerText || el.textContent) === 'chontatca');
-        if (selectAll) {
-            try {
-                selectAll.click();
-            }
-            catch (_) { }
-            await sleep(450);
-        }
-        else {
-            const boxes = Array.from(panel.querySelectorAll('input[type="checkbox"]'));
-            for (const box of boxes) {
-                clickCheckbox(box, true);
-                await sleep(25);
-            }
-        }
-        try {
-            btn.click();
-        }
-        catch (_) { }
-        await sleep(400);
-        const reload = findReloadButton();
-        if (reload) {
-            reload.click();
-            await waitBI(12000);
-        }
-        return true;
-    }
-    function scrapeAsPromise(scrapeFn) {
-        return new Promise(resolve => {
-            let finished = false;
-            const timer = setTimeout(() => {
-                if (!finished) {
-                    finished = true;
-                    resolve(null);
-                }
-            }, 90000);
-            try {
-                scrapeFn(data => {
-                    if (finished)
-                        return;
-                    finished = true;
-                    clearTimeout(timer);
-                    resolve(data || null);
-                });
-            }
-            catch (e) {
-                clearTimeout(timer);
-                finished = true;
-                console.error('[AutoBI Health] scrape l\u1ED7i:', e);
-                resolve(null);
-            }
-        });
-    }
-    async function scan(config, scrapeFn, toastFn, done) {
-        const shops = [];
-        for (let i = 1; i <= 5; i++) {
-            if (config && config['shop' + i])
-                shops.push(i);
-        }
-        if (!shops.length) {
-            if (done)
-                done();
-            return;
-        }
-        console.log('[AutoBI Health] B\u1EAFt \u0111\u1EA7u qu\u00E9t chi ti\u1EBFt', shops.length, 'si\u00EAu th\u1ECB');
-        for (let pos = 0; pos < shops.length; pos++) {
-            const idx = shops[pos];
-            const key = 'shop' + idx;
-            const name = config[key] || key;
-            if (toastFn) {
-                toastFn('\uD83C\uDFEC S\u1EE9c kh\u1ECFe ST [' + (pos + 1) + '/' + shops.length + ']: ' + name, 2500);
-            }
-            const selected = await selectSingleShop(config, idx);
-            if (!selected.ok) {
-                console.warn('[AutoBI Health] B\u1ECF qua', key, selected.reason);
-                continue;
-            }
-            await window.__AutoBIOnline40.scanShop(config, idx, waitBI, toastFn || console.log);
-            // Sau reload có thể BI quay về tab mặc định; scrapeFn sẽ tự mở tab Ngành hàng BI.
-            const data = await scrapeAsPromise(scrapeFn);
-            if (!data) {
-                console.warn('[AutoBI Health] Kh\u00F4ng l\u1EA5y \u0111\u01B0\u1EE3c d\u1EEF li\u1EC7u', key);
-                continue;
-            }
-            const cache = GM_getValue(DATA_KEY, {}) || {};
-            if (!cache.link8_health)
-                cache.link8_health = {};
-            cache.link8_health[key] = data;
-            GM_setValue(DATA_KEY, cache);
-            console.log('[AutoBI Health] \u2705 \u0110\u00E3 l\u01B0u', key, name, data);
-            await sleep(250);
-        }
-        if (toastFn)
-            toastFn('\uD83D\uDD04 \u0110ang kh\u00F4i ph\u1EE5c b\u1ED9 l\u1ECDc t\u1EA5t c\u1EA3 Si\u00EAu th\u1ECB...', 1800);
-        try {
-            await restoreAllShops();
-        }
-        catch (e) {
-            console.warn('[AutoBI Health] Kh\u00F4ng kh\u00F4i ph\u1EE5c \u0111\u01B0\u1EE3c b\u1ED9 l\u1ECDc:', e);
-        }
-        if (done)
-            done();
-    }
-    return { scan, selectSingleShop, restoreAllShops, waitBI };
-})();
-/* AutoBI 16.1.1.41 - read installment totals directly from Báo cáo trả chậm. */
-window.__AutoBIInstallment41 = (() => {
-    const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/[^a-z0-9]/g, '');
-    const text = e => (e?.innerText || e?.textContent || '').trim();
-    const visible = e => !!e && e.getClientRects().length > 0;
-    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-    const number = s => {
-        const raw = String(s ?? '').replace(/,/g, '').replace(/%/g, '').replace(/\s/g, '');
-        return /^-?\d+(\.\d+)?$/.test(raw) ? Number(raw) : null;
-    };
-    function matchShop(label, config) {
-        const value = norm(label);
-        const matches = [];
-        for (let i = 1; i <= 5; i++) {
-            const key = 'shop' + i;
-            if (!config[key])
-                continue;
-            const candidates = [config[key], config[key + 'Short'], config['makho' + i], config['shopCode' + i]].map(norm).filter(Boolean);
-            if (candidates.some(candidate => value === candidate || value.endsWith(candidate) || candidate.endsWith(value)))
-                matches.push(key);
-        }
-        return matches.length === 1 ? matches[0] : null;
-    }
-    function read(config, root = document) {
-        const rows = {};
-        let confirmed = false;
-        for (const table of root.querySelectorAll('table')) {
-            if (root === document && (!visible(table) || table.closest('[id^="tgdd-"],#capture-area')))
-                continue;
-            const head = norm(text(table.querySelector('thead th')));
-            if (head !== 'sieuthi')
-                continue;
-            for (const tr of table.querySelectorAll('tbody tr:not(.ant-table-measure-row)')) {
-                const cells = [...tr.querySelectorAll('td')];
-                if (cells.length < 8)
-                    continue;
-                const key = matchShop(text(cells[0]), config);
-                if (!key)
-                    continue;
-                const values = [1, 2, 3, 4, 6].map(index => number(text(cells[index])));
-                if (values.some(value => value === null))
-                    continue;
-                confirmed = true;
-                rows[key] = { dt_tragop: values[0], dt_sieu_thi: values[1], tg: values[2], hc: values[3], fe: values[4] };
-            }
-        }
-        return { confirmed, rows };
-    }
-    function save(rows) {
-        const cache = GM_getValue('tgdd_data_cache_v30', {}) || {};
-        cache.link7 ||= {};
-        cache.link2 ||= {};
-        for (const [key, row] of Object.entries(rows)) {
-            cache.link7[key] = { ...cache.link7[key], _SHOP_DT: row.dt_sieu_thi, _SHOP_HC: row.hc, _SHOP_FE: row.fe, _SHOP_TOTAL_: row };
-            cache.link2[key] = { ...cache.link2[key], tg: row.tg };
-        }
-        const total = Object.values(rows).reduce((sum, row) => ({ dt: sum.dt + row.dt_sieu_thi, installment: sum.installment + row.dt_tragop, hc: sum.hc + row.hc, fe: sum.fe + row.fe }), { dt: 0, installment: 0, hc: 0, fe: 0 });
-        cache.link2.total = { ...cache.link2.total, tg: total.dt ? total.installment / total.dt * 100 : 0 };
-        cache.link7.total = { ...cache.link7.total, _SHOP_DT: total.dt, _SHOP_HC: total.hc, _SHOP_FE: total.fe, _SHOP_TOTAL_: { dt_sieu_thi: total.dt, dt_tragop: total.installment, tg: total.dt ? total.installment / total.dt * 100 : 0, hc: total.hc, fe: total.fe } };
-        GM_setValue('tgdd_data_cache_v30', cache);
-    }
-    function callbackTask(start, timeout = 12000) {
-        return new Promise(resolve => {
-            let complete = false;
-            const finish = value => { if (!complete) {
-                complete = true;
-                clearTimeout(timer);
-                resolve(value);
-            } };
-            const timer = setTimeout(() => finish(false), timeout);
-            try {
-                start(finish);
-            }
-            catch (error) {
-                console.error('[AutoBI Tr\u1EA3 ch\u1EADm 41]', error);
-                finish(false);
-            }
-        });
-    }
-    async function clearShopFilter() {
-        const until = Date.now() + 60000;
-        const wait = async (read, message) => { while (Date.now() < until) {
-            const result = read();
-            if (result && !window.__AutoBILoadingGuard75.loading())
-                return result;
-            await sleep(150);
-        } throw new Error(message); };
-        const button = await wait(() => [...document.querySelectorAll('button')].find(b => visible(b) && [...b.querySelectorAll('span')].some(s => norm(text(s)) === 'sieuthi')), 'Kh\u00F4ng th\u1EA5y b\u1ED9 l\u1ECDc Si\u00EAu th\u1ECB');
-        const panel = () => [...document.querySelectorAll('div,section,aside,ul,[role="dialog"],[role="listbox"]')].filter(visible).filter(p => p.querySelector('input[type="checkbox"]') && norm(text(p)).includes('bochontatca')).sort((a, b) => text(a).length - text(b).length)[0];
-        const boxes = p => [...p.querySelectorAll('input[type="checkbox"]')].filter(b => !['chontatca', 'bochontatca'].includes(norm(text(b.closest('label') || b.parentElement))));
-        button.click();
-        let opened = true;
-        try {
-            const p = await wait(panel, 'Kh\u00F4ng th\u1EA5y danh s\u00E1ch Si\u00EAu th\u1ECB');
-            const clear = [...p.querySelectorAll('button,a,label,span')].find(el => visible(el) && norm(text(el)) === 'bochontatca');
-            if (clear) {
-                clear.click();
-                await sleep(200);
-            }
-            for (let turn = 0; turn < 300; turn++) {
-                const current = await wait(panel, 'Danh s\u00E1ch Si\u00EAu th\u1ECB b\u1ECB \u0111\u00F3ng tr\u01B0\u1EDBc khi x\u00E1c nh\u1EADn');
-                const all = boxes(current);
-                if (!all.length)
-                    throw new Error('Kh\u00F4ng x\u00E1c nh\u1EADn \u0111\u01B0\u1EE3c tr\u1EA1ng th\u00E1i checkbox Si\u00EAu th\u1ECB');
-                const checked = all.filter(b => b.checked);
-                if (!checked.length)
-                    break;
-                const before = checked.length;
-                checked[0].click();
-                await wait(() => { const q = panel(); return q && boxes(q).filter(b => b.checked).length < before; }, 'Kh\u00F4ng b\u1ECF ch\u1ECDn \u0111\u01B0\u1EE3c Si\u00EAu th\u1ECB');
-            }
-            const verified = panel();
-            if (!verified || !boxes(verified).length || boxes(verified).some(b => b.checked))
-                throw new Error('Si\u00EAu th\u1ECB v\u1EABn \u0111ang \u0111\u01B0\u1EE3c ch\u1ECDn; ch\u01B0a \u0111\u1ECDc b\u1EA3ng t\u1ED5ng quan');
-            button.click();
-            opened = false;
-            await sleep(300);
-        }
-        finally {
-            if (opened)
-                button.click();
-        }
-    }
-    const filterSettings71 = { timeout: 8000, poll: 150 };
-    async function selectAllFilter(label) { if (norm(label) === 'sieuthi')
-        return clearShopFilter(); return window.__AutoBIFilterGuard75.selectAll(label); }
-    async function selectAllFilterOriginal71(label) {
-        if (norm(label) === 'sieuthi')
-            return clearShopFilter();
-        const wanted = norm(label);
-        let button = null;
-        for (let attempt = 0; attempt < 30 && !button; attempt++) {
-            button = [...document.querySelectorAll('button')].find(item => visible(item) && [...item.querySelectorAll('span')].some(span => norm(text(span)) === wanted));
-            if (!button)
-                await sleep(300);
-        }
-        if (!button)
-            throw new Error('Kh\u00F4ng t\u00ECm th\u1EA5y b\u1ED9 l\u1ECDc ' + label);
-        button.click();
-        await sleep(700);
-        const actions = [...document.querySelectorAll('button, a, label, div, span')]
-            .filter(visible)
-            .filter(item => norm(text(item)) === 'chontatca')
-            .sort((a, b) => text(a).length - text(b).length);
-        if (!actions.length)
-            throw new Error('Kh\u00F4ng th\u1EA5y Ch\u1ECDn t\u1EA5t c\u1EA3 c\u1EE7a ' + label);
-        actions[0].click();
-        await sleep(900);
-        button.click();
-        await sleep(1400);
-    }
-    async function waitRows(config, timeout = 60000) { const expected = Array.from({ length: 5 }, (_, i) => 'shop' + (i + 1)).filter(key => config[key]); return window.__AutoBILoadingGuard75.wait('Tr\u1EA3 ch\u1EADm t\u1EEBng si\u00EAu th\u1ECB', () => { const state = read(config); return state.confirmed && expected.length && expected.every(key => state.rows[key]) ? state.rows : false; }, { timeout, settle: 600, key: JSON.stringify, expected: expected.length + ' si\u00EAu th\u1ECB' }); }
-    const controlSettings72 = { timeout: 10000, poll: 200 };
-    function findControl72(names) {
-        const wanted = names.map(norm);
-        return [...document.querySelectorAll('button,[role="button"],[role="tab"],input[type="button"],input[type="submit"]')].find(el => visible(el) && !el.closest('[data-autobi-ui],[id^="tgdd-"],#capture-area') &&
-            !el.disabled && el.getAttribute('aria-disabled') !== 'true' &&
-            [el.getAttribute('aria-label'), el.getAttribute('title'), el.value, text(el)].some(label => label && wanted.includes(norm(label))));
-    }
-    async function waitControl72(names) {
-        window.__AutoBILog5.wait('\u0110ang ch\u1EDD n\u00FAt ' + names[0]);
-        for (let attempt = 0; attempt < 2; attempt++) {
-            const deadline = Date.now() + controlSettings72.timeout;
-            do {
-                const node = findControl72(names);
-                if (node)
-                    return node;
-                await sleep(controlSettings72.poll);
-            } while (Date.now() < deadline);
-            if (attempt === 0)
-                window.__AutoBILog5.retry(1, 'Ch\u01B0a th\u1EA5y n\u00FAt ' + names[0] + '; t\u00ECm l\u1EA1i \u0111\u00FAng b\u01B0\u1EDBc');
-        }
-        const seen = [...document.querySelectorAll('button,[role="button"],[role="tab"]')].filter(visible).filter(el => !el.closest('[data-autobi-ui],[id^="tgdd-"]')).map(el => el.getAttribute('aria-label') || el.getAttribute('title') || text(el)).filter(Boolean).slice(0, 18);
-        throw new Error('Timeout n\u00FAt ' + names[0] + '; c\u00E1c n\u00FAt \u0111ang th\u1EA5y: ' + (seen.join(' | ') || '(kh\u00F4ng c\u00F3)'));
-    }
-    async function run(config, data, ui, done) {
-        let passiveTimer = null;
-        try {
-            // Save only after the overview filter and stable rows have been verified.
-            window.__AutoBILog5.stage('Tr\u1EA3 ch\u1EADm', 'T\u1ED5ng c\u1EE5m', '\u0110ang x\u00E1c nh\u1EADn th\u00E1ng b\u00E1o c\u00E1o');
-            ui.showToast('\uD83D\uDCB3 \u0110ang l\u1EA5y B\u00E1o c\u00E1o tr\u1EA3 ch\u1EADm...', 0);
-            const storedMonth = GM_getValue('tgdd_custom_report_month', 'current');
-            const now = new Date();
-            const expectedMonth = storedMonth === 'current' ? String(now.getMonth() + 1).padStart(2, '0') + '/' + now.getFullYear() : storedMonth;
-            const monthReady = await callbackTask(callback => data.selectMonthDMX(expectedMonth, callback));
-            if (monthReady === false)
-                throw new Error('Kh\u00F4ng x\u00E1c nh\u1EADn \u0111\u01B0\u1EE3c th\u00E1ng Tr\u1EA3 ch\u1EADm');
-            for (const label of ['V\u00F9ng', 'Khu v\u1EF1c', 'Si\u00EAu th\u1ECB']) {
-                window.__AutoBILog5.wait('\u0110ang x\u00E1c nh\u1EADn b\u1ED9 l\u1ECDc ' + label);
-                await selectAllFilter(label);
-            }
-            const cumulative = await waitControl72(['L\u0169y k\u1EBF']);
-            cumulative.click();
-            await sleep(500);
-            // Find again after the mode click; never keep the old detached Xem node.
-            const view = await waitControl72(['Xem', 'Xem b\u00E1o c\u00E1o', 'Xem d\u1EEF li\u1EC7u']);
-            view.click();
-            window.__AutoBILog5.wait('\u0110ang ch\u1EDD b\u1EA3ng t\u1ED5ng quan t\u1EEBng si\u00EAu th\u1ECB \u1ED5n \u0111\u1ECBnh');
-            const rows = await waitRows(config);
-            save(rows);
-            window.__AutoBILog5.ok('Tr\u1EA3 ch\u1EADm OK \u2014 \u0111\u00E3 l\u01B0u ' + Object.keys(rows).length + ' si\u00EAu th\u1ECB');
-            ui.showToast('\u2705 \u0110\u00E3 l\u1EA5y Tr\u1EA3 ch\u1EADm cho ' + Object.keys(rows).length + ' si\u00EAu th\u1ECB', 4000);
-        }
-        catch (error) {
-            window.__AutoBILog5.error(error);
-            console.error('[AutoBI Tr\u1EA3 ch\u1EADm 41]', error);
-            ui.showToast('\u26A0\uFE0F Tr\u1EA3 ch\u1EADm: ' + error.message, 12000);
-        }
-        finally {
-            if (passiveTimer)
-                clearInterval(passiveTimer);
-            done();
-        }
-    }
-    let passiveSignature = '';
-    async function passiveCapture(config, ui) {
-        if (!location.pathname.includes('/dashboard/tra-cham'))
-            return false;
-        const state = read(config);
-        const expected = Array.from({ length: 5 }, (_, i) => 'shop' + (i + 1)).filter(key => config[key]);
-        if (!expected.length || !expected.every(key => state.rows[key]))
-            return false;
-        const signature = JSON.stringify(state.rows);
-        if (signature === passiveSignature)
-            return true;
-        passiveSignature = signature;
-        save(state.rows);
-        GM_setValue('tgdd_installment41_status', { ok: true, at: new Date().toISOString(), rows: state.rows });
-        if (ui?.showToast)
-            ui.showToast('\u2705 \u0110\u00E3 t\u1EF1 l\u01B0u Tr\u1EA3 ch\u1EADm: ' + expected.length + ' si\u00EAu th\u1ECB', 3500);
-        console.info('[AutoBI Tr\u1EA3 ch\u1EADm 41] T\u1EF1 l\u01B0u b\u1EA3ng \u0111ang hi\u1EC3n th\u1ECB', state.rows);
-        return true;
-    }
-    return { number, matchShop, read, save, waitRows, selectAllFilter, passiveCapture, run, controlSettings72, findControl72, waitControl72, filterSettings71 };
-})();
-/* AutoBI 16.1.1.41 - reliable Online 18001060 capture. */
-window.__AutoBIOnline40 = (() => {
-    const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/[^a-z0-9]/g, '');
-    const text = e => (e?.innerText || e?.textContent || '').trim();
-    const visible = e => !!e && e.getClientRects().length > 0;
-    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-    function inspect(root = document) {
-        let confirmedStaffTable = false;
-        for (const table of root.querySelectorAll('table')) {
-            const scope = table.closest('.ant-table-wrapper, .ant-table') || table;
-            const headers = [...scope.querySelectorAll('thead th, thead td')].map(e => norm(e.getAttribute('title') || text(e)));
-            if (!headers.some(h => h === 'nhanvien'))
-                continue;
-            const qdCol = headers.findIndex(h => ['doanhthuqd', 'doanhthuquydoi', 'dtqd', 'dtquydoi'].includes(h));
-            if (qdCol < 0)
-                continue;
-            confirmedStaffTable = true;
-            for (const row of table.querySelectorAll('tbody tr:not(.ant-table-measure-row)')) {
-                const cells = [...row.querySelectorAll('td')];
-                if (!cells.length || norm(text(cells[0])) !== 'onlineonline18001060')
-                    continue;
-                const raw = text(cells[qdCol]).replace(/,/g, '').replace(/\s/g, '');
-                if (!/^-?\d+(\.\d+)?$/.test(raw))
-                    return { confirmedStaffTable, amount: null, invalid: true };
-                return { confirmedStaffTable, amount: Number(raw), invalid: false };
-            }
-        }
-        return { confirmedStaffTable, amount: null, invalid: false };
-    }
-    function apply(cache, key, amount) {
-        const row = cache.link2?.[key];
-        if (!row || !Number.isFinite(row.r) || !Number.isFinite(amount))
-            throw new Error('Thi\u1EBFu doanh thu Q\u0110 si\u00EAu th\u1ECB');
-        const previous = Number.isFinite(row.onlineExcludedQD) ? row.onlineExcludedQD : 0;
-        const delta = amount - previous;
-        const adjust = target => {
-            if (!target || !Number.isFinite(target.r))
-                return;
-            const before = target.r;
-            target.r = before - delta;
-            if (Number.isFinite(target.dtqd_dk) && before !== 0)
-                target.dtqd_dk *= target.r / before;
-            if (target.t > 0)
-                target.dk = target.r / target.t * 100;
-        };
-        adjust(row);
-        adjust(cache.link2.total === row ? null : cache.link2.total);
-        row.grossQD = row.r + amount;
-        row.onlineExcludedQD = amount;
-        row.onlineExcludedAt = new Date().toISOString();
-    }
-    const exactButton = name => [...document.querySelectorAll('button')].find(e => visible(e) && norm(text(e)) === name);
-    async function waitForStaffTable() { const value = await window.__AutoBILoadingGuard75.wait('Nh\u00E2n vi\u00EAn Online', () => { const state = inspect(); if (!state.confirmedStaffTable)
-        return false; if (state.invalid)
-        throw Error('C\u1ED9t Q\u0110 c\u1EE7a Online kh\u00F4ng ph\u1EA3i s\u1ED1'); return { amount: state.amount, signature: window.__AutoBILoadingGuard75.signature() }; }, { settle: 600, key: v => v.signature }); return value.amount === null ? 0 : value.amount; }
-    async function scanShop(config, idx, waitBI, toast) {
-        const key = 'shop' + idx;
-        const shopName = config[key + 'Short'] || config[key] || key;
-        window.__AutoBILog5.stage('Online 18001060', shopName, '\u0110ang x\u00E1c nh\u1EADn shop v\u00E0 m\u1EDF Nh\u00E2n vi\u00EAn');
-        try {
-            const filter = [...document.querySelectorAll('button')].find(b => visible(b) && [...b.querySelectorAll('span')].some(e => norm(text(e)) === 'sieuthi'));
-            const label = norm(text(filter));
-            const tokens = [config[key], config[key + 'Short'], config['makho' + idx], config['shopCode' + idx]].map(norm).filter(Boolean);
-            if (!tokens.some(t => label.includes(t)))
-                throw new Error('Ch\u01B0a x\u00E1c nh\u1EADn \u0111\u00FAng b\u1ED9 l\u1ECDc si\u00EAu th\u1ECB');
-            const cumulative = exactButton('luyke');
-            if (!cumulative)
-                throw new Error('Kh\u00F4ng t\u00ECm th\u1EA5y n\u00FAt L\u0169y k\u1EBF');
-            cumulative.click();
-            await sleep(700);
-            await waitBI(15000);
-            const staff = exactButton('nhanvien');
-            if (!staff)
-                throw new Error('Kh\u00F4ng t\u00ECm th\u1EA5y n\u00FAt Nh\u00E2n vi\u00EAn');
-            staff.click();
-            await sleep(700);
-            const amount = await waitForStaffTable();
-            const cache = GM_getValue('tgdd_data_cache_v30', {}) || {};
-            apply(cache, key, amount);
-            GM_setValue('tgdd_data_cache_v30', cache);
-            window.__AutoBILog5.ok('Online 18001060 OK \u2014 \u0111\u00E3 c\u1EADp nh\u1EADt');
-            toast('\u2705 ' + shopName + ': Online Q\u0110 ' + amount + ' tri\u1EC7u \u0111\u00E3 \u0111\u01B0\u1EE3c lo\u1EA1i', 4000);
-            console.info('[AutoBI Online 40]', key, { online: amount, gross: cache.link2[key].grossQD, net: cache.link2[key].r });
-        }
-        catch (error) {
-            window.__AutoBILog5.error(error);
-            console.error('[AutoBI Online 40]', key, error);
-            toast('\u26A0\uFE0F Online ' + shopName + ': ' + error.message, 10000);
-            await sleep(3500);
-        }
-    }
-    return { inspect, apply, waitForStaffTable, scanShop };
-})();
+
+
 /* AutoBI 16.1.1.44 - fast Realtime V1 collection.
  * Keeps the normal filter/navigation pipeline, but scans Online only and skips
  * staff detail, health-category expansion and per-shop competition staff. */
-window.__AutoBIFastRealtime43 = (() => {
-    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-    const enabled = () => !!(GM_getValue('tgdd_last_run_options', {}) || {}).fastRealtime;
-    async function finishRevenue(config, done, ui) {
-        if (!enabled())
-            return false;
-        const health = window.__AutoBIHealthPerShop;
-        const online = window.__AutoBIOnline40;
-        try {
-            const shops = [];
-            for (let i = 1; i <= 5; i++)
-                if (config && config['shop' + i])
-                    shops.push(i);
-            for (let pos = 0; pos < shops.length; pos++) {
-                const idx = shops[pos];
-                const name = config['shop' + idx + 'Short'] || config['shop' + idx] || ('shop' + idx);
-                ui.showToast('\u26A1 Realtime nhanh [' + (pos + 1) + '/' + shops.length + ']: lo\u1EA1i doanh thu Online ' + name, 2500);
-                const selected = await health.selectSingleShop(config, idx);
-                if (!selected.ok) {
-                    console.warn('[AutoBI Fast RT 43] Kh\u00F4ng ch\u1ECDn \u0111\u01B0\u1EE3c', name, selected.reason);
-                    continue;
-                }
-                window.__AutoBILog5.stage('Online 18001060', name, '\u0110ang ch\u1EDD b\u1EA3ng chi ti\u1EBFt Online');
-                await online.scanShop(config, idx, health.waitBI, ui.showToast.bind(ui));
-                await sleep(200);
-            }
-            await health.restoreAllShops();
-        }
-        catch (error) {
-            console.error('[AutoBI Fast RT 43] Online scan error', error);
-            ui.showToast('\u26A0\uFE0F Realtime nhanh: ' + error.message, 8000);
-        }
-        ui.showToast('\u2705 \u0110\u00E3 \u0111\u1EE7 d\u1EEF li\u1EC7u Doanh thu Realtime/L\u0169y k\u1EBF', 1800);
-        if (done)
-            done();
-        return true;
-    }
-    function finishCompetition(done, ui) {
-        if (!enabled())
-            return false;
-        ui.showToast('\u2705 \u0110\u00E3 \u0111\u1EE7 d\u1EEF li\u1EC7u Thi \u0111ua Realtime/L\u0169y k\u1EBF', 1800);
-        if (done)
-            done();
-        return true;
-    }
-    return { enabled, finishRevenue, finishCompetition };
-})();
-/* AutoBI 16.1.1.67: chỉ bắt đầu phiên mới từ nút Bắt Đầu Chạy. */
+
+/* V17: chế độ báo cáo Realtime (chỉ còn cờ, số lấy bằng API) */
+window.__AutoBIFastRealtime43 = { enabled: () => !!(GM_getValue('tgdd_last_run_options', {}) || {}).fastRealtime };
 window.__AutoBIRun67 = (function () {
     const KEY = 'autobi_run_session_67';
     const STATE = 'tgdd_auto_state_run_v30';
@@ -3454,15 +1327,7 @@ window.__AutoBIRun67 = (function () {
         window.tgdd_active_requests.push(_0x2fa416);
     } return _0x2fa416; };
     const CONSTANTS = { STORAGE_KEY_PERMANENT: 'TGDD_BI_STORE_PERMANENT_CONFIG_GM_V1', STORAGE_KEY_DEVICE_ID: 'TGDD_BI_STORE_PERMANENT_DEVICE_ID', KEYS: { AUTO_STATE: 'tgdd_auto_state_run_v30', DATA_CACHE: 'tgdd_data_cache_v30', CONFIG_LIST: 'tgdd_gsheet_list_v30', REPORT_TYPE: 'tgdd_report_type_v30', STAFF_LIST: 'tgdd_staff_list_v3', TARGET_CONFIG: 'tgdd_target_config_v3', RUN_QUEUE: 'tgdd_run_queue_v44', PENDING_DATA: 'tgdd_pending_report_data', IS_PENDING: 'tgdd_is_pending_render', TOOLS_CACHE_V2: 'tgdd_tools_source_cache_v2', AUTH_CACHE: 'tgdd_auth_cache_v1', PINNED_TOOLS: 'tgdd_pinned_tools_v1' }, DOM_IDS: { BOTTOM_NAV: 'tgdd-bottom-nav', REPORT_NAV: 'tgdd-report-nav', MODAL: 'tgdd-config-modal', MSG_MODAL: 'tgdd-msg-modal', SELECT_MODAL: 'tgdd-select-modal', VIDEO_MODAL: 'tgdd-video-modal', TOAST: 'tgdd-toast-notification', REPORT_ICON: 'nav-report-icon', REPORT_CIRCLE: 'nav-report-circle', CAPTURE_AREA: 'capture-area', SCROLL_WRAPPER: 'report-scroll-wrapper', CHECKBOX_LK: 'tgdd-cb-lk', CHECKBOX_TARGET_BI: 'tgdd-cb-target-bi', MENU_POPUP: 'tgdd-menu-popup', TRANSITION: 'tgdd-transition-overlay', TOOLS_MODAL: 'tgdd-tools-modal', TOOLS_GRID: 'tgdd-tools-grid' }, EXTERNAL_MODULE_LINKS: [], BUILTIN_APPS: [], GSHEET: { DATA: { ID: '17PxnghjkKIP36fWoSd656wo3DhlOmMiTiyjlf1g23UU', GID: '1429054555' }, AUTH: { ID: '1iuApMwdKYx9ofo0oJR84AlzXka0PmTQPudXzx0Uub0o', GID: '0' }, TOOLS: { ID: '1iuApMwdKYx9ofo0oJR84AlzXka0PmTQPudXzx0Uub0o', GID: '1111643634' }, THEME: { ID: '1iuApMwdKYx9ofo0oJR84AlzXka0PmTQPudXzx0Uub0o', GID: '1500927635' }, API_URL: 'https://script.google.com/macros/s/AKfycbwZkBZc5aG0dyxfi-9qFDheIEHEbzVnwPGFyCxyXOn9HDuwZWgXpyCQKY7Mghe3aoWC/exec', CONFIG_API: 'https://script.google.com/macros/s/AKfycbzSGNHjQ81dzQJcvk9m1lubSDvkn2bQ2qpSyALpmKqyCBSQXtIH_j3738YLVhIjlxGg/exec', HISTORY_API: 'https://script.google.com/macros/s/AKfycbwe_W8d1TYhcQNQ6rQLVSOVMggjGJELyMOVo1rBNysK_fgIZZ_RzsDuvokDDW0srCqKJw/exec', PLAN_API: 'https://script.google.com/macros/s/AKfycbyIRjtkOWySF_wkd1OmAdyYz2-Ax1PRu8j1l3MXCDNtADlS01R7HQWyRzepRcwfVfIjww/exec', YEARLY_API: 'https://script.google.com/macros/s/AKfycbyeBRJq48wsBbqGGtp59-NAd7_lABQtiISMsJ6sB4Yp_Jblnl8B7TW2we1uxFUVSNMA-w/exec' }, URL_TEMPLATES: { HOME: 'https://baocao.dienmayxanh.com/dashboard/home', REVENUE: 'https://baocao.dienmayxanh.com/dashboard/revenue-consolidated', THI_DUA: 'https://baocao.dienmayxanh.com/dashboard/thi-dua', CRM_BASE: 'https://crm.thegioididong.com/Reviewuser/ReportCustomerRatings', CRM_NEW: 'https://crm.thegioididong.com/diem-phuc-vu-tgdd-new' }, DEFAULT_LINKS: { LINK_THIDUA: 'https://baocao.dienmayxanh.com/dashboard/thi-dua' }, STEP_TIMES: { 0: 20000, 2: 25000, 17: 16000, 18: 14000 }, QR_IMG: '', };
-    const InitialLoader = { show: () => { const _0xfb2b34 = window.location.pathname; const _0x3f73be = _0xfb2b34 === '/' || _0xfb2b34 === '' || window.location.href.includes('/dashboard/home'); if (!_0x3f73be)
-            return; if (document.getElementById('tgdd-initial-loader'))
-            return; const _0x445885 = document.createElement('div'); _0x445885.id = 'tgdd-initial-loader'; _0x445885.style.cssText = '\n                position:fixed; top:0; left:0; width:100%; height:100%;\n                background: radial-gradient(circle at 50% 50%, #1e293b, #0f172a);\n                z-index:999999; display:flex; flex-direction:column; align-items:center; justify-content:center;\n                color:#fff; font-family:sans-serif; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);\n                transition: opacity 0.4s ease;\n            '; _0x445885.innerHTML = '\n                <div style="text-align:center; background:rgba(255,255,255,0.03); padding:35px 25px; border-radius:24px; border:1px solid rgba(255,255,255,0.08); box-shadow:0 20px 50px rgba(0,0,0,0.3); width: 320px;">\n                    <div class="neon-ring" style="position:relative; width:45px; height:45px; border:3px solid rgba(255,255,255,0.1); border-top-color:#ff9f43; border-radius:50%; animation:neon-spin 1s linear infinite; margin:0 auto 20px auto; box-shadow:0 0 15px rgba(255,159,67,0.4);"></div>\n                    <div style="font-weight:900; font-size:15px; margin-bottom:12px; color:#ff9f43; text-transform:uppercase; letter-spacing:1.5px;">Auto BI</div>\n                    <div id="tgdd-initial-loader-status" style="font-size:12px; color:#94a3b8; font-weight:600; min-height:18px; animation:pulse-text 1.5s infinite;">\u0110ang kh\u1EDFi \u0111\u1ED9ng h\u1EC7 th\u1ED1ng...</div>\n                </div>\n            '; document.body.appendChild(_0x445885); document.body.classList.add('tgdd-body-lock'); }, update: _0x1b783d => { const _0x39014b = document.getElementById('tgdd-initial-loader-status'); if (_0x39014b)
-            _0x39014b.innerText = _0x1b783d; }, hide: () => { const _0x520a74 = document.getElementById('tgdd-initial-loader'); if (_0x520a74) {
-            _0x520a74.style.opacity = '0';
-            setTimeout(() => { _0x520a74.remove(); document.body.classList.remove('tgdd-body-lock'); const _0x4f3f72 = document.getElementById(CONSTANTS.DOM_IDS.BOTTOM_NAV); if (_0x4f3f72 && !_0x4f3f72.classList.contains('always-hidden')) {
-                _0x4f3f72.classList.add('show-nav');
-            } }, 400);
-        } } };
+    
     let AUTH_STATE = { checked: false, isAuthorized: false, userName: '---' };
     const UTILS = { isHomePage: () => { const _0x2910d5 = window.location.href; const _0x132f23 = window.location.pathname; return _0x2910d5.includes('baocao.dienmayxanh.com/dashboard/home') || _0x2910d5.endsWith('baocao.dienmayxanh.com/') || _0x2910d5.endsWith('baocao.dienmayxanh.com') || _0x132f23 === '/' || _0x132f23 === '' || _0x132f23 === '/dashboard/home'; }, toUltraSlug: _0x2f2702 => !_0x2f2702 ? '' : _0x2f2702.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/[^a-z0-9]/g, ''), parseFormattedNumber: _0x55f42d => { if (!_0x55f42d)
             return 0; return parseFloat(_0x55f42d.toString().replace(/,/g, '')) || 0; }, formatInputNumber: _0xa10baf => { if (!_0xa10baf && _0xa10baf !== 0)
@@ -4111,316 +1976,7 @@ window.__AutoBIRun67 = (function () {
                         GM_setValue('autobi_cfglist_at', Date.now());
                     }
                 } GM_setValue('tgdd_active_run_config', _0x5f53e4); console.log('[Auto BI] \u2705 \u0110\u00E3 n\u1EA1p c\u1EA5u h\u00ECnh chu\u1EA9n c\u1EE7a Th\u00E1ng hi\u1EC7n t\u1EA1i (Target: ' + _0x5f53e4.target1 + ')'); _0xb0716(); }, onerror: () => { GM_setValue('tgdd_active_run_config', _0x5f53e4); _0xb0716(); }, ontimeout: () => { GM_setValue('tgdd_active_run_config', _0x5f53e4); _0xb0716(); } });
-        } }, ensureRevenueOptionsDMX: _0x440e7c => { UI.showToast('\u2699\uFE0F \u0110ang tick ch\u1ECDn Target, D\u1EF1 ki\u1EBFn, Tr\u1EA3 g\u00F3p, T\u0103ng tr\u01B0\u1EDFng...'); const _0x3fe241 = Array.from(document.querySelectorAll('button')); const _0x8859c4 = _0x3fe241.find(_0x502ee6 => { const _0x240bef = (_0x502ee6.textContent || _0x502ee6.innerText || '').trim().toLowerCase(); return _0x240bef === 'dt quy \u0111\u1ED5i' || _0x240bef === 'quy \u0111\u1ED5i'; }); if (_0x8859c4 && !_0x8859c4.classList.contains('bg-blue-600')) {
-            _0x8859c4.click();
-            console.log('[Auto BI] \uD83D\uDC49 \u0110\u00E3 k\u00EDch ho\u1EA1t tab [DT Quy \u0111\u1ED5i]');
-        } const _0x34a122 = _0x3fe241.find(_0x5bf29d => _0x5bf29d.textContent.includes('Doanh thu theo c\u1EA5p')); if (_0x34a122 && !_0x34a122.classList.contains('bg-blue-600')) {
-            _0x34a122.click();
-            console.log('[Auto BI] \uD83D\uDC49 \u0110\u00E3 k\u00EDch ho\u1EA1t [Doanh thu theo c\u1EA5p]');
-        } setTimeout(async () => { const _0x51a085 = _0x5ce1a6 => { const _0x1fb049 = _0x5ce1a6.querySelector('span'); const _0x2568e9 = _0x1fb049 && _0x1fb049.textContent.includes('\u2713'); const _0x2b63a3 = _0x5ce1a6.classList.contains('bg-blue-50') || _0x5ce1a6.className.includes('border-blue-') || _0x5ce1a6.className.includes('text-blue-'); return _0x2568e9 || _0x2b63a3; }; const _0x438f90 = async (_0xbc5495, _0x5c3fed) => { const _0x45e3f9 = Array.from(document.querySelectorAll('div.flex.flex-wrap.items-center button')); const _0x21b0a9 = _0x45e3f9.find(_0x4dfc8c => { const _0x1b705c = (_0x4dfc8c.textContent || _0x4dfc8c.innerText || '').replace('\u2713', '').trim().toLowerCase(); return _0x1b705c === _0xbc5495.toLowerCase(); }); if (!_0x21b0a9) {
-            console.warn('[Auto BI] \u26A0\uFE0F Kh\u00F4ng t\u00ECm th\u1EA5y n\u00FAt: [' + _0xbc5495 + ']');
-            return;
-        } const _0x1a059d = _0x51a085(_0x21b0a9); if (_0x5c3fed && !_0x1a059d) {
-            _0x21b0a9.click();
-            console.log('%c[Auto BI] \uD83D\uDFE2 \u0110\u00C3 B\u1EACT: [' + _0xbc5495 + ']', 'color: green; font-weight: bold;');
-            await new Promise(_0x414187 => setTimeout(_0x414187, 400));
-        }
-        else if (!_0x5c3fed && _0x1a059d) {
-            _0x21b0a9.click();
-            console.log('%c[Auto BI] \uD83D\uDD34 \u0110\u00C3 T\u1EAET: [' + _0xbc5495 + ']', 'color: red; font-weight: bold;');
-            await new Promise(_0x299835 => setTimeout(_0x299835, 400));
-        } }; await _0x438f90('Target', true); await _0x438f90('D\u1EF1 ki\u1EBFn', true); await _0x438f90('Tr\u1EA3 g\u00F3p', true); await _0x438f90('T\u0103ng tr\u01B0\u1EDFng', true); await _0x438f90('T\u1EC9 tr\u1ECDng', false); await _0x438f90('Off / Onl', false); setTimeout(() => { if (_0x440e7c)
-            _0x440e7c(); }, 1000); }, 1000); }, scrapeRevenueTableDMX: (_0x5efdb6, _0x1cf208) => { const _0x358a68 = () => ({ t: 0, r: 0, dtlk: 0, tg: 0, dk: 0, dtqd_dk: 0 }); let _0x4631ad = { total: _0x358a68(), shop1: _0x358a68(), shop2: _0x358a68(), shop3: _0x358a68(), shop4: _0x358a68(), shop5: _0x358a68() }; const _0x52cae0 = document.querySelector('.report-table table, .ant-table-content table, table'); if (!_0x52cae0)
-            return _0x4631ad; let _0x5c475a = { sl: 1, dt_thuc: 2, dtqd: 3, target: 4, ht_target: 5, dt_du_kien: 8, dt_tra_gop: 9, pct_tra_gop: 10 }; const _0x40148f = Array.from(_0x52cae0.querySelectorAll('thead th, thead td')); _0x40148f.forEach((_0x17de38, _0x31acf9) => { const _0x38ba7d = (_0x17de38.getAttribute('title') || _0x17de38.innerText || _0x17de38.textContent || '').trim().toUpperCase(); if (_0x38ba7d === 'S\u1ED0 L\u01AF\u1EE2NG' || _0x38ba7d === 'SO LUONG') {
-            _0x5c475a.sl = _0x31acf9;
-        }
-        else if (_0x38ba7d === 'DOANH THU Q\u0110' || _0x38ba7d === 'DOANH THU QD' || _0x38ba7d === 'DTQ\u0110') {
-            _0x5c475a.dtqd = _0x31acf9;
-        }
-        else if (_0x38ba7d === 'DOANH THU' || _0x38ba7d === 'DT' || _0x38ba7d === 'DT TH\u1EF0C') {
-            _0x5c475a.dt_thuc = _0x31acf9;
-        }
-        else if (_0x38ba7d === 'TARGET' || _0x38ba7d === 'CH\u1EC8 TI\u00CAU' || _0x38ba7d === 'CHI TIEU') {
-            _0x5c475a.target = _0x31acf9;
-        }
-        else if (_0x38ba7d.includes('%') && (_0x38ba7d.includes('HT') || _0x38ba7d.includes('TARGET') || _0x38ba7d.includes('HO\u00C0N TH\u00C0NH'))) {
-            _0x5c475a.ht_target = _0x31acf9;
-        }
-        else if (_0x38ba7d.includes('D\u1EF0 KI\u1EBEN') || _0x38ba7d.includes('DU KIEN')) {
-            _0x5c475a.dt_du_kien = _0x31acf9;
-        }
-        else if (_0x38ba7d.includes('%') && (_0x38ba7d.includes('TR\u1EA2 G\u00D3P') || _0x38ba7d.includes('TRA GOP') || _0x38ba7d.includes('TR\u1EA2 CH\u1EACM') || _0x38ba7d.includes('TRA CHAM'))) {
-            _0x5c475a.pct_tra_gop = _0x31acf9;
-        }
-        else if (_0x38ba7d.includes('DT TR\u1EA2 G\u00D3P') || _0x38ba7d.includes('DT TRA GOP')) {
-            _0x5c475a.dt_tra_gop = _0x31acf9;
-        } }); console.log('%c[Auto BI] \uD83C\uDFAF V\u1ECA TR\u00CD C\u1ED8T: TARGET=' + _0x5c475a.target + ' | DTQ\u0110=' + _0x5c475a.dtqd + ' | % HT=' + _0x5c475a.ht_target + ' | % Tr\u1EA3 G\u00F3p=' + _0x5c475a.pct_tra_gop, 'color:blue; font-weight:bold;'); const _0x9ea70e = _0x3c0be3 => { const _0x5cff86 = _0x48209a => _0x48209a !== -1 && _0x3c0be3[_0x48209a] ? UTILS.parseNumber(_0x3c0be3[_0x48209a].innerText || _0x3c0be3[_0x48209a].textContent) : 0; const _0x3cb0f2 = _0x5272f7 => { if (_0x5272f7 !== -1 && _0x3c0be3[_0x5272f7]) {
-            const _0x477ece = (_0x3c0be3[_0x5272f7].innerText || _0x3c0be3[_0x5272f7].textContent || '').replace('%', '').replace('+', '').trim();
-            return parseFloat(_0x477ece) || 0;
-        } return 0; }; return { t: _0x5cff86(_0x5c475a.target), r: _0x5cff86(_0x5c475a.dtqd), dtlk: _0x5cff86(_0x5c475a.dt_thuc) || _0x5cff86(_0x5c475a.dtqd), tg: _0x3cb0f2(_0x5c475a.pct_tra_gop), dk: _0x3cb0f2(_0x5c475a.ht_target), dtqd_dk: _0x5cff86(_0x5c475a.dt_du_kien) }; }; const _0xbad5d7 = _0x52cae0.querySelector('tfoot tr, tr.ant-table-summary'); if (_0xbad5d7) {
-            const _0x4bb601 = _0xbad5d7.querySelectorAll('td, th');
-            if (_0x4bb601.length >= 5) {
-                _0x4631ad.total = _0x9ea70e(_0x4bb601);
-            }
-        } const _0x26f69d = _0x52cae0.querySelectorAll('tbody tr:not(.ant-table-measure-row)'); _0x26f69d.forEach(_0x3b0eae => { const _0x468e41 = _0x3b0eae.querySelectorAll('td'); if (_0x468e41.length < 5)
-            return; const _0x46d9c4 = (_0x468e41[0].getAttribute('title') || _0x468e41[0].innerText || _0x468e41[0].textContent || '').trim(); const _0x486e6b = _0x3b0eae.getAttribute('data-row-key') || ''; const _0x345991 = UTILS.toUltraSlug(_0x46d9c4); const _0x783731 = _0x9ea70e(_0x468e41); if (_0x345991.includes('tong') || _0x3b0eae.classList.contains('grid-total-row')) {
-            _0x4631ad.total = _0x783731;
-        }
-        else {
-            const _0x3036f = DATA.identifyShopFromRowData(_0x46d9c4, _0x486e6b, _0x5efdb6);
-            if (_0x3036f) {
-                _0x4631ad[_0x3036f] = _0x783731;
-                console.log('[Auto BI] \uD83C\uDFEC \u0110\u00E3 b\u00F3c t\u00E1ch [' + _0x3036f + '] (Target: ' + _0x783731.t + ' | % HT: ' + _0x783731.dk + '%):', _0x783731);
-            }
-        } }); return _0x4631ad; }, scrapeStaffRevenueTableDMX: _0x3eaadd => { const _0x4b9538 = _0x3eaadd.staffList || []; let _0x172809 = {}; let _0x33f4af = {}; for (let _0xa1249 = 1; _0xa1249 <= 5; _0xa1249++) {
-            const _0x2f1921 = 'shop' + _0xa1249;
-            _0x172809[_0x2f1921] = {};
-            _0x33f4af[_0x2f1921] = {};
-        } const __pick94 = window.__AutoBIStaffTable94(); const _0x4e89be = __pick94 && __pick94.header; const __body94 = (__pick94 && __pick94.body) || _0x4e89be; if (!_0x4e89be)
-            return { staffRevMap: _0x172809, staffInstMap: _0x33f4af }; const _0x150abb = Array.from(_0x4e89be.querySelectorAll('thead th, thead td')); let _0x265d8e = { dtqd: 3, dt_thuc: 2, dt_tragop: 9, pct_tragop: 10 }; _0x150abb.forEach((_0x24e58a, _0x3c43dd) => { const _0x6bda3d = (_0x24e58a.getAttribute('title') || _0x24e58a.innerText || _0x24e58a.textContent || '').trim().toUpperCase(); if (_0x6bda3d.includes('DOANH THU Q\u0110') || _0x6bda3d.includes('DOANH THU QD') || _0x6bda3d.includes('DTQ\u0110') || _0x6bda3d.includes('QUY \u0110\u1ED4I'))
-            _0x265d8e.dtqd = _0x3c43dd;
-        else if (_0x6bda3d === 'DOANH THU' || _0x6bda3d === 'DT' || _0x6bda3d.includes('DT TH\u1EF0C'))
-            _0x265d8e.dt_thuc = _0x3c43dd;
-        else if (_0x6bda3d.includes('DT TR\u1EA2 G\u00D3P') || _0x6bda3d.includes('DT TRA GOP') || _0x6bda3d.includes('TR\u1EA2 G\u00D3P') && !_0x6bda3d.includes('%'))
-            _0x265d8e.dt_tragop = _0x3c43dd;
-        else if (_0x6bda3d.includes('%') && (_0x6bda3d.includes('TR\u1EA2 G\u00D3P') || _0x6bda3d.includes('TRA GOP') || _0x6bda3d.includes('TR\u1EA2 CH\u1EACM') || _0x6bda3d.includes('TRA CHAM') || _0x6bda3d.includes('T\u1EF6 TR\u1ECCNG'))) {
-            _0x265d8e.pct_tragop = _0x3c43dd;
-        } }); if (_0x265d8e.pct_tragop === -1 && _0x150abb.length > 0)
-            _0x265d8e.pct_tragop = _0x150abb.length - 1; const _0x272e07 = __body94.querySelectorAll('tbody tr:not(.ant-table-measure-row)'); console.log('[Auto BI] \uD83D\uDC64 B\u1EAFt \u0111\u1EA7u qu\u00E9t doanh thu c\u1EE7a ' + _0x272e07.length + ' nh\u00E2n vi\u00EAn...'); _0x272e07.forEach(_0x469413 => { const _0x17520b = _0x469413.querySelectorAll('td'); if (_0x17520b.length < 5)
-            return; const _0x1a5233 = (_0x17520b[0].getAttribute('title') || _0x17520b[0].innerText || _0x17520b[0].textContent || '').trim(); const _0x31253c = AuthService.extractUserId(_0x1a5233); if (!_0x31253c)
-            return; const _0x547431 = _0x265d8e.dtqd !== -1 && _0x17520b[_0x265d8e.dtqd] ? UTILS.parseNumber(_0x17520b[_0x265d8e.dtqd].innerText) : 0; const _0xc830e4 = _0x265d8e.dt_thuc !== -1 && _0x17520b[_0x265d8e.dt_thuc] ? UTILS.parseNumber(_0x17520b[_0x265d8e.dt_thuc].innerText) : 0; const _0x37db9a = _0x265d8e.dt_tragop !== -1 && _0x17520b[_0x265d8e.dt_tragop] ? UTILS.parseNumber(_0x17520b[_0x265d8e.dt_tragop].innerText) : 0; const _0x454695 = _0x265d8e.pct_tragop !== -1 && _0x17520b[_0x265d8e.pct_tragop] ? parseFloat((_0x17520b[_0x265d8e.pct_tragop].innerText || _0x17520b[_0x265d8e.pct_tragop].textContent || '').replace('%', '').trim()) || 0 : 0; const _0x4b3e24 = _0xc830e4 > 0 ? (_0x547431 - _0xc830e4) / _0xc830e4 * 100 : 0; const _0x4d629e = _0x4b9538.find(_0x111fcb => { const _0x173d26 = AuthService.extractUserId(_0x111fcb.name); return _0x173d26 && _0x173d26 === _0x31253c; }); if (_0x4d629e) {
-            const _0x51f31c = 'shop' + (_0x4d629e.shopIdx || 1);
-            if (!_0x172809[_0x51f31c])
-                _0x172809[_0x51f31c] = {};
-            if (!_0x33f4af[_0x51f31c])
-                _0x33f4af[_0x51f31c] = {};
-            _0x172809[_0x51f31c][_0x4d629e.name] = { dtqd: _0x547431, dtlk: _0xc830e4, hqqd: _0x4b3e24 };
-            _0x33f4af[_0x51f31c][_0x4d629e.name] = { tg: _0x454695, dt_sieu_thi: _0xc830e4, dt_tragop: _0x37db9a };
-        } }); return { staffRevMap: _0x172809, staffInstMap: _0x33f4af }; }, scrapeHealthCategoriesDMX: _0x13598f => {
-            (async () => {
-                const txt = el => (el?.getAttribute?.('title') || el?.innerText || el?.textContent || '').trim();
-                const slug = value => UTILS.toUltraSlug(value || '');
-                UI.showToast('\uD83D\uDCE6 Ng\u00E0nh h\u00E0ng BI: m\u1EDF tab v\u00E0 bung nh\u00F3m ', 3000);
-                const table = await window.__AutoBIHealth74Only.prepareForRead();
-                const dynamicTree = window.__AutoBIHealthTree75.parse(table, UTILS.parseNumber);
-                const headers = Array.from(table.querySelectorAll('thead th'));
-                const cols = {
-                    sl: 1,
-                    qd: 2,
-                    growth: -1,
-                    tg: -1
-                };
-                headers.forEach((h, i) => {
-                    const v = slug(txt(h));
-                    if (v.includes('soluong'))
-                        cols.sl = i;
-                    else if (v.includes('doanhthuqd') || v.includes('dtqd'))
-                        cols.qd = i;
-                    else if (v.includes('tangtruong') || v === 'tt' || v.includes('pcttt'))
-                        cols.growth = i;
-                    else if (v.includes('tytrongtragop') || v.includes('pcttragop'))
-                        cols.tg = i;
-                });
-                const names = ['Smartphone', 'Apple', 'Android', 'Samsung', 'OPPO', 'Xiaomi', 'Vivo', 'Realme', 'Laptop', 'Tablet', 'Ph\u1EE5 ki\u1EC7n', 'Pin s\u1EA1c d\u1EF1 ph\u00F2ng', 'Camera', 'Tai nghe', '\u0110\u00E8n n\u0103ng l\u01B0\u1EE3ng m\u1EB7t tr\u1EDDi', 'SIM', 'VAS', 'Wearable', '\u0110\u1ED3ng h\u1ED3 th\u1EDDi trang', '\u0110i\u1EC7n t\u1EED', 'Tivi', 'Loa Karaoke', 'D\u00E0n m\u00E1y', '\u0110i\u1EC7n l\u1EA1nh', 'T\u1EE7 l\u1EA1nh', 'T\u1EE7 \u0111\u00F4ng', 'T\u1EE7 m\u00E1t', 'M\u00E1y gi\u1EB7t', 'M\u00E1y s\u1EA5y', 'M\u00E1y l\u1EA1nh', 'M\u00E1y r\u1EEDa ch\u00E9n', 'M\u00E1y n\u01B0\u1EDBc n\u00F3ng', '\u0110i\u1EC7n gia d\u1EE5ng', 'Qu\u1EA1t gi\u00F3', 'N\u1ED3i c\u01A1m', 'B\u1EBFp Gas', 'B\u1EBFp \u0111i\u1EC7n', 'N\u1ED3i chi\u00EAn', 'M\u00E1y l\u1ECDc n\u01B0\u1EDBc', 'Qu\u1EA1t \u0111i\u1EC1u h\u00F2a', 'H\u00FAt b\u1EE5i Robot'];
-                const out = {};
-                names.forEach(n => out[n] = {
-                    sl: 0,
-                    dtqd: 0,
-                    growth: 0,
-                    tg_ratio: 0
-                });
-                const rows = Array.from(table.querySelectorAll('tbody tr:not(.ant-table-measure-row)'));
-                const parsed = [];
-                for (const tr of rows) {
-                    const td = tr.querySelectorAll('td');
-                    if (td.length < 4)
-                        continue;
-                    const raw = txt(td[0]);
-                    const m = raw.match(/^(-?[0-9]+)\s*-\s*(.*)$/);
-                    const code = m ? m[1] : '';
-                    const label = (m ? m[2] : raw).trim();
-                    parsed.push({
-                        code,
-                        label,
-                        key: tr.getAttribute('data-row-key') || '',
-                        sl: UTILS.parseNumber(txt(td[cols.sl])),
-                        dtqd: UTILS.parseNumber(txt(td[cols.qd])),
-                        growth: cols.growth >= 0 ? parseFloat(txt(td[cols.growth]).replace('%', '').replace('+', '')) || 0 : 0,
-                        tg_ratio: cols.tg >= 0 ? parseFloat(txt(td[cols.tg]).replace('%', '')) || 0 : 0
-                    });
-                }
-                const assign = (target, row) => {
-                    if (row)
-                        out[target] = {
-                            sl: row.sl,
-                            dtqd: row.dtqd,
-                            growth: row.growth,
-                            tg_ratio: row.tg_ratio
-                        };
-                };
-                const byCode = c => parsed.find(r => r.key === 'p-' + c) || parsed.find(r => r.code === c && !r.key.startsWith('cp-'));
-                const exact = (...labels) => parsed.find(r => labels.map(slug).includes(slug(r.label)));
-                const starts = (...labels) => parsed.find(r => labels.map(slug).some(p => slug(r.label).startsWith(p)));
-                const contains = (...parts) => parsed.find(r => parts.map(slug).some(p => slug(r.label).includes(p)));
-                const smartphone = byCode('1491') || exact('Smartphone');
-                assign('Smartphone', smartphone);
-                assign('Android', smartphone);
-                assign('Apple', exact('Apple', 'iPhone', 'Apple iPhone') || starts('Apple iPhone', 'iPhone'));
-                assign('Samsung', starts('Samsung'));
-                assign('OPPO', starts('OPPO'));
-                assign('Xiaomi', starts('Xiaomi'));
-                assign('Vivo', starts('Vivo'));
-                assign('Realme', starts('Realme'));
-                assign('Laptop', byCode('22') || starts('Laptop'));
-                assign('Tablet', starts('Tablet', 'M\u00E1y t\u00EDnh b\u1EA3ng'));
-                assign('Ph\u1EE5 ki\u1EC7n', byCode('16') || exact('Ph\u1EE5 ki\u1EC7n ti\u1EC7n \u00EDch'));
-                assign('Pin s\u1EA1c d\u1EF1 ph\u00F2ng', starts('Pin s\u1EA1c d\u1EF1 ph\u00F2ng'));
-                assign('Camera', starts('Camera'));
-                assign('Tai nghe', starts('Tai nghe'));
-                assign('\u0110\u00E8n n\u0103ng l\u01B0\u1EE3ng m\u1EB7t tr\u1EDDi', starts('\u0110\u00E8n n\u0103ng l\u01B0\u1EE3ng m\u1EB7t tr\u1EDDi'));
-                assign('SIM', byCode('664') || exact('Sim Online', 'SIM'));
-                assign('VAS', byCode('1994') || exact('VAS', 'D\u1ECBch v\u1EE5 b\u1EA3o h\u00E0nh, b\u1EA3o d\u01B0\u1EE1ng \u0110i\u1EC7n m\u00E1y xanh'));
-                assign('Wearable', byCode('23') || exact('Wearable'));
-                assign('\u0110\u1ED3ng h\u1ED3 th\u1EDDi trang', byCode('1274') || exact('\u0110\u1ED3ng h\u1ED3 th\u1EDDi trang'));
-                assign('\u0110i\u1EC7n t\u1EED', byCode('304') || exact('\u0110i\u1EC7n t\u1EED'));
-                assign('Tivi', byCode('1094') || starts('Tivi LED', 'Tivi'));
-                assign('Loa Karaoke', starts('Loa Karaoke', 'Loa k\u00E9o'));
-                assign('D\u00E0n m\u00E1y', starts('D\u00E0n m\u00E1y'));
-                assign('\u0110i\u1EC7n l\u1EA1nh', byCode('1755') || exact('T\u1EE7 l\u1EA1nh, \u0111\u00F4ng, m\u00E1t', '\u0110i\u1EC7n l\u1EA1nh'));
-                assign('T\u1EE7 l\u1EA1nh', starts('T\u1EE7 l\u1EA1nh'));
-                assign('T\u1EE7 \u0111\u00F4ng', starts('T\u1EE7 \u0111\u00F4ng'));
-                assign('T\u1EE7 m\u00E1t', starts('T\u1EE7 m\u00E1t'));
-                assign('M\u00E1y gi\u1EB7t', byCode('1099') || starts('M\u00E1y gi\u1EB7t'));
-                assign('M\u00E1y s\u1EA5y', starts('M\u00E1y s\u1EA5y'));
-                assign('M\u00E1y l\u1EA1nh', starts('M\u00E1y l\u1EA1nh'));
-                assign('M\u00E1y r\u1EEDa ch\u00E9n', starts('M\u00E1y r\u1EEDa ch\u00E9n'));
-                assign('M\u00E1y n\u01B0\u1EDBc n\u00F3ng', starts('M\u00E1y n\u01B0\u1EDBc n\u00F3ng'));
-                assign('\u0110i\u1EC7n gia d\u1EE5ng', byCode('484') || exact('\u0110i\u1EC7n gia d\u1EE5ng'));
-                assign('Qu\u1EA1t gi\u00F3', starts('Qu\u1EA1t gi\u00F3'));
-                assign('N\u1ED3i c\u01A1m', starts('N\u1ED3i c\u01A1m'));
-                assign('B\u1EBFp Gas', starts('B\u1EBFp Gas', 'B\u1EBFp ga'));
-                assign('B\u1EBFp \u0111i\u1EC7n', starts('B\u1EBFp \u0111i\u1EC7n'));
-                assign('N\u1ED3i chi\u00EAn', starts('N\u1ED3i chi\u00EAn'));
-                assign('M\u00E1y l\u1ECDc n\u01B0\u1EDBc', byCode('1116') || starts('M\u00E1y l\u1ECDc n\u01B0\u1EDBc'));
-                assign('Qu\u1EA1t \u0111i\u1EC1u h\u00F2a', starts('Qu\u1EA1t \u0111i\u1EC1u h\u00F2a'));
-                assign('H\u00FAt b\u1EE5i Robot', starts('H\u00FAt b\u1EE5i Robot', 'Robot h\u00FAt b\u1EE5i'));
-                out.__autobiHealthTree75 = dynamicTree;
-                const healthAnchors = ['1491', '22', '16', '664', '304', '1094', '1755', '1099', '484', '1116'];
-                Object.defineProperty(out, '__autobiHealthMeta', {
-                    value: {
-                        parsedRows: dynamicTree.parsedRows,
-                        matchedAnchors: healthAnchors.filter((c, i) => !!byCode(c) || !!exact(['Smartphone', 'Laptop', 'Ph\u1EE5 ki\u1EC7n ti\u1EC7n \u00EDch', 'SIM', '\u0110i\u1EC7n t\u1EED', 'Tivi', '\u0110i\u1EC7n l\u1EA1nh', 'M\u00E1y gi\u1EB7t', '\u0110i\u1EC7n gia d\u1EE5ng', 'M\u00E1y l\u1ECDc n\u01B0\u1EDBc'][i])).length
-                    },
-                    enumerable: true,
-                    configurable: true
-                });
-                console.table(parsed.map(r => ({
-                    ma: r.code,
-                    nhom: r.label,
-                    sl: r.sl,
-                    dtqd: r.dtqd
-                })));
-                console.info('[AutoBI 42] D\u1EEF li\u1EC7u nh\u00F3m \u0111\u00E3 \u0111\u1ED1i chi\u1EBFu theo m\u00E3/t\u00EAn ch\u00EDnh x\u00E1c', out);
-                window.__AutoBIHealth74Only.verify();
-                if (_0x13598f)
-                    _0x13598f(out);
-            })().catch(e => {
-                console.error('[AutoBI 42]', e);
-                UI.showToast('\u274C L\u1ED7i qu\u00E9t nh\u00F3m h\u00E0ng: ' + e.message, 10000);
-                if (_0x13598f)
-                    _0x13598f({});
-            });
-        }, runRevenueSequenceDMX: (_0x520b2a, _0x22c964) => { UI.showToast('\uD83D\uDE80 [1/6] \u0110ang b\u1EAFt \u0111\u1EA7u qu\u00E9t ...'); const _0x8c5048 = () => { const _0x243fba = Array.from(document.querySelectorAll('span, div')); const _0x352e20 = _0x243fba.find(_0x3b324b => { const _0x8d7f3 = (_0x3b324b.textContent || _0x3b324b.innerText || '').trim().toUpperCase(); return _0x8d7f3.includes('TLPVTC') || _0x8d7f3.includes('TLPVTC l\u0169y k\u1EBF'); }); if (_0x352e20) {
-            const _0x37ae39 = _0x352e20.closest('.flex-col, .rounded-xl, div[class*="rounded"]');
-            if (_0x37ae39) {
-                const _0x4aaddd = _0x37ae39.querySelector('.tabular-nums, div.text-lg, div[class*="text-lg"]');
-                if (_0x4aaddd) {
-                    const _0x547535 = (_0x4aaddd.textContent || _0x4aaddd.innerText || '').replace('%', '').trim();
-                    const _0x516d20 = parseFloat(_0x547535);
-                    if (!isNaN(_0x516d20))
-                        return _0x516d20;
-                }
-            }
-        } const _0x2842aa = document.querySelector('.lucide-user-check'); if (_0x2842aa) {
-            const _0x2a1ee8 = _0x2842aa.closest('.flex-col, .rounded-xl, div[class*="rounded"]');
-            if (_0x2a1ee8) {
-                const _0x3fac5e = Array.from(_0x2a1ee8.querySelectorAll('div, span'));
-                for (let _0x1748a7 of _0x3fac5e) {
-                    const _0x5a634f = (_0x1748a7.textContent || _0x1748a7.innerText || '').trim();
-                    if (_0x5a634f.endsWith('%') && !_0x5a634f.includes('+') && !_0x5a634f.includes('-')) {
-                        const _0x4adb65 = parseFloat(_0x5a634f.replace('%', ''));
-                        if (!isNaN(_0x4adb65))
-                            return _0x4adb65;
-                    }
-                }
-            }
-        } return 0; }; DATA.runFilterAllSequenceDMX(() => { DATA.ensureRevenueOptionsDMX(() => { const _0x264d58 = _0x50a5ae => { const _0x1bec4c = Array.from(document.querySelectorAll('button')); const _0xe2c831 = _0x1bec4c.find(_0xeafd4b => (_0xeafd4b.textContent || _0xeafd4b.innerText || '').trim().toLowerCase() === _0x50a5ae.toLowerCase()); if (_0xe2c831) {
-            _0xe2c831.click();
-            return true;
-        } return false; }; UI.showToast('\u26A1 [2/6] \u0110ang qu\u00E9t Doanh thu realtime ...', 3000); _0x264d58('Realtime'); setTimeout(() => { const _0x432c65 = DATA.scrapeRevenueTableDMX(_0x520b2a, true); let _0x278c03 = GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {}; _0x278c03.link1 = JSON.parse(JSON.stringify(_0x432c65)); GM_setValue(CONSTANTS.KEYS.DATA_CACHE, _0x278c03); console.log('%c[Auto BI] \uD83D\uDFE2 C\u00C0O XONG DOANH THU REALTIME (link1):', 'color:green;font-weight:bold;', _0x432c65); UI.showToast('\uD83D\uDCCA [3/6] \u0110ang qu\u00E9t Doanh thu l\u0169y k\u1EBF ...', 3000); _0x264d58('L\u0169y k\u1EBF'); setTimeout(() => { const _0x2325ae = DATA.scrapeRevenueTableDMX(_0x520b2a, false); const _0x5ee2c6 = _0x8c5048(); console.log('%c[Auto BI] \uD83C\uDFAF B\u00D3C T\u00C1CH TLPVTC L\u0168Y K\u1EBE TH\u00C0NH C\u00D4NG: ' + _0x5ee2c6 + '%', 'color:#d63031; font-weight:bold; font-size:13px;'); if (_0x2325ae.total)
-            _0x2325ae.total.tlpvtc = _0x5ee2c6; ['shop1', 'shop2', 'shop3', 'shop4', 'shop5'].forEach(_0x46fed5 => { if (_0x2325ae[_0x46fed5])
-            _0x2325ae[_0x46fed5].tlpvtc = _0x5ee2c6; }); let _0x4d0c4d = GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {}; _0x4d0c4d.link2 = JSON.parse(JSON.stringify(_0x2325ae)); GM_setValue(CONSTANTS.KEYS.DATA_CACHE, _0x4d0c4d); console.log('%c[Auto BI] \uD83D\uDD35 C\u00C0O XONG DOANH THU L\u0168Y K\u1EBE (link2):', 'color:blue;font-weight:bold;', _0x2325ae); if (window.__AutoBIFastRealtime43 && window.__AutoBIFastRealtime43.enabled()) {
-            window.__AutoBIFastRealtime43.finishRevenue(_0x520b2a, _0x22c964, UI);
-            return;
-        } UI.showToast('\uD83D\uDC64 [4/6] \u0110ang m\u1EDF danh s\u00E1ch nh\u00E2n vi\u00EAn ...', 3000); const _0x4bd334 = Array.from(document.querySelectorAll('button')); const _0xd79200 = _0x4bd334.find(_0x4eb054 => _0x4eb054.textContent.includes('Nh\u00E2n vi\u00EAn') || _0x4eb054.querySelector('.lucide-users') !== null); if (_0xd79200)
-            _0xd79200.click(); setTimeout(() => { UI.showToast('\uD83D\uDCE5 [5/6] \u0110ang b\u00F3c t\u00E1ch Doanh thu & Tr\u1EA3 g\u00F3p t\u1EEBng nh\u00E2n vi\u00EAn...', 3000); const { staffRevMap: _0x50dc96, staffInstMap: _0x2fde1a } = DATA.scrapeStaffRevenueTableDMX(_0x520b2a); let _0x1392d3 = GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {}; if (!_0x1392d3.link6)
-            _0x1392d3.link6 = {}; if (!_0x1392d3.link7)
-            _0x1392d3.link7 = {}; for (let _0x4084e2 in _0x50dc96) {
-            if (!_0x1392d3.link6[_0x4084e2])
-                _0x1392d3.link6[_0x4084e2] = { revenue: {}, competition: {}, crossSell: {} };
-            _0x1392d3.link6[_0x4084e2].revenue = _0x50dc96[_0x4084e2];
-            _0x1392d3.link7[_0x4084e2] = _0x2fde1a[_0x4084e2];
-        } GM_setValue(CONSTANTS.KEYS.DATA_CACHE, _0x1392d3); DATA.scrapeHealthCategoriesDMX(_0xd38a05 => { let _0x511ec9 = GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {}; if (!_0x511ec9.link8_health)
-            _0x511ec9.link8_health = {}; _0x511ec9.link8_health.total = _0xd38a05; GM_setValue(CONSTANTS.KEYS.DATA_CACHE, _0x511ec9); window.__AutoBIHealthPerShop.scan(_0x520b2a, DATA.scrapeHealthCategoriesDMX, (_0xmsg, _0xms) => UI.showToast(_0xmsg, _0xms), () => { UI.showToast('\uD83C\uDF89 Ho\u00E0n t\u1EA5t S\u1EE9c kh\u1ECFe ST t\u1EEBng si\u00EAu th\u1ECB!', 4000); if (_0x22c964)
-            _0x22c964(); }); }); }, 2500); }, 2500); }, 2500); }); }); }, autoSelectFilterDMX: (label, done) => { window.__AutoBIFilterGuard75.selectAll(label).then(() => done?.(true)).catch(window.__AutoBILoadingGuard75.stop); }, selectMonthDMX: (_0x3f1dc7, _0xcb1305) => { if (!_0x3f1dc7 || _0x3f1dc7 === 'current') {
-            if (_0xcb1305)
-                _0xcb1305();
-            return;
-        } const [_0x4f4ff2, _0x31cc2e] = _0x3f1dc7.split('/'); UI.showToast('\uD83D\uDCC5 \u0110ang ch\u1ECDn th\u00E1ng: ' + _0x3f1dc7 + '...'); const _0x4286ff = document.querySelector('.ant-picker input[placeholder*="th\u00E1ng"], .ant-picker input'); if (!_0x4286ff) {
-            console.warn('[Auto BI] \u26A0\uFE0F Kh\u00F4ng t\u00ECm th\u1EA5y \u00F4 DatePicker ch\u1ECDn th\u00E1ng!');
-            if (_0xcb1305)
-                _0xcb1305();
-            return;
-        } if (_0x4286ff.value && _0x4286ff.value.trim() === _0x3f1dc7) {
-            console.log('[Auto BI] \u2705 \u0110\u00E3 \u1EDF s\u1EB5n th\u00E1ng ' + _0x3f1dc7);
-            if (_0xcb1305)
-                _0xcb1305();
-            return;
-        } _0x4286ff.click(); setTimeout(() => { const _0x4c4192 = () => { const _0x3cab41 = document.querySelector('.ant-picker-year-btn'); const _0x1a32a0 = _0x3cab41 ? parseInt(_0x3cab41.innerText.trim()) : parseInt(_0x31cc2e); const _0x5279c5 = parseInt(_0x31cc2e); if (_0x1a32a0 < _0x5279c5) {
-            const _0x4fc5a4 = document.querySelector('.ant-picker-header-super-next-btn');
-            if (_0x4fc5a4) {
-                _0x4fc5a4.click();
-                setTimeout(_0x4c4192, 300);
-                return;
-            }
-        }
-        else if (_0x1a32a0 > _0x5279c5) {
-            const _0x54ba0b = document.querySelector('.ant-picker-header-super-prev-btn');
-            if (_0x54ba0b) {
-                _0x54ba0b.click();
-                setTimeout(_0x4c4192, 300);
-                return;
-            }
-        } const _0x26fd4d = _0x31cc2e + '-' + _0x4f4ff2.padStart(2, '0'); const _0x12ce0d = document.querySelector('td[title="' + _0x26fd4d + '"] div, td[title="' + _0x26fd4d + '"]'); if (_0x12ce0d) {
-            _0x12ce0d.click();
-            console.log('[Auto BI] \u2705 \u0110\u00E3 ch\u1ECDn th\u00E0nh c\u00F4ng th\u00E1ng: ' + _0x3f1dc7);
-        }
-        else {
-            const _0x1e4556 = Array.from(document.querySelectorAll('.ant-picker-month-panel td'));
-            const _0x192d9b = parseInt(_0x4f4ff2);
-            const _0xc52b4b = _0x1e4556.find(_0x48a4f8 => _0x48a4f8.innerText.includes('Th ' + (_0x192d9b < 10 ? '0' + _0x192d9b : _0x192d9b)));
-            if (_0xc52b4b)
-                _0xc52b4b.click();
-        } setTimeout(() => { if (_0xcb1305)
-            _0xcb1305(); }, 1500); }; _0x4c4192(); }, 500); }, runFilterAllSequenceDMX: done => { (async () => { const month = GM_getValue('tgdd_custom_report_month', 'current'); if (month && month !== 'current')
-            await window.__AutoBILoadingGuard75.callbackTask(cb => DATA.selectMonthDMX(month, cb), 'Th\u00E1ng b\u00E1o c\u00E1o'); for (const label of ['Mi\u1EC1n', 'V\u00F9ng', 'Khu v\u1EF1c', 'Si\u00EAu th\u1ECB'])
-            await window.__AutoBIFilterGuard75.selectAll(label); const button = await window.__AutoBILoadingGuard75.wait('N\u00FAt T\u1EA3i l\u1EA1i', () => window.__AutoBILoadingGuard75.all('button').find(b => window.__AutoBILoadingGuard75.norm(window.__AutoBILoadingGuard75.text(b)) === 'tai lai')); const ticket = window.__AutoBILoadingGuard75.arm(); try {
-            button.click();
-            await window.__AutoBILoadingGuard75.tableReady('B\u1EA3ng sau b\u1ED9 l\u1ECDc', { ticket, freshAfterMs: 8000 });
-        }
-        finally {
-            ticket.close();
-        } done?.(); })().catch(window.__AutoBILoadingGuard75.stop); }, matchGroupConfigName: (_0x84dcaf, _0xac25f4) => { const _0x56d486 = UTILS.toUltraSlug(_0x84dcaf); for (let _0x5b27e6 of _0xac25f4) {
+        } },         matchGroupConfigName: (_0x84dcaf, _0xac25f4) => { const _0x56d486 = UTILS.toUltraSlug(_0x84dcaf); for (let _0x5b27e6 of _0xac25f4) {
             if (UTILS.toUltraSlug(_0x5b27e6.short) === _0x56d486 || UTILS.toUltraSlug(_0x5b27e6.full) === _0x56d486)
                 return _0x5b27e6;
         } for (let _0x1b66f3 of _0xac25f4) {
@@ -4466,304 +2022,7 @@ window.__AutoBIRun67 = (function () {
                     _0x1e7fd = 'shop' + _0x460f9d;
                 }
             }
-        } return _0x1e7fd; }, scrapeThiDuaTablesDMX: (_0x2b493c, _0x20820f, _0x371a77) => { let _0x1c22ad = {}; const _0x12654c = document.querySelectorAll('.report-table table, .ant-table-content table'); const _0x33176e = (_0x42c2b2, _0x45a05e) => { if (_0x42c2b2 <= 0 || isNaN(_0x42c2b2))
-            return 0; return _0x45a05e ? UTILS.roundCustom(_0x42c2b2 * 1000, -2) : _0x42c2b2 > 0 && _0x42c2b2 < 1 ? 1 : _0x42c2b2; }; _0x12654c.forEach(_0x4a0a19 => { const _0x18e5b3 = _0x4a0a19.querySelector('thead tr th:first-child'); const _0x1c3ca0 = _0x4a0a19.querySelector('thead tr th:nth-child(2)'); if (!_0x18e5b3)
-            return; const _0x9186d9 = _0x18e5b3.getAttribute('title') || _0x18e5b3.innerText.trim(); const _0x329d57 = _0x1c3ca0 ? (_0x1c3ca0.getAttribute('title') || _0x1c3ca0.innerText.trim()).toUpperCase() : ''; const _0x5b2e69 = _0x9186d9.replace(/^\d+\s*-\s*/, '').trim(); const _0x5eccd9 = DATA.matchGroupConfigName(_0x5b2e69, _0x2b493c); const _0x34f5f5 = _0x5eccd9 ? _0x5eccd9.short : _0x5b2e69; const _0x55d7e8 = _0x329d57.includes('DOANH THU') || _0x5eccd9 && (_0x5eccd9.type.includes('doanhthu') || _0x5eccd9.type.includes('ti\u1EC1n')); let _0x1de1e9 = { total: { t: 0, r: 0, p: 0, pd: 0 }, shop1: { t: 0, r: 0, p: 0, pd: 0 }, shop2: { t: 0, r: 0, p: 0, pd: 0 }, shop3: { t: 0, r: 0, p: 0, pd: 0 }, shop4: { t: 0, r: 0, p: 0, pd: 0 }, shop5: { t: 0, r: 0, p: 0, pd: 0 } }; const _0x398998 = _0x4a0a19.querySelectorAll('tbody tr'); _0x398998.forEach(_0x32264e => { if (_0x32264e.classList.contains('ant-table-measure-row'))
-            return; const _0xb46f97 = _0x32264e.querySelectorAll('td'); if (_0xb46f97.length < 5)
-            return; const _0x30a316 = (_0xb46f97[0].getAttribute('title') || _0xb46f97[0].innerText).trim(); const _0x19002e = _0x32264e.getAttribute('data-row-key') || ''; const _0x14fa84 = UTILS.toUltraSlug(_0x30a316); const _0x5dd870 = UTILS.parseNumber(_0xb46f97[1].innerText); const _0x42cc35 = UTILS.parseNumber(_0xb46f97[2].innerText); const _0x2510f4 = parseFloat(_0xb46f97[3].innerText.replace('%', '').trim()) || 0; const _0x284459 = parseFloat(_0xb46f97[4].innerText.replace('%', '').trim()) || 0; const _0x540265 = { t: _0x33176e(_0x42cc35, _0x55d7e8), r: _0x33176e(_0x5dd870, _0x55d7e8), p: _0x2510f4, pd: _0x284459 }; if (_0x14fa84 === 'tong' || _0x32264e.classList.contains('grid-total-row') || _0x19002e.includes('__total__')) {
-            _0x1de1e9.total = _0x540265;
-        }
-        else {
-            const _0x291cef = DATA.identifyShopFromRowData(_0x30a316, _0x19002e, _0x20820f);
-            if (_0x291cef)
-                _0x1de1e9[_0x291cef] = _0x540265;
-        } }); _0x1c22ad[_0x34f5f5] = _0x1de1e9; }); return _0x1c22ad; }, scrapeStaffThiDuaTablesDMX: (_0x3a4a98, _0x48ffbc, _0x453a27) => { let _0x35d01a = {}; const _0x512b1c = _0x453a27.staffList || []; const _0x5285c6 = _0x3a4a98.replace('shop', ''); const _0x5dcaed = _0x512b1c.filter(_0xd0a3a7 => String(_0xd0a3a7.shopIdx) === String(_0x5285c6)); const _0x280d02 = document.querySelectorAll('.report-table table, .ant-table-content table'); console.log('[Auto BI] \uD83D\uDC64 B\u1EAFt \u0111\u1EA7u c\u00E0o nh\u00E2n vi\u00EAn [' + _0x3a4a98 + '] qua ' + _0x280d02.length + ' b\u1EA3ng...'); const _0x524b10 = (_0x114ed0, _0x1c596f) => { if (_0x114ed0 <= 0 || isNaN(_0x114ed0))
-            return 0; return _0x1c596f ? UTILS.roundCustom(_0x114ed0 * 1000, -2) : _0x114ed0 > 0 && _0x114ed0 < 1 ? 1 : _0x114ed0; }; _0x280d02.forEach(_0x348d1c => { const _0x50548c = _0x348d1c.querySelector('thead tr th:first-child'); const _0x4014ec = _0x348d1c.querySelector('thead tr th:nth-child(2)'); if (!_0x50548c)
-            return; const _0x121b1e = _0x50548c.getAttribute('title') || _0x50548c.innerText.trim(); const _0x3bceb8 = _0x4014ec ? (_0x4014ec.getAttribute('title') || _0x4014ec.innerText.trim()).toUpperCase() : ''; const _0x4ebfb0 = _0x121b1e.replace(/^\d+\s*-\s*/, '').trim(); const _0x55ab6e = DATA.matchGroupConfigName(_0x4ebfb0, _0x48ffbc); const _0x259f7a = _0x55ab6e ? _0x55ab6e.short : _0x4ebfb0; const _0x1d8efc = _0x3bceb8.includes('DOANH THU') || _0x55ab6e && (_0x55ab6e.type.includes('doanhthu') || _0x55ab6e.type.includes('ti\u1EC1n')); const _0xc19dcc = _0x348d1c.querySelectorAll('tbody tr'); _0xc19dcc.forEach(_0x3d0a3c => { if (_0x3d0a3c.classList.contains('ant-table-measure-row') || _0x3d0a3c.classList.contains('grid-total-row'))
-            return; const _0x1c9c8f = _0x3d0a3c.querySelectorAll('td'); if (_0x1c9c8f.length < 2)
-            return; const _0x6b5e33 = (_0x1c9c8f[0].getAttribute('title') || _0x1c9c8f[0].innerText).trim(); const _0x770744 = AuthService.extractUserId(_0x6b5e33); const _0x2089cc = _0x524b10(UTILS.parseNumber(_0x1c9c8f[1].innerText), _0x1d8efc); const _0x3b670d = _0x5dcaed.find(_0x4a900c => { const _0x346d48 = AuthService.extractUserId(_0x4a900c.name); return _0x346d48 && _0x770744 && _0x346d48 === _0x770744; }); if (_0x3b670d) {
-            if (!_0x35d01a[_0x3b670d.name]) {
-                _0x35d01a[_0x3b670d.name] = {};
-            }
-            if (!_0x35d01a[_0x3b670d.name][_0x259f7a]) {
-                _0x35d01a[_0x3b670d.name][_0x259f7a] = 0;
-            }
-            _0x35d01a[_0x3b670d.name][_0x259f7a] += _0x2089cc;
-            if (_0x1d8efc) {
-                _0x35d01a[_0x3b670d.name][_0x259f7a] = UTILS.roundCustom(_0x35d01a[_0x3b670d.name][_0x259f7a], -2);
-            }
-        } }); }); return _0x35d01a; }, runThiDuaSequenceDMX: (_0x436100, _0x4ad8e0, _0x2941fb) => {
-            window.__AutoBILog5.stage('Thi \u0111ua', 'T\u1ED5ng c\u1EE5m', '\u0110ang \u0111\u1ED3ng b\u1ED9 b\u1ED9 l\u1ECDc');
-            console.log('%c\uD83D\uDE80 B\u1EAET \u0110\u1EA6U QUY TR\u00CCNH THI \u0110UA 2 C\u1EA4P \u0110\u1ED8 HO\u00C0N CH\u1EC8NH', 'color:#007bff; font-weight:bold; font-size:14px;');
-            const _0x5de3f3 = _0x10e63b => { const _0x2ecf2f = Array.from(document.querySelectorAll('button')); const _0x15575f = _0x2ecf2f.find(_0x22444e => (_0x22444e.textContent || _0x22444e.innerText || '').trim().toLowerCase() === _0x10e63b.toLowerCase()); if (_0x15575f) {
-                _0x15575f.click();
-                return true;
-            } return false; };
-            DATA.runFilterAllSequenceDMX(() => {
-                window.__AutoBILog5.stage('Thi \u0111ua Realtime', 'T\u1ED5ng c\u1EE5m', '\u0110ang ch\u1EDD b\u1EA3ng Realtime');
-                UI.showToast('\u26A1 [1/4] \u0110ang qu\u00E9t s\u1ED1 li\u1EC7u Thi \u0111ua REALTIME...', 3000);
-                _0x5de3f3('Realtime');
-                window.__AutoBIStableWait(() => {
-                    let _0x193e06 = DATA.scrapeThiDuaTablesDMX(_0x436100, _0x4ad8e0, true);
-                    let _0x1ddfeb = GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {};
-                    _0x1ddfeb.link3_smart = JSON.parse(JSON.stringify(_0x193e06));
-                    GM_setValue(CONSTANTS.KEYS.DATA_CACHE, _0x1ddfeb);
-                    window.__AutoBILog5.ok('Thi \u0111ua Realtime \u0111\u00E3 \u0111\u1ECDc v\u00E0 l\u01B0u');
-                    window.__AutoBILog5.stage('Thi \u0111ua L\u0169y k\u1EBF', 'T\u1ED5ng c\u1EE5m', '\u0110ang ch\u1EDD b\u1EA3ng L\u0169y k\u1EBF');
-                    UI.showToast('\uD83D\uDCCA [2/4] \u0110ang qu\u00E9t s\u1ED1 li\u1EC7u Thi \u0111ua L\u0168Y K\u1EBE...', 3000);
-                    _0x5de3f3('L\u0169y k\u1EBF');
-                    window.__AutoBIStableWait(() => {
-                        let _0x20c50a = DATA.scrapeThiDuaTablesDMX(_0x436100, _0x4ad8e0, false);
-                        let _0x1b8bce = GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {};
-                        _0x1b8bce.link4_smart = JSON.parse(JSON.stringify(_0x20c50a));
-                        if (!_0x1b8bce.link6)
-                            _0x1b8bce.link6 = {};
-                        GM_setValue(CONSTANTS.KEYS.DATA_CACHE, _0x1b8bce);
-                        window.__AutoBILog5.ok('Thi \u0111ua L\u0169y k\u1EBF \u0111\u00E3 \u0111\u1ECDc v\u00E0 l\u01B0u');
-                        if (window.__AutoBIFastRealtime43 && window.__AutoBIFastRealtime43.finishCompetition(_0x2941fb, UI))
-                            return;
-                        const _0x24b0e6 = [];
-                        for (let _0x20e9db = 1; _0x20e9db <= 5; _0x20e9db++) {
-                            if (_0x4ad8e0['shop' + _0x20e9db]) {
-                                _0x24b0e6.push({ key: 'shop' + _0x20e9db, idx: _0x20e9db, fullName: _0x4ad8e0['shop' + _0x20e9db].trim(), shortName: _0x4ad8e0['shop' + _0x20e9db + 'Short'] || _0x4ad8e0['shop' + _0x20e9db] });
-                            }
-                        }
-                        let _0x12f730 = 0;
-                        const _0x56e6ba = () => {
-                            if (_0x12f730 >= _0x24b0e6.length) {
-                                UI.showToast('\uD83C\uDF89 Ho\u00E0n t\u1EA5t thu th\u1EADp d\u1EEF li\u1EC7u Thi \u0111ua & Nh\u00E2n vi\u00EAn!', 4000);
-                                if (_0x2941fb)
-                                    _0x2941fb();
-                                return;
-                            }
-                            const _0x5c0d69 = _0x24b0e6[_0x12f730];
-                            window.__AutoBILog5.stage('Nh\u00E2n vi\u00EAn Thi \u0111ua', _0x5c0d69.shortName, '\u0110ang m\u1EDF v\u00E0 ch\u1EDD b\u1EA3ng nh\u00E2n vi\u00EAn');
-                            UI.showToast('\uD83D\uDC64 [3/4] \u0110ang m\u1EDF danh s\u00E1ch nh\u00E2n vi\u00EAn: ' + _0x5c0d69.shortName + '...', 3000);
-                            const _0x11d293 = Array.from(document.querySelectorAll('.report-table table, .ant-table-content table, table'));
-                            let _0x17d68e = null;
-                            let _0x223ad7 = '';
-                            for (let _0x3c84fb of _0x11d293) {
-                                const _0x3afdc7 = Array.from(_0x3c84fb.querySelectorAll('tbody tr'));
-                                for (let _0x1db81f of _0x3afdc7) {
-                                    if (_0x1db81f.classList.contains('ant-table-measure-row') || _0x1db81f.classList.contains('grid-total-row'))
-                                        continue;
-                                    const _0x19a579 = _0x1db81f.getAttribute('data-row-key') || '';
-                                    if (_0x19a579.includes('__total__'))
-                                        continue;
-                                    const _0x36318f = _0x1db81f.querySelector('td button');
-                                    const _0x1b6e72 = (_0x36318f ? _0x36318f.innerText || _0x36318f.textContent : _0x1db81f.querySelector('td')?.['getAttribute']('title') || _0x1db81f.querySelector('td')?.['innerText'] || '').trim();
-                                    const _0x2e7079 = UTILS.toUltraSlug(_0x1b6e72);
-                                    const _0x447b49 = UTILS.toUltraSlug(_0x5c0d69.fullName);
-                                    const _0x5e416b = UTILS.toUltraSlug(_0x4ad8e0['shopCode' + _0x5c0d69.idx] || '');
-                                    const _0x298030 = _0x5e416b && (_0x19a579.includes(_0x5e416b) || _0x2e7079.includes(_0x5e416b));
-                                    const _0xa0d327 = _0x447b49 && (_0x2e7079.includes(_0x447b49) || _0x447b49.includes(_0x2e7079));
-                                    if (_0x298030 || _0xa0d327) {
-                                        _0x17d68e = _0x36318f || _0x1db81f.querySelector('button') || _0x1db81f.querySelector('td:first-child');
-                                        const _0x53d190 = _0x3c84fb.querySelector('thead th')?.['innerText'] || 'Nh\u00F3m h\u00E0ng';
-                                        _0x223ad7 = _0x53d190.split('\n')[0].trim();
-                                        break;
-                                    }
-                                }
-                                if (_0x17d68e)
-                                    break;
-                            }
-                            if (_0x17d68e) {
-                                console.log('[Auto BI] \uD83D\uDD3D T\u00ECm th\u1EA5y n\u00FAt [' + _0x5c0d69.fullName + '] t\u1EA1i b\u1EA3ng [' + _0x223ad7 + '], ti\u1EBFn h\u00E0nh click...');
-                                _0x17d68e.click();
-                                window.__AutoBIStableWaitDetail(() => {
-                                    const _0x12323a = DATA.scrapeStaffThiDuaTablesDMX(_0x5c0d69.key, _0x436100, _0x4ad8e0);
-                                    window.__AutoBILog5.note('\u0110\u00E3 \u0111\u1ECDc b\u1EA3ng Nh\u00E2n vi\u00EAn Thi \u0111ua');
-                                    let _0x2580ff = GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {};
-                                    if (!_0x2580ff.link6[_0x5c0d69.key])
-                                        _0x2580ff.link6[_0x5c0d69.key] = { revenue: {}, competition: {}, crossSell: {} };
-                                    _0x2580ff.link6[_0x5c0d69.key].competition = _0x12323a;
-                                    GM_setValue(CONSTANTS.KEYS.DATA_CACHE, _0x2580ff);
-                                    console.log('[Auto BI] \u2705 \u0110\u00E3 qu\u00E9t xong nh\u00E2n vi\u00EAn [' + _0x5c0d69.key + ']:', _0x12323a);
-                                    UI.showToast('\uD83D\uDD04 \u0110ang quay l\u1EA1i danh s\u00E1ch Si\u00EAu th\u1ECB...', 2000);
-                                    DATA.autoSelectFilterDMX('Si\u00EAu th\u1ECB', () => { _0x12f730++; setTimeout(_0x56e6ba, 1500); });
-                                }, 2500);
-                            }
-                            else {
-                                window.__AutoBILog5.error('Kh\u00F4ng t\u00ECm th\u1EA5y d\u00F2ng si\u00EAu th\u1ECB \u0111\u1EC3 m\u1EDF Nh\u00E2n vi\u00EAn; b\u1ECF qua shop n\u00E0y');
-                                console.warn('[Auto BI] \u26A0\uFE0F Kh\u00F4ng t\u00ECm th\u1EA5y shop [' + _0x5c0d69.fullName + '], chuy\u1EC3n ti\u1EBFp sang shop kh\u00E1c...');
-                                _0x12f730++;
-                                _0x56e6ba();
-                            }
-                        };
-                        _0x56e6ba();
-                    }, 3000);
-                }, 3000);
-            });
-        }, scrapeServiceData: _0x28ca2d => { let _0x50b39d = {}; const _0x5d1a4c = document.getElementById('tbReportCustomerRating'); if (!_0x5d1a4c)
-            return _0x50b39d; const _0x369669 = _0x5d1a4c.querySelectorAll('tbody tr'); _0x369669.forEach(_0xf0244b => { const _0x3fe517 = _0xf0244b.querySelectorAll('td'); if (_0x3fe517.length >= 16) {
-            const _0x5c1252 = _0x3fe517[2].innerText.trim();
-            if (!_0x5c1252)
-                return;
-            const _0x500904 = _0x28ca2d.find(_0x524576 => _0x524576.name.toLowerCase().includes(_0x5c1252.toLowerCase()));
-            if (_0x500904) {
-                _0x50b39d[_0x500904.name] = { s5: UTILS.parseNumber(_0x3fe517[5].innerText), s4: UTILS.parseNumber(_0x3fe517[6].innerText), s3: UTILS.parseNumber(_0x3fe517[7].innerText), s2: UTILS.parseNumber(_0x3fe517[8].innerText), s1: UTILS.parseNumber(_0x3fe517[9].innerText), sent: UTILS.parseNumber(_0x3fe517[11].innerText), rated: UTILS.parseNumber(_0x3fe517[12].innerText), total: UTILS.parseNumber(_0x3fe517[12].innerText), ratePct: UTILS.parseNumber(_0x3fe517[13].innerText), score: UTILS.parseNumber(_0x3fe517[15].innerText) };
-            }
-        } }); return _0x50b39d; }, runCrmSequence: (_0x558ccf, _0x1d8ad0) => {
-            window.__AutoBILog5.stage('Ph\u1EE5c v\u1EE5 si\u00EAu th\u1ECB');
-            UI.showToast('\uD83D\uDE80 [1/7] \u0110ang truy c\u1EADp ph\u1EE5c v\u1EE5 si\u00EAu th\u1ECB ..');
-            const _0x1134d1 = sessionStorage.getItem('tgdd_crm_reloaded_v2');
-            if (!_0x1134d1) {
-                setTimeout(() => { sessionStorage.setItem('tgdd_crm_reloaded_v2', 'true'); window.location.href = CONSTANTS.URL_TEMPLATES.CRM_BASE; }, 1500);
-                return;
-            }
-            sessionStorage.removeItem('tgdd_crm_reloaded_v2');
-            const _0x33dd5f = GM_getValue('tgdd_custom_report_month', 'current');
-            const _0x377af2 = _0x486d03 => { const _0x2a5cd6 = '//button[contains(@class, "ui-multiselect")]//span[contains(translate(text(), \'ABCDEFGHIJKLMNOPQRSTUVWXYZ\', \'abcdefghijklmnopqrstuvwxyz\'), "' + _0x486d03.toLowerCase() + '")]/parent::button'; return document.evaluate(_0x2a5cd6, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue; };
-            const _0x352204 = () => { const _0x135b26 = document.querySelectorAll('.ui-multiselect-menu'); for (let _0xb14cfa of _0x135b26) {
-                if (_0xb14cfa.offsetParent !== null && _0xb14cfa.style.display !== 'none') {
-                    const _0x1b45ec = _0xb14cfa.querySelector('a.ui-multiselect-all');
-                    if (_0x1b45ec) {
-                        _0x1b45ec.click();
-                        return true;
-                    }
-                }
-            } return false; };
-            const _0x41cd32 = _0x5ce9b6 => { if (_0x33dd5f && _0x33dd5f !== 'current') {
-                const _0x7d0bdf = document.getElementById('ddlMonth');
-                if (_0x7d0bdf) {
-                    UI.showToast('\uD83D\uDCC5 \u0110ang ch\u1ECDn th\u00E1ng CRM: ' + _0x33dd5f + '...');
-                    _0x7d0bdf.value = _0x33dd5f;
-                    _0x7d0bdf.dispatchEvent(new Event('change', { bubbles: true }));
-                    /* V16.2.8: hàm của trang CRM nằm ở unsafeWindow (Tampermonkey chạy tách biệt) */
-                    { const getArea = (typeof unsafeWindow !== 'undefined' && unsafeWindow.GetArea) || (typeof GetArea === 'function' ? GetArea : null);
-                    if (typeof getArea === 'function') {
-                        try {
-                            getArea();
-                        }
-                        catch (_0x26404d) { }
-                    } }
-                    setTimeout(_0x5ce9b6, 1500);
-                    return;
-                }
-            } _0x5ce9b6(); };
-            _0x41cd32(() => { let _0x1c3e84 = 0; const _0x4744f0 = setInterval(() => { _0x1c3e84++; const _0x2f8544 = _0x377af2('Khu v\u1EF1c'); if (_0x2f8544) {
-                clearInterval(_0x4744f0);
-                _0x2f8544.click();
-                setTimeout(() => { _0x352204(); setTimeout(() => { _0x2f8544.click(); setTimeout(() => { const _0x702f40 = _0x377af2('Si\u00EAu th\u1ECB'); if (_0x702f40) {
-                    _0x702f40.click();
-                    setTimeout(() => { _0x352204(); setTimeout(() => { _0x702f40.click(); setTimeout(() => { const _0xc98e9 = document.querySelector('button[ng-click*="CheckTimeIsViewFullHour"]') || document.querySelector('button.btn-info'); if (_0xc98e9) {
-                        _0xc98e9.click();
-                        setTimeout(() => { try {
-                            const _0x3237b5 = DATA.scrapeServiceData(_0x558ccf.staffList || []);
-                            let _0x48d71f = GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {};
-                            _0x48d71f.link8 = _0x3237b5;
-                            GM_setValue(CONSTANTS.KEYS.DATA_CACHE, _0x48d71f);
-                        }
-                        catch (_0x4ce64d) { } if (_0x1d8ad0)
-                            _0x1d8ad0(); }, 8000);
-                    }
-                    else {
-                        if (_0x1d8ad0)
-                            _0x1d8ad0();
-                    } }, 1000); }, 1000); }, 1500);
-                } }, 1000); }, 1000); }, 1500);
-            }
-            else if (_0x1c3e84 > 30) {
-                clearInterval(_0x4744f0);
-                if (_0x1d8ad0)
-                    _0x1d8ad0();
-            } }, 500); });
-        }, runCrmServiceScoreSequence: (_0x14d7c2, _0x41291d) => {
-            window.__AutoBILog5.stage('Ph\u1EE5c v\u1EE5 nh\u00E2n vi\u00EAn');
-            UI.showToast('\uD83D\uDE80 [1/6] \u0110ang truy c\u1EADp phuc v\u1EE5 nh\u00E2n vi\u00EAn...');
-            const _0x394406 = GM_getValue('tgdd_custom_report_month', 'current');
-            const _0x5d4cd5 = _0x1febe2 => { const _0x5d556d = '//button[contains(@class, "ui-multiselect")]//span[contains(translate(text(), \'ABCDEFGHIJKLMNOPQRSTUVWXYZ\', \'abcdefghijklmnopqrstuvwxyz\'), "' + _0x1febe2.toLowerCase() + '")]/parent::button'; return document.evaluate(_0x5d556d, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue; };
-            const _0x1a6e2c = _0x522697 => { let _0x1f5204 = 0; const _0x4c0e03 = setInterval(() => { _0x1f5204++; const _0x423838 = document.querySelectorAll('.ui-multiselect-menu'); let _0x2e9465 = null; for (let _0x5145c2 of _0x423838) {
-                if (_0x5145c2.offsetParent !== null && _0x5145c2.style.display !== 'none') {
-                    _0x2e9465 = _0x5145c2;
-                    break;
-                }
-            } if (_0x2e9465 && _0x2e9465.querySelectorAll('input[type="checkbox"]').length > 0) {
-                clearInterval(_0x4c0e03);
-                const _0x352a8d = _0x2e9465.querySelector('a.ui-multiselect-all');
-                if (_0x352a8d)
-                    _0x352a8d.click();
-                setTimeout(_0x522697, 600);
-            }
-            else if (_0x1f5204 > 30) {
-                clearInterval(_0x4c0e03);
-                _0x522697();
-            } }, 300); };
-            const _0x19b015 = () => { const _0x21ee10 = document.getElementById('ddlType'); if (_0x21ee10) {
-                _0x21ee10.value = '72';
-                _0x21ee10.dispatchEvent(new Event('change', { bubbles: true }));
-                return true;
-            } const _0x43d1f4 = document.querySelectorAll('select'); for (let _0xf9d8b3 of _0x43d1f4) {
-                for (let _0x2b3802 of _0xf9d8b3.options) {
-                    if (_0x2b3802.text.toLowerCase().includes('\u0111i\u1EC3m kh h\u00E0i l\u00F2ng') || _0x2b3802.text.toLowerCase().includes('kh\u00E1ch h\u00E0ng h\u00E0i l\u00F2ng')) {
-                        _0xf9d8b3.value = _0x2b3802.value;
-                        _0xf9d8b3.dispatchEvent(new Event('change', { bubbles: true }));
-                        return true;
-                    }
-                }
-            } return false; };
-            const _0x115aee = _0x2857eb => { if (_0x394406 && _0x394406 !== 'current') {
-                const _0x3a0ba0 = document.getElementById('ddlMonth');
-                if (_0x3a0ba0) {
-                    UI.showToast('\uD83D\uDCC5 \u0110ang ch\u1ECDn th\u00E1ng CRM: ' + _0x394406 + '...');
-                    _0x3a0ba0.value = _0x394406;
-                    _0x3a0ba0.dispatchEvent(new Event('change', { bubbles: true }));
-                    { const getArea = (typeof unsafeWindow !== 'undefined' && unsafeWindow.GetArea) || (typeof GetArea === 'function' ? GetArea : null);
-                    if (typeof getArea === 'function') {
-                        try {
-                            getArea();
-                        }
-                        catch (_0x1547f0) { }
-                    } }
-                    setTimeout(_0x2857eb, 1500);
-                    return;
-                }
-            } _0x2857eb(); };
-            _0x115aee(() => { let _0xcd5f13 = 0; const _0x338c79 = setInterval(() => { _0xcd5f13++; const _0x56c9ba = _0x5d4cd5('khu v\u1EF1c'); if (_0x56c9ba) {
-                clearInterval(_0x338c79);
-                _0x56c9ba.click();
-                _0x1a6e2c(() => { _0x56c9ba.click(); setTimeout(() => { const _0xf4f1f6 = _0x5d4cd5('si\u00EAu th\u1ECB'); if (_0xf4f1f6) {
-                    _0xf4f1f6.click();
-                    _0x1a6e2c(() => { _0xf4f1f6.click(); setTimeout(() => { _0x19b015(); setTimeout(() => { const _0x309180 = document.getElementById('btnSearch') || document.querySelector('a[ng-click*="GetStorePointByListStoreID"]') || document.querySelector('button[ng-click*="Search"]') || document.querySelector('button.btn-info'); if (_0x309180) {
-                        _0x309180.click();
-                        let _0x304877 = 0;
-                        const _0x1754b5 = setInterval(() => { _0x304877++; const _0x20913d = document.querySelector('.loading, #AjaxLoading, .spinner, .ng-loading'); const _0xa7eb21 = document.getElementById('tbAssessServiccePointTGDD'); const _0x3e42d3 = _0xa7eb21 && _0xa7eb21.querySelectorAll('tbody tr').length > 0; let _0x1dcae1 = {}; if (_0x3e42d3 && !_0x20913d)
-                            _0x1dcae1 = DATA.scrapeServiceScoreNew(_0x14d7c2); if (Object.keys(_0x1dcae1).length > 0 || _0x304877 >= 30) {
-                            clearInterval(_0x1754b5);
-                            let _0x36a487 = GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {};
-                            _0x36a487.link9 = _0x1dcae1;
-                            GM_setValue(CONSTANTS.KEYS.DATA_CACHE, _0x36a487);
-                            setTimeout(() => { if (_0x41291d)
-                                _0x41291d(); }, 800);
-                        } }, 1000);
-                    }
-                    else {
-                        if (_0x41291d)
-                            _0x41291d();
-                    } }, 1000); }, 1000); });
-                }
-                else {
-                    if (_0x41291d)
-                        _0x41291d();
-                } }, 1800); });
-            }
-            else if (_0xcd5f13 > 30) {
-                clearInterval(_0x338c79);
-                if (_0x41291d)
-                    _0x41291d();
-            } }, 500); });
-        }, scrapeServiceScoreNew: _0x12dd63 => { let _0x93811e = {}; const _0x3bdb89 = document.getElementById('tbAssessServiccePointTGDD'); if (!_0x3bdb89)
-            return _0x93811e; const _0x452f05 = _0x3bdb89.querySelectorAll('tbody tr'); if (_0x452f05.length === 0)
-            return _0x93811e; const _0x1781e9 = [{ id: 'shop1', name: _0x12dd63.shop1, code: _0x12dd63.shopCode1 }, { id: 'shop2', name: _0x12dd63.shop2, code: _0x12dd63.shopCode2 }, { id: 'shop3', name: _0x12dd63.shop3, code: _0x12dd63.shopCode3 }, { id: 'shop4', name: _0x12dd63.shop4, code: _0x12dd63.shopCode4 }, { id: 'shop5', name: _0x12dd63.shop5, code: _0x12dd63.shopCode5 }]; _0x452f05.forEach(_0x2e177e => { const _0x3929a7 = _0x2e177e.querySelectorAll('td'); if (_0x3929a7.length >= 15) {
-            const _0x30e6f1 = UTILS.toUltraSlug(_0x3929a7[0].innerText.trim());
-            const _0x3e9007 = _0x1781e9.find(_0x487d54 => { if (!_0x487d54.name && !_0x487d54.code)
-                return false; if (_0x487d54.code && _0x30e6f1.includes(UTILS.toUltraSlug(_0x487d54.code)))
-                return true; if (_0x487d54.name && (_0x30e6f1.includes(UTILS.toUltraSlug(_0x487d54.name)) || UTILS.toUltraSlug(_0x487d54.name).includes(_0x30e6f1)))
-                return true; return false; });
-            if (_0x3e9007) {
-                _0x93811e[_0x3e9007.id] = { totalSent: UTILS.parseNumber(_0x3929a7[4].innerText), total: UTILS.parseNumber(_0x3929a7[5].innerText), s5: UTILS.parseNumber(_0x3929a7[6].innerText), s4: UTILS.parseNumber(_0x3929a7[7].innerText), s3: UTILS.parseNumber(_0x3929a7[8].innerText), s2: UTILS.parseNumber(_0x3929a7[9].innerText), s1: UTILS.parseNumber(_0x3929a7[10].innerText), ratePct: parseFloat(_0x3929a7[11].innerText.replace('%', '').trim()) || 0, score: UTILS.parseNumber(_0x3929a7[15].innerText) };
-            }
-        } }); return _0x93811e; }, saveCloudConfig: (_0x3ecb74, _0x3de7b8) => { const _0x478668 = CONSTANTS.GSHEET.CONFIG_API; if (!_0x478668) {
+        } return _0x1e7fd; },        saveCloudConfig: (_0x3ecb74, _0x3de7b8) => { const _0x478668 = CONSTANTS.GSHEET.CONFIG_API; if (!_0x478668) {
             if (_0x3de7b8)
                 _0x3de7b8({ status: 'error' });
             return;
@@ -4936,10 +2195,8 @@ window.__AutoBIRun67 = (function () {
             document.body.appendChild(_0x3e7930);
         } const _0x18448e = { plan: '<svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>', menu: '<svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>', setting: '<svg viewBox="0 0 24 24"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49-.12-.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2-3.46c-1.29 0-2.43.38-3.32.96l2.11 1.65c.04-.32.07-.65.07-.98l-2.11-1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/></svg>', note: '<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"/></svg>', check: '<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>', back: '<svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>', comment: '<svg viewBox="0 0 24 24"><path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18z"/></svg>', line: '<svg viewBox="0 0 48 48"><path fill="#00c300" d="M12.5,42h23c3.59,0,6.5-2.91,6.5-6.5v-23C42,8.91,39.09,6,35.5,6h-23C8.91,6,6,8.91,6,12.5v23C6,39.09,8.91,42,12.5,42z"/><path fill="#fff" d="M37.113,22.417c0-5.865-5.88-10.637-13.107-10.637s-13.108,4.772-13.108,10.637c0,5.258,4.663,9.662,10.962,10.495c0.427,0.092,1.008,0.282,1.155,0.646c0.132,0.331,0.086,0.85,0.042,1.185c0,0-0.153,0.925-0.187,1.122c-0.057,0.331-0.263,1.296,1.135,0.707c1.399-0.589,7.548-4.445,10.298-7.611h-0.001C36.203,26.879,37.113,24.764,37.113,22.417z"/></svg>', cam: '<svg viewBox="0 0 24 24"><path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-2c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"/></svg>', save: '<svg viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>', rerun: '<svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>', history: '<svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9z"/></svg>', music: '<svg viewBox="0 0 24 24"><path d="M12 3v9.28a4.39 4.39 0 0 0-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/></svg>', tools: '<svg viewBox="0 0 24 24"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>', resources: '<svg viewBox="0 0 24 24"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg>', youtube: '<svg viewBox="0 0 24 24" style="fill:#ff0000"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>' }; const _0x1c03de = [{ title: '1. H\u01B0\u1EDBng d\u1EABn khai b\u00E1o AutoBI', url: 'https://youtu.be/AW5UpWk3Exo' }, { title: '2. H\u01B0\u1EDBng d\u1EABn update AutoBI', url: 'https://youtube.com/shorts/17d82ZoqcvY?si=TbhQhVAAq6dTa0Kn' }, { title: '3. H\u01B0\u1EDBng d\u1EABn khai b\u00E1o ID sheet l\u1ECBch s\u1EED', url: 'https://www.youtube.com/watch?v=K32kvjpKxG0' }, { title: '4. H\u01B0\u1EDBng d\u1EABn khai b\u00E1o app b\u00E1o c\u00E1o', url: 'https://www.youtube.com/watch?v=LtItdUXWy_s' }, { title: '5. H\u01B0\u1EDBng d\u1EABn c\u00E0i AutoBI tr\u00EAn m\u00E1y t\u00EDnh - Android', url: 'https://youtu.be/TNJuqnJ7wRY' }]; let _0x5af095 = ''; if (_0x445605 === 'home') {
             _0x1c03de.forEach(_0x1d83f0 => { _0x5af095 += '<div class="tgdd-menu-item btn-tutorial-link" data-url="' + _0x1d83f0.url + '" style="color:#333; font-weight: normal;">' + _0x18448e.youtube + ' ' + _0x1d83f0.title + '</div>'; });
-        } const _0x538b3f = _0x445605 === 'home' ? '<div class="tgdd-menu-item" id="btn-menu-config-home" style="color:#0984e3; border-top: 1px solid blanchedalmond; border-bottom: 2px solid #f9d849;">' + _0x18448e.setting + ' Khai b\u00E1o</div>' : ''; const _0x3e165e = _0x445605 === 'report' ? '\n                <div class="tgdd-menu-item" id="btn-menu-config-report" style="color:#0984e3; border-bottom: 1px dashed rgba(150,150,150,0.3); padding-bottom: 15px; margin-bottom: 5px;">' + _0x18448e.setting + ' Khai b\u00E1o</div>\n                <div class="tgdd-menu-item" id="btn-menu-comment">' + _0x18448e.comment + ' Auto Comment</div>\n                <div class="tgdd-menu-item" id="btn-menu-deploy">' + _0x18448e.line + ' G\u1EEDi Line</div>\n                <div class="tgdd-menu-item" id="btn-menu-cam">' + _0x18448e.cam + ' Ch\u1EE5p \u1EA3nh</div>\n            ' : ''; const _0x58c53f = _0x445605 === 'report' ? '\n                <div class="tgdd-menu-item" id="btn-menu-save-logic" style="color:#007bff;">' + _0x18448e.save + ' L\u01B0u b\u00E1o c\u00E1o</div>\n            ' : ''; _0x252652.innerHTML = '\n                <div class="sidebar-header"><div class="sidebar-title" id="sb-title">DANH M\u1EE4C</div><button class="sidebar-close" id="sb-btn-x">\u2715</button></div>\n                <div class="sidebar-view-container" id="sb-container">\n                    <div class="sidebar-panel-tab" id="p-menu">\n                        <div class="sidebar-tab-content">\n                            ' + _0x3e165e + '\n                            <div class="tgdd-menu-item" id="btn-menu-tools">' + _0x18448e.tools + ' Ti\u1EC7n \u00EDch</div>\n                            <div class="tgdd-menu-item" id="btn-menu-plan" style="color:#e84393; font-weight:900;">' + _0x18448e.plan + ' K\u1EBF ho\u1EA1ch truy\u1EC1n th\u00F4ng</div>\n                            <div class="tgdd-menu-item" id="btn-menu-yearly" style="color:#0984e3; font-weight:900;">\n                                <svg viewBox="0 0 24 24" style="width:22px; height:22px; fill:none; stroke:#0984e3; stroke-width:2px; margin-right:4px;"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>\n                                D\u1EEF li\u1EC7u n\u0103m\n                            </div>\n\n                            <!-- \u0110\u1ED2NG B\u1ED8 M\u1EDAI: \u0110\u01B0a n\u00FAt B\u1ED5 sung \u0111i\u1EC3m ra v\u1ECB tr\u00ED danh m\u1EE5c chung hi\u1EC3n th\u1ECB tr\u00EAn c\u1EA3 Home v\u00E0 Report -->\n                            <div class="tgdd-menu-item" id="btn-menu-bonus-points" style="color:#6f42c1; font-weight:bold;">\n                                <svg viewBox="0 0 24 24" style="width:22px; height:22px; fill:none; stroke:#6f42c1; stroke-width:2px; margin-bottom:-4px; margin-right:4px;"><path d="M12 9v6m-3-3h6m-3 11a10 10 0 1 1 0-20 10 10 0 0 1 0 20z"/></svg>\n                                B\u1ED5 sung \u0111i\u1EC3m\n                            </div>\n\n                            <div class="tgdd-menu-item" id="btn-menu-history">' + _0x18448e.history + ' Xem l\u1ECBch s\u1EED</div>\n                            ' + _0x58c53f + '\n                        </div>\n                        <div class="tgdd-pinned-container"></div>\n                        ' + _0x538b3f + '\n                        ' + _0x5af095 + '\n                        ' + (_0x445605 === 'report' ? '<div class="sidebar-tab-footer"><div class="tgdd-menu-item" id="btn-menu-rerun-logic" style="color: #d63031; border:none;">' + _0x18448e.rerun + ' Ch\u1EA1y l\u1EA1i b\u00E1o c\u00E1o</div></div>' : '') + '\n                    </div>\n                </div>\n                <div class="sidebar-bottom-nav">\n                    <div class="sb-tab-item sb-tab-back" id="sb-close-trigger">' + _0x18448e.back + '</div>\n                    <div class="sb-tab-item active" data-idx="0">' + _0x18448e.menu + '<span>Menu</span></div>\n                </div>\n            '; if (document.getElementById('btn-menu-plan')) {
+        } const _0x538b3f = _0x445605 === 'home' ? '<div class="tgdd-menu-item" id="btn-menu-config-home" style="color:#0984e3; border-top: 1px solid blanchedalmond; border-bottom: 2px solid #f9d849;">' + _0x18448e.setting + ' Khai b\u00E1o</div>' : ''; const _0x3e165e = _0x445605 === 'report' ? '\n                <div class="tgdd-menu-item" id="btn-menu-config-report" style="color:#0984e3; border-bottom: 1px dashed rgba(150,150,150,0.3); padding-bottom: 15px; margin-bottom: 5px;">' + _0x18448e.setting + ' Khai b\u00E1o</div>\n                <div class="tgdd-menu-item" id="btn-menu-comment">' + _0x18448e.comment + ' Auto Comment</div>\n                <div class="tgdd-menu-item" id="btn-menu-deploy">' + _0x18448e.line + ' G\u1EEDi Line</div>\n                <div class="tgdd-menu-item" id="btn-menu-cam">' + _0x18448e.cam + ' Ch\u1EE5p \u1EA3nh</div>\n            ' : ''; const _0x58c53f = _0x445605 === 'report' ? '\n                <div class="tgdd-menu-item" id="btn-menu-save-logic" style="color:#007bff;">' + _0x18448e.save + ' L\u01B0u b\u00E1o c\u00E1o</div>\n            ' : ''; _0x252652.innerHTML = '\n                <div class="sidebar-header"><div class="sidebar-title" id="sb-title">DANH M\u1EE4C</div><button class="sidebar-close" id="sb-btn-x">\u2715</button></div>\n                <div class="sidebar-view-container" id="sb-container">\n                    <div class="sidebar-panel-tab" id="p-menu">\n                        <div class="sidebar-tab-content">\n                            ' + _0x3e165e + '\n                            <div class="tgdd-menu-item" id="btn-menu-tools">' + _0x18448e.tools + ' Ti\u1EC7n \u00EDch</div>\n                            <div class="tgdd-menu-item" id="btn-menu-plan" style="color:#e84393; font-weight:900;">' + _0x18448e.plan + ' K\u1EBF ho\u1EA1ch truy\u1EC1n th\u00F4ng</div>\n                            \n                            <!-- \u0110\u1ED2NG B\u1ED8 M\u1EDAI: \u0110\u01B0a n\u00FAt B\u1ED5 sung \u0111i\u1EC3m ra v\u1ECB tr\u00ED danh m\u1EE5c chung hi\u1EC3n th\u1ECB tr\u00EAn c\u1EA3 Home v\u00E0 Report -->\n                            <div class="tgdd-menu-item" id="btn-menu-bonus-points" style="color:#6f42c1; font-weight:bold;">\n                                <svg viewBox="0 0 24 24" style="width:22px; height:22px; fill:none; stroke:#6f42c1; stroke-width:2px; margin-bottom:-4px; margin-right:4px;"><path d="M12 9v6m-3-3h6m-3 11a10 10 0 1 1 0-20 10 10 0 0 1 0 20z"/></svg>\n                                B\u1ED5 sung \u0111i\u1EC3m\n                            </div>\n\n                            <div class="tgdd-menu-item" id="btn-menu-history">' + _0x18448e.history + ' Xem l\u1ECBch s\u1EED</div>\n                            ' + _0x58c53f + '\n                        </div>\n                        <div class="tgdd-pinned-container"></div>\n                        ' + _0x538b3f + '\n                        ' + _0x5af095 + '\n                        ' + (_0x445605 === 'report' ? '<div class="sidebar-tab-footer"><div class="tgdd-menu-item" id="btn-menu-rerun-logic" style="color: #d63031; border:none;">' + _0x18448e.rerun + ' Ch\u1EA1y l\u1EA1i b\u00E1o c\u00E1o</div></div>' : '') + '\n                    </div>\n                </div>\n                <div class="sidebar-bottom-nav">\n                    <div class="sb-tab-item sb-tab-back" id="sb-close-trigger">' + _0x18448e.back + '</div>\n                    <div class="sb-tab-item active" data-idx="0">' + _0x18448e.menu + '<span>Menu</span></div>\n                </div>\n            '; if (document.getElementById('btn-menu-plan')) {
             document.getElementById('btn-menu-plan').onclick = () => { _0x182dd8(); UI.createPlanModal(); };
-        } if (document.getElementById('btn-menu-yearly')) {
-            document.getElementById('btn-menu-yearly').onclick = () => { _0x182dd8(); UI.createYearlyDataModal(); };
         } const _0x182dd8 = () => { _0x252652.classList.remove('show'); _0x3e7930.classList.remove('show'); document.body.classList.remove('tgdd-body-lock'); }; _0x3e7930.onclick = _0x182dd8; document.getElementById('sb-close-trigger').onclick = _0x182dd8; document.getElementById('sb-btn-x').onclick = _0x182dd8; const _0x4d3153 = document.getElementById('sb-container'); const _0x23da6b = document.querySelectorAll('.sb-tab-item[data-idx]'); const _0x545b39 = document.getElementById('sb-title'); const _0x38def6 = ['DANH M\u1EE4C']; _0x23da6b.forEach(_0xa0e92c => { _0xa0e92c.onclick = () => { const _0x4272e9 = _0xa0e92c.dataset.idx; _0x4d3153.style.transform = 'translateX(-' + _0x4272e9 * 100 + '%)'; _0x23da6b.forEach(_0x91492a => _0x91492a.classList.remove('active')); _0xa0e92c.classList.add('active'); _0x545b39.innerText = _0x38def6[_0x4272e9];  }; }); document.querySelectorAll('.btn-tutorial-link').forEach(_0x52fb6d => { _0x52fb6d.onclick = () => { _0x182dd8(); window.open(_0x52fb6d.getAttribute('data-url'), '_blank'); }; }); if (document.getElementById('btn-menu-config-home'))
             document.getElementById('btn-menu-config-home').onclick = () => { _0x182dd8(); UI.openConfigModal(); }; document.getElementById('btn-menu-history').onclick = () => { _0x182dd8(); UI.showHistoryModal(); }; document.getElementById('btn-menu-tools').onclick = () => { _0x182dd8(); UI.createToolsModal(); document.getElementById(CONSTANTS.DOM_IDS.TOOLS_MODAL).classList.add('show'); UI.renderToolsGrid(); }; const _0x15ff69 = document.getElementById('btn-menu-bonus-points'); if (_0x15ff69) {
             _0x15ff69.onclick = () => { _0x182dd8(); UI.openBonusPointsModal(); };
@@ -5107,142 +2364,7 @@ window.__AutoBIRun67 = (function () {
             _0x4119a7 += '<tr><td colspan="17" style="border:none; height:20px;"></td></tr>';
             _0x4763d0 = _0x1f08bb > 0 ? _0x1f08bb + 1 : _0x174abd + 1;
             _0x13b957 += 2;
-        } let _0xcf0a95 = '\n                    <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">\n                    <head><meta charset="utf-8"><style>\n                        table { border-collapse: collapse; font-family: Arial; font-size: 11pt; }\n                        th, td { border: 1px solid black; text-align: center; vertical-align: middle; white-space: normal; }\n                        .bg-title { background-color: #FFFF00; font-weight: bold; font-size: 20pt; color: #008000; height: 50px; }\n                    </style></head><body>\n                    <table>\n                        <tr><td colspan="17" class="bg-title">K\u1EBF ho\u1EA1ch truy\u1EC1n th\u00F4ng Th\u00E1ng ' + (_0x3e130e.getMonth() + 1) + '</td></tr>\n                        <tr><td colspan="17" style="text-align:left; font-weight:bold; border:none;">Si\u00EAu th\u1ECB: ' + _0x433a28 + '</td></tr>\n                        <tr><td colspan="17" style="border:none;"></td></tr>\n                        ' + _0x4119a7 + '\n                    </table></body></html>\n                '; const _0x12ab23 = new Blob([_0xcf0a95], { type: 'application/vnd.ms-excel' }); const _0x3e4f6c = URL.createObjectURL(_0x12ab23); const _0x15aa85 = document.createElement('a'); _0x15aa85.href = _0x3e4f6c; _0x15aa85.download = 'Ke_Hoach_Truyen_Thong_T' + (_0x3e130e.getMonth() + 1) + '_' + _0x433a28.replace(/[^a-zA-Z0-9]/g, '_') + '.xls'; document.body.appendChild(_0x15aa85); _0x15aa85.click(); document.body.removeChild(_0x15aa85); URL.revokeObjectURL(_0x3e4f6c); _0x454efc('\u2705 \u0110\u00E3 xu\u1EA5t file Excel!', '#28a745'); }; document.getElementById('btn-plan-close').onclick = () => { _0x1fa8c9.remove(); document.body.classList.remove('tgdd-body-lock'); }; }, createYearlyDataModal: () => { if (document.getElementById('tgdd-yearly-modal'))
-            return; const _0x14fc8f = () => { let _0x2bc669 = 0; const _0x22f088 = document.getElementsByTagName('*'); for (let _0x36283b = 0; _0x36283b < _0x22f088.length; _0x36283b++) {
-            const _0x16f7ae = parseInt(window.getComputedStyle(_0x22f088[_0x36283b]).zIndex, 10);
-            if (_0x16f7ae && _0x16f7ae > _0x2bc669)
-                _0x2bc669 = _0x16f7ae;
-        } return _0x2bc669; }; const _0x1ad99e = _0x14fc8f() + 5; const _0x56c535 = document.createElement('div'); _0x56c535.id = 'tgdd-yearly-modal'; _0x56c535.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:#fff; display:flex; justify-content:center; align-items:center; z-index:' + _0x1ad99e + '; box-sizing:border-box;'; const _0x146d1b = UTILS.getPersistentConfig(); const _0xb61fc2 = _0x146d1b.cluster || _0x146d1b.shop1 || ''; const _0x141b95 = new Date().getFullYear(); let _0x13d54e = [{ group: 'TR\u1EA2 CH\u1EACM', name: 'HomeCredit' }, { group: 'TR\u1EA2 CH\u1EACM', name: 'FeCredit' }, { group: 'TR\u1EA2 CH\u1EACM', name: 'Tr\u1EA3 Ch\u1EADm CE&GD' }, { group: 'TR\u1EA2 CH\u1EACM', name: 'V\u00ED tr\u1EA3 sau' }, { group: 'ICT', name: 'Phone/Tab Android' }, { group: 'ICT', name: 'Realme' }, { group: 'ICT', name: 'Vivo' }, { group: 'ICT', name: 'Flagship SS S/Z' }, { group: 'ICT', name: 'Laptop' }, { group: 'ICT', name: '\u0110\u1ED3ng h\u1ED3' }, { group: 'ICT', name: 'Vivo' }, { group: 'B\u00C1N K\u00C8M - MULTICAT', name: 'PK&\u0110H' }, { group: 'B\u00C1N K\u00C8M - MULTICAT', name: 'S\u1EA1c d\u1EF1 ph\u00F2ng' }, { group: 'B\u00C1N K\u00C8M - MULTICAT', name: 'Tai nghe Bluetooth' }, { group: 'B\u00C1N K\u00C8M - MULTICAT', name: 'Camera' }, { group: 'B\u00C1N K\u00C8M - MULTICAT', name: 'Loa' }, { group: 'B\u00C1N K\u00C8M - MULTICAT', name: '\u0110\u00E8n NLMT' }, { group: 'B\u00C1N K\u00C8M - MULTICAT', name: 'SIM' }, { group: 'B\u00C1N K\u00C8M - MULTICAT', name: 'Vina/\u0110MX' }, { group: 'B\u00C1N K\u00C8M - MULTICAT', name: 'VAS' }, { group: 'B\u00C1N K\u00C8M - MULTICAT', name: 'Mango+ iCallme' }, { group: 'B\u00C1N K\u00C8M - MULTICAT', name: 'B\u1EA3o hi\u1EC3m' }, { group: 'B\u00C1N K\u00C8M - MULTICAT', name: 'B\u1EA3o hi\u1EC3m \u0110MX' }, { group: 'B\u00C1N K\u00C8M - MULTICAT', name: 'Vay ti\u1EC1n m\u1EB7t' }, { group: 'B\u00C1N K\u00C8M - MULTICAT', name: 'EVO/MWG' }, { group: 'B\u00C1N K\u00C8M - MULTICAT', name: 'N\u1ED3i c\u01A1m' }, { group: 'B\u00C1N K\u00C8M - MULTICAT', name: 'M\u00E1y l\u1ECDc n\u01B0\u1EDBc' }, { group: 'B\u00C1N K\u00C8M - MULTICAT', name: 'Qu\u1EA1t gi\u00F3' }, { group: 'B\u00C1N K\u00C8M - MULTICAT', name: 'KK/HA/HB' }, { group: 'B\u00C1N K\u00C8M - MULTICAT', name: 'N\u1EA1p/R\u00FAt ti\u1EC1n' }]; let _0x29cee5 = {}; _0x56c535.innerHTML = '\n                <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; display:flex; flex-direction:column; overflow:hidden; animation: fadeIn 0.2s ease-out; background:#f4f6f8;">\n\n                    <!-- V\u00D9NG CU\u1ED8N & ZOOM -->\n                    <div id="yd-scroll-wrapper" style="overflow:auto; flex-grow:1; position:relative; width:100%;">\n\n                        <!-- V\u00D9NG CH\u1EE4P \u1EA2NH (\u0110\u1ED8 R\u1ED8NG CO D\u00C3N T\u1EF0 NHI\u00CAN THEO B\u1EA2NG) -->\n                        <div id="yd-capture-area" style="background:#fff; padding:25px; width:max-content; margin:20px auto; transform-origin:0 0; box-shadow:0 5px 20px rgba(0,0,0,0.08); border-radius:8px;">\n\n                            <!-- TI\u00CAU \u0110\u1EC0 N\u0102M & C\u1EE4M -->\n                            <div style="margin-bottom:15px; width:100%;">\n                                <div style="background:#00B0F0; color:#FFFF00; text-align:center; font-size:26px; font-weight:900; padding:12px; border:2px solid #000; text-transform:uppercase; letter-spacing:1.5px;">\n                                    THEO D\u00D5I THI \u0110UA N\u0102M ' + _0x141b95 + '\n                                </div>\n                                <div style="margin-top:12px; font-weight:bold; font-size:16px; display:flex; align-items:center; justify-content:space-between; gap:10px;">\n                                    <div style="display:flex; align-items:center; gap:8px; flex:1;">\n                                        <span style="white-space:nowrap; color:#002060;">C\u1EE5m:</span>\n                                        <input type="text" id="yd-shop-name" value="' + _0xb61fc2 + '" style="flex:1; border:none; border-bottom:1px dashed #999; outline:none; font-size:16px; font-weight:bold; color:#002060;" placeholder="Nh\u1EADp t\u00EAn c\u1EE5m / si\u00EAu th\u1ECB...">\n                                    </div>\n                                    <!-- C\u00C1C N\u00DAT TH\u00CAM C\u1ED8T NHANH (T\u1EF0 \u0110\u1ED8NG \u1EA8N KHI CH\u1EE4P) -->\n                                    <div class="yd-toolbar-actions" style="display:flex; gap:6px;">\n                                        <button id="yd-add-col-tc" style="background:#FCE4D6; color:#C65911; border:1px solid #C65911; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer;">+ C\u1ED9t Tr\u1EA3 ch\u1EADm</button>\n                                        <button id="yd-add-col-ict" style="background:#DDEBF7; color:#1F4E79; border:1px solid #1F4E79; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer;">+ C\u1ED9t ICT</button>\n                                        <button id="yd-add-col-bk" style="background:#E2EFDA; color:#385723; border:1px solid #385723; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer;">+ C\u1ED9t B\u00E1n k\u00E8m</button>\n                                    </div>\n                                </div>\n                            </div>\n\n                            <!-- B\u1EA2NG D\u1EEE LI\u1EC6U CH\u00CDNH -->\n                            <div id="yd-table-mount-point" style="width:max-content;"></div>\n                        </div>\n                    </div>\n\n                    <!-- FOOTER TR\u1EA0NG TH\u00C1I & N\u00DAT B\u1EA4M -->\n                    <div style="padding:15px 20px; border-top:1px solid #ccc; display:flex; justify-content:space-between; align-items:center; background:#fff; flex-shrink:0; box-shadow: 0 -5px 10px rgba(0,0,0,0.05); flex-wrap:wrap; gap:10px;">\n                        <div id="yd-status-msg" style="font-size:13px; font-weight:bold; color:#333; display:flex; align-items:center; gap:8px;"></div>\n\n                        <div style="display:flex; gap:10px; flex-wrap:wrap;">\n                            <button id="btn-yd-cam" style="padding:10px 18px; border:1px solid #6f42c1; background:#f3e5f5; color:#6f42c1; border-radius:6px; cursor:pointer; font-weight:bold; display:flex; align-items:center; gap:5px;">\n                                \uD83D\uDCF8 Ch\u1EE5p \u1EA3nh\n                            </button>\n                            <button id="btn-yd-save" style="padding:10px 20px; border:none; background:#007bff; color:#fff; border-radius:6px; cursor:pointer; font-weight:bold; box-shadow:0 4px 10px rgba(0,123,255,0.3);">\n                                \uD83D\uDCBE L\u01B0u d\u1EEF li\u1EC7u\n                            </button>\n                            <button id="btn-yd-close" style="padding:10px 20px; border:1px solid #ccc; background:#f8f9fa; border-radius:6px; cursor:pointer; font-weight:bold; color:#333;">\n                                \u0110\u00F3ng l\u1EA1i\n                            </button>\n                        </div>\n                    </div>\n                </div>\n            '; document.body.appendChild(_0x56c535); document.body.classList.add('tgdd-body-lock'); const _0x58b40e = document.getElementById('yd-status-msg'); const _0x81a905 = (_0x284575, _0x1ea10a = '#333') => { _0x58b40e.style.color = _0x1ea10a; _0x58b40e.innerHTML = _0x284575; }; const _0x3958f8 = () => { const _0x432ed2 = document.getElementById('yd-table-mount-point'); if (!_0x432ed2)
-            return; const _0xdd80fa = { 'TR\u1EA2 CH\u1EACM': 0, ICT: 0, 'B\u00C1N K\u00C8M - MULTICAT': 0 }; _0x13d54e.forEach(_0x1b3877 => { _0xdd80fa[_0x1b3877.group] = (_0xdd80fa[_0x1b3877.group] || 0) + 1; }); let _0x58b7c6 = '<colgroup><col style="width:110px;">'; _0x13d54e.forEach(() => { _0x58b7c6 += '<col style="width:80px;">'; }); _0x58b7c6 += '</colgroup>'; let _0xb2d6ce = '<tr><th rowspan="2" style="border:1px solid #000; background:#7030A0; color:#fff; font-weight:bold; font-size:12px; height:50px; text-align:center !important; vertical-align:middle !important;">NH\u00D3M H\u00C0NG</th>'; if (_0xdd80fa['TR\u1EA2 CH\u1EACM'] > 0)
-            _0xb2d6ce += '<th colspan="' + _0xdd80fa['TR\u1EA2 CH\u1EACM'] + '" style="border:1px solid #000; background:#FCE4D6; color:#C65911; font-weight:bold; font-size:12.5px; height:25px; text-align:center !important; vertical-align:middle !important; padding:4px;">TR\u1EA2 CH\u1EACM</th>'; if (_0xdd80fa.ICT > 0)
-            _0xb2d6ce += '<th colspan="' + _0xdd80fa.ICT + '" style="border:1px solid #000; background:#DDEBF7; color:#1F4E79; font-weight:bold; font-size:12.5px; height:25px; text-align:center !important; vertical-align:middle !important; padding:4px;">ICT</th>'; if (_0xdd80fa['B\u00C1N K\u00C8M - MULTICAT'] > 0)
-            _0xb2d6ce += '<th colspan="' + _0xdd80fa['B\u00C1N K\u00C8M - MULTICAT'] + '" style="border:1px solid #000; background:#E2EFDA; color:#385723; font-weight:bold; font-size:12.5px; height:25px; text-align:center !important; vertical-align:middle !important; padding:4px;">B\u00C1N K\u00C8M - MULTICAT</th>'; _0xb2d6ce += '</tr>'; let _0x24bedd = '<tr>'; _0x13d54e.forEach((_0xb74b1b, _0x62e988) => { _0x24bedd += '\n                        <th style="border:1px solid #000; background:#fff; padding:2px 1px; height:28px; vertical-align:middle !important; text-align:center !important; position:relative;">\n                            <input type="text" class="yd-col-name-input" data-col-idx="' + _0x62e988 + '" value="' + _0xb74b1b.name + '" style="width:100%; border:none; outline:none; text-align:center !important; text-align-last:center !important; font-weight:bold; font-size:10.5px; color:#000; background:transparent; font-family:Arial, sans-serif; display:block; margin:0 auto;">\n                            <span class="yd-del-col-btn" data-col-idx="' + _0x62e988 + '" title="X\u00F3a c\u1ED9t n\u00E0y" style="position:absolute; top:0; right:1px; color:#dc3545; font-size:9px; cursor:pointer; font-weight:900;">\u2715</span>\n                        </th>\n                    '; }); _0x24bedd += '</tr>'; let _0x2f9f1b = '<tr><td style="border:1px solid #000; background:#FFF2CC; font-weight:bold; color:#C00000; font-size:12px; height:26px; text-align:center !important; vertical-align:middle !important;">S\u1ED1 Th\u00E1ng \u0110\u1EA1t</td>'; _0x13d54e.forEach((_0x516283, _0x2d9307) => { _0x2f9f1b += '<td id="yd-pass-col-' + _0x2d9307 + '" style="border:1px solid #000; background:#FFF2CC; font-weight:bold; color:#000; font-size:12.5px; text-align:center !important; vertical-align:middle !important;">0</td>'; }); _0x2f9f1b += '</tr>'; let _0x402ffc = ''; for (let _0x4b46a5 = 1; _0x4b46a5 <= 12; _0x4b46a5++) {
-            _0x402ffc += '<tr><td style="border:1px solid #000; background:#fff; font-weight:bold; font-size:12px; height:26px; text-align:center !important; vertical-align:middle !important;">Th\u00E1ng ' + _0x4b46a5 + '</td>';
-            _0x13d54e.forEach((_0x27dd5d, _0xec958d) => { const _0x2f913a = _0x29cee5[_0x4b46a5 + '_' + _0xec958d] || ''; _0x402ffc += '\n                            <td style="border:1px solid #000; padding:0; text-align:center !important; vertical-align:middle !important;">\n                                <input type="text" class="yd-input-cell" data-month="' + _0x4b46a5 + '" data-col="' + _0xec958d + '" value="' + _0x2f913a + '" style="width:100%; height:26px; border:none; outline:none; text-align:center !important; text-align-last:center !important; font-size:11.5px; font-weight:bold; background:transparent; box-sizing:border-box; margin:0 auto; display:block;">\n                            </td>\n                        '; });
-            _0x402ffc += '</tr>';
-        } _0x432ed2.innerHTML = '\n                    <table id="yd-main-table" style="border-collapse:collapse; width:max-content; table-layout:fixed; border:2px solid #000; margin:0 auto; text-align:center;">\n                        ' + _0x58b7c6 + '\n                        <thead>' + _0xb2d6ce + _0x24bedd + '</thead>\n                        <tbody>' + _0x2f9f1b + _0x402ffc + '</tbody>\n                    </table>\n                '; _0x205b58(); _0x333c32(); }; const _0x1c3399 = _0x51f83c => { let _0x4272d5 = 0; const _0x3625f2 = document.querySelectorAll('.yd-input-cell[data-col="' + _0x51f83c + '"]'); _0x3625f2.forEach(_0x573030 => { const _0x26f70f = _0x573030.value.trim().replace('%', ''); const _0xba4718 = parseFloat(_0x26f70f); if (!isNaN(_0xba4718) && _0xba4718 > 0) {
-            if (_0xba4718 < 100) {
-                _0x573030.style.backgroundColor = '#FCE4D6';
-                _0x573030.style.color = '#C00000';
-                _0x573030.style.fontWeight = 'bold';
-            }
-            else {
-                _0x573030.style.backgroundColor = '#FFFFFF';
-                _0x573030.style.color = '#000000';
-                _0x573030.style.fontWeight = 'bold';
-                _0x4272d5++;
-            }
-        }
-        else {
-            _0x573030.style.backgroundColor = 'transparent';
-            _0x573030.style.color = '#000000';
-        } }); const _0xac8984 = document.getElementById('yd-pass-col-' + _0x51f83c); if (_0xac8984)
-            _0xac8984.innerText = _0x4272d5; }; const _0x333c32 = () => { _0x13d54e.forEach((_0x1d4c44, _0x5a816a) => _0x1c3399(_0x5a816a)); }; const _0x3d37ee = () => { document.querySelectorAll('.yd-input-cell').forEach(_0x5028a5 => { const _0x2b52e0 = _0x5028a5.getAttribute('data-month'); const _0x93b15d = _0x5028a5.getAttribute('data-col'); _0x29cee5[_0x2b52e0 + '_' + _0x93b15d] = _0x5028a5.value.trim(); }); }; const _0x205b58 = () => { document.querySelectorAll('.yd-col-name-input').forEach(_0x2729f9 => { _0x2729f9.addEventListener('change', _0x24746d => { const _0x291ca0 = parseInt(_0x24746d.target.getAttribute('data-col-idx')); _0x13d54e[_0x291ca0].name = _0x24746d.target.value.trim() || 'Nh\u00F3m m\u1EDBi'; }); }); document.querySelectorAll('.yd-del-col-btn').forEach(_0x18c74e => { _0x18c74e.onclick = _0x33b932 => { const _0x2ef198 = parseInt(_0x33b932.target.getAttribute('data-col-idx')); if (confirm('B\u1EA1n c\u00F3 ch\u1EAFc mu\u1ED1n x\u00F3a c\u1ED9t "' + _0x13d54e[_0x2ef198].name + '" kh\u00F4ng?')) {
-            _0x3d37ee();
-            _0x13d54e.splice(_0x2ef198, 1);
-            const _0x341b3d = {};
-            for (let _0x2e55db = 1; _0x2e55db <= 12; _0x2e55db++) {
-                let _0x1658c4 = 0;
-                for (let _0x257e66 = 0; _0x257e66 < _0x13d54e.length + 1; _0x257e66++) {
-                    if (_0x257e66 !== _0x2ef198) {
-                        if (_0x29cee5[_0x2e55db + '_' + _0x257e66]) {
-                            _0x341b3d[_0x2e55db + '_' + _0x1658c4] = _0x29cee5[_0x2e55db + '_' + _0x257e66];
-                        }
-                        _0x1658c4++;
-                    }
-                }
-            }
-            _0x29cee5 = _0x341b3d;
-            _0x3958f8();
-        } }; }); document.querySelectorAll('.yd-input-cell').forEach(_0xf0de91 => { _0xf0de91.addEventListener('input', _0x46c2c9 => { const _0x5d8ba8 = _0x46c2c9.target.getAttribute('data-col'); const _0x5714ad = _0x46c2c9.target.getAttribute('data-month'); _0x29cee5[_0x5714ad + '_' + _0x5d8ba8] = _0x46c2c9.target.value.trim(); _0x1c3399(_0x5d8ba8); }); _0xf0de91.addEventListener('blur', _0x5b5f8b => { let _0x2e1821 = _0x5b5f8b.target.value.trim(); if (_0x2e1821 && !isNaN(parseFloat(_0x2e1821)) && !_0x2e1821.includes('%') && !_0x2e1821.toLowerCase().includes('kh\u00F4ng')) {
-            _0x5b5f8b.target.value = parseFloat(_0x2e1821).toFixed(1) + '%';
-            const _0xffdce0 = _0x5b5f8b.target.getAttribute('data-col');
-            const _0x3b0ecc = _0x5b5f8b.target.getAttribute('data-month');
-            _0x29cee5[_0x3b0ecc + '_' + _0xffdce0] = _0x5b5f8b.target.value;
-        } _0x1c3399(_0x5b5f8b.target.getAttribute('data-col')); }); }); }; const _0x5e26b9 = _0x3b7fc4 => { _0x3d37ee(); let _0x4610cb = -1; for (let _0xffd3fc = _0x13d54e.length - 1; _0xffd3fc >= 0; _0xffd3fc--) {
-            if (_0x13d54e[_0xffd3fc].group === _0x3b7fc4) {
-                _0x4610cb = _0xffd3fc;
-                break;
-            }
-        } const _0x5aa8eb = _0x4610cb !== -1 ? _0x4610cb + 1 : _0x13d54e.length; _0x13d54e.splice(_0x5aa8eb, 0, { group: _0x3b7fc4, name: 'Nh\u00F3m m\u1EDBi' }); const _0x435bd8 = {}; for (let _0x8a909f = 1; _0x8a909f <= 12; _0x8a909f++) {
-            let _0x4a1497 = 0;
-            for (let _0x4dd755 = 0; _0x4dd755 < _0x13d54e.length; _0x4dd755++) {
-                if (_0x4dd755 === _0x5aa8eb) {
-                    _0x435bd8[_0x8a909f + '_' + _0x4dd755] = '';
-                }
-                else {
-                    if (_0x29cee5[_0x8a909f + '_' + _0x4a1497]) {
-                        _0x435bd8[_0x8a909f + '_' + _0x4dd755] = _0x29cee5[_0x8a909f + '_' + _0x4a1497];
-                    }
-                    _0x4a1497++;
-                }
-            }
-        } _0x29cee5 = _0x435bd8; _0x3958f8(); }; document.getElementById('yd-add-col-tc').onclick = () => _0x5e26b9('TR\u1EA2 CH\u1EACM'); document.getElementById('yd-add-col-ict').onclick = () => _0x5e26b9('ICT'); document.getElementById('yd-add-col-bk').onclick = () => _0x5e26b9('B\u00C1N K\u00C8M - MULTICAT'); const _0x1780f2 = () => { const _0x5a7eb4 = []; const _0x551e20 = document.getElementById('yd-shop-name').value; _0x5a7eb4.push(['THEO D\u00D5I THI \u0110UA N\u0102M ' + _0x141b95]); _0x5a7eb4.push(['C\u1EE5m: ' + _0x551e20]); const _0x36b21f = ['NH\u00D3M H\u00C0NG']; _0x13d54e.forEach(_0x54f6b9 => _0x36b21f.push(_0x54f6b9.group)); _0x5a7eb4.push(_0x36b21f); const _0x33d4ab = ['']; _0x13d54e.forEach(_0x48bfec => _0x33d4ab.push(_0x48bfec.name)); _0x5a7eb4.push(_0x33d4ab); const _0x321250 = ['S\u1ED1 Th\u00E1ng \u0110\u1EA1t']; _0x13d54e.forEach((_0x16e45e, _0x362cca) => { const _0x9e6277 = document.getElementById('yd-pass-col-' + _0x362cca)?.['innerText'] || '0'; _0x321250.push(_0x9e6277); }); _0x5a7eb4.push(_0x321250); for (let _0x2b633e = 1; _0x2b633e <= 12; _0x2b633e++) {
-            const _0x5123cb = ['Th\u00E1ng ' + _0x2b633e];
-            _0x13d54e.forEach((_0x1ca61c, _0x310145) => { const _0xf35bad = document.querySelector('.yd-input-cell[data-month="' + _0x2b633e + '"][data-col="' + _0x310145 + '"]'); _0x5123cb.push(_0xf35bad ? _0xf35bad.value : ''); });
-            _0x5a7eb4.push(_0x5123cb);
-        } return _0x5a7eb4; }; const _0x4a4ac1 = _0x2c9b96 => { if (_0x2c9b96.ShopName)
-            document.getElementById('yd-shop-name').value = _0x2c9b96.ShopName; if (_0x2c9b96.Cols && Array.isArray(_0x2c9b96.Cols) && _0x2c9b96.Cols.length > 0) {
-            _0x13d54e = _0x2c9b96.Cols;
-        } if (_0x2c9b96.Cells) {
-            _0x29cee5 = _0x2c9b96.Cells;
-        } _0x3958f8(); }; const _0x444a2e = () => { const _0x2e80d4 = CONSTANTS.GSHEET.YEARLY_API; if (!_0x2e80d4 || _0x2e80d4.includes('D\u00C1N_LINK') || !_0x146d1b.historySheetId) {
-            _0x81a905('\u26A0\uFE0F Ch\u01B0a khai b\u00E1o ID File L\u1ECBch S\u1EED!', 'red');
-            _0x3958f8();
-            return;
-        } _0x81a905('<div class="neon-loader-container" style="position:relative; height:18px; width:18px; margin-right:5px;"><div class="neon-ring" style="width:18px; height:18px; border-width:2px; border-top-color:#007bff;"></div></div> \u0110ang t\u1EF1 \u0111\u1ED9ng t\u1EA3i d\u1EEF li\u1EC7u ...', '#007bff'); GM_xmlhttpRequest({ method: 'POST', url: _0x2e80d4, data: JSON.stringify({ action: 'load', sheetId: _0x146d1b.historySheetId }), headers: { 'Content-Type': 'text/plain;charset=utf-8' }, onload: _0x3d5a71 => { if (_0x3d5a71.status === 200) {
-                try {
-                    const _0xe74caf = JSON.parse(_0x3d5a71.responseText);
-                    if (_0xe74caf.status === 'success' && _0xe74caf.data) {
-                        const _0x2ecb43 = typeof _0xe74caf.data === 'string' ? JSON.parse(_0xe74caf.data) : _0xe74caf.data;
-                        _0x4a4ac1(_0x2ecb43);
-                        _0x81a905('\u2705 \u0110\u00E3 \u0111\u1ED3ng b\u1ED9 d\u1EEF li\u1EC7u t\u1EEB cloud!', '#28a745');
-                    }
-                    else {
-                        _0x3958f8();
-                        _0x81a905('\uD83D\uDCDD B\u1EA3ng D\u1EEF li\u1EC7u n\u0103m tr\u1ED1ng.', '#f59e0b');
-                    }
-                }
-                catch (_0x404196) {
-                    _0x3958f8();
-                    _0x81a905('\uD83D\uDCDD B\u1EA3ng D\u1EEF li\u1EC7u n\u0103m tr\u1ED1ng.', '#f59e0b');
-                }
-            }
-            else {
-                _0x3958f8();
-                _0x81a905('\u274C L\u1ED7i k\u1EBFt n\u1ED1i API!', 'red');
-            } }, onerror: () => { _0x3958f8(); _0x81a905('\u274C L\u1ED7i m\u1EA1ng!', 'red'); } }); }; const _0x3019a6 = GM_getValue('tgdd_yearly_data_cache', null); if (_0x3019a6) {
-            _0x4a4ac1(_0x3019a6);
-        }
-        else {
-            _0x3958f8();
-        } _0x444a2e(); document.getElementById('btn-yd-save').onclick = () => { const _0xaa8fba = CONSTANTS.GSHEET.YEARLY_API; if (!_0xaa8fba || !_0x146d1b.historySheetId) {
-            _0x81a905('\u274C Ch\u01B0a khai b\u00E1o ID Sheet L\u1ECBch S\u1EED!', 'red');
-            return;
-        } _0x3d37ee(); const _0x146082 = document.getElementById('btn-yd-save'); _0x146082.disabled = true; _0x81a905('<div class="neon-loader-container" style="position:relative; height:18px; width:18px; margin-right:5px;"><div class="neon-ring" style="width:18px; height:18px; border-width:2px; border-top-color:#d63031;"></div></div> \u0110ang l\u01B0u d\u1EEF li\u1EC7u...', '#d63031'); const _0x3acdd8 = { ShopName: document.getElementById('yd-shop-name').value.trim(), Cols: _0x13d54e, Cells: _0x29cee5 }; const _0xeb8951 = _0x1780f2(); GM_xmlhttpRequest({ method: 'POST', url: _0xaa8fba, data: JSON.stringify({ action: 'save', sheetId: _0x146d1b.historySheetId, matrix: _0xeb8951, data: JSON.stringify(_0x3acdd8) }), headers: { 'Content-Type': 'text/plain;charset=utf-8' }, onload: _0x39d58e => { _0x146082.disabled = false; try {
-                const _0x2d552a = JSON.parse(_0x39d58e.responseText);
-                if (_0x2d552a.status === 'success') {
-                    GM_setValue('tgdd_yearly_data_cache', _0x3acdd8);
-                    _0x81a905('\u2705 \u0110\u00E3 l\u01B0u d\u1EEF li\u1EC7u th\u00E0nh c\u00F4ng!', '#28a745');
-                }
-                else {
-                    _0x81a905('\u274C L\u01B0u th\u1EA5t b\u1EA1i: ' + (_0x2d552a.msg || 'L\u1ED7i ph\u1EA3n h\u1ED3i'), 'red');
-                }
-            }
-            catch (_0x53d883) {
-                _0x81a905('\u274C L\u1ED7i ph\u00E2n t\u00EDch k\u1EBFt qu\u1EA3 ph\u1EA3n h\u1ED3i t\u1EEB GAS!', 'red');
-            } }, onerror: () => { _0x146082.disabled = false; _0x81a905('\u274C L\u1ED7i k\u1EBFt n\u1ED1i m\u1EA1ng!', 'red'); } }); }; document.getElementById('btn-yd-cam').onclick = () => { _0x81a905('\uD83D\uDCF8 \u0110ang chu\u1EA9n b\u1ECB khung h\u00ECnh...', '#6f42c1'); const _0x2c4e88 = document.getElementById('yd-capture-area'); const _0x151ed9 = _0x2c4e88.querySelector('.yd-toolbar-actions'); if (_0x151ed9)
-            _0x151ed9.style.display = 'none'; const _0x1b52a9 = _0x2c4e88.querySelectorAll('.yd-del-col-btn'); _0x1b52a9.forEach(_0x5189bb => _0x5189bb.style.display = 'none'); const _0x147d33 = _0x2c4e88.style.transform; const _0x14006a = _0x2c4e88.style.margin; _0x2c4e88.style.transform = 'none'; _0x2c4e88.style.margin = '0'; const _0x5ea893 = document.getElementById('yd-shop-name'); const _0x106d0b = document.createElement('span'); _0x106d0b.innerText = _0x5ea893.value; _0x106d0b.style.cssText = 'font-size:16px; font-weight:bold; color:#002060;'; _0x5ea893.parentNode.insertBefore(_0x106d0b, _0x5ea893); _0x5ea893.style.display = 'none'; const _0x2f3fa8 = []; document.querySelectorAll('.yd-col-name-input').forEach(_0x5428e2 => { const _0x48f454 = document.createElement('span'); _0x48f454.innerText = _0x5428e2.value; _0x48f454.style.cssText = 'font-weight:bold; font-size:10.5px; color:#000; display:block; padding:1px; text-align:center !important; width:100%; margin:0 auto;'; _0x5428e2.parentNode.insertBefore(_0x48f454, _0x5428e2); _0x5428e2.style.display = 'none'; _0x2f3fa8.push({ inp: _0x5428e2, span: _0x48f454 }); }); const _0x494cee = []; document.querySelectorAll('.yd-input-cell').forEach(_0xbcacbc => { const _0x2df0a1 = document.createElement('div'); _0x2df0a1.innerText = _0xbcacbc.value; _0x2df0a1.style.cssText = 'width:100%; height:26px; line-height:26px; font-size:11.5px; font-weight:bold; text-align:center !important; background:' + (_0xbcacbc.style.backgroundColor || 'transparent') + '; color:' + (_0xbcacbc.style.color || '#000') + '; margin:0 auto;'; _0xbcacbc.parentNode.insertBefore(_0x2df0a1, _0xbcacbc); _0xbcacbc.style.display = 'none'; _0x494cee.push({ inp: _0xbcacbc, div: _0x2df0a1 }); }); setTimeout(() => { html2canvas(_0x2c4e88, { scale: 1.5, useCORS: true, backgroundColor: '#ffffff', allowTaint: true }).then(_0x3b4f7c => { _0x2c4e88.style.transform = _0x147d33; _0x2c4e88.style.margin = _0x14006a; if (_0x151ed9)
-            _0x151ed9.style.display = 'flex'; _0x1b52a9.forEach(_0xefbae7 => _0xefbae7.style.display = ''); _0x5ea893.style.display = ''; _0x106d0b.remove(); _0x2f3fa8.forEach(_0x47ee25 => { _0x47ee25.inp.style.display = ''; _0x47ee25.span.remove(); }); _0x494cee.forEach(_0x549b44 => { _0x549b44.inp.style.display = ''; _0x549b44.div.remove(); }); _0x3b4f7c.toBlob(_0x42c1fe => { if (!_0x42c1fe) {
-            _0x81a905('\u274C L\u1ED7i t\u1EA1o \u1EA3nh!', 'red');
-            return;
-        } const _0xeb918d = URL.createObjectURL(_0x42c1fe); const _0x259b1b = document.createElement('a'); _0x259b1b.download = 'Theo d\u00F5i thi \u0111ua_' + _0x141b95 + '.png'; _0x259b1b.href = _0xeb918d; document.body.appendChild(_0x259b1b); _0x259b1b.click(); document.body.removeChild(_0x259b1b); _0x81a905('\u2705 \u0110\u00E3 t\u1EA3i \u1EA3nh v\u1EC1 m\u00E1y th\u00E0nh c\u00F4ng!', '#28a745'); setTimeout(() => URL.revokeObjectURL(_0xeb918d), 1000); }, 'image/png'); }).catch(_0x239372 => { _0x2c4e88.style.transform = _0x147d33; _0x2c4e88.style.margin = _0x14006a; if (_0x151ed9)
-            _0x151ed9.style.display = 'flex'; _0x1b52a9.forEach(_0x3ba7a5 => _0x3ba7a5.style.display = ''); _0x5ea893.style.display = ''; _0x106d0b.remove(); _0x2f3fa8.forEach(_0x4e623e => { _0x4e623e.inp.style.display = ''; _0x4e623e.span.remove(); }); _0x494cee.forEach(_0x36a091 => { _0x36a091.inp.style.display = ''; _0x36a091.div.remove(); }); _0x81a905('\u274C L\u1ED7i ch\u1EE5p \u1EA3nh!', 'red'); }); }, 300); }; document.getElementById('btn-yd-close').onclick = () => { _0x56c535.remove(); document.body.classList.remove('tgdd-body-lock'); }; const _0x51752d = document.getElementById('yd-scroll-wrapper'); const _0x56d9d6 = document.getElementById('yd-capture-area'); if (UTILS.isMobile()) {
-            UI.setupMobileZoom(_0x51752d, _0x56d9d6);
-        }
-        else {
-            UI.setupDesktopZoom(_0x51752d, _0x56d9d6);
-        } }, createToolsModal: () => { if (document.getElementById(CONSTANTS.DOM_IDS.TOOLS_MODAL))
+        } let _0xcf0a95 = '\n                    <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">\n                    <head><meta charset="utf-8"><style>\n                        table { border-collapse: collapse; font-family: Arial; font-size: 11pt; }\n                        th, td { border: 1px solid black; text-align: center; vertical-align: middle; white-space: normal; }\n                        .bg-title { background-color: #FFFF00; font-weight: bold; font-size: 20pt; color: #008000; height: 50px; }\n                    </style></head><body>\n                    <table>\n                        <tr><td colspan="17" class="bg-title">K\u1EBF ho\u1EA1ch truy\u1EC1n th\u00F4ng Th\u00E1ng ' + (_0x3e130e.getMonth() + 1) + '</td></tr>\n                        <tr><td colspan="17" style="text-align:left; font-weight:bold; border:none;">Si\u00EAu th\u1ECB: ' + _0x433a28 + '</td></tr>\n                        <tr><td colspan="17" style="border:none;"></td></tr>\n                        ' + _0x4119a7 + '\n                    </table></body></html>\n                '; const _0x12ab23 = new Blob([_0xcf0a95], { type: 'application/vnd.ms-excel' }); const _0x3e4f6c = URL.createObjectURL(_0x12ab23); const _0x15aa85 = document.createElement('a'); _0x15aa85.href = _0x3e4f6c; _0x15aa85.download = 'Ke_Hoach_Truyen_Thong_T' + (_0x3e130e.getMonth() + 1) + '_' + _0x433a28.replace(/[^a-zA-Z0-9]/g, '_') + '.xls'; document.body.appendChild(_0x15aa85); _0x15aa85.click(); document.body.removeChild(_0x15aa85); URL.revokeObjectURL(_0x3e4f6c); _0x454efc('\u2705 \u0110\u00E3 xu\u1EA5t file Excel!', '#28a745'); }; document.getElementById('btn-plan-close').onclick = () => { _0x1fa8c9.remove(); document.body.classList.remove('tgdd-body-lock'); }; },  createToolsModal: () => { if (document.getElementById(CONSTANTS.DOM_IDS.TOOLS_MODAL))
             return; const _0x3c0afd = document.createElement('div'); _0x3c0afd.id = 'tgdd-tools-overlay'; document.body.appendChild(_0x3c0afd); const _0x49638f = document.createElement('div'); _0x49638f.id = CONSTANTS.DOM_IDS.TOOLS_MODAL; _0x49638f.innerHTML = '\n                <div class="tgdd-tools-header">\n                    <div class="tgdd-tools-title">Ti\u1EC7n \u00EDch</div>\n                    <div class="tgdd-tools-close" id="btn-close-tools">\u2715</div>\n                </div>\n                <div style="text-align:center; font-size:11px; color:#aaa; margin-top:-30px; margin-bottom:20px; font-style:italic;">* M\u1EB9o: Chu\u1ED9t ph\u1EA3i ho\u1EB7c Gi\u1EEF tay v\u00E0o ti\u1EC7n \u00EDch \u0111\u1EC3 Ghim ra ngo\u00E0i Sidebar</div>\n                <div class="tgdd-tools-grid" id="' + CONSTANTS.DOM_IDS.TOOLS_GRID + '"></div>\n                <div id="tgdd-tools-status"></div>\n            '; document.body.appendChild(_0x49638f); const _0x3b3ad5 = () => { _0x49638f.classList.remove('show'); _0x3c0afd.classList.remove('show'); const _0x436756 = document.getElementById(CONSTANTS.DOM_IDS.BOTTOM_NAV); if (_0x436756)
             _0x436756.classList.add('show-nav'); document.body.classList.remove('tgdd-body-lock'); }; document.getElementById('btn-close-tools').onclick = _0x3b3ad5; _0x3c0afd.onclick = _0x3b3ad5; }, renderToolsGrid: () => { const _0x569d44 = document.getElementById(CONSTANTS.DOM_IDS.TOOLS_GRID); const _0x2d585d = document.getElementById('tgdd-tools-status'); if (!_0x569d44)
             return; const _0x5a24c4 = _0x12d427 => { _0x569d44.innerHTML = ''; CONSTANTS.BUILTIN_APPS.forEach(_0x3fbccc => { _0x3fbccc.id = 'builtin_' + _0x3fbccc.name; _0x569d44.appendChild(UI.createAppElement(_0x3fbccc)); }); const _0x2542dd = { UI: UI, UTILS: UTILS, DATA: DATA, CONSTANTS: CONSTANTS, AUTH_STATE: AUTH_STATE, GM_xmlhttpRequest: GM_xmlhttpRequest }; _0x12d427.forEach(_0x180438 => { try {
@@ -5378,7 +2500,7 @@ window.__AutoBIRun67 = (function () {
         } const _0x29b045 = new Date(); const _0x564a36 = _0x29b045.getMonth() + 1; const _0x4c4ee8 = _0x29b045.getFullYear(); let _0x441708 = '<option value="current" selected>\u26A1 Th\u00E1ng hi\u1EC7n t\u1EA1i (T\u1EF1 \u0111\u1ED9ng)</option>'; for (let _0x28fecb = _0x564a36 - 1; _0x28fecb >= 1; _0x28fecb--) {
             const _0x3bcd6b = String(_0x28fecb).padStart(2, '0');
             _0x441708 += '<option value="' + _0x3bcd6b + '/' + _0x4c4ee8 + '">\uD83D\uDCC5 Th\u00E1ng ' + _0x3bcd6b + '/' + _0x4c4ee8 + '</option>';
-        } _0x2aa6dd.innerHTML = '\n                <div class="tgdd-select-content" style="padding:0; overflow:hidden;">\n                    <div style="display:flex; background:#f4f6f8; border-bottom:1px solid #e2e8f0;">\n                        <div id="md-tab-auto" style="flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; background:#fff; color:#007bff; border-bottom:3px solid #007bff;">\uD83E\uDD16 CH\u1EA0Y B\u00C1O C\u00C1O</div>\n                        <div id="md-tab-excel" style="flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; color:#64748b; border-bottom:3px solid transparent;">\uD83D\uDCCA NH\u1EACP EXCEL</div>\n                    </div>\n\n                    <!-- M\u1EB6T 1: CH\u1EA0Y B\u00C1O C\u00C1O AUTO -->\n                    <div id="md-view-auto" style="padding:20px; display:block;">\n\n                        <!-- DROPDOWN CH\u1ECCN TH\u00C1NG B\u00C1O C\u00C1O -->\n                        <div style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; background: #f8fafc; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #e2e8f0;">\n                            <span style="font-size: 12.5px; font-weight: bold; color: #334155;">Th\u00E1ng b\u00E1o c\u00E1o:</span>\n                            <select id="sel-report-month" style="padding: 5px 8px; border-radius: 6px; border: 1.5px solid #007bff; font-weight: bold; color: #007bff; background: #fff; outline: none; cursor: pointer; font-size: 12px;">\n                                ' + _0x441708 + '\n                            </select>\n                        </div>\n\n                        <div class="tgdd-chk-group" id="grp-chk-all" style="background: #e6f2ff; border-color: #b8daff; transition: opacity 0.2s;">\n                            <input type="checkbox" id="chk-all-save">\n                            <label for="chk-all-save" style="color: #0056b3; font-weight: 900;">\uD83D\uDD25 B\u00E1o c\u00E1o ALL & L\u01B0u Data</label>\n                        </div>\n                        <div class="tgdd-chk-group">\n                            <input type="checkbox" id="chk-rev-thidua" checked>\n                            <label for="chk-rev-thidua" style="font-weight:bold; color:#007bff;">\uD83D\uDCC8 B\u00E1o c\u00E1o L\u0169y K\u1EBF</label>\n                        </div>\n                        <div class="tgdd-chk-group" id="grp-chk-fast-realtime" style="background:#fff7ed; border-color:#fdba74;">\n                            <input type="checkbox" id="chk-fast-realtime">\n                            <label for="chk-fast-realtime" style="font-weight:900; color:#ea580c;">\u26A1 B\u00E1o c\u00E1o Realtime</label>\n                        </div>\n                        <div class="tgdd-chk-group">\n                            <input type="checkbox" id="chk-crm">\n                            <label for="chk-crm" style="font-weight:bold;">\uD83C\uDF1F B\u00E1o c\u00E1o Ph\u1EE5c v\u1EE5 (CRM)</label>\n                        </div>\n\n                        <!-- \u26A1 T\u00D9Y CH\u1ECCN M\u1EDAI: XEM B\u00C1O C\u00C1O G\u1EA6N NH\u1EA4T -->\n                        <div class="tgdd-chk-group" id="grp-chk-last-run" style="background: #f0fdf4; border-color: #bbf7d0;">\n                            <input type="checkbox" id="chk-last-run">\n                            <label for="chk-last-run" style="color: #15803d; font-weight: 900;">\u26A1 Xem b\u00E1o c\u00E1o g\u1EA7n nh\u1EA5t</label>\n                        </div>\n\n                        ' + _0x469bec + '\n\n                        <div class="tgdd-select-btn-row">\n                            <button class="tgdd-btn-cancel btn-close-modal">\u0110\u00F3ng</button>\n                            <button class="tgdd-btn-run" id="btn-sel-run">B\u1EAFt \u0110\u1EA7u Ch\u1EA1y</button>\n                        </div>\n                    </div>\n\n                    <!-- M\u1EB6T 2: N\u1EA0P FILE EXCEL -->\n                    <div id="md-view-excel" style="padding:20px; display:none; background:#fafafa;">\n                        <div style="border: 2px dashed #3b82f6; padding: 15px; border-radius: 8px; margin-bottom: 10px; background: #eff6ff; text-align:center; position:relative;">\n                            <input type="file" id="md-file-now" accept=".xlsx, .xls, .csv" style="opacity:0; position:absolute; top:0; left:0; width:100%; height:100%; cursor:pointer;">\n                            <div style="font-size:24px; margin-bottom:5px;">\uD83D\uDCC8</div>\n                            <div style="font-weight:bold; color:#3b82f6; font-size:13px;">File Th\u00E1ng N\u00C0Y</div>\n                            <div id="md-name-now" style="font-size:11px; color:#10b981; margin-top:5px; font-weight:bold;">Ch\u01B0a ch\u1ECDn file</div>\n                        </div>\n\n                        <div style="border: 2px dashed #8b5cf6; padding: 15px; border-radius: 8px; margin-bottom: 15px; background: #f5f3ff; text-align:center; position:relative;">\n                            <input type="file" id="md-file-prev" accept=".xlsx, .xls, .csv" style="opacity:0; position:absolute; top:0; left:0; width:100%; height:100%; cursor:pointer;">\n                            <div style="font-size:24px; margin-bottom:5px;">\uD83D\uDCC9</div>\n                            <div style="font-weight:bold; color:#8b5cf6; font-size:13px;">File Th\u00E1ng TR\u01AF\u1EDAC</div>\n                            <div id="md-name-prev" style="font-size:11px; color:#10b981; margin-top:5px; font-weight:bold;">Ch\u01B0a ch\u1ECDn file</div>\n                        </div>\n\n                        <div class="tgdd-select-btn-row">\n                            <button class="tgdd-btn-cancel btn-close-modal">\u0110\u00F3ng</button>\n                            <button id="btn-fast-process" style="flex:1; padding:10px; border:none; background:linear-gradient(135deg, #10b981, #059669); color:white; font-weight:bold; border-radius:8px; cursor:pointer;">XEM B\u00C1O C\u00C1O</button>\n                        </div>\n                    </div>\n                </div>\n            '; const _0x25cc35 = document.getElementById('md-tab-auto'); const _0x5ed9ef = document.getElementById('md-tab-excel'); const _0x24403d = document.getElementById('md-view-auto'); const _0x17bf9d = document.getElementById('md-view-excel'); _0x25cc35.onclick = () => { _0x25cc35.style.cssText = 'flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; background:#fff; color:#007bff; border-bottom:3px solid #007bff;'; _0x5ed9ef.style.cssText = 'flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; color:#64748b; border-bottom:3px solid transparent;'; _0x24403d.style.display = 'block'; _0x17bf9d.style.display = 'none'; }; _0x5ed9ef.onclick = () => { _0x5ed9ef.style.cssText = 'flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; background:#fff; color:#007bff; border-bottom:3px solid #007bff;'; _0x25cc35.style.cssText = 'flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; color:#64748b; border-bottom:3px solid transparent;'; _0x17bf9d.style.display = 'block'; _0x24403d.style.display = 'none'; }; const _0x30405e = document.getElementById('chk-all-save'); const _0x124e5b = document.getElementById('grp-chk-all'); const _0xa371d7 = document.getElementById('chk-rev-thidua'); const _0x5d0357 = document.getElementById('chk-crm'); const _0x30f0b0 = document.getElementById('chk-last-run'); const _0xfast43 = document.getElementById('chk-fast-realtime'); const _0x863a4 = document.getElementById('chk-test'); const _0x43d320 = document.getElementById('sel-report-month'); if (_0x43d320) {
+        } _0x2aa6dd.innerHTML = '\n                <div class="tgdd-select-content" style="padding:0; overflow:hidden;">\n                    <div style="display:flex; background:#f4f6f8; border-bottom:1px solid #e2e8f0;">\n                        <div id="md-tab-auto" style="flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; background:#fff; color:#007bff; border-bottom:3px solid #007bff;">\uD83E\uDD16 CH\u1EA0Y B\u00C1O C\u00C1O</div>\n                        <div id="md-tab-excel" style="flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; color:#64748b; border-bottom:3px solid transparent;">\uD83D\uDCCA NH\u1EACP EXCEL</div>\n                    </div>\n\n                    <!-- M\u1EB6T 1: CH\u1EA0Y B\u00C1O C\u00C1O AUTO -->\n                    <div id="md-view-auto" style="padding:20px; display:block;">\n\n                        <!-- DROPDOWN CH\u1ECCN TH\u00C1NG B\u00C1O C\u00C1O -->\n                        \n\n                        <div class="tgdd-chk-group" id="grp-chk-all" style="background: #e6f2ff; border-color: #b8daff; transition: opacity 0.2s;">\n                            <input type="checkbox" id="chk-all-save">\n                            <label for="chk-all-save" style="color: #0056b3; font-weight: 900;">\uD83D\uDD25 B\u00E1o c\u00E1o ALL & L\u01B0u Data</label>\n                        </div>\n                        <div class="tgdd-chk-group">\n                            <input type="checkbox" id="chk-rev-thidua" checked>\n                            <label for="chk-rev-thidua" style="font-weight:bold; color:#007bff;">\uD83D\uDCC8 B\u00E1o c\u00E1o L\u0169y K\u1EBF</label>\n                        </div>\n                        <div class="tgdd-chk-group" id="grp-chk-fast-realtime" style="background:#fff7ed; border-color:#fdba74;">\n                            <input type="checkbox" id="chk-fast-realtime">\n                            <label for="chk-fast-realtime" style="font-weight:900; color:#ea580c;">\u26A1 B\u00E1o c\u00E1o Realtime</label>\n                        </div>\n                        <div class="tgdd-chk-group">\n                            <input type="checkbox" id="chk-crm">\n                            <label for="chk-crm" style="font-weight:bold;">\uD83C\uDF1F B\u00E1o c\u00E1o Ph\u1EE5c v\u1EE5 (CRM)</label>\n                        </div>\n\n                        <!-- \u26A1 T\u00D9Y CH\u1ECCN M\u1EDAI: XEM B\u00C1O C\u00C1O G\u1EA6N NH\u1EA4T -->\n                        <div class="tgdd-chk-group" id="grp-chk-last-run" style="background: #f0fdf4; border-color: #bbf7d0;">\n                            <input type="checkbox" id="chk-last-run">\n                            <label for="chk-last-run" style="color: #15803d; font-weight: 900;">\u26A1 Xem b\u00E1o c\u00E1o g\u1EA7n nh\u1EA5t</label>\n                        </div>\n\n                        ' + _0x469bec + '\n\n                        <div class="tgdd-select-btn-row">\n                            <button class="tgdd-btn-cancel btn-close-modal">\u0110\u00F3ng</button>\n                            <button class="tgdd-btn-run" id="btn-sel-run">B\u1EAFt \u0110\u1EA7u Ch\u1EA1y</button>\n                        </div>\n                    </div>\n\n                    <!-- M\u1EB6T 2: N\u1EA0P FILE EXCEL -->\n                    <div id="md-view-excel" style="padding:20px; display:none; background:#fafafa;">\n                        <div style="border: 2px dashed #3b82f6; padding: 15px; border-radius: 8px; margin-bottom: 10px; background: #eff6ff; text-align:center; position:relative;">\n                            <input type="file" id="md-file-now" accept=".xlsx, .xls, .csv" style="opacity:0; position:absolute; top:0; left:0; width:100%; height:100%; cursor:pointer;">\n                            <div style="font-size:24px; margin-bottom:5px;">\uD83D\uDCC8</div>\n                            <div style="font-weight:bold; color:#3b82f6; font-size:13px;">File Th\u00E1ng N\u00C0Y</div>\n                            <div id="md-name-now" style="font-size:11px; color:#10b981; margin-top:5px; font-weight:bold;">Ch\u01B0a ch\u1ECDn file</div>\n                        </div>\n\n                        <div style="border: 2px dashed #8b5cf6; padding: 15px; border-radius: 8px; margin-bottom: 15px; background: #f5f3ff; text-align:center; position:relative;">\n                            <input type="file" id="md-file-prev" accept=".xlsx, .xls, .csv" style="opacity:0; position:absolute; top:0; left:0; width:100%; height:100%; cursor:pointer;">\n                            <div style="font-size:24px; margin-bottom:5px;">\uD83D\uDCC9</div>\n                            <div style="font-weight:bold; color:#8b5cf6; font-size:13px;">File Th\u00E1ng TR\u01AF\u1EDAC</div>\n                            <div id="md-name-prev" style="font-size:11px; color:#10b981; margin-top:5px; font-weight:bold;">Ch\u01B0a ch\u1ECDn file</div>\n                        </div>\n\n                        <div class="tgdd-select-btn-row">\n                            <button class="tgdd-btn-cancel btn-close-modal">\u0110\u00F3ng</button>\n                            <button id="btn-fast-process" style="flex:1; padding:10px; border:none; background:linear-gradient(135deg, #10b981, #059669); color:white; font-weight:bold; border-radius:8px; cursor:pointer;">XEM B\u00C1O C\u00C1O</button>\n                        </div>\n                    </div>\n                </div>\n            '; const _0x25cc35 = document.getElementById('md-tab-auto'); const _0x5ed9ef = document.getElementById('md-tab-excel'); const _0x24403d = document.getElementById('md-view-auto'); const _0x17bf9d = document.getElementById('md-view-excel'); _0x25cc35.onclick = () => { _0x25cc35.style.cssText = 'flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; background:#fff; color:#007bff; border-bottom:3px solid #007bff;'; _0x5ed9ef.style.cssText = 'flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; color:#64748b; border-bottom:3px solid transparent;'; _0x24403d.style.display = 'block'; _0x17bf9d.style.display = 'none'; }; _0x5ed9ef.onclick = () => { _0x5ed9ef.style.cssText = 'flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; background:#fff; color:#007bff; border-bottom:3px solid #007bff;'; _0x25cc35.style.cssText = 'flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; color:#64748b; border-bottom:3px solid transparent;'; _0x17bf9d.style.display = 'block'; _0x24403d.style.display = 'none'; }; const _0x30405e = document.getElementById('chk-all-save'); const _0x124e5b = document.getElementById('grp-chk-all'); const _0xa371d7 = document.getElementById('chk-rev-thidua'); const _0x5d0357 = document.getElementById('chk-crm'); const _0x30f0b0 = document.getElementById('chk-last-run'); const _0xfast43 = document.getElementById('chk-fast-realtime'); const _0x863a4 = document.getElementById('chk-test'); const _0x43d320 = document.getElementById('sel-report-month'); if (_0x43d320) {
             _0x43d320.onchange = _0x35e4fb => { const _0x1a178a = _0x35e4fb.target.value !== 'current'; if (_0x1a178a) {
                 _0x30405e.checked = false;
                 _0x30405e.disabled = true;
@@ -6865,7 +3987,7 @@ window.__AutoBIRun67 = (function () {
         } let _0x592670 = ''; _0x133240.forEach(_0x31e83a => { _0x592670 += '<option value="' + _0x31e83a + '">' + _0x31e83a + '</option>'; }); const _0x339938 = window.tgdd_nlnv_date_range ? window.tgdd_nlnv_date_range.from : _0x133240[0]; const _0x137556 = window.tgdd_nlnv_date_range ? window.tgdd_nlnv_date_range.to : _0x133240[_0x133240.length - 1]; let _0x426169 = '\n                    <div style="text-align:left; font-weight:bold; color:#333; margin-bottom:15px;">\n                        <label>T\u1EEB ng\u00E0y:</label>\n                        <select id="sel-date-from" style="width:100%; padding:8px; border-radius:5px; border:1px solid #ccc; margin-top:5px; margin-bottom:10px;">\n                            ' + _0x592670 + '\n                        </select>\n                        <label>\u0110\u1EBFn ng\u00E0y:</label>\n                        <select id="sel-date-to" style="width:100%; padding:8px; border-radius:5px; border:1px solid #ccc; margin-top:5px;">\n                            ' + _0x592670 + '\n                        </select>\n                        <button id="btn-clear-time-filter" style="margin-top:15px; width:100%; padding:8px; background:#f8f9fa; border:1px solid #ccc; border-radius:5px; cursor:pointer; font-weight:bold; color:#d63031;">Hi\u1EC3n th\u1ECB To\u00E0n b\u1ED9 th\u00E1ng</button>\n                        <button id="btn-save-time-filter" class="tgdd-msg-btn" style="margin-top:10px; width:100%; background:#007bff;">\u00C1p d\u1EE5ng b\u1ED9 l\u1ECDc</button>\n                    </div>\n                '; _0x426169 += '<style>#tgdd-modal-btn-close { display: none !important; }</style>'; UI.showMsg('L\u1ECCC TH\u1EDCI GIAN', _0x426169, 'info'); setTimeout(() => { document.getElementById('sel-date-from').value = _0x339938; document.getElementById('sel-date-to').value = _0x137556; document.getElementById('btn-clear-time-filter').onclick = () => { window.tgdd_nlnv_date_range = null; document.getElementById(CONSTANTS.DOM_IDS.MSG_MODAL).style.display = 'none'; document.body.classList.remove('tgdd-body-lock'); _0x5d2d05(); }; document.getElementById('btn-save-time-filter').onclick = () => { const _0x1fcd1e = document.getElementById('sel-date-from').value; const _0x46f277 = document.getElementById('sel-date-to').value; const _0xd02de3 = parseInt(_0x1fcd1e.split('/')[0]); const _0x4fad06 = parseInt(_0x46f277.split('/')[0]); if (_0xd02de3 > _0x4fad06) {
             alert('L\u1ED7i: \'T\u1EEB ng\u00E0y\' kh\u00F4ng \u0111\u01B0\u1EE3c l\u1EDBn h\u01A1n \'\u0110\u1EBFn ng\u00E0y\'!');
             return;
-        } window.tgdd_nlnv_date_range = { from: _0x1fcd1e, to: _0x46f277 }; document.getElementById(CONSTANTS.DOM_IDS.MSG_MODAL).style.display = 'none'; document.body.classList.remove('tgdd-body-lock'); _0x5d2d05(); }; }, 200); }; const _0x598bb9 = document.createElement('div'); _0x598bb9.id = CONSTANTS.DOM_IDS.SCROLL_WRAPPER; const _0x2ad4ca = document.createElement('div'); _0x2ad4ca.id = CONSTANTS.DOM_IDS.CAPTURE_AREA; _0x598bb9.appendChild(_0x2ad4ca); document.body.appendChild(_0x598bb9); const _0x119aa7 = document.createElement('div'); _0x119aa7.id = CONSTANTS.DOM_IDS.REPORT_NAV; _0x119aa7.className = 'slide-hidden'; const _0x5aef00 = typeof GM_info !== 'undefined' && GM_info.script ? GM_info.script.name : 'Auto BI'; const _0x2e44ea = document.createElement('div'); _0x2e44ea.id = 'tgdd-sidebar-menu'; const _0x33f6de = '<svg viewBox="0 0 24 24"><path d="M12 3v9.28a4.39 4.39 0 0 0-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/></svg>'; const _0x1852d1 = '<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>'; _0x2e44ea.innerHTML = '\n                <div class="sidebar-header">\n                    <div class="sidebar-title">\uD83E\uDD16 ' + _0x5aef00 + '</div>\n                    <button class="sidebar-close" id="btn-close-sidebar">\u2715</button>\n                </div>\n\n                <div class="sidebar-view-wrapper">\n                    <!-- PANEL 1: MENU G\u1ED0C -->\n                    <div id="panel-menu" class="sidebar-panel">\n                        <div class="sidebar-content">\n                            <div class="tgdd-menu-item" id="btn-menu-comment">' + _0x5bfe13.comment + ' Auto Comment</div>\n                            <div class="tgdd-menu-item" id="btn-menu-deploy">' + _0x5bfe13.line + ' G\u1EEDi Line</div>\n                            <div class="tgdd-menu-item" id="btn-menu-cam">' + _0x5bfe13.cam + ' Ch\u1EE5p \u1EA3nh</div>\n                            <div class="tgdd-menu-item" id="btn-menu-tools">' + _0x5bfe13.tools + ' Ti\u1EC7n \u00EDch</div>\n                            <div class="tgdd-menu-item" id="btn-menu-plan" style="color:#e84393; font-weight:900;">' + _0x5bfe13.plan + ' K\u1EBF ho\u1EA1ch truy\u1EC1n th\u00F4ng</div>\n                            <div class="tgdd-menu-item" id="btn-menu-yearly" style="color:#0984e3; font-weight:900;">\n                                <svg viewBox="0 0 24 24" style="width:22px; height:22px; fill:none; stroke:#0984e3; stroke-width:2px; margin-right:4px;"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>\n                                D\u1EEF li\u1EC7u n\u0103m\n                            </div>\n                            <div class="tgdd-menu-item" id="btn-menu-history" style="color:#e67e22;">' + _0x5bfe13.history + ' Xem l\u1EA1i l\u1ECBch s\u1EED</div>\n                            <div class="tgdd-menu-item" id="btn-menu-save-data" style="color:#007bff;">' + _0x5bfe13.save + ' L\u01B0u b\u00E1o c\u00E1o</div>\n                        </div>\n\n                        <div class="sidebar-footer">\n                            <div class="tgdd-menu-item" id="btn-menu-rerun" style="color: #d63031; font-weight:900;">' + _0x5bfe13.rerun + ' Ch\u1EA1y l\u1EA1i b\u00E1o c\u00E1o</div>\n                        </div>\n                    </div>\n                </div>\n            '; const _0x6bfd3c = document.createElement('div'); _0x6bfd3c.id = 'tgdd-sidebar-overlay'; document.body.appendChild(_0x6bfd3c); document.body.appendChild(_0x2e44ea); _0x119aa7.innerHTML = '\n                <!-- N\u00FAt Menu C\u1ED1 \u0110\u1ECBnh -->\n                <div id="btn-menu">\n                    ' + _0x5bfe13.menu + '<span>Menu</span>\n                </div>\n\n                <!-- V\u00F9ng Tr\u01B0\u1EE3t Ngang Ch\u1EE9a C\u00E1c Tab -->\n                <div class="rpt-nav-scroll-area">\n                    <div class="rpt-nav-item" data-tab="dashboard">' + _0x5bfe13.dashboard + '<span>Dashboard</span></div>\n                    <div class="rpt-nav-item active" data-tab="health">' + (_0x5bfe13.health || '\u2764\uFE0F') + '<span>S\u1EE9c kh\u1ECFe ST</span></div>\n                    <div class="rpt-nav-item active" data-tab="oneshop">' + _0x5bfe13.one + '<span>Realtime V1</span></div>\n                    <div class="rpt-nav-item" data-tab="rt4">' + _0x5bfe13.rt4 + '<span>Realtime V4</span></div>\n                    <div class="rpt-nav-item" data-tab="multirt">' + _0x5bfe13.rt + '<span>Multi RT</span></div>\n                    <div class="rpt-nav-item" data-tab="multilk">' + _0x5bfe13.lk + '<span>Multi LK</span></div>\n                    <div class="rpt-nav-item" data-tab="bcstaff">' + _0x5bfe13.staff + '<span>Chi ti\u1EBFt NV</span></div>\n                    <div class="rpt-nav-item" data-tab="nlnv">' + _0x5bfe13.person + '<span>N\u0103ng l\u1EF1c NV</span></div>\n                    <div class="rpt-nav-item" data-tab="compare_week">' + (_0x5bfe13.compare || '\uD83D\uDCC8') + '<span>So s\u00E1nh tu\u1EA7n</span></div>\n                    <div class="rpt-nav-item" data-tab="compare">' + (_0x5bfe13.compare || '\uD83D\uDCC8') + '<span>So s\u00E1nh BI CK</span></div>\n                    <div class="rpt-nav-item" data-tab="comparerp">' + _0x5bfe13.comparerp + '<span>So s\u00E1nh RP CK</span></div>\n                    <div class="rpt-nav-item" data-tab="revenue">' + _0x5bfe13.chart + '<span>Chart Doanh thu</span></div>\n                    <div class="rpt-nav-item" data-tab="service">' + _0x5bfe13.donate + '<span>Chart Ph\u1EE5c v\u1EE5</span></div>\n                </div>\n            '; document.body.appendChild(_0x119aa7); if (!document.getElementById('btn-toggle-report-nav')) {
+        } window.tgdd_nlnv_date_range = { from: _0x1fcd1e, to: _0x46f277 }; document.getElementById(CONSTANTS.DOM_IDS.MSG_MODAL).style.display = 'none'; document.body.classList.remove('tgdd-body-lock'); _0x5d2d05(); }; }, 200); }; const _0x598bb9 = document.createElement('div'); _0x598bb9.id = CONSTANTS.DOM_IDS.SCROLL_WRAPPER; const _0x2ad4ca = document.createElement('div'); _0x2ad4ca.id = CONSTANTS.DOM_IDS.CAPTURE_AREA; _0x598bb9.appendChild(_0x2ad4ca); document.body.appendChild(_0x598bb9); const _0x119aa7 = document.createElement('div'); _0x119aa7.id = CONSTANTS.DOM_IDS.REPORT_NAV; _0x119aa7.className = 'slide-hidden'; const _0x5aef00 = typeof GM_info !== 'undefined' && GM_info.script ? GM_info.script.name : 'Auto BI'; const _0x2e44ea = document.createElement('div'); _0x2e44ea.id = 'tgdd-sidebar-menu'; const _0x33f6de = '<svg viewBox="0 0 24 24"><path d="M12 3v9.28a4.39 4.39 0 0 0-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/></svg>'; const _0x1852d1 = '<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>'; _0x2e44ea.innerHTML = '\n                <div class="sidebar-header">\n                    <div class="sidebar-title">\uD83E\uDD16 ' + _0x5aef00 + '</div>\n                    <button class="sidebar-close" id="btn-close-sidebar">\u2715</button>\n                </div>\n\n                <div class="sidebar-view-wrapper">\n                    <!-- PANEL 1: MENU G\u1ED0C -->\n                    <div id="panel-menu" class="sidebar-panel">\n                        <div class="sidebar-content">\n                            <div class="tgdd-menu-item" id="btn-menu-comment">' + _0x5bfe13.comment + ' Auto Comment</div>\n                            <div class="tgdd-menu-item" id="btn-menu-deploy">' + _0x5bfe13.line + ' G\u1EEDi Line</div>\n                            <div class="tgdd-menu-item" id="btn-menu-cam">' + _0x5bfe13.cam + ' Ch\u1EE5p \u1EA3nh</div>\n                            <div class="tgdd-menu-item" id="btn-menu-tools">' + _0x5bfe13.tools + ' Ti\u1EC7n \u00EDch</div>\n                            <div class="tgdd-menu-item" id="btn-menu-plan" style="color:#e84393; font-weight:900;">' + _0x5bfe13.plan + ' K\u1EBF ho\u1EA1ch truy\u1EC1n th\u00F4ng</div>\n                                                        <div class="tgdd-menu-item" id="btn-menu-history" style="color:#e67e22;">' + _0x5bfe13.history + ' Xem l\u1EA1i l\u1ECBch s\u1EED</div>\n                            <div class="tgdd-menu-item" id="btn-menu-save-data" style="color:#007bff;">' + _0x5bfe13.save + ' L\u01B0u b\u00E1o c\u00E1o</div>\n                        </div>\n\n                        <div class="sidebar-footer">\n                            <div class="tgdd-menu-item" id="btn-menu-rerun" style="color: #d63031; font-weight:900;">' + _0x5bfe13.rerun + ' Ch\u1EA1y l\u1EA1i b\u00E1o c\u00E1o</div>\n                        </div>\n                    </div>\n                </div>\n            '; const _0x6bfd3c = document.createElement('div'); _0x6bfd3c.id = 'tgdd-sidebar-overlay'; document.body.appendChild(_0x6bfd3c); document.body.appendChild(_0x2e44ea); _0x119aa7.innerHTML = '\n                <!-- N\u00FAt Menu C\u1ED1 \u0110\u1ECBnh -->\n                <div id="btn-menu">\n                    ' + _0x5bfe13.menu + '<span>Menu</span>\n                </div>\n\n                <!-- V\u00F9ng Tr\u01B0\u1EE3t Ngang Ch\u1EE9a C\u00E1c Tab -->\n                <div class="rpt-nav-scroll-area">\n                    <div class="rpt-nav-item" data-tab="dashboard">' + _0x5bfe13.dashboard + '<span>Dashboard</span></div>\n                    <div class="rpt-nav-item active" data-tab="health">' + (_0x5bfe13.health || '\u2764\uFE0F') + '<span>S\u1EE9c kh\u1ECFe ST</span></div>\n                    <div class="rpt-nav-item active" data-tab="oneshop">' + _0x5bfe13.one + '<span>Realtime V1</span></div>\n                    <div class="rpt-nav-item" data-tab="rt4">' + _0x5bfe13.rt4 + '<span>Realtime V4</span></div>\n                    <div class="rpt-nav-item" data-tab="multirt">' + _0x5bfe13.rt + '<span>Multi RT</span></div>\n                    <div class="rpt-nav-item" data-tab="multilk">' + _0x5bfe13.lk + '<span>Multi LK</span></div>\n                    <div class="rpt-nav-item" data-tab="bcstaff">' + _0x5bfe13.staff + '<span>Chi ti\u1EBFt NV</span></div>\n                    <div class="rpt-nav-item" data-tab="nlnv">' + _0x5bfe13.person + '<span>N\u0103ng l\u1EF1c NV</span></div>\n                    <div class="rpt-nav-item" data-tab="compare_week">' + (_0x5bfe13.compare || '\uD83D\uDCC8') + '<span>So s\u00E1nh tu\u1EA7n</span></div>\n                    <div class="rpt-nav-item" data-tab="compare">' + (_0x5bfe13.compare || '\uD83D\uDCC8') + '<span>So s\u00E1nh BI CK</span></div>\n                    <div class="rpt-nav-item" data-tab="comparerp">' + _0x5bfe13.comparerp + '<span>So s\u00E1nh RP CK</span></div>\n                    <div class="rpt-nav-item" data-tab="revenue">' + _0x5bfe13.chart + '<span>Chart Doanh thu</span></div>\n                    <div class="rpt-nav-item" data-tab="service">' + _0x5bfe13.donate + '<span>Chart Ph\u1EE5c v\u1EE5</span></div>\n                </div>\n            '; document.body.appendChild(_0x119aa7); if (!document.getElementById('btn-toggle-report-nav')) {
             const _0x57e656 = document.createElement('div');
             _0x57e656.className = 'nav-toggle-btn';
             _0x57e656.id = 'btn-toggle-report-nav';
@@ -9962,117 +7084,26 @@ const _0x133c09 = '<div style="font-size:15px; color:#333; line-height:1.6; text
         }, checkAutoProcess: () => { if (!window.__AutoBIRun67.active())
             return; const runId67 = window.__AutoBIRun67.current().id; const _0x509d19 = GM_getValue(CONSTANTS.KEYS.AUTO_STATE); if (typeof _0x509d19 !== 'number' || _0x509d19 < 0)
             return; const _0x85e9c8 = UTILS.getPersistentConfig(); const _0x2e2bb0 = GM_getValue(CONSTANTS.KEYS.RUN_QUEUE, []); const _0x3b9c7d = GM_getValue(CONSTANTS.KEYS.CONFIG_LIST) || []; const _0x351723 = GM_getValue('tgdd_auto_start_time', Date.now()); const _0xa20620 = GM_getValue('tgdd_total_auto_seconds', 60); const _0x511741 = () => { if (!window.__AutoBIRun67.active(runId67))
-            return; const _0x183eb7 = Math.floor((Date.now() - _0x351723) / 1000); const _0x542bcf = Math.max(1, _0xa20620 - _0x183eb7); UI.updateTimer(_0x542bcf); }; _0x511741(); const _0x3111b4 = setInterval(_0x511741, 1000);  const __autobiDispatch = () => { if (_0x509d19 === 3) {
-            window.__AutoBIInstallment41.run(_0x85e9c8, DATA, UI, () => _0x497e3b(null, true));
-            return;
-        } if (_0x509d19 === 0) {
-            DATA.runRevenueSequenceDMX(_0x85e9c8, () => _0x497e3b(null, true));
-            return;
-        } if (_0x509d19 === 2) {
-            DATA.runThiDuaSequenceDMX(_0x3b9c7d, _0x85e9c8, () => _0x497e3b(null, true));
-            return;
-        } if (_0x509d19 === 17) {
-            DATA.runCrmSequence(_0x85e9c8, () => _0x497e3b(null, true));
-            return;
-        } if (_0x509d19 === 18) {
-            DATA.runCrmServiceScoreSequence(_0x85e9c8, () => _0x497e3b(null, true));
-            return;
-        } };
-        /* V16.8: chạy nhanh bằng API cho các bước 0/2/3, không chuyển trang; bước nào API lỗi thì chạy giao diện như cũ */
-        const __skip = GM_getValue('autobi_fast_skip', null);
-        const __autobiGo = () => { const __u = UTILS.getStepUrl(_0x509d19, _0x85e9c8); let __here = true; try { __here = !__u || new URL(__u, location.href).pathname === location.pathname; } catch (_) { } if (__here) __autobiDispatch(); else { GM_setValue('autobi_fast_skip', { run: runId67, step: _0x509d19 }); window.location.replace(__u); } };
-        const __autobiFast = window.__AutoBIApi && window.__AutoBIApi.fastOn && window.__AutoBIApi.fastOn() && [0, 2, 3, 17, 18].includes(_0x509d19) && !window.__AutoBIFastTried && !(__skip && __skip.run === runId67 && __skip.step === _0x509d19);
+            return; const _0x183eb7 = Math.floor((Date.now() - _0x351723) / 1000); const _0x542bcf = Math.max(1, _0xa20620 - _0x183eb7); UI.updateTimer(_0x542bcf); }; _0x511741(); const _0x3111b4 = setInterval(_0x511741, 1000);  /* V16.8: chạy nhanh bằng API cho các bước 0/2/3, không chuyển trang; bước nào API lỗi thì chạy giao diện như cũ */
+        const __autobiFast = window.__AutoBIApi && window.__AutoBIApi.fastOn && window.__AutoBIApi.fastOn() && [0, 2, 3, 17, 18].includes(_0x509d19) && !window.__AutoBIFastTried;
         if (__autobiFast) {
             window.__AutoBIFastTried = true;
             try { window.__AutoBILog5.stage('API', 'Tổng cụm', 'Đang lấy số bằng API (không chuyển trang)'); } catch (_) { }
             window.__AutoBIApi.fastRun(_0x2e2bb0, _0x509d19, _0x85e9c8).then(res => {
                 if (!window.__AutoBIRun67.active(runId67) || GM_getValue('tgdd_auto_state_run_v30', -1) !== _0x509d19) { clearInterval(_0x3111b4); return; }
-                if (!res.handled) { __autobiGo(); return; }
+                if (!res.handled) { clearInterval(_0x3111b4); const __e = new Error('API ch\u01B0a l\u1EA5y \u0111\u01B0\u1EE3c s\u1ED1 (xem nh\u1EADt k\u00FD) \u2014 h\u00E3y ch\u1EA1y l\u1EA1i'); try { window.__AutoBILoadingGuard75.stop(__e); } catch (_) { } UI.showToast('\u26A0\uFE0F ' + __e.message, 12000); return; }
                 clearInterval(_0x3111b4);
                 const __cache = GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {};
-                const __idx = _0x2e2bb0.indexOf(_0x509d19);
-                let __next = 99, __url = '';
-                for (let __i = __idx + 1; __i < _0x2e2bb0.length; __i++) {
-                    const __st = _0x2e2bb0[__i];
-                    if (res.done.has(__st)) continue;
-                    if (UTILS.isStepValid(__st, _0x85e9c8)) { __next = __st; __url = UTILS.getStepUrl(__st, _0x85e9c8); break; }
-                }
-                if (__next < 99 && __url) { GM_setValue(CONSTANTS.KEYS.AUTO_STATE, __next); window.location.replace(__url); }
-                else { GM_deleteValue('tgdd_auto_start_time'); GM_deleteValue('tgdd_total_auto_seconds'); finishRunAndReturnHome(__cache, _0x85e9c8); }
+                /* V17.5: mọi bước đã chạy bằng API trong cùng lượt; phần phụ lỗi (vd CRM) chỉ ghi nhật ký, vẫn dựng báo cáo */
+                GM_deleteValue('tgdd_auto_start_time'); GM_deleteValue('tgdd_total_auto_seconds'); finishRunAndReturnHome(__cache, _0x85e9c8);
             }).catch(err => {
                 if (err && err.code === 'AUTH') { clearInterval(_0x3111b4); try { window.__AutoBILoadingGuard75.stop(err); } catch (_) { } UI.showToast('\u26A0\uFE0F ' + err.message, 12000); return; }
-                try { window.__AutoBILog5.note('API ch\u1EA1y nhanh l\u1ED7i: ' + (err && err.message) + ' \u2014 ch\u1EA1y giao di\u1EC7n'); } catch (_) { }
-                __autobiGo();
+                try { window.__AutoBILog5.note('API l\u1ED7i: ' + (err && err.message)); } catch (_) { }
+                clearInterval(_0x3111b4); try { window.__AutoBILoadingGuard75.stop(err); } catch (_) { } UI.showToast('\u26A0\uFE0F API l\u1ED7i: ' + (err && err.message) + ' \u2014 h\u00E3y ch\u1EA1y l\u1EA1i', 12000);
             });
             return;
         }
-        __autobiDispatch(); function _0x497e3b(_0x431b49, _0x5b4090) { if (!window.__AutoBIRun67.active(runId67) || GM_getValue('tgdd_auto_state_run_v30', -1) !== _0x509d19) {
-            clearInterval(_0x3111b4);
-            return;
-        } clearInterval(_0x3111b4); const _0x426eec = GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {}; const _0x5d827e = _0x2e2bb0.indexOf(_0x509d19); let _0x5988a6 = 99; let _0x134796 = ''; if (_0x5d827e !== -1 && _0x5d827e < _0x2e2bb0.length - 1) {
-            for (let _0x550210 = _0x5d827e + 1; _0x550210 < _0x2e2bb0.length; _0x550210++) {
-                const _0x579c11 = _0x2e2bb0[_0x550210];
-                if (UTILS.isStepValid(_0x579c11, _0x85e9c8)) {
-                    _0x5988a6 = _0x579c11;
-                    _0x134796 = UTILS.getStepUrl(_0x5988a6, _0x85e9c8);
-                    break;
-                }
-            }
-        } if (_0x5988a6 < 99 && _0x134796) {
-            GM_setValue(CONSTANTS.KEYS.AUTO_STATE, _0x5988a6);
-            window.location.replace(_0x134796);
-        }
-        else {
-            GM_deleteValue('tgdd_auto_start_time');
-            GM_deleteValue('tgdd_total_auto_seconds');
-            finishRunAndReturnHome(_0x426eec, _0x85e9c8);
-        } } }, checkBirthdays: _0x5aabe0 => { /* V16.8.4: đã bỏ kiểm tra sinh nhật */ if (_0x5aabe0) _0x5aabe0(); return; const _0x19f792 = new Date().toDateString(); const _0x42b9a5 = GM_getValue('tgdd_bday_last_closed_date', ''); if (_0x42b9a5 === _0x19f792 || window.tgdd_bday_checked) {
-            if (_0x5aabe0)
-                _0x5aabe0();
-            return;
-        } window.tgdd_bday_checked = true; if (!UTILS.isHomePage()) {
-            if (_0x5aabe0)
-                _0x5aabe0();
-            return;
-        } DATA.getStandardUserName(_0xc072ca => { if (!_0xc072ca) {
-            if (_0x5aabe0)
-                _0x5aabe0();
-            return;
-        } const _0x2a6780 = 'https://script.google.com/macros/s/AKfycbyE_RBQ_svQjPaA6z_3EBtcxyIjmubhRyLq_eHxfdE-1pVbszxZul1Ow1n8SNfGFyvq/exec'; GM_xmlhttpRequest({ method: 'POST', url: _0x2a6780, data: JSON.stringify({ action: 'get_config_manager', user: _0xc072ca }), headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, onload: _0x3f2792 => { if (_0x3f2792.status === 200) {
-                try {
-                    const _0x35cd3a = JSON.parse(_0x3f2792.responseText);
-                    if (_0x35cd3a.status === 'success' && _0x35cd3a.employees) {
-                        const _0xa703a1 = JSON.parse(_0x35cd3a.employees);
-                        if (Array.isArray(_0xa703a1) && _0xa703a1.length > 0) {
-                            const _0x7e63e3 = [...new Set(_0xa703a1.map(_0x583ae4 => String(_0x583ae4.s).trim()).filter(_0x35ace0 => _0x35ace0))];
-                            APP.processBirthdays(_0xa703a1, _0xc072ca, _0x7e63e3);
-                        }
-                    }
-                }
-                catch (_0x78890f) { }
-            } if (_0x5aabe0)
-                _0x5aabe0(); }, onerror: () => { if (_0x5aabe0)
-                _0x5aabe0(); } }); }); }, processBirthdays: (_0x465792, _0x5d8e93, _0x9085dd) => { if (!_0x465792 || !Array.isArray(_0x465792) || _0x465792.length === 0)
-            return; const _0x4ebf7a = _0x217f8c => { if (!_0x217f8c)
-            return null; let _0x159179 = String(_0x217f8c).trim(); if (_0x159179.includes('/')) {
-            let _0x54a609 = _0x159179.split('/');
-            if (_0x54a609.length >= 2)
-                return String(_0x54a609[0]).padStart(2, '0') + '/' + String(_0x54a609[1]).padStart(2, '0');
-        } let _0x35e4b9 = new Date(_0x159179); if (!isNaN(_0x35e4b9.getTime()))
-            return String(_0x35e4b9.getDate()).padStart(2, '0') + '/' + String(_0x35e4b9.getMonth() + 1).padStart(2, '0'); return null; }; let _0x590548 = []; let _0x2477fc = new Date(); let _0x289ab2 = _0x2477fc.getDay() === 0 ? 7 : _0x2477fc.getDay(); let _0x4b4efd = 7 - _0x289ab2; for (let _0x2f201c = 0; _0x2f201c <= _0x4b4efd; _0x2f201c++) {
-            let _0x57be10 = new Date(_0x2477fc.getFullYear(), _0x2477fc.getMonth(), _0x2477fc.getDate());
-            _0x57be10.setDate(_0x2477fc.getDate() + _0x2f201c);
-            _0x590548.push(String(_0x57be10.getDate()).padStart(2, '0') + '/' + String(_0x57be10.getMonth() + 1).padStart(2, '0'));
-        } let _0x35604f = String(_0x5d8e93).split('-')[0].trim().toLowerCase(); let _0x2bdf6d = _0x9085dd.map(_0x103779 => String(_0x103779).trim().toLowerCase()); let _0x52e28b = []; _0x465792.forEach(_0x44e226 => { let _0x21b94c = String(_0x44e226.s).trim().toLowerCase(); if (_0x2bdf6d.includes(_0x21b94c)) {
-            let _0x342016 = _0x4ebf7a(_0x44e226.dob);
-            if (_0x342016 && _0x590548.includes(_0x342016)) {
-                let _0x4b9dff = String(_0x44e226.u).split('-')[0].trim().toLowerCase() === _0x35604f;
-                let _0x4ffbec = _0x44e226.fn ? _0x44e226.fn : String(_0x44e226.u).split('-')[0].trim();
-                _0x52e28b.push({ name: _0x4b9dff ? _0x4ffbec + ' (L\u00E0 B\u1EA1n \uD83C\uDF81)' : _0x4ffbec, date: _0x342016, shop: _0x44e226.s });
-            }
-        } }); if (_0x52e28b.length > 0)
-            window.tgdd_pending_birthday_people = _0x52e28b; }, showBirthdayPopup: _0x475024 => { let _0x59c501 = document.getElementById('hpbd-modal'); if (_0x59c501)
-            _0x59c501.remove(); let _0x1a0d7f = _0x475024.map(_0x2a2a0c => '\n                <div class="hpbd-item">\n                    <span class="hpbd-date">\uD83C\uDF82 ' + _0x2a2a0c.date + '</span>\n                    <span style="flex:1; text-align:left;">' + _0x2a2a0c.name + ' <small style="color:#94a3b8;">(Kho ' + _0x2a2a0c.shop + ')</small></span>\n                </div>\n            ').join(''); const _0x265448 = '\n                <div class="hpbd-overlay" id="hpbd-modal">\n                    <div class="hpbd-box">\n                        <div class="hpbd-icon">\uD83C\uDF89</div>\n                        <div class="hpbd-title">S\u1EAFp T\u1EDBi Sinh Nh\u1EADt!</div>\n                        <p style="color: #cbd5e1; font-size: 13px; margin-bottom: 15px; line-height: 1.5; text-align:center;">Trong tu\u1EA7n n\u00E0y, si\u00EAu th\u1ECB c\u00F3 sinh nh\u1EADt c\u1EE7a c\u00E1c th\u00E0nh vi\u00EAn sau. \u0110\u1EEBng qu\u00EAn g\u1EEDi l\u1EDDi ch\u00FAc nh\u00E9!</p>\n                        <div class="hpbd-list">' + _0x1a0d7f + '</div>\n                        <button class="hpbd-btn" id="btn-hpbd-close">\u0110\u00F3ng</button>\n                    </div>\n                </div>\n            '; document.body.insertAdjacentHTML('beforeend', _0x265448); const _0x2a95d3 = document.getElementById('hpbd-modal'); setTimeout(() => _0x2a95d3.classList.add('show'), 50); document.getElementById('btn-hpbd-close').onclick = () => { _0x2a95d3.classList.remove('show'); GM_setValue('tgdd_bday_last_closed_date', new Date().toDateString()); setTimeout(() => _0x2a95d3.remove(), 300); }; }, showQueuedPopups: () => { const _0x8326e7 = () => { if (window.tgdd_pending_start_of_month_notice) {
+        clearInterval(_0x3111b4);  },    showQueuedPopups: () => { const _0x8326e7 = () => { if (window.tgdd_pending_start_of_month_notice) {
             const _0x3adff5 = '\n                        <div style="font-size:15px; color:#333; line-height:1.6; text-align:left; background: linear-gradient(135deg, #f0f8ff, #e6f2ff); padding:20px; border-radius:12px; border:2px solid #b8daff; box-shadow: 0 5px 15px rgba(0, 123, 255, 0.1); margin-bottom: 20px;">\n                            \u0110\u1EA7u th\u00E1ng h\u1EC7 th\u1ED1ng BI ch\u01B0a update \u0111\u1EA7y \u0111\u1EE7 c\u00E1c nh\u00F3m h\u00E0ng thi \u0111ua. Anh em ch\u1ECBu kh\u00F3 \u0111\u1EE3i sau ng\u00E0y 3 (th\u01B0\u1EDDng l\u00E0 v\u1EADy) h\u1EC7 th\u1ED1ng update \u0111\u1EA7y \u0111\u1EE7 th\u00EC Admin s\u1EBD khai b\u00E1o l\u1EA1i \u0111\u1EA7y \u0111\u1EE7 c\u00E1c nh\u00F3m h\u00E0ng thi \u0111ua.<br><br>\n                            Sau \u0111\u00F3 anh em v\u00E0o m\u1EE5c <b>Khai b\u00E1o</b> > b\u1EA5m n\u00FAt <b>Load Nh\u00F3m h\u00E0ng</b> \u0111\u1EC3 c\u1EADp nh\u1EADt danh s\u00E1ch m\u1EDBi nh\u1EA5t nh\u00E9! <b style="color:#d63031;">V\u00EC v\u1EADy kh\u00F4ng c\u1EA7n h\u1ECFi l\u1EA1i Admin mong anh em th\u00F4ng c\u1EA3m!</b>\n                        </div>\n                        <div style="text-align:center;">\n                            <button id="btn-confirm-start-month" class="tgdd-msg-btn" style="background: linear-gradient(135deg, #007bff, #0056b3); width:100%; padding: 12px; font-size: 16px; box-shadow: 0 4px 15px rgba(0, 123, 255, 0.4);">\n                                \uD83D\uDE80 \u0110\u00C3 HI\u1EC2U\n                            </button>\n                        </div>\n                    ';
             UI.showMsg('\uD83D\uDCC5 L\u01AFU \u00DD \u0110\u1EA6U TH\u00C1NG', _0x3adff5, 'info');
             const _0x2f4997 = document.getElementById('tgdd-modal-btn-x');
@@ -10106,7 +7137,7 @@ const _0x133c09 = '<div style="font-size:15px; color:#333; line-height:1.6; text
         else {
             _0x32fcf8();
         } }; const _0x32fcf8 = () => { if (window.tgdd_pending_birthday_people && window.tgdd_pending_birthday_people.length > 0) {
-            APP.showBirthdayPopup(window.tgdd_pending_birthday_people);
+            /* V17: bỏ chúc mừng sinh nhật */
             window.tgdd_pending_birthday_people = null;
         } }; _0x8326e7(); }, runAutoCaptureSequence: async (_0xd8560d) => { const _0xb4315b = UTILS.getPersistentConfig(); const _0x24fb18 = _0xb4315b.imageFolderId; if (!_0x24fb18) {
             UI.showToast('\u26A0\uFE0F Ch\u01B0a c\u1EA5u h\u00ECnh Th\u01B0 m\u1EE5c Drive l\u01B0u \u1EA3nh trong m\u1EE5c Khai b\u00E1o!');
@@ -10230,9 +7261,6 @@ const _0x133c09 = '<div style="font-size:15px; color:#333; line-height:1.6; text
         return; if (_0x231834 === 'img' || _0x231834 === 'canvas')
         return; _0x592f8a.preventDefault(); });
     const GLOBAL = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
-    GLOBAL.testDoanhThu = () => { DATA.runRevenueSequenceDMX(UTILS.getPersistentConfig(), () => { alert('\uD83C\uDF89 \u0110\u00C3 QU\u00C9T XONG DOANH THU H\u1EE2P NH\u1EA4T!'); }); };
-    GLOBAL.testNganhHang = () => { DATA.scrapeHealthCategoriesDMX(_0x499fb4 => { alert('\uD83C\uDF89 \u0110\u00C3 BUNG V\u00C0 QU\u00C9T XONG Ng\u00E0nh h\u00E0ng BI BI S\u1EE8C KH\u1ECEE ST!'); console.log('D\u1EEF li\u1EC7u S\u1EE9c kh\u1ECFe ST:', _0x499fb4); }); };
-    GLOBAL.testThiDua = () => { const _0x4c34aa = GM_getValue(CONSTANTS.KEYS.CONFIG_LIST, []); const _0x8ca83c = UTILS.getPersistentConfig(); DATA.runThiDuaSequenceDMX(_0x4c34aa, _0x8ca83c, () => { alert('\uD83C\uDF89 \u0110\u00C3 HO\u00C0N TH\u00C0NH L\u1ECCC V\u00C0 QU\u00C9T THI \u0110UA TH\u00C0NH C\u00D4NG!'); }); };
     GLOBAL.DATA = DATA;
     GLOBAL.UTILS = UTILS;
     GLOBAL.UI = UI;
@@ -10245,649 +7273,8 @@ const _0x133c09 = '<div style="font-size:15px; color:#333; line-height:1.6; text
     }
     APP.init();
 }());
-/* AutoBI 16.1.1.55 - quét nhiều lần và giữ dữ liệu Sức khỏe ST đầy đủ nhất. */
-(function () {
-    'use strict';
-    const DATA_KEY = 'tgdd_data_cache_v30';
-    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-    const slug = value => String(value || '')
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase()
-        .replace(/đ/g, 'd')
-        .replace(/[^a-z0-9]/g, '');
-    function visible(element) {
-        return !!element && element.getClientRects().length > 0;
-    }
-    function currentShopLabel() {
-        const button = Array.from(document.querySelectorAll('button.filter-field-card, button'))
-            .find(item => visible(item) && Array.from(item.querySelectorAll('span'))
-            .some(span => slug(span.innerText || span.textContent) === 'sieuthi'));
-        return slug(button && (button.innerText || button.textContent));
-    }
-    function expectedShopTokens(config, index) {
-        return [
-            config['makho' + index],
-            config['shopCode' + index],
-            config['code' + index],
-            config['shop' + index],
-            config['shop' + index + 'Short']
-        ].map(slug).filter(Boolean);
-    }
-    function isExpectedShop(config, index) {
-        const label = currentShopLabel();
-        return !!label && expectedShopTokens(config, index).some(token => label.includes(token));
-    }
-    function hasHealthData(data) {
-        if (!data || typeof data !== 'object')
-            return false;
-        return Object.values(data).some(row => row && (Number(row.sl) !== 0 || Number(row.dtqd) !== 0 ||
-            Number(row.growth) !== 0 || Number(row.tg_ratio) !== 0));
-    }
-    function healthScore(data) {
-        if (!data || typeof data !== 'object')
-            return 0;
-        let populated = 0;
-        let anchors = 0;
-        Object.values(data).forEach(row => {
-            if (row && (Number(row.sl) !== 0 || Number(row.dtqd) !== 0))
-                populated++;
-        });
-        ['Smartphone', 'Laptop', 'Ph\u1EE5 ki\u1EC7n', 'SIM', '\u0110i\u1EC7n t\u1EED', '\u0110i\u1EC7n l\u1EA1nh', 'M\u00E1y gi\u1EB7t', 'M\u00E1y l\u1EA1nh', '\u0110i\u1EC7n gia d\u1EE5ng', 'M\u00E1y l\u1ECDc n\u01B0\u1EDBc']
-            .forEach(name => {
-            const row = data[name];
-            if (row && (Number(row.sl) !== 0 || Number(row.dtqd) !== 0))
-                anchors++;
-        });
-        const parsedRows = Number(data.__autobiHealthMeta?.parsedRows) || 0;
-        const matchedAnchors = Number(data.__autobiHealthMeta?.matchedAnchors) || 0;
-        return parsedRows * 100 + matchedAnchors * 50 + populated * 10 + anchors * 25;
-    }
-    function completeHealthData(data) { return window.__AutoBIHealthTree75.valid(data); }
-    function invalidateHealthShop(key, reason) {
-        const cache = GM_getValue(DATA_KEY, {}) || {};
-        // Lỗi chọn bộ lọc hoặc tải bảng có thể chỉ là tạm thời. Giữ lại bản hợp lệ
-        // gần nhất thay vì xóa trắng cả shop trên báo cáo Sức khỏe ST.
-        if (cache.link8_health && Object.prototype.hasOwnProperty.call(cache.link8_health, key)) {
-            console.warn('[AutoBI Health 65] Gi\u1EEF d\u1EEF li\u1EC7u c\u0169 c\u1EE7a', key, reason || '');
-        }
-        else {
-            console.warn('[AutoBI Health 65] Ch\u01B0a c\u00F3 d\u1EEF li\u1EC7u \u0111\u1EC3 gi\u1EEF cho', key, reason || '');
-        }
-    }
-    function scrapeOnce(scrapeFn, timeout = 90000) {
-        return new Promise(resolve => {
-            let settled = false;
-            const timer = setTimeout(() => {
-                if (!settled) {
-                    settled = true;
-                    resolve(null);
-                }
-            }, timeout);
-            try {
-                scrapeFn(data => {
-                    if (settled)
-                        return;
-                    settled = true;
-                    clearTimeout(timer);
-                    resolve(data || null);
-                });
-            }
-            catch (error) {
-                clearTimeout(timer);
-                settled = true;
-                console.error('[AutoBI Health 55] L\u1ED7i \u0111\u1ECDc b\u1EA3ng:', error);
-                resolve(null);
-            }
-        });
-    }
-    function restoreRevenueRows() {
-        const cache = GM_getValue(DATA_KEY, {}) || {};
-        if (!cache.link2)
-            return;
-        let changed = false;
-        for (let index = 1; index <= 5; index++) {
-            const row = cache.link2['shop' + index];
-            if (!row || !Number.isFinite(row.grossQD))
-                continue;
-            const current = Number(row.r);
-            const gross = Number(row.grossQD);
-            if (Number.isFinite(current) && current !== 0 && Number.isFinite(row.dtqd_dk)) {
-                row.dtqd_dk *= gross / current;
-            }
-            row.r = gross;
-            if (Number(row.t) > 0)
-                row.dk = gross / Number(row.t) * 100;
-            delete row.grossQD;
-            delete row.onlineExcludedQD;
-            delete row.onlineExcludedAt;
-            changed = true;
-        }
-        if (changed)
-            GM_setValue(DATA_KEY, cache);
-    }
-    function installFix() {
-        const health = window.__AutoBIHealthPerShop;
-        if (!health || health.__shopFix52)
-            return false;
-        health.__shopFix52 = true;
-        health.scan = async function (config, scrapeFn, toastFn, done) {
-            const H = window.__AutoBIHealth74Only;
-            H.cancel();
-            restoreRevenueRows();
-            const notify = (message, ms = 4000) => { if (toastFn)
-                toastFn(message, ms); };
-            const scrape = () => new Promise((resolve, reject) => {
-                let settled = false;
-                const timer = setTimeout(() => { if (!settled) {
-                    settled = true;
-                    H.cancel();
-                    reject(new Error('Qu\u00E1 th\u1EDDi gian \u0111\u1ECDc Ng\u00E0nh h\u00E0ng BI'));
-                } }, 90000);
-                const finish = data => { if (settled)
-                    return; settled = true; clearTimeout(timer); resolve(data); };
-                try {
-                    scrapeFn(finish);
-                }
-                catch (error) {
-                    clearTimeout(timer);
-                    settled = true;
-                    reject(error);
-                }
-            });
-            try {
-                for (let index = 1; index <= 5; index++) {
-                    const key = 'shop' + index;
-                    if (!config?.[key])
-                        continue;
-                    const name = config[key + 'Short'] || config[key];
-                    try {
-                        window.__AutoBILog5.stage('S\u1EE9c kh\u1ECFe ST', name, '\u0110ang ch\u1ECDn v\u00E0 x\u00E1c nh\u1EADn si\u00EAu th\u1ECB');
-                        notify('\uD83C\uDFEC ' + name + ' \u2192 \u0111ang ch\u1ECDn si\u00EAu th\u1ECB', 0);
-                        await H.selectShop(config, key);
-                        window.__AutoBILog5.wait('\u0110ang ch\u1EDD v\u00E0 bung Ng\u00E0nh h\u00E0ng BI');
-                        notify('\uD83C\uDFEC ' + name + ' \u2192 \u0111ang ch\u1EDD Ng\u00E0nh h\u00E0ng BI', 0);
-                        const data = await scrape();
-                        H.verify();
-                        if (!completeHealthData(data))
-                            throw new Error('Ch\u01B0a \u0111\u1ECDc \u0111\u01B0\u1EE3c nh\u00F3m Ng\u00E0nh h\u00E0ng BI h\u1EE3p l\u1EC7');
-                        const cache = GM_getValue(DATA_KEY, {}) || {};
-                        cache.link8_health ||= {};
-                        cache.link8_health[key] = data;
-                        GM_setValue(DATA_KEY, cache);
-                        window.__AutoBILog5.ok('S\u1EE9c kh\u1ECFe ST OK \u2014 \u0111\u00E3 l\u01B0u d\u1EEF li\u1EC7u shop');
-                        notify('\u2705 ' + name + ' \u2192 S\u1EE9c kh\u1ECFe ST OK');
-                    }
-                    catch (error) {
-                        window.__AutoBILog5.error(error);
-                        console.error('[AutoBI Core67 FIX3 Health]', key, error);
-                        notify('\u26A0\uFE0F S\u1EE9c kh\u1ECFe ST ' + name + ': ' + error.message, 9000);
-                    }
-                }
-            }
-            finally {
-                try {
-                    window.__AutoBILog5.stage('S\u1EE9c kh\u1ECFe ST', 'T\u1ED5ng c\u1EE5m', '\u0110ang kh\u00F4i ph\u1EE5c b\u1ED9 l\u1ECDc');
-                    notify('\uD83D\uDD04 S\u1EE9c kh\u1ECFe ST: kh\u00F4i ph\u1EE5c T\u1ED5ng c\u1EE5m', 0);
-                    await H.allShops(config);
-                }
-                catch (error) {
-                    notify('\u26A0\uFE0F Kh\u00F4i ph\u1EE5c b\u1ED9 l\u1ECDc: ' + error.message, 9000);
-                }
-                finally {
-                    H.cancel();
-                    if (done)
-                        done();
-                }
-            }
-        };
-        return true;
-    }
-    if (!installFix()) {
-        const timer = setInterval(() => {
-            if (installFix())
-                clearInterval(timer);
-        }, 100);
-        setTimeout(() => clearInterval(timer), 30000);
-    }
-})();
-/* AutoBI 16.1.1.59 STABLE - khóa trạng thái Realtime/Lũy kế và dữ liệu Sức khỏe ST. */
-(function () {
-    'use strict';
-    const CACHE_KEY = 'tgdd_data_cache_v30';
-    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-    const norm = value => String(value || '')
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .replace(/đ/gi, 'd').toLowerCase().replace(/[^a-z0-9]/g, '');
-    const text = element => String(element?.innerText || element?.textContent || '').trim();
-    const visible = element => !!element && element.getClientRects().length > 0;
-    document.addEventListener('click', event => {
-        const button = event.target && event.target.closest && event.target.closest('button');
-        const label = norm(text(button));
-        if (label === 'realtime' || label === 'luyke') {
-            window.__AutoBIDataMode56 = label;
-        }
-    }, true);
-    function loading() { return window.__AutoBILoadingGuard75.loading(); }
-    function reportSignature() {
-        return Array.from(document.querySelectorAll('.report-table table,.ant-table-content table'))
-            .slice(0, 12)
-            .map(table => Array.from(table.querySelectorAll('thead tr,tbody tr'))
-            .filter(row => !row.classList.contains('ant-table-measure-row'))
-            .slice(0, 8).map(text).join('|'))
-            .join('###');
-    }
-    function modeButton(mode) {
-        const wanted = norm(mode);
-        return Array.from(document.querySelectorAll('button'))
-            .find(button => visible(button) && norm(text(button)) === wanted) || null;
-    }
-    function buttonLooksActive(button) {
-        if (!button)
-            return false;
-        const classes = norm(button.className);
-        const state = norm(button.getAttribute('data-state'));
-        return button.getAttribute('aria-pressed') === 'true' ||
-            state === 'active' || state === 'on' ||
-            classes.includes('active') || classes.includes('selected') ||
-            classes.includes('bgblue') || classes.includes('bgprimary');
-    }
-    async function selectMode(mode, DATA, config) {
-        const button = await window.__AutoBILoadingGuard75.wait('N\u00FAt ' + mode, () => modeButton(mode), { key: () => mode });
-        const alreadyActive = buttonLooksActive(button), ticket = window.__AutoBILoadingGuard75.arm();
-        try {
-            if (!alreadyActive)
-                button.click();
-            await window.__AutoBILoadingGuard75.wait('Ch\u1EBF \u0111\u1ED9 ' + mode, () => buttonLooksActive(modeButton(mode)) && reportSignature(), { settle: 480, key: String, ticket: alreadyActive ? null : ticket, expected: 'ch\u1EBF \u0111\u1ED9 \u0111\u00FAng v\u00E0 b\u1EA3ng m\u1EDBi \u1ED5n \u0111\u1ECBnh' });
-            window.__AutoBIDataMode56 = norm(mode);
-            return { mode: norm(mode), changed: ticket.fresh(), alreadyActive, signature: reportSignature(), zeroReady: explicitZeroRevenue(DATA, config, mode) };
-        }
-        finally {
-            ticket.close();
-        }
-    }
-    function clone(value) {
-        return JSON.parse(JSON.stringify(value || {}));
-    }
-    function dataFingerprint(data) {
-        return ['total', 'shop1', 'shop2', 'shop3', 'shop4', 'shop5']
-            .map(key => {
-            const row = data?.[key] || {};
-            return [key, row.r, row.dt, row.t, row.dk, row.dtqd_dk]
-                .map(value => String(value ?? '')).join(':');
-        }).join('|');
-    }
-    function actualRevenueFingerprint(data) {
-        return ['total', 'shop1', 'shop2', 'shop3', 'shop4', 'shop5']
-            .map(key => {
-            const value = Number(data?.[key]?.r);
-            return key + ':' + (Number.isFinite(value) ? value : '');
-        }).join('|');
-    }
-    function usableRevenue(data) {
-        if (!data || typeof data !== 'object')
-            return false;
-        return ['total', 'shop1', 'shop2', 'shop3', 'shop4', 'shop5']
-            .some(key => {
-            const row = data[key];
-            return row && Object.values(row).some(value => Number.isFinite(Number(value)) && Number(value) !== 0);
-        });
-    }
-    function hasRevenueShape(data) {
-        if (!data || typeof data !== 'object')
-            return false;
-        return ['total', 'shop1', 'shop2', 'shop3', 'shop4', 'shop5']
-            .some(key => {
-            const row = data[key];
-            return row && typeof row === 'object' &&
-                ['r', 'dt', 't', 'dk', 'dtlk', 'tg']
-                    .some(field => Object.prototype.hasOwnProperty.call(row, field));
-        });
-    }
-    // A parser's default zeros are not evidence. Require explicit zero cells
-    // for every configured shop in the same table the legacy reader uses.
-    function explicitZeroRevenue(DATA, config, mode) {
-        if (!DATA || !config || loading() || !buttonLooksActive(modeButton(mode)))
-            return false;
-        const table = document.querySelector('.report-table table, .ant-table-content table, table');
-        if (!visible(table))
-            return false;
-        const headers = Array.from(table.querySelectorAll('thead th,thead td')).map(h => norm(h.getAttribute('title') || text(h)));
-        const real = headers.findIndex(h => ['doanhthu', 'dt', 'dtthuc'].includes(h));
-        const qd = headers.findIndex(h => ['doanhthuqd', 'dtqd'].includes(h));
-        if (real < 0 || qd < 0)
-            return false;
-        const wanted = Array.from({ length: 5 }, (_, i) => 'shop' + (i + 1)).filter(k => config[k]);
-        if (!wanted.length)
-            return false;
-        const found = new Set();
-        const zero = cell => !!cell && /^[+-]?0+(?:[.,]0+)*$/.test(text(cell).replace(/\s/g, ''));
-        for (const tr of table.querySelectorAll('tbody tr:not(.ant-table-measure-row),tfoot tr')) {
-            if (!visible(tr))
-                continue;
-            const cells = tr.querySelectorAll('td,th');
-            if (cells.length < 5)
-                continue;
-            const label = cells[0]?.getAttribute('title') || text(cells[0]);
-            const key = DATA.identifyShopFromRowData(label, tr.getAttribute('data-row-key') || '', config);
-            const total = norm(label).includes('tong') || tr.classList.contains('grid-total-row') || tr.closest('tfoot');
-            if (!key && !total)
-                continue;
-            if (!zero(cells[real]) || !zero(cells[qd]))
-                return false;
-            if (wanted.includes(key))
-                found.add(key);
-        }
-        return wanted.every(key => found.has(key));
-    }
-    function realtimeRevenueEvidence72(DATA, config) {
-        const result = { runId: window.__AutoBIRun67?.current?.()?.id || '', zeroShops: [] };
-        if (loading() || !buttonLooksActive(modeButton('Realtime')))
-            return result;
-        const table = document.querySelector('.report-table table, .ant-table-content table, table');
-        if (!visible(table))
-            return result;
-        const headers = Array.from(table.querySelectorAll('thead th,thead td')).map(h => norm(h.getAttribute('title') || text(h)));
-        const real = headers.findIndex(h => ['doanhthu', 'dt', 'dtthuc'].includes(h)), qd = headers.findIndex(h => ['doanhthuqd', 'dtqd'].includes(h));
-        if (real < 0 || qd < 0)
-            return result;
-        const seen = new Map(), zero = cell => !!cell && /^[+-]?0+(?:[.,]0+)*$/.test(text(cell).replace(/\s/g, ''));
-        for (const row of table.querySelectorAll('tbody tr:not(.ant-table-measure-row)')) {
-            if (!visible(row))
-                continue;
-            const cells = row.querySelectorAll('td');
-            if (cells.length < 5)
-                continue;
-            const key = DATA.identifyShopFromRowData(cells[0]?.getAttribute('title') || text(cells[0]), row.getAttribute('data-row-key') || '', config);
-            if (!key || key === 'total' || !config[key])
-                continue;
-            const isZero = zero(cells[real]) && zero(cells[qd]);
-            seen.set(key, (seen.get(key) ?? true) && isZero);
-        }
-        result.zeroShops = [...seen].filter(([, isZero]) => isZero).map(([key]) => key);
-        return result;
-    }
-    function zeroRevenueResult(data) {
-        return !!data && ['total', 'shop1', 'shop2', 'shop3', 'shop4', 'shop5'].every(key => {
-            const row = data[key];
-            return row && ['r', 'dtlk'].every(field => typeof row[field] === 'number' && row[field] === 0);
-        });
-    }
-    function hasCumulativeActual(data) {
-        if (!data || typeof data !== 'object')
-            return false;
-        return ['total', 'shop1', 'shop2', 'shop3', 'shop4', 'shop5']
-            .some(key => {
-            const row = data[key];
-            return row && (Number(row.r) > 0 || Number(row.dtlk) > 0);
-        });
-    }
-    function acceptableRevenue(data, realtimeMode, zeroReady = false) {
-        // Buổi sáng, Realtime có thể thực sự bằng 0. Khi bảng đã có đúng
-        // cấu trúc dữ liệu, 0 là kết quả hợp lệ chứ không phải lỗi/rỗng.
-        if (realtimeMode)
-            return usableRevenue(data) || hasRevenueShape(data);
-        // Lũy kế giữa tháng không thể chỉ có Target mà toàn bộ doanh thu bằng 0.
-        // Không cho bảng đang chuyển chế độ ghi đè dữ liệu Lũy kế hợp lệ.
-        return hasCumulativeActual(data) || (zeroReady && zeroRevenueResult(data));
-    }
-    function purgeMixedRealtimeCache() {
-        const cache = GM_getValue(CACHE_KEY, {}) || {};
-        if (!usableRevenue(cache.link1) || !usableRevenue(cache.link2))
-            return;
-        if (dataFingerprint(cache.link1) !== dataFingerprint(cache.link2))
-            return;
-        delete cache.link1;
-        GM_setValue(CACHE_KEY, cache);
-        console.warn('[AutoBI 56] \u0110\u00E3 x\u00F3a cache Realtime c\u0169 tr\u00F9ng to\u00E0n b\u1ED9 d\u1EEF li\u1EC7u L\u0169y k\u1EBF');
-    }
-    async function scrapeStableRevenue(DATA, config, realtimeMode, label) {
-        const result = await window.__AutoBILoadingGuard75.wait('D\u1EEF li\u1EC7u ' + label, () => { const candidate = DATA.scrapeRevenueTableDMX(config, realtimeMode), zero = explicitZeroRevenue(DATA, config, realtimeMode ? 'Realtime' : 'L\u0169y k\u1EBF'); return acceptableRevenue(candidate, realtimeMode, zero) ? candidate : false; }, { settle: 600, key: dataFingerprint, expected: 's\u1ED1 li\u1EC7u h\u1EE3p l\u1EC7 theo ki\u1EC3m tra V75' });
-        if (explicitZeroRevenue(DATA, config, realtimeMode ? 'Realtime' : 'L\u0169y k\u1EBF') && zeroRevenueResult(result))
-            Object.defineProperty(result, '__autobiZero70', { value: true });
-        if (realtimeMode)
-            Object.defineProperty(result, '__autobiRevenueEvidence72', { value: realtimeRevenueEvidence72(DATA, config) });
-        return result;
-    }
-    function healthScore(data) {
-        if (!data || typeof data !== 'object')
-            return 0;
-        let populated = 0;
-        let anchors = 0;
-        Object.values(data).forEach(row => {
-            if (row && (Number(row.sl) !== 0 || Number(row.dtqd) !== 0))
-                populated++;
-        });
-        ['Smartphone', 'Laptop', 'Ph\u1EE5 ki\u1EC7n', 'SIM', '\u0110i\u1EC7n t\u1EED', '\u0110i\u1EC7n l\u1EA1nh', 'M\u00E1y gi\u1EB7t', 'M\u00E1y l\u1EA1nh', '\u0110i\u1EC7n gia d\u1EE5ng', 'M\u00E1y l\u1ECDc n\u01B0\u1EDBc']
-            .forEach(name => {
-            const row = data[name];
-            if (row && (Number(row.sl) !== 0 || Number(row.dtqd) !== 0))
-                anchors++;
-        });
-        const parsedRows = Number(data.__autobiHealthMeta?.parsedRows) || 0;
-        const matchedAnchors = Number(data.__autobiHealthMeta?.matchedAnchors) || 0;
-        return parsedRows * 100 + matchedAnchors * 50 + populated * 10 + anchors * 25;
-    }
-    async function scrapeBestHealth(DATA, UI, label) { const data = await callbackAsPromise(cb => DATA.scrapeHealthCategoriesDMX(cb), 180000); if (!window.__AutoBIHealthTree75.valid(data))
-        throw Error(label + ' ch\u01B0a \u0111\u1ECDc \u0111\u1EE7 c\u00E2y Ng\u00E0nh h\u00E0ng BI'); return data; }
-    function readTlpvtc() {
-        const nodes = Array.from(document.querySelectorAll('span,div'));
-        for (const node of nodes) {
-            const label = norm(text(node));
-            if (!label.includes('tlpvtc'))
-                continue;
-            const card = node.closest('.flex-col,.rounded-xl,div[class*="rounded"]');
-            if (!card)
-                continue;
-            const values = Array.from(card.querySelectorAll('.tabular-nums,div.text-lg,div[class*="text-lg"],span'));
-            for (const item of values) {
-                const match = text(item).match(/(-?\d+(?:[.,]\d+)?)\s*%/);
-                if (match)
-                    return Number(match[1].replace(',', '.')) || 0;
-            }
-        }
-        return 0;
-    }
-    function callbackAsPromise(invoke, timeout = 30000) {
-        return new Promise((resolve, reject) => {
-            let done = false;
-            const timer = setTimeout(() => {
-                if (!done) {
-                    done = true;
-                    reject(new Error('H\u1EBFt th\u1EDDi gian ch\u1EDD thao t\u00E1c BI'));
-                }
-            }, timeout);
-            try {
-                invoke(result => {
-                    if (done)
-                        return;
-                    done = true;
-                    clearTimeout(timer);
-                    resolve(result);
-                });
-            }
-            catch (error) {
-                clearTimeout(timer);
-                reject(error);
-            }
-        });
-    }
-    function saveRevenuePair(realtime, cumulative) {
-        const cache = GM_getValue(CACHE_KEY, {}) || {};
-        cache.link1 = clone(realtime);
-        cache.__autobiRealtimeRevenueEvidence72 = realtime.__autobiRevenueEvidence72 || null;
-        cache.link2 = clone(cumulative);
-        GM_setValue(CACHE_KEY, cache);
-    }
-    async function reloadRevenueReport(UI) {
-        const reloadButton = Array.from(document.querySelectorAll('button'))
-            .find(button => visible(button) && (norm(text(button)).includes('tailai') ||
-            button.querySelector('.lucide-rotate-cw,.lucide-refresh-cw')));
-        if (reloadButton) {
-            UI.showToast('\uD83D\uDD04 D\u1EEF li\u1EC7u L\u0169y k\u1EBF ch\u01B0a \u0111\u1EE7, \u0111ang t\u1EA3i l\u1EA1i b\u00E1o c\u00E1o...', 0);
-            reloadButton.click();
-            await sleep(1600);
-            await new Promise(resolve => window.__AutoBIStable.wait(resolve, {
-                minWait: 1800, maxWait: 25000, poll: 350, requireChange: false
-            }));
-        }
-        else {
-            // Nếu giao diện đổi tên nút, buộc chọn lại Lũy kế và chờ React tải xong.
-            modeButton('L\u0169y k\u1EBF')?.click();
-            await sleep(3000);
-        }
-    }
-    async function robustRevenueRun(DATA, UI, config, done) {
-        if (window.__AutoBIRevenueRun56) {
-            UI.showToast('\u26A0\uFE0F AutoBI \u0111ang qu\u00E9t d\u1EEF li\u1EC7u; kh\u00F4ng ch\u1EA1y ch\u1ED3ng th\u00EAm l\u1EA7n m\u1EDBi.', 6000);
-            if (done)
-                done();
-            return;
-        }
-        window.__AutoBIRevenueRun56 = true;
-        try {
-            purgeMixedRealtimeCache();
-            window.__AutoBILog5.stage('Doanh thu', 'T\u1ED5ng c\u1EE5m', '\u0110ang \u0111\u1ED3ng b\u1ED9 b\u1ED9 l\u1ECDc');
-            UI.showToast('\uD83D\uDEE1\uFE0F \u0110ang \u0111\u1ED3ng b\u1ED9 b\u1ED9 l\u1ECDc v\u00E0 tr\u1EA1ng th\u00E1i b\u00E1o c\u00E1o...', 0);
-            await callbackAsPromise(cb => DATA.runFilterAllSequenceDMX(cb), 360000);
-            await callbackAsPromise(cb => DATA.ensureRevenueOptionsDMX(cb), 30000);
-            UI.showToast('\uD83E\uDDED \u0110ang x\u00E1c l\u1EADp tr\u1EA1ng th\u00E1i L\u0169y k\u1EBF ban \u0111\u1EA7u...', 0);
-            await selectMode('L\u0169y k\u1EBF', DATA, config);
-            window.__AutoBILog5.stage('Doanh thu Realtime', 'T\u1ED5ng c\u1EE5m', '\u0110ang ch\u1ECDn Realtime v\u00E0 ch\u1EDD d\u1EEF li\u1EC7u \u1ED5n \u0111\u1ECBnh');
-            UI.showToast('\u26A1 \u0110ang qu\u00E9t Doanh thu Realtime...', 0);
-            const realtimeMode = await selectMode('Realtime', DATA, config);
-            if (!realtimeMode.changed && !realtimeMode.zeroReady)
-                throw new Error('B\u1EA3ng ch\u01B0a chuy\u1EC3n th\u1EF1c s\u1EF1 sang Realtime');
-            const realtime = await scrapeStableRevenue(DATA, config, true, 'Realtime');
-            window.__AutoBILog5.note('Realtime \u0111\u00E3 \u0111\u1ECDc \u1ED5n \u0111\u1ECBnh; ch\u1EDD \u0111\u1ED1i chi\u1EBFu L\u0169y k\u1EBF tr\u01B0\u1EDBc khi l\u01B0u');
-            window.__AutoBILog5.stage('Doanh thu L\u0169y k\u1EBF', 'T\u1ED5ng c\u1EE5m', '\u0110ang ch\u1ECDn L\u0169y k\u1EBF v\u00E0 ch\u1EDD d\u1EEF li\u1EC7u \u1ED5n \u0111\u1ECBnh');
-            UI.showToast('\uD83D\uDCCA \u0110ang qu\u00E9t Doanh thu L\u0169y k\u1EBF...', 0);
-            let cumulative = null;
-            let cumulativeError = null;
-            for (let attempt = 1; attempt <= 1; attempt++) {
-                try {
-                    const cumulativeMode = await selectMode('L\u0169y k\u1EBF', DATA, config);
-                    if (attempt === 1 && !cumulativeMode.changed && !cumulativeMode.zeroReady) {
-                        throw new Error('B\u1EA3ng ch\u01B0a chuy\u1EC3n th\u1EF1c s\u1EF1 sang L\u0169y k\u1EBF');
-                    }
-                    const candidate = await scrapeStableRevenue(DATA, config, false, 'L\u0169y k\u1EBF');
-                    if (!hasCumulativeActual(candidate) && !candidate.__autobiZero70) {
-                        throw new Error('L\u0169y k\u1EBF m\u1EDBi ch\u1EC9 c\u00F3 Target, ch\u01B0a c\u00F3 doanh thu');
-                    }
-                    cumulative = candidate;
-                    cumulativeError = null;
-                    break;
-                }
-                catch (error) {
-                    cumulativeError = error;
-                    console.warn('[AutoBI 64 TEST] L\u1EA7n qu\u00E9t L\u0169y k\u1EBF ch\u01B0a \u0111\u1EA1t:', attempt, error);
-                    // Loading timeout stops this report; no reload/reclick.
-                }
-            }
-            if (!cumulative) {
-                throw cumulativeError || new Error('Kh\u00F4ng l\u1EA5y \u0111\u01B0\u1EE3c doanh thu L\u0169y k\u1EBF');
-            }
-            if (dataFingerprint(cumulative) === dataFingerprint(realtime) && !(cumulative.__autobiZero70 && realtime.__autobiZero70)) {
-                throw new Error('To\u00E0n b\u1ED9 d\u1EEF li\u1EC7u Realtime \u0111ang tr\u00F9ng L\u0169y k\u1EBF; \u0111\u00E3 ch\u1EB7n l\u01B0u nh\u1EA7m');
-            }
-            const tlpvtc = readTlpvtc();
-            if (cumulative.total)
-                cumulative.total.tlpvtc = tlpvtc;
-            // TLPVTC đang đọc ở bộ lọc Tổng cụm: chỉ lưu cho total,
-            // không gán cùng một tỷ lệ cho từng shop.
-            // Chỉ ghi cache sau khi cả hai chế độ đã ổn định và khác nhau.
-            // Nếu có lỗi ở bất kỳ bước nào, dữ liệu hợp lệ trước đó được giữ nguyên.
-            saveRevenuePair(realtime, cumulative);
-            window.__AutoBILog5.ok('Doanh thu Realtime/L\u0169y k\u1EBF OK \u2014 \u0111\u00E3 \u0111\u1ED1i chi\u1EBFu v\u00E0 l\u01B0u');
-            if (window.__AutoBIFastRealtime43?.enabled()) {
-                window.__AutoBILog5.stage('T\u00EAn nh\u00F3m BI Realtime', 'T\u1ED5ng c\u1EE5m', '\u0110ang c\u1EADp nh\u1EADt danh s\u00E1ch nh\u00F3m; kh\u00F4ng l\u1EA5y s\u1ED1 li\u1EC7u nh\u00F3m v\u00E0o b\u00E1o c\u00E1o Realtime');
-                /* V96: bước này chỉ cập nhật danh sách tên nhóm, không lấy số -> lỗi thì bỏ qua, đổ tiếp */
-                try {
-                    const realtimeNames = await scrapeBestHealth(DATA, UI, 'Danh s\u00E1ch nh\u00F3m BI Realtime');
-                    window.__AutoBIHealthTree75.rememberRealtimeNames(realtimeNames.__autobiHealthTree75);
-                } catch (namesError) {
-                    if (window.__AutoBIRun67 && !window.__AutoBIRun67.active()) throw namesError;
-                    window.__AutoBILog5.warning('Bỏ qua cập nhật tên nhóm BI Realtime (không ảnh hưởng số liệu): ' + (namesError && namesError.message || namesError));
-                }
-                await window.__AutoBIFastRealtime43.finishRevenue(config, done, UI);
-                return;
-            }
-            window.__AutoBILog5.stage('Nh\u00E2n vi\u00EAn Doanh thu', 'T\u1ED5ng c\u1EE5m', '\u0110ang m\u1EDF v\u00E0 ch\u1EDD b\u1EA3ng nh\u00E2n vi\u00EAn');
-            UI.showToast('\uD83D\uDC64 \u0110ang m\u1EDF d\u1EEF li\u1EC7u nh\u00E2n vi\u00EAn...', 0);
-            const staffButton = Array.from(document.querySelectorAll('button'))
-                .find(button => visible(button) && (norm(text(button)) === 'nhanvien' || button.querySelector('.lucide-users')));
-            if (!staffButton)
-                throw Error('Kh\u00F4ng t\u00ECm th\u1EA5y n\u00FAt Nh\u00E2n vi\u00EAn');
-            const staffTicket = window.__AutoBILoadingGuard75.arm();
-            staffButton.click();
-            await sleep(700);
-            await new Promise(resolve => window.__AutoBIStableWaitDetail(resolve, 2500));
-            const staff = DATA.scrapeStaffRevenueTableDMX(config) || {};
-            const cache = GM_getValue(CACHE_KEY, {}) || {};
-            if (!cache.link6)
-                cache.link6 = {};
-            if (!cache.link7)
-                cache.link7 = {};
-            Object.keys(staff.staffRevMap || {}).forEach(key => {
-                if (!cache.link6[key])
-                    cache.link6[key] = { revenue: {}, competition: {}, crossSell: {} };
-                cache.link6[key].revenue = staff.staffRevMap[key];
-                cache.link7[key] = (staff.staffInstMap || {})[key];
-            });
-            GM_setValue(CACHE_KEY, cache);
-            window.__AutoBILog5.note('\u0110\u00E3 \u0111\u1ECDc Nh\u00E2n vi\u00EAn Doanh thu: ' + Object.keys(staff.staffRevMap || {}).length + ' shop');
-            window.__AutoBILog5.stage('S\u1EE9c kh\u1ECFe ST', 'T\u1ED5ng c\u1EE5m', '\u0110ang ch\u1EDD Ng\u00E0nh h\u00E0ng BI');
-            try {
-                const totalHealth = await scrapeBestHealth(DATA, UI, 'T\u1ED5ng c\u1EE5m');
-                const afterHealth = GM_getValue(CACHE_KEY, {}) || {};
-                if (!afterHealth.link8_health)
-                    afterHealth.link8_health = {};
-                afterHealth.link8_health.total = totalHealth || {};
-                GM_setValue(CACHE_KEY, afterHealth);
-                window.__AutoBILog5.ok('S\u1EE9c kh\u1ECFe ST T\u1ED5ng c\u1EE5m OK \u2014 \u0111\u00E3 l\u01B0u');
-            }
-            catch (error) {
-                window.__AutoBILog5.error(error);
-                UI.showToast('\u26A0\uFE0F S\u1EE9c kh\u1ECFe ST T\u1ED5ng c\u1EE5m: ' + error.message + '. Ti\u1EBFp t\u1EE5c \u0111\u1ECDc t\u1EEBng shop.', 9000);
-                window.__AutoBIHealth74Only?.cancel();
-            }
-            await window.__AutoBIHealthPerShop.scan(config, DATA.scrapeHealthCategoriesDMX, (message, ms) => UI.showToast(message, ms));
-            UI.showToast('\u2705 Ho\u00E0n t\u1EA5t v\u00E0 \u0111\u00E3 ki\u1EC3m tra d\u1EEF li\u1EC7u Doanh thu!', 3000);
-            if (done)
-                done();
-        }
-        catch (error) {
-            window.__AutoBILog5.error(error);
-            console.error('[AutoBI 59 STABLE Revenue]', error);
-            UI.showToast('\u274C \u0110\u00E3 ch\u1EB7n d\u1EEF li\u1EC7u sai: ' + error.message + '. H\u00E3y ch\u1EA1y l\u1EA1i.', 12000);
-            if (done)
-                done();
-        }
-        finally {
-            window.__AutoBIRevenueRun56 = false;
-        }
-    }
-    function strengthenWaits() { window.__AutoBIStableWait = callback => window.__AutoBILoadingGuard75.callbackWait(callback); window.__AutoBIStableWaitDetail = callback => window.__AutoBILoadingGuard75.callbackWait(callback); }
-    function install() {
-        const page = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
-        const DATA = page.DATA || window.DATA;
-        const UI = page.UI || window.UI;
-        if (!DATA || !UI || DATA.__integrity55)
-            return false;
-        DATA.__integrity55 = true;
-        strengthenWaits();
-        DATA.runRevenueSequenceDMX = (config, done) => robustRevenueRun(DATA, UI, config, done);
-        console.info('[AutoBI 16.1.1.59 STABLE] Data integrity guard ready');
-        return true;
-    }
-    if (!install()) {
-        const timer = setInterval(() => {
-            if (install())
-                clearInterval(timer);
-        }, 100);
-        setTimeout(() => clearInterval(timer), 30000);
-    }
-})();
+
+
 /* AutoBI 16.1.1.59 STABLE - nhãn phiên bản gọn; không can thiệp dữ liệu báo cáo. */
 (function () {
     'use strict';
@@ -11012,17 +7399,6 @@ const _0x133c09 = '<div style="font-size:15px; color:#333; line-height:1.6; text
   } catch (_) {}
 })();
 
-/* V94: tìm đúng bảng Doanh thu nhân viên đang hiển thị (bỏ qua bảng của tab ẩn; hỗ trợ bảng tách tiêu đề/thân) */
-window.__AutoBIStaffTable94 = function () {
-  const vis = e => !!e && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
-  const norm = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/\s+/g, ' ').trim();
-  const heads = t => [...t.querySelectorAll('thead th, thead td')].map(x => norm(x.getAttribute('title') || x.textContent));
-  const tables = [...document.querySelectorAll('table')].filter(vis);
-  const header = tables.find(t => { const h = heads(t); return h.some(x => /^nhan vien/.test(x)) && h.some(x => x.includes('doanh thu')); });
-  if (!header) { const t = document.querySelector('.report-table table, .ant-table-content table, table'); return t ? { header: t, body: t } : null; }
-  const body = header.querySelector('tbody tr td') ? header : (header.closest('.ant-table') && header.closest('.ant-table').querySelector('.ant-table-body table')) || header;
-  return { header, body };
-};
 
 /* V96: một bộ hẹn giờ chung cho các module nhỏ (thay cho nhiều setInterval riêng) */
 window.__AutoBITick96 = (function () {
@@ -11286,7 +7662,7 @@ window.__AutoBIBiTarget99 = (function () {
   'use strict';
   if (window.top !== window.self) return null;
   const norm = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/\s+/g, ' ').trim();
-  const fmt = n => Math.round(n).toLocaleString('en-US');
+  
   const toast = (m, ms) => { try { if (window.UI && window.UI.showToast) { window.UI.showToast(m, ms || 6000); return; } } catch (_) { } alert(m); };
   const monthOf = d => { try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit' }).format(d).slice(0, 7); } catch (_) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); } };
   const daysInMonth = () => { const [y, m] = monthOf(new Date()).split('-').map(Number); return new Date(y, m, 0).getDate(); };
@@ -11389,31 +7765,6 @@ window.__AutoBIBiTarget99 = (function () {
     return changed;
   }
 
-  /* V16.2.5: sau khi đọc Thi đua, nếu bảng "Lũy kế" thật ra vẫn là Realtime thì không dùng (giữ bản Lũy kế trước đó nếu có) để báo cáo khỏi hiện số sai */
-  function hookCompetition() {
-    const DATA = core('DATA');
-    if (!DATA || !DATA.runThiDuaSequenceDMX || DATA.runThiDuaSequenceDMX.__autobiGuard125) return;
-    const run = DATA.runThiDuaSequenceDMX;
-    const wrapped = function (list, config, done) {
-      let before = {};
-      try { before = JSON.parse(JSON.stringify((GM_getValue('tgdd_data_cache_v30', {}) || {}).link4_smart || {})); } catch (_) { }
-      return run.call(this, list, config, function (...a) {
-        try {
-          const cache = GM_getValue('tgdd_data_cache_v30', {}) || {};
-          if (cumulativeLooksRealtime(cache.link4_smart, cache.link3_smart)) {
-            if (Object.keys(before).length && !cumulativeLooksRealtime(before, cache.link3_smart)) cache.link4_smart = before; else delete cache.link4_smart;
-            GM_setValue('tgdd_data_cache_v30', cache);
-            note('Thi đua Lũy kế đọc ra số Realtime (BI chưa chuyển bảng) — không dùng lượt đọc này');
-            toast('🛡️ Bảng Thi đua Lũy kế chưa tải đúng nên không dùng số vừa đọc. Nếu báo cáo thiếu số, hãy chạy lại một lần.', 10000);
-          }
-        } catch (e) { try { console.warn('[AutoBI 16.2.5] Kiểm tra Thi đua Lũy kế lỗi:', e); } catch (_) { } }
-        if (done) return done.apply(this, a);
-      });
-    };
-    wrapped.__autobiGuard125 = true;
-    DATA.runThiDuaSequenceDMX = wrapped;
-  }
-
   function sync(cache) {
     if (!autoOn()) return false;
     cache = cache && typeof cache === 'object' && Object.keys(cache).length ? cache : (GM_getValue('tgdd_data_cache_v30', {}) || {});
@@ -11494,7 +7845,6 @@ window.__AutoBIBiTarget99 = (function () {
     queueMicrotask(() => { el.value = shown; });
   }, true);
   /* V16.2.6: ẩn "Dữ liệu năm" trong Menu và dòng "Tháng báo cáo" ở bảng Chạy báo cáo (luôn chạy tháng hiện tại) */
-  try { GM_addStyle('#btn-menu-yearly { display: none !important; } div:has(> #sel-report-month) { display: none !important; }'); } catch (_) { }
   /* V16.2.6: đồng hồ khi chạy luôn đếm lên từ 00:01 cho mọi loại báo cáo (trước đây Lũy kế/Realtime/ALL đếm ngược từ 05:00, Giờ công đếm lên từ 00:00) */
   function runStart() {
     try { const st = window.__AutoBILog5 && window.__AutoBILog5.snapshot && window.__AutoBILog5.snapshot(); if (st && st.status === 'running' && st.startedAt) return Number(st.startedAt); } catch (_) { }
@@ -11521,14 +7871,16 @@ window.__AutoBIBiTarget99 = (function () {
       timerObs.observe(el, { childList: true, characterData: true, subtree: true });
     }
   }
-  try { hookReport(); hookCompetition(); sync(); } catch (_) { }
-  if (window.__AutoBITick96) { window.__AutoBITick96(install, 1000); window.__AutoBITick96(hookReport, 2000); window.__AutoBITick96(hookCompetition, 2000); window.__AutoBITick96(fixTimer, 500); }
+  try { hookReport(); sync(); } catch (_) { }
+  if (window.__AutoBITick96) { window.__AutoBITick96(install, 1000); window.__AutoBITick96(hookReport, 2000); window.__AutoBITick96(fixTimer, 500); }
   return { sync };
 })();
 
 /* ==========================================================================
-   V16.4 — __AutoBIApi: đọc số trực tiếp từ dữ liệu gốc của BI (/kb-api) và SO KHỚP
-   với số AutoBI đang đọc từ giao diện. Chưa thay luồng đổ số, chưa đổi báo cáo.
+   __AutoBIApi (V16.4 → V17): MỌI SỐ LIỆU LẤY TỪ API
+   BI: /kb-api/reports/* (Doanh thu, NV, Ngành hàng BI, Thi đua, Thi đua NV, Trả chậm, Giờ công)
+   CRM: crm.thegioididong.com (Điểm phục vụ, Điểm KH đánh giá NV) — còn đường giao diện dự phòng.
+   (Ghi chú cũ bên dưới giữ để tra lịch sử.)
    - Menu Tampermonkey: "AutoBI: So khớp số API" (chạy ngay, hiện bảng kết quả)
                         "AutoBI: Xem so khớp gần nhất" / "AutoBI: Bật/Tắt tự so khớp sau đổ số"
    - Tự so khớp sau mỗi lượt đổ số hoàn tất (mặc định bật), ghi tóm tắt vào nhật ký.
@@ -11542,7 +7894,7 @@ window.__AutoBIBiTarget99 = (function () {
 
   const CFG_KEY = 'TGDD_BI_STORE_PERMANENT_CONFIG_GM_V1';
   const CACHE_KEY = 'tgdd_data_cache_v30';
-  const LAST_KEY = 'autobi_api_compare_last';
+  
   const PEND_KEY = 'autobi_api_compare_pending';
   const AUTO_KEY = 'autobi_api_compare_auto';
   const page = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
@@ -11552,7 +7904,7 @@ window.__AutoBIBiTarget99 = (function () {
   const num = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
   const pct = (a, b) => (num(b) ? num(a) / num(b) * 100 : 0);
   const note = text => { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note(text); } catch (_) { } };
-  const running = () => { try { return Number(GM_getValue('tgdd_auto_state_run_v30', -1)) >= 0 || (window.__AutoBIRunning88 && window.__AutoBIRunning88()); } catch (_) { return false; } };
+  
 
   /* Ngày theo giờ Việt Nam, dạng 20261002 */
   function vnDay(offset = 0) { const d = new Date(Date.now() + 7 * 3600e3 + offset * 86400e3); return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate(); }
@@ -11621,29 +7973,10 @@ window.__AutoBIBiTarget99 = (function () {
   }
 
   /* So một ô: thử các cách tính từ API, lấy cách gần nhất */
-  function judge(ui, candidates) {
-    const u = num(ui);
-    let best = null;
-    for (const [via, raw] of Object.entries(candidates)) {
-      const a = num(raw), diff = Math.abs(a - u), rel = Math.max(Math.abs(a), Math.abs(u)) ? diff / Math.max(Math.abs(a), Math.abs(u)) : 0;
-      if (!best || rel < best.rel) best = { via, api: a, rel, diff };
-    }
-    best.ok = best.rel <= 0.01 || best.diff <= 0.2;
-    return best;
-  }
-  const fmt = v => { const n = num(v); return Math.abs(n) >= 1000 ? Math.round(n).toLocaleString('vi-VN') : (Math.round(n * 100) / 100).toLocaleString('vi-VN'); };
+  
+  
 
-  function revenueCandidates(r) {
-    const days = num(r.numday_cum) || num(r.numday_window), month = num(r.numday_month);
-    const forecast = (v, t) => (days && month && num(t) ? num(v) / days * month / num(t) * 100 : 0);
-    return {
-      t: { 'target_kfactor': r.target_kfactor, 'target': r.target },
-      r: { 'revenue_kfactor': r.revenue_kfactor, 'revenue': r.revenue },
-      dtlk: { 'revenue': r.revenue, 'revenue_kfactor': r.revenue_kfactor },
-      dk: { '%HT QĐ': pct(r.revenue_kfactor, r.target_kfactor), '%HT thực': pct(r.revenue, r.target), '%Dự kiến QĐ': forecast(r.revenue_kfactor, r.target_kfactor), '%Dự kiến thực': forecast(r.revenue, r.target) },
-      tg: { '%TG thực': pct(r.revenue_tragop, r.revenue), '%TG QĐ': pct(r.revenue_tragop_kfactor, r.revenue_kfactor) }
-    };
-  }
+  
   const SUM_FIELDS = ['quantity', 'revenue', 'revenue_kfactor', 'revenue_off', 'revenue_onl', 'revenue_tragop', 'revenue_tragop_kfactor', 'target', 'target_kfactor'];
   function sumRows(rows) {
     const t = {};
@@ -11686,150 +8019,9 @@ window.__AutoBIBiTarget99 = (function () {
     return ok(gm) ? gm : (ok(run) ? run : {});
   }
 
-  async function collect() {
-    const cfg = readConfig(), cache = readObj(CACHE_KEY), shops = shopsOf(cfg);
-    if (!shops.length) throw new Error('Khai báo chưa có shop nào (đã tìm ở cấu hình lượt chạy, GM và localStorage; khóa có: ' + Object.keys(cfg).filter(k => /shop|kho|code/i.test(k)).slice(0, 12).join(', ') + ')');
-    const today = vnDay(), lines = [], stats = { ok: 0, bad: 0, miss: 0 }, push = (ok, text) => { lines.push((ok === true ? '✅ ' : ok === false ? '❌ ' : '⚪ ') + text); if (ok === true) stats.ok++; else if (ok === false) stats.bad++; else stats.miss++; };
+  
 
-    /* 1. Siêu thị */
-    const stores = await discoverStores(today);
-    const matched = [];
-    for (const shop of shops) {
-      const st = stores.find(x => shopOf([shop], cfg, x.name, x.id));
-      if (st) matched.push({ ...shop, storeId: st.id, storeName: st.name });
-      else push(null, shop.short + ': không thấy trong danh sách siêu thị BI của tài khoản');
-    }
-    if (!matched.length) throw new Error('Không khớp được shop nào trong Khai báo với siêu thị BI');
-    const storeIds = matched.map(s => s.storeId).join(',');
-    lines.push('Siêu thị: ' + matched.map(s => s.short + ' = ' + s.storeName + ' (' + s.storeId + ')').join(' · '));
-
-    /* 2. Doanh thu Realtime + Lũy kế */
-    const rt = {}, cum = {};
-    let cumTo = 0;
-    for (const s of matched) {
-      rt[s.key] = (await api('reports/revenue-consolidated-get', revBody(today, today, 'STORE', s.storeId, 'LEVEL')))[0] || null;
-      const k = String(rt[s.key] && rt[s.key].cum_as_of_date_key || '');
-      if (/^\d{8}$/.test(k)) cumTo = Math.max(cumTo, Number(k));
-    }
-    if (!cumTo) cumTo = vnDay(-1);
-    const cumFrom = monthStart(cumTo);
-    for (const s of matched) cum[s.key] = (await api('reports/revenue-consolidated-get', revBody(cumFrom, cumTo, 'STORE', s.storeId, 'LEVEL')))[0] || null;
-    lines.push('Lũy kế API: ' + cumFrom + ' → ' + cumTo + ' · Realtime: ' + today);
-
-    const compareRevenue = (title, uiData, apiRows, cumRows) => {
-      lines.push('— ' + title);
-      if (!uiData) { push(null, title + ': chưa có số giao diện để so (chạy đổ số trước)'); return; }
-      const keys = matched.map(s => s.key).filter(k => apiRows[k]);
-      const targets = keys.map(k => [k, apiRows[k]]).concat(keys.length ? [['total', sumRows(keys.map(k => apiRows[k]))]] : []);
-      for (const [k, row] of targets) {
-        const ui = uiData[k], name = k === 'total' ? 'Tổng' : (matched.find(s => s.key === k) || {}).short;
-        if (!ui) { push(null, name + ': giao diện không có dòng này'); continue; }
-        const cands = revenueCandidates(row);
-        /* Realtime: ô %HT của AutoBI là %HT Lũy kế (V16.4.2) */
-        if (cumRows) { const c = k === 'total' ? sumRows(keys.map(x => cumRows[x]).filter(Boolean)) : cumRows[k]; if (c) cands.dk = { '%HT QĐ Lũy kế': pct(c.revenue_kfactor, c.target_kfactor), ...cands.dk }; }
-        for (const f of ['t', 'r', 'dtlk', 'dk', 'tg']) {
-          if (ui[f] === undefined) continue;
-          const j = judge(ui[f], cands[f]);
-          push(j.ok, name + ' · ' + f + ': giao diện ' + fmt(ui[f]) + ' | API ' + fmt(j.api) + ' (' + j.via + ')');
-        }
-      }
-    };
-    compareRevenue('Doanh thu Lũy kế (link2)', cache.link2, cum);
-    compareRevenue('Doanh thu Realtime (link1)', cache.link1, rt, cum);
-
-    /* 3. Thi đua Lũy kế + Realtime, và mã nội bộ shop (lấy lại mỗi lượt) */
-    const month = monthKey(today), salegroups = {};
-    for (const [title, timeType, cacheKey] of [['Thi đua Lũy kế (link4_smart)', 2, 'link4_smart'], ['Thi đua Realtime (link3_smart)', 1, 'link3_smart']]) {
-      lines.push('— ' + title);
-      const rows = (await api('reports/competition-bymsg-get', compBody(month, timeType, storeIds))).filter(r => String(r.columnname || '').toUpperCase() === 'STOREID');
-      const uiGroups = cache[cacheKey];
-      const unmatched = new Set(), notInUi = new Set(), buckets = new Map();
-      const r100 = v => Math.round(num(v) * 1000 / 100) * 100, pos = v => Math.max(0, num(v));
-      for (const r of rows) {
-        const shop = shopOf(matched, cfg, r.salegroupname, null);
-        if (!shop) continue;
-        if (timeType === 2 && r.salegroupid != null) (salegroups[shop.key] = salegroups[shop.key] || new Set()).add(String(r.salegroupid));
-        if (!uiGroups) continue;
-        const g = matchGroup(uiGroups, r.programname);
-        const pname = String(r.programname || '').replace(/^\d+\s*-\s*/, '');
-        if (!g) { unmatched.add(pname); continue; }
-        if (!uiGroups[g]) { notInUi.add(g + ' ← ' + pname); continue; }
-        const ui = uiGroups[g][shop.key];
-        if (!ui) { push(null, g + ' · ' + shop.short + ': giao diện không có'); continue; }
-        const jr = judge(ui.r, { 'revenue×1000': num(r.revenue) * 1000, 'revenue×1000 (âm tính 0)': pos(r.revenue) * 1000, 'revenue×1000 làm tròn 100': r100(pos(r.revenue)), 'quantity': num(r.quantity), 'quantity (âm tính 0)': pos(r.quantity) });
-        const jt = judge(ui.t, { 'target×1000': num(r.target) * 1000, 'target×1000 làm tròn 100': r100(r.target), 'target': r.target });
-        const jp = judge(ui.p, { '%HT': r.targetpercent_month, '%HT×100': num(r.targetpercent_month) * 100 });
-        const jd = judge(ui.pd, { '%DK': r.targetpercent_predict, '%DK×100': num(r.targetpercent_predict) * 100 });
-        const fails = [jr, jt, jp, jd].filter(x => !x.ok);
-        const item = { label: g + ' · ' + shop.short, pname, jr, jt, jp, jd, ui, fails, neg: num(r.revenue) < 0 && num(ui.r) === 0 };
-        const key = g + '|' + shop.key, prev = buckets.get(key);
-        if (!prev) buckets.set(key, [item]); else prev.push(item);
-      }
-      for (const items of buckets.values()) {
-        items.sort((a, b) => a.fails.length - b.fails.length);
-        const it = items[0], ok = !it.fails.length;
-        let hint = '';
-        if (!ok) {
-          if (it.fails.includes(it.jd) && num(it.ui.pd) > 0 && num(it.jd.api) >= 1000 && Math.floor(num(it.jd.api) / 1000) === Math.floor(num(it.ui.pd))) hint = ' — giao diện đọc sai số có dấu phân cách hàng nghìn, API đúng';
-          else if (it.neg) hint = ' — API âm (hàng trả), giao diện tính 0';
-          else hint = ' (' + it.fails.map(x => x.via).join(', ') + ')';
-        }
-        push(ok, it.label + ': r ' + fmt(it.ui.r) + '/' + fmt(it.jr.api) + ' · t ' + fmt(it.ui.t) + '/' + fmt(it.jt.api) + ' · %HT ' + fmt(it.ui.p) + '/' + fmt(it.jp.api) + ' · %DK ' + fmt(it.ui.pd) + '/' + fmt(it.jd.api) + hint + (items.length > 1 ? ' [nhóm gộp ' + items.length + ' chương trình; khớp nhất: ' + it.pname + ']' : ''));
-      }
-      if (notInUi.size) push(null, 'Có trong Khai báo nhưng giao diện chưa đọc: ' + [...notInUi].slice(0, 8).join(' | '));
-      if (!uiGroups) push(null, title + ': chưa có số giao diện để so');
-      if (unmatched.size) push(null, 'Chương trình API chưa khớp tên nhóm Khai báo: ' + [...unmatched].slice(0, 8).join(' | '));
-    }
-
-    /* 4. Thi đua nhân viên từng shop (Lũy kế) */
-    lines.push('— Thi đua nhân viên');
-    for (const s of matched) {
-      const ids = [...(salegroups[s.key] || [])];
-      if (!ids.length) { push(null, s.short + ': không tìm thấy mã Thi đua của shop'); continue; }
-      let n = 0; const staff = new Set(), programs = new Set();
-      for (const id of ids) {
-        const rows = await api('reports/competition-bymsg-get', compBody(month, 2, storeIds, 'STORE', id));
-        n += rows.length; rows.forEach(r => { staff.add(String(r.staffuser)); programs.add(r.programid); });
-      }
-      push(n > 0 ? true : null, s.short + ': mã ' + ids.join('+') + ' → ' + staff.size + ' nhân viên, ' + programs.size + ' chương trình, ' + n + ' dòng');
-    }
-
-    /* 5. Nhân viên Doanh thu, Ngành hàng BI, Trả chậm, Giờ công — kiểm tra lấy được dữ liệu */
-    lines.push('— Dữ liệu khác');
-    for (const s of matched) {
-      const staff = await api('reports/revenue-consolidated-staff-get', { FROMDATE: cumFrom, TODATE: cumTo, VIEWLEVEL: 'STORE', VIEWIDS: String(s.storeId), CHAINIDS: null, MAINGROUPIDS: null, SUBGROUPIDS: null, ORDERBY: 'REVENUE', ORDERDIR: 'DESC', PAGEINDEX: 1, PAGESIZE: 500 });
-      const staffSum = staff.reduce((a, r) => a + num(r.revenue_kfactor), 0), shopQd = num(cum[s.key] && cum[s.key].revenue_kfactor);
-      const j = judge(staffSum, { 'DT QĐ shop': shopQd });
-      push(staff.length ? j.ok : null, s.short + ' · Nhân viên DT: ' + staff.length + ' người, tổng QĐ ' + fmt(staffSum) + ' / shop ' + fmt(shopQd));
-      const cat = await api('reports/revenue-consolidated-get', revBody(cumFrom, cumTo, 'STORE', s.storeId, 'BICAT'));
-      push(cat.length ? true : null, s.short + ' · Ngành hàng BI: ' + cat.length + ' dòng');
-    }
-    const tc = await api('reports/tra-cham-matrix-get', { VIEWLEVEL: 'RSMSTOREGROUP', RSMIDS: null, AMIDS: null, STOREIDS: storeIds, MONTHKEY: month });
-    push(tc.length ? true : null, 'Trả chậm: ' + tc.length + ' dòng');
-    const tk = await api('reports/timekeeping-get', { FROMDATE: monthStart(today), TODATE: today, RSMIDS: null, AMIDS: null, STOREIDS: storeIds, PAGEINDEX: 1, PAGESIZE: 50 });
-    push(tk.length ? true : null, 'Giờ công: ' + num(tk[0] && tk[0].total_rows || tk.length) + ' dòng từ ' + monthStart(today));
-
-    return { at: Date.now(), stats, lines };
-  }
-
-  function render(report) {
-    document.getElementById('autobi-api16-panel')?.remove();
-    const box = document.createElement('div');
-    box.id = 'autobi-api16-panel';
-    box.style.cssText = 'position:fixed;inset:max(12px,env(safe-area-inset-top)) 10px max(12px,env(safe-area-inset-bottom));z-index:2147483646;background:#fff;color:#111;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.35);display:flex;flex-direction:column;font:13px/1.45 -apple-system,Segoe UI,Roboto,sans-serif';
-    const s = report.stats || {};
-    const head = document.createElement('div');
-    head.style.cssText = 'padding:12px 14px;border-bottom:1px solid #eee;display:flex;gap:8px;align-items:center;flex-wrap:wrap';
-    head.innerHTML = '<b style="flex:1;min-width:160px">So khớp số API · ' + new Date(report.at).toLocaleString('vi-VN') + '<br><span style="font-weight:400;color:#555">✅ ' + (s.ok || 0) + ' khớp · ❌ ' + (s.bad || 0) + ' lệch · ⚪ ' + (s.miss || 0) + ' chưa so được</span></b>';
-    const btn = (t, bg, fn) => { const b = document.createElement('button'); b.textContent = t; b.style.cssText = 'border:0;border-radius:9px;padding:9px 14px;font-weight:600;color:#fff;background:' + bg; b.onclick = fn; return b; };
-    const text = (report.error ? '⛔ ' + report.error + '\n' : '') + (report.lines || []).join('\n');
-    head.append(btn('Chép', '#2563eb', () => { try { navigator.clipboard.writeText(text); } catch (_) { } }), btn('Đóng', '#6b7280', () => box.remove()));
-    const pre = document.createElement('pre');
-    pre.style.cssText = 'margin:0;padding:12px 14px;overflow:auto;flex:1;white-space:pre-wrap;word-break:break-word;font:12px/1.5 ui-monospace,Menlo,Consolas,monospace';
-    pre.textContent = text;
-    box.append(head, pre);
-    document.body.appendChild(box);
-  }
+  
 
   /* ======================================================================
      V16.5 — LẤY SỐ BẰNG API: sau bước Doanh thu và bước Thi đua của lượt đổ số,
@@ -11839,7 +8031,7 @@ window.__AutoBIBiTarget99 = (function () {
      API lỗi → giữ nguyên số giao diện, ghi nhật ký. Tắt/bật: menu "AutoBI: Bật/Tắt lấy số bằng API".
      ====================================================================== */
   const SRC_KEY = 'autobi_api_source';
-  const apiOn = () => GM_getValue(SRC_KEY, true) !== false;
+  
   const STORES_KEY = 'autobi_api_stores_v1';
 
   async function storesToday(day) {
@@ -12194,12 +8386,12 @@ window.__AutoBIBiTarget99 = (function () {
         data: form ? body : JSON.stringify(body),
         onload: r => {
           const t = String(r.responseText || '').trim();
-          if (r.status === 401 || r.status === 403 || t.startsWith('<')) { const e = new Error('CRM chưa đăng nhập hoặc chưa chọn công ty trên trình duyệt này'); e.code = 'CRM_LOGIN'; return reject(e); }
+          if (r.status === 401 || r.status === 403 || t.startsWith('<')) { const e = new Error('CRM chưa đăng nhập — mở crm.thegioididong.com trên trình duyệt này (để CRM tự đăng nhập lại) rồi chạy lại'); e.code = 'CRM_LOGIN'; return reject(e); }
           if (r.status >= 400) return reject(new Error('CRM lỗi ' + r.status + ' ở ' + path));
           let j = t; try { j = JSON.parse(t); if (typeof j === 'string') { try { j = JSON.parse(j); } catch (_) { } } } catch (_) { }
           resolve(j);
         },
-        onerror: () => reject(new Error('Không gọi được CRM (' + path + ')')),
+        onerror: () => reject(new Error('Không gọi được CRM (' + path + ') — mở crm.thegioididong.com đăng nhập lại rồi chạy lại')),
         ontimeout: () => reject(new Error('CRM quá 20 giây (' + path + ')'))
       });
     });
@@ -12207,7 +8399,25 @@ window.__AutoBIBiTarget99 = (function () {
   const crmMonths = () => { const t = vnDay(), y = Math.floor(t / 10000), m = Math.floor(t / 100) % 100; return [{ y, m }, m === 1 ? { y: y - 1, m: 12 } : { y, m: m - 1 }]; };
   const mmyyyy = x => String(x.m).padStart(2, '0') + '/' + x.y;
   const vnMidnightISO = (y, m, d) => new Date(Date.UTC(y, m - 1, d) - 7 * 3600e3).toISOString();
+  /* V17.5: phiên CRM qua đêm thường mất lựa chọn công ty (trang về /chon-cong-ty) → chọn lại Điện Máy Xanh (= bấm logo ĐMX), 1 lần mỗi lượt */
+  let crmCompanyMemo = null;
+  function crmSelectCompany() {
+    if (crmCompanyMemo && Date.now() - crmCompanyMemo.at < 60000) return crmCompanyMemo.promise;
+    const promise = new Promise((resolve, reject) => {
+      /* CRM trả 500 nếu thiếu Referer (thử 3/10: có Referer 200, không có 500) */
+      GM_xmlhttpRequest({ method: 'GET', url: CRM + '/chon-cong-ty/2', timeout: 15000, headers: { Referer: CRM + '/Reviewuser/ReportCustomerRatings' },
+        /* V17.6: không đoán qua địa chỉ chuyển hướng (dễ báo nhầm); việc còn đăng nhập hay không do lệnh gọi CRM kế tiếp xác định */
+        onload: () => resolve(true),
+        onerror: () => reject(new Error('Không vào được CRM — mở crm.thegioididong.com đăng nhập lại rồi chạy lại')),
+        ontimeout: () => reject(new Error('CRM quá 15 giây khi chọn công ty')) });
+    });
+    crmCompanyMemo = { at: Date.now(), promise };
+    promise.catch(() => { crmCompanyMemo = null; });
+    return promise;
+  }
+  /* V17.7: chọn công ty ĐMX trước (kèm Referer), lỗi thì bỏ qua — phiên còn công ty cũ vẫn chạy tiếp */
   async function crmOpen() {
+    try { await crmSelectCompany(); } catch (_) { }
     const ok = await crmPost('/ReviewUser/CheckTimeIsViewFullHour', {});
     if (!(ok === true || String(ok).trim() === 'true')) { const e = new Error('CRM chỉ mở trước 8h sáng hoặc sau 18h — bỏ qua CRM lượt này'); e.code = 'CRM_TIME'; throw e; }
   }
@@ -12264,7 +8474,7 @@ window.__AutoBIBiTarget99 = (function () {
   /* ===== V16.8: CHẠY NHANH — các bước Doanh thu (0), Thi đua (2), Trả chậm (3) lấy hết bằng API ngay trên trang hiện tại, không chuyển trang, không bấm.
      Phần nào lỗi thì bước đó chạy lại bằng giao diện như cũ (dự phòng). ===== */
   const FAST_KEY = 'autobi_api_fast';
-  const fastOn = () => apiOn(); /* V16.8.1: gộp chung công tắc API */
+  const fastOn = () => true; /* V17: API là cách lấy số duy nhất */
   async function timed(label, fn) {
     const t0 = Date.now();
     try { const n = await fn(); return { label, ok: true, n, ms: Date.now() - t0 }; }
@@ -12289,68 +8499,39 @@ window.__AutoBIBiTarget99 = (function () {
       const step = tasks[i][1];
       if (r.ok) note('API · ' + r.label + ': ' + r.n + ' · ' + (r.ms / 1000).toFixed(1) + 's');
       else if (r.error && r.error.code === 'CRM_TIME') note('API · ' + r.label + ': ' + r.error.message);
-      else { note('API · ' + r.label + ' lỗi (' + (r.error && r.error.message || r.error) + ') — bước này chạy lại bằng giao diện'); if (['Doanh thu', 'Thi đua', 'Trả chậm', 'CRM Phục vụ nhân viên', 'CRM Điểm phục vụ'].includes(r.label)) done.delete(step); }
+      else { note('API · ' + r.label + ' lỗi (' + (r.error && r.error.message || r.error) + ')'); if (['Doanh thu', 'Thi đua', 'Trả chậm', 'CRM Phục vụ nhân viên', 'CRM Điểm phục vụ'].includes(r.label)) done.delete(step); }
     });
+    /* V17.8: Thi đua Realtime của BI không theo ngày — sáng sớm (chưa có doanh thu hôm nay) BI vẫn trả số Realtime của hôm trước.
+       Doanh thu Realtime hôm nay = 0 mà Thi đua Realtime còn số → bỏ số Thi đua Realtime cũ, báo cáo hiện "-" như đầu ngày. */
+    if (steps.includes(0) && steps.includes(2)) {
+      let stale = false;
+      writeCache(cache => {
+        const t = cache.link1 && cache.link1.total;
+        const noSalesToday = !!t && num(t.r) === 0 && num(t.dtlk) === 0;
+        const rt = cache.link3_smart;
+        if (noSalesToday && rt && Object.values(rt).some(g => g && Object.values(g).some(c => c && num(c.r) !== 0))) {
+          for (const g of Object.values(rt)) if (g) for (const c of Object.values(g)) if (c) { c.r = 0; c.p = 0; c.pd = 0; }
+          stale = true;
+        }
+      });
+      if (stale) note('Thi đua Realtime: BI chưa sang ngày mới (doanh thu hôm nay = 0) — bỏ số Realtime của hôm trước, giữ target ngày');
+    }
     note('API: lấy xong số trong ' + ((Date.now() - t0) / 1000).toFixed(1) + 's');
     return { handled: done.has(current), done };
   }
 
-  async function safely(label, fn) {
-    if (!apiOn()) return;
-    try {
-      const n = await Promise.race([fn(), new Promise((_, rej) => setTimeout(() => rej(new Error('quá 45 giây')), 45000))]);
-      note(label + ': đã lấy số bằng API (' + n + ')');
-    } catch (e) {
-      note(label + ': API lỗi — giữ số đọc giao diện (' + (e && e.message || e) + ')');
-      if (e && e.code === 'AUTH') { try { const UI = page.UI || window.UI; UI && UI.showToast && UI.showToast('⚠️ Phiên BI hết hạn — số Doanh thu/Thi đua lượt này lấy từ giao diện. Đăng nhập lại BI cho lượt sau.', 9000); } catch (_) { } }
-    }
-  }
-  function hookRuns() {
-    const D = page.DATA || window.DATA;
-    if (!D) return;
-    const rev = D.runRevenueSequenceDMX;
-    if (typeof rev === 'function' && !rev.__api16) {
-      const w = function (config, done, ...rest) { return rev.call(this, config, function (...a) { (async () => { await safely('Doanh thu', () => applyRevenue(config)); await safely('Nhân viên Doanh thu', () => applyStaffRevenue(config)); await safely('Ngành hàng BI', () => applyHealth(config)); })().finally(() => { if (done) done.apply(this, a); }); }, ...rest); };
-      w.__api16 = true; D.runRevenueSequenceDMX = w;
-    }
-    const comp = D.runThiDuaSequenceDMX;
-    if (typeof comp === 'function' && !comp.__api16) {
-      const w = function (list, config, done, ...rest) { return comp.call(this, list, config, function (...a) { (async () => { await safely('Thi đua', () => applyCompetition(config)); await safely('Thi đua nhân viên', () => applyStaffCompetition(config)); })().finally(() => { if (done) done.apply(this, a); }); }, ...rest); };
-      w.__api16 = true; D.runThiDuaSequenceDMX = w;
-    }
-    const inst = window.__AutoBIInstallment41;
-    if (inst && typeof inst.run === 'function' && !inst.run.__api16) {
-      const orig = inst.run;
-      const w = function (config, data, ui, done, ...rest) { return orig.call(this, config, data, ui, function (...a) { safely('Trả chậm', () => applyInstallment(config)).finally(() => { if (done) done.apply(this, a); }); }, ...rest); };
-      w.__api16 = true; inst.run = w;
-    }
-  }
-  if (window.__AutoBITick96) window.__AutoBITick96(hookRuns, 1000); else setInterval(hookRuns, 1000);
-  setTimeout(hookRuns, 0);
+  
+  
+  try { GM_deleteValue(SRC_KEY); } catch (_) { }
 
-  let busy = false;
-  async function run({ show = true } = {}) {
-    if (busy) return null;
-    if (running()) { if (show) alert('AutoBI đang đổ số — chạy so khớp sau khi xong.'); return null; }
-    busy = true;
-    let report;
-    try { report = await collect(); }
-    catch (e) { report = { at: Date.now(), stats: { ok: 0, bad: 0, miss: 0 }, lines: [], error: e && e.message || String(e) }; }
-    finally { busy = false; }
-    try { GM_setValue(LAST_KEY, report); } catch (_) { }
-    const sum = report.error ? 'So khớp API lỗi: ' + report.error : 'So khớp API: ' + report.stats.ok + ' khớp, ' + report.stats.bad + ' lệch, ' + report.stats.miss + ' chưa so được';
-    note(sum);
-    console.info('[AutoBI API] ' + sum + '\n' + (report.lines || []).join('\n'));
-    if (show) render(report);
-    return report;
-  }
+  
+  
 
   /* V16.8.1: bỏ tự so khớp sau đổ số (mọi số đã lấy bằng API nên so khớp chỉ tự so với chính nó) */
   try { GM_deleteValue(PEND_KEY); GM_deleteValue(AUTO_KEY); GM_deleteValue(FAST_KEY); } catch (_) { }
 
   try {
-    GM_registerMenuCommand('AutoBI: Bật/Tắt lấy số bằng API', () => { const on = apiOn(); GM_setValue(SRC_KEY, !on); alert('Lấy số bằng API (chạy nhanh, không chuyển trang): ' + (!on ? 'BẬT' : 'TẮT — đọc giao diện như cũ')); });
   } catch (_) { }
 
-  window.__AutoBIApi = { api, run, collect, discoverStores, vnDay, applyRevenue, applyCompetition, timekeepingRows, applyStaffRevenue, applyHealth, applyStaffCompetition, applyInstallment, healthFrom, staffRevenueMap, fastRun, fastOn, applyCrmStore, applyCrmStaff };
+  window.__AutoBIApi = { api,   discoverStores, vnDay, applyRevenue, applyCompetition, timekeepingRows, applyStaffRevenue, applyHealth, applyStaffCompetition, applyInstallment, healthFrom, staffRevenueMap, fastRun, fastOn, applyCrmStore, applyCrmStaff };
 })();
