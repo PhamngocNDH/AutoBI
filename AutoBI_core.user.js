@@ -1,12 +1,13 @@
 // ==UserScript==
-// @name         AutoBI Core V17.8
+// @name         AutoBI Core V17.10
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.8
+// @version      17.10
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
+// @match        https://crm.thegioididong.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=thegioididong.com
 // @connect      crm.thegioididong.com
 // @connect      *
@@ -29,6 +30,92 @@
 // @require      https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js
 // ==/UserScript==
+/* V17.10: CRM trên iPhone. Safari không gửi phiên CRM (cookie) khi AutoBI gọi chéo từ trang BI sang crm.thegioididong.com,
+   nên CRM trả trang đăng nhập dù đã đăng nhập. Gọi chéo không có phiên → AutoBI mở trang CRM, lấy số ngay trên trang đó
+   (cùng tên miền, chắc chắn có phiên), lưu kết quả rồi quay lại BI chạy tiếp lượt. Máy tính gọi chéo được thì không đổi gì.
+   Trên trang CRM chỉ chạy cầu nối này, phần còn lại của AutoBI không chạy. */
+window.__AutoBICrmFetch = (function () {
+  const JOB = 'autobi_crm_bridge_job', RESULT = 'autobi_crm_bridge_result';
+  const num = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+  const vnToday = () => { const d = new Date(Date.now() + 7 * 3600e3); return { y: d.getUTCFullYear(), m: d.getUTCMonth() + 1 }; };
+  const months = () => { const { y, m } = vnToday(); return [{ y, m }, m === 1 ? { y: y - 1, m: 12 } : { y, m: m - 1 }]; };
+  const mmyyyy = x => String(x.m).padStart(2, '0') + '/' + x.y;
+  const vnMidnightISO = (y, m, d) => new Date(Date.UTC(y, m - 1, d) - 7 * 3600e3).toISOString();
+  const err = (message, code) => { const e = new Error(message); if (code) e.code = code; return e; };
+  const LOGIN_MSG = 'CRM chưa đăng nhập — mở crm.thegioididong.com trên trình duyệt này (để CRM tự đăng nhập lại) rồi chạy lại';
+  /* Đọc phản hồi CRM: trang HTML / 401 / 403 = không có phiên */
+  function parse(status, text, path) {
+    const t = String(text || '').trim();
+    if (status === 401 || status === 403 || t.startsWith('<')) throw err(LOGIN_MSG, 'CRM_LOGIN');
+    if (status >= 400) throw err('CRM lỗi ' + status + ' ở ' + path);
+    let j = t; try { j = JSON.parse(t); if (typeof j === 'string') { try { j = JSON.parse(j); } catch (_) { } } } catch (_) { }
+    return j;
+  }
+  async function checkTime(post) {
+    const ok = await post('/ReviewUser/CheckTimeIsViewFullHour', {});
+    if (!(ok === true || String(ok).trim() === 'true')) throw err('CRM chỉ mở trước 8h sáng hoặc sau 18h — bỏ qua CRM lượt này', 'CRM_TIME');
+  }
+  /* Điểm phục vụ shop (link9): tháng hiện tại, chưa có số thì tháng trước */
+  async function store(post, ids) {
+    let rows = [], used = null, loginErr = null, okMonths = 0;
+    for (const mo of months()) {
+      const last = new Date(Date.UTC(mo.y, mo.m, 0)).getUTCDate();
+      let data = null;
+      try { data = await post('/Statistic/Assess_Service_PointTGDD_new', { strDateFrom: vnMidnightISO(mo.y, mo.m, 1), strDateTo: vnMidnightISO(mo.y, mo.m, last), strLstStoreId: ids, iCompanyID: '0', type: 1, isSuppermini: '1' }); }
+      catch (e) { if (e.code !== 'CRM_LOGIN') throw e; data = null; loginErr = e; }
+      if (Array.isArray(data)) okMonths++;
+      if (Array.isArray(data) && data.some(r => num(r.totalsend) > 0 || num(r.totalrate) > 0)) { rows = data; used = mmyyyy(mo); break; }
+    }
+    if (!rows.length && !okMonths && loginErr) throw loginErr;
+    if (!rows.length) throw err('CRM chưa có Điểm phục vụ tháng này và tháng trước');
+    return { rows, used };
+  }
+  /* Điểm KH đánh giá nhân viên (link8) */
+  async function staff(post, ids) {
+    for (const mo of months()) {
+      const j = await post('/ReviewUser/SatisfiedUserRate', { objPage: { Keyword: '', PageNumber: 1, PageSize: 500 }, companyID: '0', datakey: mmyyyy(mo), strStoreID: ids, lstAreaID: '', keysearch: '', isSPMini: 'true' });
+      let d = j && j.data; if (typeof d === 'string') { try { d = JSON.parse(d); } catch (_) { d = null; } }
+      if (Array.isArray(d) && d.length) return { rows: d, used: mmyyyy(mo) };
+    }
+    throw err('CRM chưa có Điểm KH đánh giá nhân viên tháng này và tháng trước');
+  }
+  const plainErr = e => ({ code: (e && e.code) || '', message: String((e && e.message) || e || 'lỗi') });
+  const api = { JOB, RESULT, parse, checkTime, store, staff, plainErr, num, LOGIN_MSG };
+
+  /* ----- Phần chạy trên trang CRM ----- */
+  if (location.hostname !== 'crm.thegioididong.com' || window.top !== window.self) return api;
+  const job = GM_getValue(JOB, null);
+  if (!job || job.status !== 'pending' || Date.now() - (Number(job.at) || 0) > 10 * 60000) return api;
+  const box = document.createElement('div');
+  box.style.cssText = 'position:fixed;left:12px;right:12px;bottom:24px;z-index:2147483647;background:#1e3a8a;color:#fff;font:600 15px/1.4 -apple-system,system-ui,sans-serif;padding:14px 16px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.35);text-align:center';
+  const say = t => { box.textContent = 'AutoBI · ' + t; if (!box.isConnected && document.body) document.body.appendChild(box); };
+  const post = (path, body) => fetch(path, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json;charset=UTF-8', 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json, text/plain, */*' }, body: JSON.stringify(body) })
+    .then(async r => parse(r.status, await r.text(), path));
+  const back = () => { try { location.replace(job.returnUrl || 'https://baocao.dienmayxanh.com/dashboard/home'); } catch (_) { } };
+  (async () => {
+    say('Đang lấy số CRM…');
+    const out = { runId: job.runId, at: Date.now() };
+    try {
+      try { await fetch('/chon-cong-ty/2', { credentials: 'include' }); } catch (_) { }
+      await checkTime(post);
+      if (job.store) { try { out.store = await store(post, job.store); } catch (e) { out.store = { error: plainErr(e) }; } }
+      if (job.staff) { try { out.staff = await staff(post, job.staff); } catch (e) { out.staff = { error: plainErr(e) }; } }
+    } catch (e) {
+      const pe = plainErr(e);
+      if (job.store) out.store = { error: pe };
+      if (job.staff) out.staff = { error: pe };
+    }
+    GM_setValue(RESULT, out);
+    GM_setValue(JOB, Object.assign({}, job, { status: 'done', doneAt: Date.now() }));
+    const bad = [out.store, out.staff].filter(x => x && x.error);
+    if (bad.length && bad[0].error.code === 'CRM_LOGIN') { say('CRM chưa đăng nhập — đăng nhập CRM rồi chạy lại AutoBI. Đang quay lại BI…'); setTimeout(back, 2500); return; }
+    say('Đã lấy số CRM — đang quay lại BI…');
+    setTimeout(back, 400);
+  })();
+  return api;
+})();
+if (location.hostname === 'crm.thegioididong.com') throw new Error('[AutoBI] Trang CRM: chỉ chạy cầu nối CRM, không nạp giao diện AutoBI');
+
 /* V90: nguồn được phép tải code (tiện ích, theme) */
 window.__AutoBIAllowedSource90 = function (u) {
   try { const x = new URL(u); return x.protocol === 'https:' && ['docs.google.com', 'script.google.com', 'script.googleusercontent.com', 'raw.githubusercontent.com'].includes(x.hostname); } catch (_) { return false; }
@@ -41,6 +128,32 @@ window.__AutoBIJson = function (raw, fallback) {
   if (typeof raw !== 'string') return raw;
   try { return JSON.parse(raw); } catch (e) { try { console.warn('[AutoBI] Dữ liệu lưu bị hỏng, dùng mặc định:', e && e.message); } catch (_) { } return def(); }
 };
+
+/* V17.9: kiểm tra danh sách nhóm hàng (tgdd_gsheet_list_v30). Trên iPhone (Safari) có lúc Google trả trang web/JS thay cho file CSV,
+   lõi đọc trang đó thành nhóm rác (vd "document.title") → Thi đua không khớp nhóm nào → lượt Realtime báo "API chưa lấy được số".
+   heal(): mỗi lần mở trang bỏ nhóm rác đã lưu; còn rỗng thì xóa hẳn để lượt sau tải lại Sheet. */
+window.__AutoBIGroupList = (function () {
+  const KEY = 'tgdd_gsheet_list_v30', AT = 'autobi_cfglist_at';
+  const BAD = /[<>{};=\\]|document\.|window\.|function\b|\bvar\s|\bconst\s|\blet\s|https?:\/\//i;
+  const okName = v => { const t = String(v == null ? '' : v).trim(); return t.length > 0 && t.length <= 80 && !BAD.test(t); };
+  const valid = g => !!g && typeof g === 'object' && okName(g.short) && (g.full == null || String(g.full).trim() === '' || okName(g.full));
+  const clean = list => (Array.isArray(list) ? list.filter(valid) : []);
+  const looksLikePage = txt => /<\s*(!doctype|html|head|body|script|meta|div|title)\b|document\.|window\./i.test(String(txt || '').slice(0, 20000));
+  function read() {
+    const v = GM_getValue(KEY, []);
+    if (Array.isArray(v)) return v;
+    try { const a = JSON.parse(v); return Array.isArray(a) ? a : []; } catch (_) { return []; }
+  }
+  function heal() {
+    const raw = read(), ok = clean(raw), bad = raw.length - ok.length;
+    if (!bad) return 0;
+    if (ok.length) GM_setValue(KEY, ok); else { GM_deleteValue(KEY); GM_deleteValue(AT); }
+    try { console.warn('[AutoBI] V17.9: bỏ ' + bad + ' nhóm hàng không hợp lệ trong danh sách đã lưu'); } catch (_) { }
+    return bad;
+  }
+  return { valid, clean, looksLikePage, read, heal };
+})();
+try { window.__AutoBIGroupList.heal(); } catch (_) { }
 
 /* V16.2.8: sao lưu Khai báo — mỗi lần mở trang, nếu cấu hình khác bản sao gần nhất thì giữ lại (tối đa 5 bản).
    Khôi phục qua menu Tampermonkey "AutoBI: Khôi phục Khai báo trước đó". */
@@ -1900,6 +2013,7 @@ window.__AutoBIRun67 = (function () {
                     if (_0x35b9e1.shopTargets)
                         _0x55aa8c = _0x35b9e1.shopTargets;
                 }
+                try { if (window.__AutoBIGroupList) _0x4d7be3 = window.__AutoBIGroupList.clean(_0x4d7be3); } catch (_) { } /* V17.9 */
                 if (_0x4d7be3.length > 0) {
                     GM_setValue(CONSTANTS.KEYS.CONFIG_LIST, _0x4d7be3);
                     let _0x190d9d = JSON.parse(JSON.stringify(_0x218727));
@@ -1960,9 +2074,11 @@ window.__AutoBIRun67 = (function () {
             /* V16.8.5: danh sách nhóm hàng đã tải trong 30 phút thì dùng lại, không chờ tải Google Sheet mỗi lần bấm chạy */
             const __cfgList = GM_getValue(CONSTANTS.KEYS.CONFIG_LIST, []);
             const __cfgFresh = Array.isArray(__cfgList) && __cfgList.length > 0 && Date.now() - (Number(GM_getValue('autobi_cfglist_at', 0)) || 0) < 30 * 60000;
-            (__cfgFresh ? (o => setTimeout(() => o.onload({ status: 0, responseText: '' }), 0)) : GM_xmlhttpRequest)({ method: 'GET', url: _0x4000ac, timeout: 5000, onload: _0x3e7c57 => { if (_0x3e7c57.status === 200 && !_0x3e7c57.responseText.includes('<html')) {
-                    let _0x32ec7c = [];
-                    const _0x43913f = _0x3e7c57.responseText.split('\n');
+            /* V17.9: Sheet trả trang web (không phải CSV) thì không ghi đè danh sách; thử lại qua đường gviz trước khi dùng danh sách cũ */
+            const __G = window.__AutoBIGroupList; const __note = t => { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note(t); } catch (_) { } };
+            const __done = () => { GM_setValue('tgdd_active_run_config', _0x5f53e4); console.log('[Auto BI] \u2705 \u0110\u00E3 n\u1EA1p c\u1EA5u h\u00ECnh chu\u1EA9n c\u1EE7a Th\u00E1ng hi\u1EC7n t\u1EA1i (Target: ' + _0x5f53e4.target1 + ')'); _0xb0716(); };
+            const __parse = __txt => { let _0x32ec7c = [];
+                    const _0x43913f = __txt.split('\n');
                     for (let _0x32f2e7 = 1; _0x32f2e7 < _0x43913f.length; _0x32f2e7++) {
                         if (_0x43913f[_0x32f2e7].trim()) {
                             const _0x4d740d = UTILS.parseCSVLine(_0x43913f[_0x32f2e7].trim());
@@ -1971,11 +2087,20 @@ window.__AutoBIRun67 = (function () {
                             }
                         }
                     }
-                    if (_0x32ec7c.length > 0) {
-                        GM_setValue(CONSTANTS.KEYS.CONFIG_LIST, _0x32ec7c);
-                        GM_setValue('autobi_cfglist_at', Date.now());
-                    }
-                } GM_setValue('tgdd_active_run_config', _0x5f53e4); console.log('[Auto BI] \u2705 \u0110\u00E3 n\u1EA1p c\u1EA5u h\u00ECnh chu\u1EA9n c\u1EE7a Th\u00E1ng hi\u1EC7n t\u1EA1i (Target: ' + _0x5f53e4.target1 + ')'); _0xb0716(); }, onerror: () => { GM_setValue('tgdd_active_run_config', _0x5f53e4); _0xb0716(); }, ontimeout: () => { GM_setValue('tgdd_active_run_config', _0x5f53e4); _0xb0716(); } });
+                    return __G.clean(_0x32ec7c); };
+            const __get = (url, cb) => GM_xmlhttpRequest({ method: 'GET', url, timeout: 6000, onload: r => { const page = !!r && __G.looksLikePage(r.responseText); cb(r && r.status === 200 && !page ? __parse(r.responseText) : [], r ? ('HTTP ' + r.status + (page ? ', trang web thay cho CSV' : '')) : 'lỗi mạng'); }, onerror: () => cb([], 'lỗi mạng'), ontimeout: () => cb([], 'hết giờ') });
+            const __save = list => { GM_setValue(CONSTANTS.KEYS.CONFIG_LIST, list); GM_setValue('autobi_cfglist_at', Date.now()); };
+            const __gviz = 'https://docs.google.com/spreadsheets/d/' + CONSTANTS.GSHEET.DATA.ID + '/gviz/tq?tqx=out:csv&gid=' + CONSTANTS.GSHEET.DATA.GID + '&_t=' + Date.now();
+            if (__cfgFresh) setTimeout(__done, 0);
+            else __get(_0x4000ac, (list, why) => {
+                if (list.length) { __save(list); return __done(); }
+                __note('Nhóm hàng: Google Sheet không trả CSV (' + why + ') — thử đường gviz');
+                __get(__gviz, (list2, why2) => {
+                    if (list2.length) { __save(list2); __note('Nhóm hàng: tải qua gviz được ' + list2.length + ' nhóm'); }
+                    else __note('Nhóm hàng: không tải được Sheet (' + why2 + ') — dùng danh sách đã lưu (' + __G.read().length + ' nhóm)');
+                    __done();
+                });
+            });
         } },         matchGroupConfigName: (_0x84dcaf, _0xac25f4) => { const _0x56d486 = UTILS.toUltraSlug(_0x84dcaf); for (let _0x5b27e6 of _0xac25f4) {
             if (UTILS.toUltraSlug(_0x5b27e6.short) === _0x56d486 || UTILS.toUltraSlug(_0x5b27e6.full) === _0x56d486)
                 return _0x5b27e6;
@@ -7091,6 +7216,7 @@ const _0x133c09 = '<div style="font-size:15px; color:#333; line-height:1.6; text
             try { window.__AutoBILog5.stage('API', 'Tổng cụm', 'Đang lấy số bằng API (không chuyển trang)'); } catch (_) { }
             window.__AutoBIApi.fastRun(_0x2e2bb0, _0x509d19, _0x85e9c8).then(res => {
                 if (!window.__AutoBIRun67.active(runId67) || GM_getValue('tgdd_auto_state_run_v30', -1) !== _0x509d19) { clearInterval(_0x3111b4); return; }
+                if (res && res.bridge) { clearInterval(_0x3111b4); return; } /* V17.10: đang mở trang CRM lấy số, quay lại sẽ chạy tiếp */
                 if (!res.handled) { clearInterval(_0x3111b4); const __e = new Error('API ch\u01B0a l\u1EA5y \u0111\u01B0\u1EE3c s\u1ED1 (xem nh\u1EADt k\u00FD) \u2014 h\u00E3y ch\u1EA1y l\u1EA1i'); try { window.__AutoBILoadingGuard75.stop(__e); } catch (_) { } UI.showToast('\u26A0\uFE0F ' + __e.message, 12000); return; }
                 clearInterval(_0x3111b4);
                 const __cache = GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {};
@@ -7987,10 +8113,10 @@ window.__AutoBIBiTarget99 = (function () {
 
   /* V16.4.2: khớp tên chương trình theo danh sách nhóm hàng (tgdd_gsheet_list_v30) đúng như lõi (DATA.matchGroupConfigName);
      chỉ đoán theo tên khi không có danh sách nhóm */
-  function groupList() { const v = GM_getValue('tgdd_gsheet_list_v30', []); if (Array.isArray(v)) return v; try { const a = JSON.parse(v); return Array.isArray(a) ? a : []; } catch (_) { return []; } }
-  function matchGroup(cacheGroups, programName) {
+  function groupList() { const G = window.__AutoBIGroupList; if (G) return G.clean(G.read()); const v = GM_getValue('tgdd_gsheet_list_v30', []); if (Array.isArray(v)) return v; try { const a = JSON.parse(v); return Array.isArray(a) ? a : []; } catch (_) { return []; } } /* V17.9: bỏ nhóm rác */
+  function matchGroup(cacheGroups, programName, extraNames) {
     const raw = String(programName || '').replace(/^\d+\s*-\s*/, '').trim(), s = slug(raw);
-    const keys = Object.keys(cacheGroups || {}), list = groupList();
+    const keys = [...new Set(Object.keys(cacheGroups || {}).concat(extraNames || []))], list = groupList(); /* V17.9: chưa có danh sách nhóm thì khớp theo nhóm trong Khai báo */
     if (list.length) {
       let m = null;
       try { const D = page.DATA || window.DATA; if (D && D.matchGroupConfigName) m = D.matchGroupConfigName(raw, list); } catch (_) { }
@@ -8100,6 +8226,7 @@ window.__AutoBIBiTarget99 = (function () {
   function groupType(short) { const g = groupList().find(x => x.short === short); return g ? slug(g.type) : ''; }
   async function applyCompetition(cfgIn) {
     const b = await baseData(cfgIn), month = monthKey(b.today), list = groupList();
+    const cfgGroups = ((b.cfg && b.cfg.compData) || []).map(x => x && String(x.group || '').trim()).filter(n => n && (!window.__AutoBIGroupList || window.__AutoBIGroupList.valid({ short: n })));
     const [lk, rt] = await Promise.all([2, 1].map(tt => api('reports/competition-bymsg-get', compBody(month, tt, b.storeIds))));
     let total = 0;
     writeCache(cache => {
@@ -8110,7 +8237,7 @@ window.__AutoBIBiTarget99 = (function () {
         for (const r of rows) {
           const shop = shopOf(b.matched, b.cfg, r.salegroupname, null);
           if (!shop) continue;
-          const g = matchGroup(cache[key] || {}, r.programname);
+          const g = matchGroup(cache[key] || {}, r.programname, cfgGroups);
           if (!g) continue;
           const rawName = slug(String(r.programname || '').replace(/^\d+\s*-\s*/, ''));
           const gc = list.find(x => x.short === g) || {};
@@ -8137,7 +8264,7 @@ window.__AutoBIBiTarget99 = (function () {
       }
       if (total) cache.__apiCompetition = { at: Date.now(), groups: total, month };
     });
-    if (!total) throw new Error('API không trả số Thi đua khớp nhóm Khai báo');
+    if (!total) throw new Error('API không trả số Thi đua khớp nhóm Khai báo (danh sách nhóm hàng: ' + list.length + ' nhóm' + (list.length ? '' : ' — chưa tải được Sheet nhóm hàng') + ')');
     return total;
   }
 
@@ -8384,21 +8511,12 @@ window.__AutoBIBiTarget99 = (function () {
         method: 'POST', url: CRM + path, timeout: 20000,
         headers: { 'Content-Type': form ? 'application/x-www-form-urlencoded; charset=UTF-8' : 'application/json;charset=UTF-8', 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json, text/plain, */*' },
         data: form ? body : JSON.stringify(body),
-        onload: r => {
-          const t = String(r.responseText || '').trim();
-          if (r.status === 401 || r.status === 403 || t.startsWith('<')) { const e = new Error('CRM chưa đăng nhập — mở crm.thegioididong.com trên trình duyệt này (để CRM tự đăng nhập lại) rồi chạy lại'); e.code = 'CRM_LOGIN'; return reject(e); }
-          if (r.status >= 400) return reject(new Error('CRM lỗi ' + r.status + ' ở ' + path));
-          let j = t; try { j = JSON.parse(t); if (typeof j === 'string') { try { j = JSON.parse(j); } catch (_) { } } } catch (_) { }
-          resolve(j);
-        },
+        onload: r => { try { resolve(window.__AutoBICrmFetch.parse(r.status, r.responseText, path)); } catch (e) { reject(e); } },
         onerror: () => reject(new Error('Không gọi được CRM (' + path + ') — mở crm.thegioididong.com đăng nhập lại rồi chạy lại')),
         ontimeout: () => reject(new Error('CRM quá 20 giây (' + path + ')'))
       });
     });
   }
-  const crmMonths = () => { const t = vnDay(), y = Math.floor(t / 10000), m = Math.floor(t / 100) % 100; return [{ y, m }, m === 1 ? { y: y - 1, m: 12 } : { y, m: m - 1 }]; };
-  const mmyyyy = x => String(x.m).padStart(2, '0') + '/' + x.y;
-  const vnMidnightISO = (y, m, d) => new Date(Date.UTC(y, m - 1, d) - 7 * 3600e3).toISOString();
   /* V17.5: phiên CRM qua đêm thường mất lựa chọn công ty (trang về /chon-cong-ty) → chọn lại Điện Máy Xanh (= bấm logo ĐMX), 1 lần mỗi lượt */
   let crmCompanyMemo = null;
   function crmSelectCompany() {
@@ -8418,24 +8536,30 @@ window.__AutoBIBiTarget99 = (function () {
   /* V17.7: chọn công ty ĐMX trước (kèm Referer), lỗi thì bỏ qua — phiên còn công ty cũ vẫn chạy tiếp */
   async function crmOpen() {
     try { await crmSelectCompany(); } catch (_) { }
-    const ok = await crmPost('/ReviewUser/CheckTimeIsViewFullHour', {});
-    if (!(ok === true || String(ok).trim() === 'true')) { const e = new Error('CRM chỉ mở trước 8h sáng hoặc sau 18h — bỏ qua CRM lượt này'); e.code = 'CRM_TIME'; throw e; }
+    await window.__AutoBICrmFetch.checkTime(crmPost);
+  }
+  /* V17.10: số CRM của lượt này — lấy từ cầu nối trang CRM (nếu đã chạy) hoặc gọi chéo như cũ.
+     Gọi chéo không có phiên (iPhone) → lỗi mang theo mã kho để fastRun mở cầu nối. */
+  function crmBridgeResult() {
+    const run = window.__AutoBIRun67 && window.__AutoBIRun67.current();
+    const r = GM_getValue(window.__AutoBICrmFetch.RESULT, null);
+    return r && run && r.runId === run.id && Date.now() - (Number(r.at) || 0) < 20 * 60000 ? r : null;
+  }
+  async function crmData(kind, ids) {
+    const F = window.__AutoBICrmFetch, br = crmBridgeResult();
+    if (br) {
+      const part = br[kind];
+      if (!part) throw new Error('Cầu nối CRM không có số ' + (kind === 'store' ? 'Điểm phục vụ' : 'nhân viên'));
+      if (part.error) { const e = new Error(part.error.message); e.code = part.error.code; e.fromBridge = true; throw e; }
+      return part;
+    }
+    try { await crmOpen(); return await F[kind](crmPost, ids); }
+    catch (e) { if (e && e.code === 'CRM_LOGIN') { e.crmKind = kind; e.crmIds = ids; } throw e; }
   }
   async function applyCrmStore(cfgIn) {
     const b = await baseData(cfgIn);
-    await crmOpen();
     const ids = b.matched.map(s => s.storeId).join(',');
-    let rows = [], used = null, loginErr = null, okMonths = 0;
-    for (const mo of crmMonths()) {
-      const last = new Date(Date.UTC(mo.y, mo.m, 0)).getUTCDate();
-      let data = null;
-      try { data = await crmPost('/Statistic/Assess_Service_PointTGDD_new', { strDateFrom: vnMidnightISO(mo.y, mo.m, 1), strDateTo: vnMidnightISO(mo.y, mo.m, last), strLstStoreId: ids, iCompanyID: '0', type: 1, isSuppermini: '1' }); }
-      catch (e) { if (e.code !== 'CRM_LOGIN') throw e; data = null; loginErr = e; }
-      if (Array.isArray(data)) okMonths++;
-      if (Array.isArray(data) && data.some(r => num(r.totalsend) > 0 || num(r.totalrate) > 0)) { rows = data; used = mmyyyy(mo); break; }
-    }
-    if (!rows.length && !okMonths && loginErr) throw loginErr;
-    if (!rows.length) throw new Error('CRM chưa có Điểm phục vụ tháng này và tháng trước');
+    const { rows, used } = await crmData('store', ids);
     const out = {};
     for (const s of b.matched) {
       const r = rows.find(x => String(x.STOREID) === String(s.storeId));
@@ -8448,17 +8572,10 @@ window.__AutoBIBiTarget99 = (function () {
   }
   async function applyCrmStaff(cfgIn) {
     const b = await baseData(cfgIn);
-    await crmOpen();
     const staffList = Array.isArray(b.cfg.staffList) ? b.cfg.staffList : [];
     if (!staffList.length) throw new Error('Khai báo chưa có danh sách nhân viên');
     const ids = b.matched.map(s => s.storeId).join(',') + ',';
-    let rows = [], used = null;
-    for (const mo of crmMonths()) {
-      const j = await crmPost('/ReviewUser/SatisfiedUserRate', { objPage: { Keyword: '', PageNumber: 1, PageSize: 500 }, companyID: '0', datakey: mmyyyy(mo), strStoreID: ids, lstAreaID: '', keysearch: '', isSPMini: 'true' });
-      let d = j && j.data; if (typeof d === 'string') { try { d = JSON.parse(d); } catch (_) { d = null; } }
-      if (Array.isArray(d) && d.length) { rows = d; used = mmyyyy(mo); break; }
-    }
-    if (!rows.length) throw new Error('CRM chưa có Điểm KH đánh giá nhân viên tháng này và tháng trước');
+    const { rows, used } = await crmData('staff', ids);
     const byId = new Map(staffList.map(x => [staffIdOf(x.name), x]));
     const out = {};
     for (const r of rows) {
@@ -8494,6 +8611,21 @@ window.__AutoBIBiTarget99 = (function () {
     const results = await Promise.all(tasks.map(([label, , fn]) => timed(label, fn)));
     const auth = results.find(r => !r.ok && r.error && r.error.code === 'AUTH');
     if (auth) throw auth.error;
+    /* V17.10: CRM gọi chéo không có phiên (Safari iPhone) → mở trang CRM lấy số rồi quay lại chạy tiếp lượt này (mỗi lượt 1 lần) */
+    const crmLogin = results.filter(r => !r.ok && r.error && r.error.code === 'CRM_LOGIN' && !r.error.fromBridge && r.error.crmIds);
+    if (crmLogin.length) {
+      const F = window.__AutoBICrmFetch, run = window.__AutoBIRun67 && window.__AutoBIRun67.current();
+      const prev = GM_getValue(F.JOB, null);
+      if (run && run.id && !(prev && prev.runId === run.id)) {
+        const job = { runId: run.id, at: Date.now(), status: 'pending', returnUrl: location.href };
+        for (const r of crmLogin) job[r.error.crmKind] = r.error.crmIds;
+        GM_deleteValue(F.RESULT);
+        GM_setValue(F.JOB, job);
+        note('CRM: trình duyệt không gửi phiên CRM khi gọi từ BI — mở trang CRM để lấy số rồi quay lại');
+        setTimeout(() => location.assign(CRM + '/Reviewuser/ReportCustomerRatings'), 300);
+        return { handled: false, bridge: true, done: new Set() };
+      }
+    }
     const done = new Set(steps);
     results.forEach((r, i) => {
       const step = tasks[i][1];
