@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.10
+// @name         AutoBI Core V17.11
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.10
+// @version      17.11
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -7152,6 +7152,7 @@ const _0x133c09 = '<div style="font-size:15px; color:#333; line-height:1.6; text
             if (!window.__AutoBIRun67.begin(manual67))
                 return;
             const startRunId67 = window.__AutoBIRun67.current().id;
+            window.__AutoBIFastTried = false; /* V17.11: lượt mới trên cùng trang (không tải lại) vẫn lấy số bằng API, không treo */
             try {
                 window.__AutoBIWorktime73.prepareRun(_0x3d2921, startRunId67);
             }
