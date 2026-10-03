@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.16
+// @name         AutoBI Core V17.20
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.16
+// @version      17.20
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -2913,7 +2913,7 @@ window.__AutoBIRun67 = (function () {
             _0x275758();
             const _0x3506c6 = _0x28e709.format || 'image/jpeg';
             const _0x2df369 = _0xe17d94 ? 0.88 : _0x28e709.quality !== undefined ? _0x28e709.quality : 0.95;
-            const _0x3583bb = () => { const _0x1f1212 = { dashboard: 'Dashboard', health: 'S\u1EE9c kh\u1ECFe ST', oneshop: 'Realtime_V1', bcbottom: 'Realtime_V2', rt3: 'Realtime_V3', rt4: 'Realtime_V4', multirt: 'Multi_RT', multilk: 'Multi_LK', bcstaff: 'Chi ti\u1EBFt NV', nlnv: 'NangLuc_NV', compare_week: 'So s\u00E1nh tu\u1EA7n', compare: 'So s\u00E1nh CK BI', comparerp: 'So s\u00E1nh CK RP', revenue: 'Chart Doanh thu', service: 'Chart Ph\u1EE5c v\u1EE5' }; const _0x4bc01e = _0x1f1212[_0x18c6ea] || 'B\u00E1o c\u00E1o'; const _0x191319 = new Date(); const _0x3471a6 = String(_0x191319.getHours()).padStart(2, '0'); const _0x5e38a1 = String(_0x191319.getMinutes()).padStart(2, '0'); return _0x4bc01e + '_' + _0x3471a6 + 'h' + _0x5e38a1 + '.jpg'; };
+            const _0x3583bb = () => { const _0x1f1212 = { dashboard: 'Dashboard', health: 'S\u1EE9c kh\u1ECFe ST', oneshop: 'Realtime_V1', rt2: 'Realtime_V2', bcbottom: 'Realtime_V2_cu', rt3: 'Realtime_V3_cu', rt4: 'Realtime_V3', multirt: 'Multi_RT', multilk: 'Multi_LK', bcstaff: 'Chi ti\u1EBFt NV', nlnv: 'NangLuc_NV', compare_week: 'So s\u00E1nh tu\u1EA7n', compare: 'So s\u00E1nh CK BI', comparerp: 'So s\u00E1nh CK RP', revenue: 'Chart Doanh thu', service: 'Chart Ph\u1EE5c v\u1EE5' }; const _0x4bc01e = _0x1f1212[_0x18c6ea] || 'B\u00E1o c\u00E1o'; const _0x191319 = new Date(); const _0x3471a6 = String(_0x191319.getHours()).padStart(2, '0'); const _0x5e38a1 = String(_0x191319.getMinutes()).padStart(2, '0'); return _0x4bc01e + '_' + _0x3471a6 + 'h' + _0x5e38a1 + '.jpg'; };
             return new Promise(_0x239f9d => { _0x226333.toBlob(_0x243178 => { if (!_0x243178) {
                 UI.showToast('\u274C Kh\u00F4ng th\u1EC3 t\u1EA1o \u1EA3nh!');
                 _0x239f9d(null);
@@ -4124,7 +4124,7 @@ window.__AutoBIRun67 = (function () {
         } let _0x592670 = ''; _0x133240.forEach(_0x31e83a => { _0x592670 += '<option value="' + _0x31e83a + '">' + _0x31e83a + '</option>'; }); const _0x339938 = window.tgdd_nlnv_date_range ? window.tgdd_nlnv_date_range.from : _0x133240[0]; const _0x137556 = window.tgdd_nlnv_date_range ? window.tgdd_nlnv_date_range.to : _0x133240[_0x133240.length - 1]; let _0x426169 = '\n                    <div style="text-align:left; font-weight:bold; color:#333; margin-bottom:15px;">\n                        <label>T\u1EEB ng\u00E0y:</label>\n                        <select id="sel-date-from" style="width:100%; padding:8px; border-radius:5px; border:1px solid #ccc; margin-top:5px; margin-bottom:10px;">\n                            ' + _0x592670 + '\n                        </select>\n                        <label>\u0110\u1EBFn ng\u00E0y:</label>\n                        <select id="sel-date-to" style="width:100%; padding:8px; border-radius:5px; border:1px solid #ccc; margin-top:5px;">\n                            ' + _0x592670 + '\n                        </select>\n                        <button id="btn-clear-time-filter" style="margin-top:15px; width:100%; padding:8px; background:#f8f9fa; border:1px solid #ccc; border-radius:5px; cursor:pointer; font-weight:bold; color:#d63031;">Hi\u1EC3n th\u1ECB To\u00E0n b\u1ED9 th\u00E1ng</button>\n                        <button id="btn-save-time-filter" class="tgdd-msg-btn" style="margin-top:10px; width:100%; background:#007bff;">\u00C1p d\u1EE5ng b\u1ED9 l\u1ECDc</button>\n                    </div>\n                '; _0x426169 += '<style>#tgdd-modal-btn-close { display: none !important; }</style>'; UI.showMsg('L\u1ECCC TH\u1EDCI GIAN', _0x426169, 'info'); setTimeout(() => { document.getElementById('sel-date-from').value = _0x339938; document.getElementById('sel-date-to').value = _0x137556; document.getElementById('btn-clear-time-filter').onclick = () => { window.tgdd_nlnv_date_range = null; document.getElementById(CONSTANTS.DOM_IDS.MSG_MODAL).style.display = 'none'; document.body.classList.remove('tgdd-body-lock'); _0x5d2d05(); }; document.getElementById('btn-save-time-filter').onclick = () => { const _0x1fcd1e = document.getElementById('sel-date-from').value; const _0x46f277 = document.getElementById('sel-date-to').value; const _0xd02de3 = parseInt(_0x1fcd1e.split('/')[0]); const _0x4fad06 = parseInt(_0x46f277.split('/')[0]); if (_0xd02de3 > _0x4fad06) {
             alert('L\u1ED7i: \'T\u1EEB ng\u00E0y\' kh\u00F4ng \u0111\u01B0\u1EE3c l\u1EDBn h\u01A1n \'\u0110\u1EBFn ng\u00E0y\'!');
             return;
-        } window.tgdd_nlnv_date_range = { from: _0x1fcd1e, to: _0x46f277 }; document.getElementById(CONSTANTS.DOM_IDS.MSG_MODAL).style.display = 'none'; document.body.classList.remove('tgdd-body-lock'); _0x5d2d05(); }; }, 200); }; const _0x598bb9 = document.createElement('div'); _0x598bb9.id = CONSTANTS.DOM_IDS.SCROLL_WRAPPER; const _0x2ad4ca = document.createElement('div'); _0x2ad4ca.id = CONSTANTS.DOM_IDS.CAPTURE_AREA; _0x598bb9.appendChild(_0x2ad4ca); document.body.appendChild(_0x598bb9); const _0x119aa7 = document.createElement('div'); _0x119aa7.id = CONSTANTS.DOM_IDS.REPORT_NAV; _0x119aa7.className = 'slide-hidden'; const _0x5aef00 = typeof GM_info !== 'undefined' && GM_info.script ? GM_info.script.name : 'Auto BI'; const _0x2e44ea = document.createElement('div'); _0x2e44ea.id = 'tgdd-sidebar-menu'; const _0x33f6de = '<svg viewBox="0 0 24 24"><path d="M12 3v9.28a4.39 4.39 0 0 0-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/></svg>'; const _0x1852d1 = '<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>'; _0x2e44ea.innerHTML = '\n                <div class="sidebar-header">\n                    <div class="sidebar-title">\uD83E\uDD16 ' + _0x5aef00 + '</div>\n                    <button class="sidebar-close" id="btn-close-sidebar">\u2715</button>\n                </div>\n\n                <div class="sidebar-view-wrapper">\n                    <!-- PANEL 1: MENU G\u1ED0C -->\n                    <div id="panel-menu" class="sidebar-panel">\n                        <div class="sidebar-content">\n                            <div class="tgdd-menu-item" id="btn-menu-comment">' + _0x5bfe13.comment + ' Auto Comment</div>\n                            <div class="tgdd-menu-item" id="btn-menu-deploy">' + _0x5bfe13.line + ' G\u1EEDi Line</div>\n                            <div class="tgdd-menu-item" id="btn-menu-cam">' + _0x5bfe13.cam + ' Ch\u1EE5p \u1EA3nh</div>\n                            <div class="tgdd-menu-item" id="btn-menu-tools">' + _0x5bfe13.tools + ' Ti\u1EC7n \u00EDch</div>\n                            <div class="tgdd-menu-item" id="btn-menu-plan" style="color:#e84393; font-weight:900;">' + _0x5bfe13.plan + ' K\u1EBF ho\u1EA1ch truy\u1EC1n th\u00F4ng</div>\n                                                        <div class="tgdd-menu-item" id="btn-menu-history" style="color:#e67e22;">' + _0x5bfe13.history + ' Xem l\u1EA1i l\u1ECBch s\u1EED</div>\n                            <div class="tgdd-menu-item" id="btn-menu-save-data" style="color:#007bff;">' + _0x5bfe13.save + ' L\u01B0u b\u00E1o c\u00E1o</div>\n                        </div>\n\n                        <div class="sidebar-footer">\n                            <div class="tgdd-menu-item" id="btn-menu-rerun" style="color: #d63031; font-weight:900;">' + _0x5bfe13.rerun + ' Ch\u1EA1y l\u1EA1i b\u00E1o c\u00E1o</div>\n                        </div>\n                    </div>\n                </div>\n            '; const _0x6bfd3c = document.createElement('div'); _0x6bfd3c.id = 'tgdd-sidebar-overlay'; document.body.appendChild(_0x6bfd3c); document.body.appendChild(_0x2e44ea); _0x119aa7.innerHTML = '\n                <!-- N\u00FAt Menu C\u1ED1 \u0110\u1ECBnh -->\n                <div id="btn-menu">\n                    ' + _0x5bfe13.menu + '<span>Menu</span>\n                </div>\n\n                <!-- V\u00F9ng Tr\u01B0\u1EE3t Ngang Ch\u1EE9a C\u00E1c Tab -->\n                <div class="rpt-nav-scroll-area">\n                    <div class="rpt-nav-item" data-tab="dashboard">' + _0x5bfe13.dashboard + '<span>Dashboard</span></div>\n                    <div class="rpt-nav-item active" data-tab="health">' + (_0x5bfe13.health || '\u2764\uFE0F') + '<span>S\u1EE9c kh\u1ECFe ST</span></div>\n                    <div class="rpt-nav-item active" data-tab="oneshop">' + _0x5bfe13.one + '<span>Realtime V1</span></div>\n                    <div class="rpt-nav-item" data-tab="rt4">' + _0x5bfe13.rt4 + '<span>Realtime V4</span></div>\n                    <div class="rpt-nav-item" data-tab="multirt">' + _0x5bfe13.rt + '<span>Multi RT</span></div>\n                    <div class="rpt-nav-item" data-tab="multilk">' + _0x5bfe13.lk + '<span>Multi LK</span></div>\n                    <div class="rpt-nav-item" data-tab="bcstaff">' + _0x5bfe13.staff + '<span>Chi ti\u1EBFt NV</span></div>\n                    <div class="rpt-nav-item" data-tab="nlnv">' + _0x5bfe13.person + '<span>N\u0103ng l\u1EF1c NV</span></div>\n                    <div class="rpt-nav-item" data-tab="compare_week">' + (_0x5bfe13.compare || '\uD83D\uDCC8') + '<span>So s\u00E1nh tu\u1EA7n</span></div>\n                    <div class="rpt-nav-item" data-tab="compare">' + (_0x5bfe13.compare || '\uD83D\uDCC8') + '<span>So s\u00E1nh BI CK</span></div>\n                    <div class="rpt-nav-item" data-tab="comparerp">' + _0x5bfe13.comparerp + '<span>So s\u00E1nh RP CK</span></div>\n                    <div class="rpt-nav-item" data-tab="revenue">' + _0x5bfe13.chart + '<span>Chart Doanh thu</span></div>\n                    <div class="rpt-nav-item" data-tab="service">' + _0x5bfe13.donate + '<span>Chart Ph\u1EE5c v\u1EE5</span></div>\n                </div>\n            '; document.body.appendChild(_0x119aa7); if (!document.getElementById('btn-toggle-report-nav')) {
+        } window.tgdd_nlnv_date_range = { from: _0x1fcd1e, to: _0x46f277 }; document.getElementById(CONSTANTS.DOM_IDS.MSG_MODAL).style.display = 'none'; document.body.classList.remove('tgdd-body-lock'); _0x5d2d05(); }; }, 200); }; const _0x598bb9 = document.createElement('div'); _0x598bb9.id = CONSTANTS.DOM_IDS.SCROLL_WRAPPER; const _0x2ad4ca = document.createElement('div'); _0x2ad4ca.id = CONSTANTS.DOM_IDS.CAPTURE_AREA; _0x598bb9.appendChild(_0x2ad4ca); document.body.appendChild(_0x598bb9); const _0x119aa7 = document.createElement('div'); _0x119aa7.id = CONSTANTS.DOM_IDS.REPORT_NAV; _0x119aa7.className = 'slide-hidden'; const _0x5aef00 = typeof GM_info !== 'undefined' && GM_info.script ? GM_info.script.name : 'Auto BI'; const _0x2e44ea = document.createElement('div'); _0x2e44ea.id = 'tgdd-sidebar-menu'; const _0x33f6de = '<svg viewBox="0 0 24 24"><path d="M12 3v9.28a4.39 4.39 0 0 0-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/></svg>'; const _0x1852d1 = '<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>'; _0x2e44ea.innerHTML = '\n                <div class="sidebar-header">\n                    <div class="sidebar-title">\uD83E\uDD16 ' + _0x5aef00 + '</div>\n                    <button class="sidebar-close" id="btn-close-sidebar">\u2715</button>\n                </div>\n\n                <div class="sidebar-view-wrapper">\n                    <!-- PANEL 1: MENU G\u1ED0C -->\n                    <div id="panel-menu" class="sidebar-panel">\n                        <div class="sidebar-content">\n                            <div class="tgdd-menu-item" id="btn-menu-comment">' + _0x5bfe13.comment + ' Auto Comment</div>\n                            <div class="tgdd-menu-item" id="btn-menu-deploy">' + _0x5bfe13.line + ' G\u1EEDi Line</div>\n                            <div class="tgdd-menu-item" id="btn-menu-cam">' + _0x5bfe13.cam + ' Ch\u1EE5p \u1EA3nh</div>\n                            <div class="tgdd-menu-item" id="btn-menu-tools">' + _0x5bfe13.tools + ' Ti\u1EC7n \u00EDch</div>\n                            <div class="tgdd-menu-item" id="btn-menu-plan" style="color:#e84393; font-weight:900;">' + _0x5bfe13.plan + ' K\u1EBF ho\u1EA1ch truy\u1EC1n th\u00F4ng</div>\n                                                        <div class="tgdd-menu-item" id="btn-menu-history" style="color:#e67e22;">' + _0x5bfe13.history + ' Xem l\u1EA1i l\u1ECBch s\u1EED</div>\n                            <div class="tgdd-menu-item" id="btn-menu-save-data" style="color:#007bff;">' + _0x5bfe13.save + ' L\u01B0u b\u00E1o c\u00E1o</div>\n                        </div>\n\n                        <div class="sidebar-footer">\n                            <div class="tgdd-menu-item" id="btn-menu-rerun" style="color: #d63031; font-weight:900;">' + _0x5bfe13.rerun + ' Ch\u1EA1y l\u1EA1i b\u00E1o c\u00E1o</div>\n                        </div>\n                    </div>\n                </div>\n            '; const _0x6bfd3c = document.createElement('div'); _0x6bfd3c.id = 'tgdd-sidebar-overlay'; document.body.appendChild(_0x6bfd3c); document.body.appendChild(_0x2e44ea); _0x119aa7.innerHTML = '\n                <!-- N\u00FAt Menu C\u1ED1 \u0110\u1ECBnh -->\n                <div id="btn-menu">\n                    ' + _0x5bfe13.menu + '<span>Menu</span>\n                </div>\n\n                <!-- V\u00F9ng Tr\u01B0\u1EE3t Ngang Ch\u1EE9a C\u00E1c Tab -->\n                <div class="rpt-nav-scroll-area">\n                    <div class="rpt-nav-item" data-tab="dashboard">' + _0x5bfe13.dashboard + '<span>Dashboard</span></div>\n                    <div class="rpt-nav-item active" data-tab="health">' + (_0x5bfe13.health || '\u2764\uFE0F') + '<span>S\u1EE9c kh\u1ECFe ST</span></div>\n                    <div class="rpt-nav-item active" data-tab="oneshop">' + _0x5bfe13.one + '<span>Realtime V1</span></div>\n                    <div class="rpt-nav-item" data-tab="rt2">' + _0x5bfe13.rt3 + '<span>Realtime V2</span></div>\n                    <div class="rpt-nav-item" data-tab="rt4">' + _0x5bfe13.rt4 + '<span>Realtime V3</span></div>\n                    <div class="rpt-nav-item" data-tab="multirt">' + _0x5bfe13.rt + '<span>Multi RT</span></div>\n                    <div class="rpt-nav-item" data-tab="multilk">' + _0x5bfe13.lk + '<span>Multi LK</span></div>\n                    <div class="rpt-nav-item" data-tab="bcstaff">' + _0x5bfe13.staff + '<span>Chi ti\u1EBFt NV</span></div>\n                    <div class="rpt-nav-item" data-tab="nlnv">' + _0x5bfe13.person + '<span>N\u0103ng l\u1EF1c NV</span></div>\n                    <div class="rpt-nav-item" data-tab="compare_week">' + (_0x5bfe13.compare || '\uD83D\uDCC8') + '<span>So s\u00E1nh tu\u1EA7n</span></div>\n                    <div class="rpt-nav-item" data-tab="compare">' + (_0x5bfe13.compare || '\uD83D\uDCC8') + '<span>So s\u00E1nh BI CK</span></div>\n                    <div class="rpt-nav-item" data-tab="comparerp">' + _0x5bfe13.comparerp + '<span>So s\u00E1nh RP CK</span></div>\n                    <div class="rpt-nav-item" data-tab="revenue">' + _0x5bfe13.chart + '<span>Chart Doanh thu</span></div>\n                    <div class="rpt-nav-item" data-tab="service">' + _0x5bfe13.donate + '<span>Chart Ph\u1EE5c v\u1EE5</span></div>\n                </div>\n            '; document.body.appendChild(_0x119aa7); if (!document.getElementById('btn-toggle-report-nav')) {
             const _0x57e656 = document.createElement('div');
             _0x57e656.className = 'nav-toggle-btn';
             _0x57e656.id = 'btn-toggle-report-nav';
@@ -4159,7 +4159,7 @@ window.__AutoBIRun67 = (function () {
             window.tgdd_hidden_report_groups = _0x48ea5b.filter(_0xf12822 => _0xf12822 && !_0x47e81e.includes(_0xf12822));
         } const _0x522dab = _0x450ffb === 'nlnv' && (_0x197e7a === 'overview' || _0x197e7a === 'daily'); let _0x469731 = '<div style="max-height: 48vh; overflow-y: auto; text-align: left; padding-right: 5px;">'; _0x469731 += '<div style="font-weight:bold; color:#007bff; margin-bottom:10px; font-size:12.5px; border-bottom:1px dashed #ddd; padding-bottom:5px;">\u2699\uFE0F T\u00D9Y CH\u1ECCN HI\u1EC2N TH\u1ECA:</div>'; _0x469731 += '<div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px;">'; if (_0x450ffb === 'oneshop') {
             _0x469731 += '\n                        <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:bold; font-size:13px; color:#000;">\n                            <input type="checkbox" id="modal-cb-lk" ' + (_0x17901a ? 'checked' : '') + ' style="width:18px; height:18px; accent-color:#007bff;">\n                            \u1EA8n LK\n                        </label>\n                    ';
-        } if (['dashboard', 'health', 'oneshop', 'multirt', 'multilk', 'bcbottom', 'bcstaff', 'nlnv', 'rt4'].includes(_0x450ffb)) {
+        } if (['dashboard', 'health', 'oneshop', 'multirt', 'multilk', 'bcbottom', 'bcstaff', 'nlnv', 'rt4', 'rt2'].includes(_0x450ffb)) {
             _0x469731 += '\n                        <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:bold; font-size:13px; color:#000;">\n                            <input type="checkbox" id="modal-cb-target-bi" ' + (_0x4df754 ? 'checked' : '') + ' style="width:18px; height:18px; accent-color:#007bff;">\n                            Target BI\n                        </label>\n                    ';
         } if (['oneshop', 'multilk'].includes(_0x450ffb)) {
             const _0x58a12f = window.tgdd_show_remaining_cols || false;
@@ -4181,7 +4181,7 @@ window.__AutoBIRun67 = (function () {
             _0x469731 += '<div style="display:flex; flex-direction:column; gap:8px; margin-bottom:15px;">';
             _0x42a0a2.forEach(_0x9a3e90 => { const _0x4bcf77 = !window.tgdd_staff_hidden_tables.includes(_0x9a3e90.id); _0x469731 += '\n                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:12.5px; font-weight:bold; color:#333;">\n                                <input type="checkbox" class="chk-modal-staff-table" value="' + _0x9a3e90.id + '" ' + (_0x4bcf77 ? 'checked' : '') + ' style="width:16px; height:16px; accent-color:#007bff; flex-shrink:0;">\n                                <span>' + _0x9a3e90.name + '</span>\n                            </label>\n                        '; });
             _0x469731 += '</div>';
-        } if (['oneshop', 'multirt', 'multilk', 'compare_week', 'rt4'].includes(_0x450ffb) || _0x522dab) {
+        } if (['oneshop', 'multirt', 'multilk', 'compare_week', 'rt4', 'rt2'].includes(_0x450ffb) || _0x522dab) {
             _0x469731 += '<div style="font-weight:bold; color:#007bff; margin-bottom:10px; font-size:12.5px; border-bottom:1px dashed #ddd; padding-bottom:5px; display:flex; justify-content:space-between; align-items:center;">\n                        <span>\uD83C\uDFAF L\u1ECCC NH\u00D3M H\u00C0NG HI\u1EC2N TH\u1ECA:</span>\n                        <div style="font-size:11px; display:flex; gap:6px; align-items:center;">\n                            <span id="btn-filter-fav" style="cursor:pointer; font-size:14px; line-height:1;" title="B\u1EA5m \u0111\u1EC3 \u00E1p nhanh c\u1EA5u h\u00ECnh Y\u00EAu Th\u00EDch">\uD83D\uDC9F</span>\n                            <span id="btn-filter-select-all" style="color:#007bff; cursor:pointer; font-weight:900;">[Ch\u1ECDn h\u1EBFt]</span>\n                            <span id="btn-filter-select-none" style="color:#d63031; cursor:pointer; font-weight:900;">[B\u1ECF h\u1EBFt]</span>\n                        </div>\n                    </div>';
             _0x469731 += '<div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px 15px; margin-bottom:15px;">';
             _0x48ea5b.forEach(_0x229cfe => { if (!_0x229cfe)
@@ -4271,7 +4271,7 @@ window.__AutoBIRun67 = (function () {
         } }, 100); window.__AutoBILog5.mountHistoryButton(document.getElementById('tgdd-msg-extra')); }; _0x2e27ae.onclick = _0x43ef05; let _0x10626e = false; let _0x17901a = false; let _0x4df754 = _0x13b9c3.defaultTargetBI !== false; let _0x21008a = true; const _0x5d2d05 = () => { document.querySelectorAll('.rpt-nav-item').forEach(_0x319658 => { if (_0x319658.id !== 'btn-menu')
             _0x319658.classList.toggle('active', _0x319658.dataset.tab === _0x450ffb); }); let _0x37589a = _0x2e5685.value; if (_0x450ffb === 'nlnv' && _0x2e5685.dataset.isNlnv !== 'true') {
             _0x37589a = 'overview';
-        } const _0xfc8799 = _0x450ffb === 'nlnv' && (_0x37589a === 'overview' || _0x37589a === 'daily'); if (['dashboard', 'health', 'oneshop', 'multirt', 'multilk', 'compare_week', 'rt4', 'bcstaff'].includes(_0x450ffb) || _0xfc8799) {
+        } const _0xfc8799 = _0x450ffb === 'nlnv' && (_0x37589a === 'overview' || _0x37589a === 'daily'); if (['dashboard', 'health', 'oneshop', 'multirt', 'multilk', 'compare_week', 'rt4', 'rt2', 'bcstaff'].includes(_0x450ffb) || _0xfc8799) {
             if (typeof _0x2e27ae !== 'undefined') {
                 _0x2e27ae.style.display = 'flex';
             }
@@ -4423,6 +4423,9 @@ window.__AutoBIRun67 = (function () {
             else if (_0x450ffb === 'rt3') {
                 _0x329bab = UI.HTML.getRealtimeV3(_0x3aa5c8, _0x13b9c3, _0x37589a);
             }
+            else if (_0x450ffb === 'rt2') {
+                _0x329bab = UI.HTML.getRealtimeV2(_0x3aa5c8, _0x37b477, _0x13b9c3, _0x37589a, _0x4df754, _0x19aafa);
+            }
             else if (_0x450ffb === 'rt4') {
                 _0x329bab = UI.HTML.getRealtimeV4(_0x3aa5c8, _0x37b477, _0x13b9c3, _0x37589a, _0x4df754, _0x19aafa);
             }
@@ -4543,7 +4546,7 @@ window.__AutoBIRun67 = (function () {
             _0x2cfe17.innerHTML = '\uD83D\uDCBE L\u01B0u h\u1EC7 s\u1ED1';
             _0x2cfe17.onclick = () => { _0x2cfe17.innerText = '\u2601\uFE0F \u0110ang \u0111\u1ED3ng b\u1ED9...'; _0x2cfe17.disabled = true; _0x2cfe17.style.animation = 'none'; DATA.saveCloudConfig(_0x13b9c3, () => { UI.showToast('\u2705 \u0110\u00E3 c\u1EADp nh\u1EADt to\u00E0n b\u1ED9 h\u1EC7 s\u1ED1 l\u00EAn Cloud!'); _0x2cfe17.remove(); }); };
             _0x1309fb.appendChild(_0x2cfe17);
-        } _0x5d2d05(); }; }); }; const _0x128861 = ['dashboard', 'health', 'oneshop', 'bcbottom', 'rt3', 'rt4', 'multirt', 'multilk', 'bcstaff', 'nlnv', 'compare_week', 'compare', 'comparerp', 'revenue', 'service']; const _0x2d1469 = window.tgdd_prev_active_tab || 'oneshop'; const _0x1a643b = _0x128861.indexOf(_0x2d1469); const _0x258332 = _0x128861.indexOf(_0x450ffb); window.tgdd_prev_active_tab = _0x450ffb; let _0xa904f8 = ''; if (_0x1a643b !== -1 && _0x258332 !== -1 && _0x1a643b !== _0x258332) {
+        } _0x5d2d05(); }; }); }; const _0x128861 = ['dashboard', 'health', 'oneshop', 'rt2', 'bcbottom', 'rt3', 'rt4', 'multirt', 'multilk', 'bcstaff', 'nlnv', 'compare_week', 'compare', 'comparerp', 'revenue', 'service']; const _0x2d1469 = window.tgdd_prev_active_tab || 'oneshop'; const _0x1a643b = _0x128861.indexOf(_0x2d1469); const _0x258332 = _0x128861.indexOf(_0x450ffb); window.tgdd_prev_active_tab = _0x450ffb; let _0xa904f8 = ''; if (_0x1a643b !== -1 && _0x258332 !== -1 && _0x1a643b !== _0x258332) {
             _0xa904f8 = _0x258332 > _0x1a643b ? 'report-slide-right' : 'report-slide-left';
         }
         else {
@@ -4944,7 +4947,7 @@ window.__AutoBIRun67 = (function () {
                 _0x5035f6.forEach(_0x2aa55d => { _0x3779b5 += _0x407611 * (parseFloat(_0x2aa55d.rate) / 100); });
                 const _0x47ce14 = Math.max(0, _0x407611 - _0x3779b5);
                 _0x605fb7 = _0x47ce14 / _0xb50ba8.length;
-            } return UI.HTML.applyTargetRounding(_0x605fb7, _0x4084be); }, getRealtimeV4: (_0x11f2c6, _0x208609, _0xbf3329, _0x99373a, _0x1079b1, _0x1b65a9) => { const _0x2c9196 = UI.HTML.resolveTimeContext(_0xbf3329, _0x1b65a9); const _0x3241b4 = _0x2c9196.daysPassed; const _0x11109e = _0x2c9196.daysInMonth; const _0x457416 = window.tgdd_rt4_mode || 'realtime'; const _0x3c3819 = _0x457416 === 'realtime'; let _0x21a1ca = false; if (_0x99373a === 'total') {
+            } return UI.HTML.applyTargetRounding(_0x605fb7, _0x4084be); }, getRealtimeV2: (c, groups, cfg, view, useBi, timeArg) => { try { return window.__AutoBIRt2 ? window.__AutoBIRt2.render({ UI, UTILS }, c, groups, cfg, view, useBi, timeArg) : ''; } catch (e) { return '<div style="padding:40px;text-align:center;color:#b42318;font-weight:700;">Realtime V2 lỗi: ' + String(e && e.message || e) + '</div>'; } }, getRealtimeV4: (_0x11f2c6, _0x208609, _0xbf3329, _0x99373a, _0x1079b1, _0x1b65a9) => { const _0x2c9196 = UI.HTML.resolveTimeContext(_0xbf3329, _0x1b65a9); const _0x3241b4 = _0x2c9196.daysPassed; const _0x11109e = _0x2c9196.daysInMonth; const _0x457416 = window.tgdd_rt4_mode || 'realtime'; const _0x3c3819 = _0x457416 === 'realtime'; let _0x21a1ca = false; if (_0x99373a === 'total') {
                 const _0xc428a = (_0xbf3329.shop1 || '').trim().toUpperCase();
                 const _0x5b5597 = (_0xbf3329.shop2 || '').trim().toUpperCase();
                 const _0x1bab49 = (_0xbf3329.shop3 || '').trim().toUpperCase();
@@ -7288,7 +7291,7 @@ const _0x133c09 = '<div style="font-size:15px; color:#333; line-height:1.6; text
             return 'Unknown'; const _0x21c256 = _0x15edb0.split('-'); if (_0x21c256.length >= 2) {
             const _0x224a1d = _0x21c256[_0x21c256.length - 1].trim().match(/\d+/);
             return _0x224a1d ? _0x224a1d[0] : _0x21c256[_0x21c256.length - 1].replace(/[^a-zA-Z0-9]/g, '');
-        } const _0x1ce8b3 = _0x15edb0.match(/\d+/); return _0x1ce8b3 ? _0x1ce8b3[0] : _0x15edb0.replace(/[^a-zA-Z0-9]/g, '_').trim(); }; const _0x2e49d8 = { dashboard: 'Dashboard', health: 'S\u1EE9c kh\u1ECFe ST', oneshop: 'Realtime_V1', bcbottom: 'Realtime_V2', rt3: 'Realtime_V3', rt4: 'Realtime_V4', multirt: 'Multi_RT', multilk: 'Multi_LK', bcstaff: 'Chi ti\u1EBFt NV', nlnv: 'N\u0103ng l\u1EF1c NV', compare_week: 'So s\u00E1nh tu\u1EA7n', compare: 'So s\u00E1nh CK BI', comparerp: 'So s\u00E1nh CK RP', revenue: 'Chart Doanh thu', service: 'Chart Ph\u1EE5c v\u1EE5' }; const _0x2bcc18 = new Date(); const _0xcc6501 = String(_0x2bcc18.getHours()).padStart(2, '0') + 'h' + String(_0x2bcc18.getMinutes()).padStart(2, '0'); const _0x362056 = String(_0x2bcc18.getDate()).padStart(2, '0') + '-' + String(_0x2bcc18.getMonth() + 1).padStart(2, '0') + '-' + _0xcc6501; UI.showToast('\uD83D\uDE80 B\u1EAFt \u0111\u1EA7u ch\u1EE5p \u1EA3nh & g\u1EEDi Drive t\u1EF1 \u0111\u1ED9ng...', 0); for (let _0x49688f = 0; _0x49688f < _0xd8560d.length; _0x49688f++) {
+        } const _0x1ce8b3 = _0x15edb0.match(/\d+/); return _0x1ce8b3 ? _0x1ce8b3[0] : _0x15edb0.replace(/[^a-zA-Z0-9]/g, '_').trim(); }; const _0x2e49d8 = { dashboard: 'Dashboard', health: 'S\u1EE9c kh\u1ECFe ST', oneshop: 'Realtime_V1', rt2: 'Realtime_V2', bcbottom: 'Realtime_V2_cu', rt3: 'Realtime_V3_cu', rt4: 'Realtime_V3', multirt: 'Multi_RT', multilk: 'Multi_LK', bcstaff: 'Chi ti\u1EBFt NV', nlnv: 'N\u0103ng l\u1EF1c NV', compare_week: 'So s\u00E1nh tu\u1EA7n', compare: 'So s\u00E1nh CK BI', comparerp: 'So s\u00E1nh CK RP', revenue: 'Chart Doanh thu', service: 'Chart Ph\u1EE5c v\u1EE5' }; const _0x2bcc18 = new Date(); const _0xcc6501 = String(_0x2bcc18.getHours()).padStart(2, '0') + 'h' + String(_0x2bcc18.getMinutes()).padStart(2, '0'); const _0x362056 = String(_0x2bcc18.getDate()).padStart(2, '0') + '-' + String(_0x2bcc18.getMonth() + 1).padStart(2, '0') + '-' + _0xcc6501; UI.showToast('\uD83D\uDE80 B\u1EAFt \u0111\u1EA7u ch\u1EE5p \u1EA3nh & g\u1EEDi Drive t\u1EF1 \u0111\u1ED9ng...', 0); for (let _0x49688f = 0; _0x49688f < _0xd8560d.length; _0x49688f++) {
             const _0x1066c4 = _0xd8560d[_0x49688f];
             UI.showToast('\uD83D\uDCF8 [' + (_0x49688f + 1) + '/' + _0xd8560d.length + '] \u0110ang m\u1EDF tab: ' + _0x1066c4.toUpperCase() + '...', 0);
             const _0x41a9bb = document.querySelector('.rpt-nav-item[data-tab="' + _0x1066c4 + '"]');
@@ -8489,6 +8492,17 @@ window.__AutoBIBiTarget99 = (function () {
   }
 
   /* link6[shop].competition[tên NV][nhóm] = số đạt (nhóm tiền ×1000, số chính xác, giữ số âm) */
+  /* V17.17: Doanh thu nhân viên hôm nay cho Realtime V2: cache.link6rt = { day, data: { shopN: { 'mã - tên': { dtqd, dtlk } } } } */
+  async function applyStaffToday(cfgIn) {
+    const b = await baseData(cfgIn);
+    let map = {};
+    try { map = await staffRevenueMap(cfgIn, { from: b.today, to: b.today }); }
+    catch (e) { if (!/không trả nhân viên nào/.test(String(e && e.message))) throw e; }
+    let n = 0;
+    for (const v of Object.values(map)) n += Object.keys(v).length;
+    writeCache(cache => { cache.link6rt = { day: b.today, at: Date.now(), data: map }; });
+    return n;
+  }
   async function applyStaffCompetition(cfgIn) {
     const b = await baseData(cfgIn), month = monthKey(b.today);
     const staffList = Array.isArray(b.cfg.staffList) ? b.cfg.staffList : [];
@@ -8654,7 +8668,7 @@ window.__AutoBIBiTarget99 = (function () {
     const t0 = Date.now();
     baseMemo = null;
     const tasks = [];
-    if (steps.includes(0)) tasks.push(['Doanh thu', 0, () => applyRevenue(config)], ['Nhân viên Doanh thu', 0, () => applyStaffRevenue(config)], ['Ngành hàng BI', 0, () => applyHealth(config)]);
+    if (steps.includes(0)) tasks.push(['Doanh thu', 0, () => applyRevenue(config)], ['Nhân viên Doanh thu', 0, () => applyStaffRevenue(config)], ['Nhân viên hôm nay', 0, () => applyStaffToday(config)], ['Ngành hàng BI', 0, () => applyHealth(config)]);
     if (steps.includes(2)) tasks.push(['Thi đua', 2, () => applyCompetition(config)], ['Thi đua nhân viên', 2, () => applyStaffCompetition(config)]);
     if (steps.includes(3)) tasks.push(['Trả chậm', 3, () => applyInstallment(config)]);
     if (steps.includes(17)) tasks.push(['CRM Phục vụ nhân viên', 17, () => applyCrmStaff(config)]);
@@ -8716,5 +8730,199 @@ window.__AutoBIBiTarget99 = (function () {
   try {
   } catch (_) { }
 
-  window.__AutoBIApi = { api,   discoverStores, vnDay, applyRevenue, applyCompetition, timekeepingRows, applyStaffRevenue, applyHealth, applyStaffCompetition, applyInstallment, healthFrom, staffRevenueMap, fastRun, fastOn, applyCrmStore, applyCrmStaff };
+  window.__AutoBIApi = { api,   discoverStores, vnDay, applyRevenue, applyCompetition, timekeepingRows, applyStaffRevenue, applyStaffToday, applyHealth, applyStaffCompetition, applyInstallment, healthFrom, staffRevenueMap, fastRun, fastOn, applyCrmStore, applyCrmStaff };
+})();
+
+/* ==== V17.17: Realtime V2 (__AutoBIRt2) — DT + mục tiêu ngày/tháng, nhóm hàng thi đua, DT nhân viên. Dữ liệu chỉ đọc từ cache (link1, link2, link3_smart, link4_smart, link6, link6rt). Dùng chủ đạo trên máy tính. ==== */
+(function () {
+  'use strict';
+  if (location.hostname !== 'baocao.dienmayxanh.com') return;
+  const num = v => { const n = Number(v); return isFinite(n) ? n : 0; };
+  const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  const nf = (v, d = 0) => num(v).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+  const pctOf = (a, b) => b > 0 ? a / b * 100 : 0;
+  const lvl = p => p >= 100 ? 'ok' : p >= 80 ? 'mid' : 'low';
+  const bar = (p, cls) => '<div class="rt2-bar"><i class="' + cls + '" style="width:' + Math.max(0, Math.min(100, p)).toFixed(1) + '%"></i></div>';
+  const vnToday = () => { try { return window.__AutoBIApi.vnDay(); } catch (_) { const d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); } };
+
+  const CSS = `
+  .rt2{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;color:#0f1b2d;background:#f2f5f9;padding:18px 20px;box-sizing:border-box;font-variant-numeric:tabular-nums;width:1240px}
+  .rt2 *{box-sizing:border-box}
+  .rt2-m{width:380px;padding:12px 10px}
+  .rt2-hd{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin-bottom:14px}
+  .rt2-kicker{font-size:12px;font-weight:800;letter-spacing:1.4px;color:#0b4fb3}
+  .rt2-title{font-size:22px;font-weight:900;line-height:1.2}
+  .rt2-m .rt2-title{font-size:16px}
+  .rt2-time{font-size:12px;font-weight:700;color:#475569;text-align:right;white-space:nowrap}
+  .rt2-row1{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:14px}
+  .rt2-row2{display:grid;grid-template-columns:minmax(0,45fr) minmax(0,55fr);gap:14px;align-items:start}
+  .rt2-m .rt2-row1,.rt2-m .rt2-row2{grid-template-columns:minmax(0,1fr);gap:10px;margin-bottom:10px}
+  .rt2-card{background:#fff;border:1px solid #dfe5ee;border-radius:16px;padding:16px 14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+  .rt2-hero{background:#0b4fb3;border-color:#0b4fb3;color:#fff}
+  .rt2-lbl{font-size:12px;font-weight:800;letter-spacing:.8px;color:#0b4fb3;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+  .rt2-hero .rt2-lbl{color:#fff}
+  .rt2-sub{font-size:12px;font-weight:600;color:#475569;letter-spacing:0}
+  .rt2-big{display:flex;align-items:baseline;gap:8px}
+  .rt2-big b{font-size:42px;font-weight:900;line-height:1}
+  .rt2-big span{font-size:16px;font-weight:700}
+  .rt2-big em{margin-left:auto;font-style:normal;font-size:32px;font-weight:900}
+  .rt2-hero .rt2-big em{color:#ffd23f}
+  .rt2-m .rt2-big b{font-size:34px}.rt2-m .rt2-big em{font-size:26px}
+  .rt2-badge{font-size:11px;font-weight:800;background:#fff;padding:3px 10px;border-radius:999px;letter-spacing:0}
+  .rt2-bar{height:10px;background:#e6ebf2;border-radius:999px;overflow:hidden;position:relative}
+  .rt2-hero .rt2-bar{background:rgba(255,255,255,.25)}
+  .rt2-bar i{display:block;height:100%;border-radius:999px}
+  .rt2-bar i.ok{background:#15803d}.rt2-bar i.mid{background:#d97706}.rt2-bar i.low{background:#c62828}.rt2-bar i.hero{background:#ffd23f}
+  .rt2-mark{position:absolute;top:0;bottom:0;width:2px;background:#0f1b2d}
+  .rt2-foot{display:flex;justify-content:space-between;font-size:13px;font-weight:600}
+  .rt2-mini3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .rt2-mini{background:#f5f7fb;border-radius:10px;padding:8px 10px}
+  .rt2-mini div{font-size:11px;font-weight:600;color:#475569}
+  .rt2-mini b{font-size:17px;font-weight:900}
+  .rt2-kpi4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .rt2-kpi{background:#fff;border:1px solid #dfe5ee;border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;justify-content:center;gap:4px;min-width:0}
+  .rt2-kpi div{font-size:11px;font-weight:800;color:#475569;letter-spacing:.5px}
+  .rt2-kpi b{font-size:26px;font-weight:900}
+  .rt2-kpi small{font-size:13px;font-weight:600;color:#475569}
+  .t-ok{color:#15803d!important}.t-mid{color:#b45309!important}.t-low{color:#b42318!important}
+  .rt2-tblw{overflow-x:auto;max-width:100%}
+  .rt2-tbl{width:100%;border-collapse:collapse;font-size:13px}
+  .rt2-tbl th{background:#f5f7fb;font-size:11px;font-weight:800;color:#475569;text-align:right;padding:9px 8px;border-bottom:1.5px solid #0f1b2d;white-space:nowrap;cursor:pointer;user-select:none}
+  .rt2-tbl td{padding:8px;text-align:right;border-bottom:1px solid #edf1f6;white-space:nowrap}
+  .rt2-tbl .l{text-align:left}
+  .rt2-tbl tfoot td{font-weight:900;border-top:1.5px solid #0f1b2d;border-bottom:none}
+  .rt2-pc{display:flex;align-items:center;gap:8px}.rt2-pc .rt2-bar{flex:1;height:8px;min-width:40px}.rt2-pc b{min-width:58px;text-align:right}
+  .rt2-nm{font-weight:700}.rt2-id{font-size:11px;color:#475569;font-weight:600}
+  .rt2-note{font-size:11px;font-weight:600;color:#475569;text-align:center;margin-top:12px}
+  .rt2-empty{padding:18px;text-align:center;color:#475569;font-weight:600}`;
+
+  function render(h, c, groups, cfg, view, useBi, timeArg) {
+    const { UI, UTILS } = h;
+    c = c || {}; cfg = cfg || {}; groups = groups || [];
+    const mobile = UTILS.isMobile();
+    const tc = UI.HTML.resolveTimeContext(cfg, timeArg);
+    const dp = num(tc.daysPassed), dim = num(tc.daysInMonth) || 30;
+    const shopIdx = [1, 2, 3, 4, 5].filter(i => (cfg['shop' + i] || '').trim());
+    const idxs = view === 'total' ? shopIdx : [Number(String(view).replace('shop', ''))];
+    const title = view === 'total' ? 'Cụm: ' + (cfg.cluster && cfg.cluster.trim() ? cfg.cluster : 'TỔNG CỤM') : (cfg[view + 'Short'] || cfg[view] || view);
+
+    /* Doanh thu + mục tiêu */
+    const dayCfg = i => { const d = num(cfg['targetDay' + i]); return d > 0 ? d : Math.round(num(cfg['target' + i]) / dim); };
+    const l1 = (c.link1 && c.link1[view]) || {}, l2 = (c.link2 && c.link2[view]) || {};
+    const dayT0 = idxs.reduce((a, i) => a + dayCfg(i), 0);
+    const monT0 = view === 'total' ? num(cfg.totalTarget) : num(cfg['target' + idxs[0]]);
+    const dayT = useBi ? (num(l1.t) || dayT0) : dayT0;
+    const monT = useBi ? (num(l2.t) || monT0) : monT0;
+    const rt = num(l1.r), lk = num(l2.r);
+    const rtP = pctOf(rt, dayT), lkP = pctOf(lk, monT), timeP = pctOf(dp, dim);
+    const dk = useBi && l2.dk != null ? num(l2.dk) : (monT > 0 && dp > 0 ? lk / dp * dim / monT * 100 : 0);
+    const left = Math.max(0, dim - dp);
+    const needDay = left > 0 ? Math.max(0, monT - lk) / left : 0;
+    const tgLim = parseFloat(cfg.installment) || 30, tg = num(l1.tg);
+    const qd = pctOf(num(l1.r), num(l1.dtlk));
+
+    /* Nhóm hàng thi đua (Realtime) — cách lọc như Realtime V3 (V4 cũ) */
+    const allCh = idxs.some(i => (cfg['shop' + i] || '').trim().toUpperCase().startsWith('Đ'));
+    let gl = groups.filter(g => allCh ? true : g.channel === 'T');
+    gl = UTILS.filterActiveGroups(gl, cfg);
+    if (window.tgdd_hidden_report_groups && window.tgdd_hidden_report_groups.length) gl = gl.filter(g => !window.tgdd_hidden_report_groups.includes(g.short));
+    const rows = gl.map(g => {
+      const a = (c.link3_smart && c.link3_smart[g.short] && c.link3_smart[g.short][view]) || {};
+      const b = (c.link4_smart && c.link4_smart[g.short] && c.link4_smart[g.short][view]) || {};
+      const t = num(UI.HTML.getFinalGroupTarget(b.t, g.short, view, cfg, groups, true, useBi));
+      const r = num(a.r), p = t > 0 ? r / t * 100 : (r > 0 ? 100 : 0);
+      return { name: g.short, t, r, p, left: Math.max(0, t - r) };
+    });
+    const st = window.__AutoBIRt2.sortGroups || { k: 'p', d: -1 };
+    rows.sort((x, y) => (x[st.k] > y[st.k] ? 1 : x[st.k] < y[st.k] ? -1 : 0) * st.d || y.p - x.p);
+    const pass = rows.filter(x => x.p >= 100).length;
+    const passP = pctOf(pass, rows.length);
+
+    /* Nhân viên */
+    const staff = (cfg.staffList || []).filter(x => idxs.includes(Number(x.shopIdx) || 1));
+    const today = c.link6rt && c.link6rt.day === vnToday() ? c.link6rt.data || {} : null;
+    const perShopN = {};
+    staff.forEach(x => { const k = Number(x.shopIdx) || 1; perShopN[k] = (perShopN[k] || 0) + 1; });
+    const shopMon = i => { const s2 = (c.link2 && c.link2['shop' + i]) || {}; return useBi ? (num(s2.t) || num(cfg['target' + i])) : (num(cfg['target' + i]) || num(s2.t)); };
+    /* V17.19: mục tiêu NV theo phân bổ ở Khai báo (cột % của NV, như Chi tiết NV): NV có % nhận target ST × %, NV để trống (Auto) chia đều phần còn lại */
+    const rateOf = x => { const r = parseFloat(x.rate); return isFinite(r) && r > 0 ? r : 0; };
+    const staffTarget = (x, i) => {
+      const T = shopMon(i); if (T <= 0) return 0;
+      const mates = (cfg.staffList || []).filter(y => (Number(y.shopIdx) || 1) === i);
+      if (rateOf(x) > 0) return Math.round(T * rateOf(x) / 100);
+      const fixed = mates.filter(y => rateOf(y) > 0).reduce((a, y) => a + Math.round(T * rateOf(y) / 100), 0);
+      const auto = mates.filter(y => !rateOf(y)).length;
+      return auto ? Math.round(Math.max(0, T - fixed) / auto) : 0;
+    };
+    const srows = staff.map(x => {
+      const i = Number(x.shopIdx) || 1, key = 'shop' + i;
+      const m = c.link6 && c.link6[key] && c.link6[key].revenue && c.link6[key].revenue[x.name];
+      const d = today && today[key] && today[key][x.name];
+      const tgt = staffTarget(x, i);
+      const mon = m ? num(m.dtqd) : null;
+      const day = today ? (d ? num(d.dtqd) : 0) : null;
+      const ht = mon != null && tgt > 0 ? mon / tgt * 100 : null;
+      const fc = mon != null && tgt > 0 && dp > 0 ? mon / dp * dim / tgt * 100 : null;
+      const parts = String(x.name).split(' - ');
+      return { id: parts.length > 1 ? parts[0] : '', nm: parts.length > 1 ? parts.slice(1).join(' - ') : x.name, shop: cfg[key + 'Short'] || cfg[key] || key, day, mon, tgt, ht, fc };
+    });
+    const ss = window.__AutoBIRt2.sortStaff || { k: 'day', d: -1 };
+    const sv = v => v == null ? -Infinity : v;
+    srows.sort((x, y) => (sv(x[ss.k]) > sv(y[ss.k]) ? 1 : sv(x[ss.k]) < sv(y[ss.k]) ? -1 : 0) * ss.d || sv(y.mon) - sv(x.mon));
+    const sum = k => srows.reduce((a, x) => a + num(x[k]), 0);
+
+    const now = new Date();
+    const stamp = tc.isPastMonth ? 'Dữ liệu hết tháng ' + tc.month + '/' + tc.year : 'Số lúc ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0') + '<br>' + String(now.getDate()).padStart(2, '0') + '/' + String(now.getMonth() + 1).padStart(2, '0') + '/' + now.getFullYear();
+    const neg = v => v < 0 ? ' class="t-low"' : '';
+    const th = (tbl, k, label, l) => { const s0 = tbl === 'g' ? st : ss; const ar = s0.k === k ? (s0.d < 0 ? ' ▼' : ' ▲') : ''; return '<th' + (l ? ' class="l"' : '') + ' data-rt2-sort="' + tbl + ':' + k + '">' + label + ar + '</th>'; };
+
+    const gBody = rows.length ? rows.map((x, n) => '<tr><td class="l">' + (n + 1) + '</td><td class="l rt2-nm">' + esc(x.name) + '</td><td>' + nf(x.t) + '</td><td' + neg(x.r) + ' style="font-weight:700">' + nf(x.r) + '</td><td class="l"><div class="rt2-pc">' + bar(x.p, lvl(x.p)) + '<b class="t-' + lvl(x.p) + '">' + (x.p >= 100 ? '✓ ' : '') + Math.round(x.p) + '%</b></div></td><td>' + nf(x.left) + '</td></tr>').join('') : '<tr><td colspan="6" class="rt2-empty">Chưa có số thi đua — bấm Bắt Đầu Chạy</td></tr>';
+
+    const sBody = srows.length ? srows.map((x, n) => '<tr><td class="l" style="font-weight:800;color:' + (n < 3 ? '#0b4fb3' : '#475569') + '">' + (n + 1) + '</td><td class="l"><div class="rt2-nm">' + esc(x.nm) + '</div><div class="rt2-id">' + esc([x.id, view === 'total' ? x.shop : ''].filter(Boolean).join(' · ')) + '</div></td>' +
+      '<td' + neg(x.day) + ' style="font-weight:800">' + (x.day == null ? '—' : nf(x.day, 1)) + '</td><td' + neg(x.mon) + '>' + (x.mon == null ? '—' : nf(x.mon, 1)) + '</td><td>' + (x.tgt > 0 ? nf(x.tgt) : '—') + '</td>' +
+      '<td class="l">' + (x.ht == null ? '—' : '<div class="rt2-pc">' + bar(x.ht, lvl(x.fc == null ? x.ht : x.fc)) + '<b>' + Math.round(x.ht) + '%</b></div>') + '</td>' +
+      '<td>' + (x.fc == null ? '—' : '<b class="t-' + lvl(x.fc) + '">' + (x.fc >= 100 ? '▲ ' : '▼ ') + Math.round(x.fc) + '%</b>') + '</td></tr>').join('')
+      : '<tr><td colspan="7" class="rt2-empty">Khai báo chưa có danh sách nhân viên</td></tr>';
+    const tMon = sum('mon'), tTgt = sum('tgt');
+
+    return '<style>' + CSS + '</style><div class="rt2' + (mobile ? ' rt2-m' : '') + '">' +
+      '<div class="rt2-hd"><div><div class="rt2-kicker">BÁO CÁO REALTIME V2</div><div class="rt2-title">' + esc(title) + '</div></div><div class="rt2-time">' + stamp + '</div></div>' +
+      '<div class="rt2-row1">' +
+        '<div class="rt2-card rt2-hero"><div class="rt2-lbl">DOANH THU HÔM NAY<span class="rt2-badge ' + (rtP >= 100 ? 't-ok' : 't-low') + '">' + (rtP >= 100 ? 'Đạt' : 'Chưa đạt') + '</span></div>' +
+          '<div class="rt2-big"><b>' + nf(rt) + '</b><span>/ ' + nf(dayT) + '</span><em>' + Math.round(rtP) + '%</em></div>' + bar(rtP, 'hero') +
+          '<div class="rt2-foot"><span>Target ngày: ' + nf(dayT) + '</span><span>' + (rt >= dayT ? 'Vượt: ' + nf(rt - dayT) : 'Còn thiếu: ' + nf(dayT - rt)) + '</span></div></div>' +
+        '<div class="rt2-card"><div class="rt2-lbl">LŨY KẾ THÁNG ' + tc.month + '<span class="rt2-sub">đến hết ' + String(dp).padStart(2, '0') + '/' + String(tc.month).padStart(2, '0') + '</span></div>' +
+          '<div class="rt2-big"><b style="font-size:34px">' + nf(lk) + '</b><span style="color:#334155">/ ' + nf(monT) + '</span><em class="t-' + (lkP >= timeP ? 'ok' : 'low') + '" style="font-size:26px">' + lkP.toFixed(1) + '%</em></div>' +
+          '<div class="rt2-bar"><i class="' + (lkP >= timeP ? 'ok' : 'low') + '" style="width:' + Math.min(100, lkP).toFixed(1) + '%"></i><span class="rt2-mark" style="left:' + Math.min(100, timeP).toFixed(1) + '%"></span></div>' +
+          '<div class="rt2-mini3"><div class="rt2-mini"><div>Thời gian qua</div><b>' + timeP.toFixed(1) + '%</b></div><div class="rt2-mini"><div>Dự kiến HT</div><b class="t-' + lvl(dk) + '">' + (dk >= 100 ? '▲ ' : '▼ ') + Math.round(dk) + '%</b></div><div class="rt2-mini"><div>Cần / ngày</div><b>' + nf(needDay) + '</b></div></div></div>' +
+        '<div class="rt2-kpi4">' +
+          '<div class="rt2-kpi"><div>% TRẢ CHẬM</div><b class="' + (tg >= tgLim ? 't-ok' : 't-low') + '">' + Math.round(tg) + '% <small>/ ' + tgLim + '%</small></b></div>' +
+          '<div class="rt2-kpi"><div>TỈ LỆ QUY ĐỔI</div><b>' + Math.round(qd) + '%</b></div>' +
+          '<div class="rt2-kpi"><div>NHÓM HÀNG ĐẠT</div><b>' + pass + ' <small>/ ' + rows.length + '</small></b></div>' +
+          '<div class="rt2-kpi"><div>%HT THI ĐUA</div><b class="' + (passP >= 50 ? 't-ok' : 't-low') + '">' + Math.round(passP) + '%</b></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="rt2-row2">' +
+        '<div class="rt2-card"><div class="rt2-lbl">NHÓM HÀNG THI ĐUA HÔM NAY<span class="rt2-sub">bấm tiêu đề cột để sắp xếp</span></div><div class="rt2-tblw"><table class="rt2-tbl"><thead><tr><th class="l">#</th>' + th('g', 'name', 'Nhóm hàng', 1) + th('g', 't', 'Target') + th('g', 'r', 'Realtime') + th('g', 'p', '%HT', 1) + th('g', 'left', 'Còn lại') + '</tr></thead><tbody>' + gBody + '</tbody></table></div></div>' +
+        '<div class="rt2-card"><div class="rt2-lbl">DOANH THU NHÂN VIÊN<span class="rt2-sub">' + (today ? 'Hôm nay + lũy kế tháng' : 'Chưa có số hôm nay') + '</span></div><div class="rt2-tblw"><table class="rt2-tbl"><thead><tr><th class="l">#</th>' + th('s', 'nm', 'Nhân viên', 1) + th('s', 'day', 'Hôm nay') + th('s', 'mon', 'Tháng') + th('s', 'tgt', 'Mục tiêu') + th('s', 'ht', '%HT tháng', 1) + th('s', 'fc', 'Dự kiến') + '</tr></thead><tbody>' + sBody + '</tbody>' +
+          (srows.length ? '<tfoot><tr><td></td><td class="l">Tổng</td>' + '<td>' + (today ? nf(sum('day'), 1) : '—') + '</td><td>' + nf(tMon, 1) + '</td><td>' + nf(tTgt) + '</td><td class="l">' + (tTgt > 0 ? Math.round(tMon / tTgt * 100) + '%' : '—') + '</td><td>' + (tTgt > 0 && dp > 0 ? Math.round(tMon / dp * dim / tTgt * 100) + '%' : '—') + '</td></tr></tfoot>' : '') +
+        '</table></div></div>' +
+      '</div>' +
+      '<div class="rt2-note">Nguồn: BI (API) · Mục tiêu NV theo phân bổ ở Khai báo · AutoBI V' + esc((typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '') + '</div>' +
+    '</div>';
+  }
+
+  /* Bấm tiêu đề cột để sắp xếp: đổi thứ tự rồi bấm lại tab Realtime V2 để vẽ lại */
+  document.addEventListener('click', ev => {
+    const thEl = ev.target && ev.target.closest && ev.target.closest('[data-rt2-sort]');
+    if (!thEl) return;
+    const [tbl, k] = thEl.getAttribute('data-rt2-sort').split(':');
+    const prop = tbl === 'g' ? 'sortGroups' : 'sortStaff';
+    const cur = window.__AutoBIRt2[prop];
+    window.__AutoBIRt2[prop] = { k, d: cur && cur.k === k ? -cur.d : (k === 'name' || k === 'nm' || k === 'shop' ? 1 : -1) };
+    const tab = document.querySelector('.rpt-nav-item[data-tab="rt2"]');
+    if (tab) tab.click();
+  }, true);
+
+  window.__AutoBIRt2 = { render, sortGroups: null, sortStaff: null };
 })();
