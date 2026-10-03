@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.13
+// @name         AutoBI Core V17.16
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.13
+// @version      17.16
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -1479,8 +1479,21 @@ window.__AutoBIRun67 = (function () {
                 _0x58fed6 = _0x58fed6.replace('/blob/', '/');
             else if (_0x58fed6.includes('/raw/'))
                 _0x58fed6 = _0x58fed6.replace('/raw/', '/');
-        } return _0x58fed6; }, matchStaffNameSafe: (_0x2c350d, _0x3ec775) => { if (!_0x2c350d || !_0x3ec775)
-            return false; const _0x33336b = _0x2c350d.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split('-')[0].replace(/[^a-z]/g, ''); const _0x3ec523 = _0x3ec775.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split('-')[0].replace(/[^a-z]/g, ''); return _0x33336b === _0x3ec523 || _0x33336b.includes(_0x3ec523) || _0x3ec523.includes(_0x33336b); }, getSafeFlatVal: (_0x4003a6, _0x3c427a, _0x15eefe, _0x1bc459, _0x107fd7) => { for (let _0x6198fd in _0x4003a6) {
+        } return _0x58fed6; }, matchStaffNameSafe: (_0x2c350d, _0x3ec775) => { /* V17.15: tên NV dạng "mã - Họ tên"; bản cũ lấy phần trước dấu "-" (là mã số) rồi bỏ hết chữ số → chuỗi rỗng → NV nào cũng khớp NV đầu tiên của shop */
+            if (!_0x2c350d || !_0x3ec775)
+                return false;
+            const a = String(_0x2c350d).trim(), b = String(_0x3ec775).trim();
+            if (a === b)
+                return true;
+            const id = v => { const m = v.match(/\d{4,}/); return m ? m[0] : ''; };
+            const ia = id(a), ib = id(b);
+            if (ia && ib)
+                return ia === ib;
+            const nm = v => v.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/[^a-z]/g, '');
+            const na = nm(a), nb = nm(b);
+            if (!na || !nb)
+                return false;
+            return na === nb || (Math.min(na.length, nb.length) >= 4 && (na.includes(nb) || nb.includes(na))); }, getSafeFlatVal: (_0x4003a6, _0x3c427a, _0x15eefe, _0x1bc459, _0x107fd7) => { for (let _0x6198fd in _0x4003a6) {
             if (_0x6198fd.startsWith(_0x3c427a) && _0x6198fd.endsWith(_0x15eefe)) {
                 const _0x8a5f4 = _0x6198fd.split('|||')[_0x107fd7] || '';
                 if (UTILS.matchStaffNameSafe(_0x8a5f4, _0x1bc459)) {
@@ -5455,10 +5468,12 @@ window.__AutoBIRun67 = (function () {
             else {
                 if ((_0x15615f[_0x3f9170] || '').toUpperCase().startsWith('\u0110'))
                     _0x4a938a = true;
-            } const _0x5c120e = _0xb5fce1[_0x124321] || {}; const _0x304648 = _0xb5fce1[_0x6a0e67] || {}; const _0x772f57 = _0x56cba4 => ['Android', 'Samsung', 'OPPO', 'Xiaomi', 'Vivo', 'Realme', 'Laptop', 'Tablet', '\u0110i\u1EC7n t\u1EED', 'Tivi', 'Loa Karaoke', 'D\u00E0n m\u00E1y', '\u0110i\u1EC7n l\u1EA1nh', 'T\u1EE7 l\u1EA1nh', 'T\u1EE7 \u0111\u00F4ng', 'T\u1EE7 m\u00E1t', 'M\u00E1y gi\u1EB7t', 'M\u00E1y s\u1EA5y', 'M\u00E1y l\u1EA1nh', 'M\u00E1y r\u1EEDa ch\u00E9n', 'M\u00E1y n\u01B0\u1EDBc n\u00F3ng'].includes(_0x56cba4); const _0xf97549 = (_0x48a4c7, _0x1ef6cd) => { if (_0x1ef6cd === 'Android') {
+            } const _0x5c120e = _0xb5fce1[_0x124321] || {}; const _0x304648 = _0xb5fce1[_0x6a0e67] || (() => { /* V17.16: Sheet chưa có bản lưu tháng trước → dùng số cùng kỳ lấy từ API ở lượt chạy gần nhất */ try { const c = GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {}; if (!c.link8_health_prev || !c.__healthPrev || c.__healthPrev.key !== _0x6a0e67) return {}; const out = {}; const fl = (o, pre) => { for (const k in o) { if (!Object.prototype.hasOwnProperty.call(o, k)) continue; const v = o[k], kk = pre + '|||' + k; if (v && typeof v === 'object' && !Array.isArray(v)) fl(v, kk); else out[kk] = v; } }; fl(c.link8_health_prev, 'link8_health'); return out; } catch (_) { return {}; } })(); const _0x772f57 = _0x56cba4 => ['Android', 'Samsung', 'OPPO', 'Xiaomi', 'Vivo', 'Realme', 'Laptop', 'Tablet', '\u0110i\u1EC7n t\u1EED', 'Tivi', 'Loa Karaoke', 'D\u00E0n m\u00E1y', '\u0110i\u1EC7n l\u1EA1nh', 'T\u1EE7 l\u1EA1nh', 'T\u1EE7 \u0111\u00F4ng', 'T\u1EE7 m\u00E1t', 'M\u00E1y gi\u1EB7t', 'M\u00E1y s\u1EA5y', 'M\u00E1y l\u1EA1nh', 'M\u00E1y r\u1EEDa ch\u00E9n', 'M\u00E1y n\u01B0\u1EDBc n\u00F3ng'].includes(_0x56cba4); const _0xf97549 = (_0x48a4c7, _0x1ef6cd) => { if (_0x1ef6cd === 'Android') {
                 const _0x1f8409 = { sl: parseFloat(_0x48a4c7['link8_health|||' + _0x3f9170 + '|||Smartphone|||sl']) || 0, dt: parseFloat(_0x48a4c7['link8_health|||' + _0x3f9170 + '|||Smartphone|||dtqd']) || 0 };
                 const _0x2d16fb = { sl: parseFloat(_0x48a4c7['link8_health|||' + _0x3f9170 + '|||Apple|||sl']) || 0, dt: parseFloat(_0x48a4c7['link8_health|||' + _0x3f9170 + '|||Apple|||dtqd']) || 0 };
                 return { sl: Math.max(0, _0x1f8409.sl - _0x2d16fb.sl), dt: Math.max(0, _0x1f8409.dt - _0x2d16fb.dt) };
+            } if (_0x1ef6cd === 'T\u1ED5ng' && (_0x48a4c7['link8_health|||' + _0x3f9170 + '|||T\u1ED5ng|||sl'] !== undefined || _0x48a4c7['link8_health|||' + _0x3f9170 + '|||T\u1ED5ng|||dtqd'] !== undefined)) {
+                return { sl: parseFloat(_0x48a4c7['link8_health|||' + _0x3f9170 + '|||T\u1ED5ng|||sl']) || 0, dt: parseFloat(_0x48a4c7['link8_health|||' + _0x3f9170 + '|||T\u1ED5ng|||dtqd']) || 0 }; /* V17.16: tổng thật của BI */
             } if (_0x1ef6cd === 'T\u1ED5ng') {
                 const _0x3fbabe = ['Smartphone', 'Laptop', 'Tablet', 'Ph\u1EE5 ki\u1EC7n', 'SIM', 'VAS', 'Wearable', '\u0110\u1ED3ng h\u1ED3 th\u1EDDi trang'];
                 if (_0x4a938a)
@@ -6359,7 +6374,7 @@ window.__AutoBIRun67 = (function () {
                 _0x2f029e++; return { cat: _0x57e639, personalTarget: _0x1ae8c2, actual: _0x1ae416, pctComplete: _0xc3b6ad, forecastPct: _0x3951de }; }); if (_0x22b237) {
                 _0x5578ce.sort((_0x402f87, _0xc0ffab) => _0xc0ffab.forecastPct - _0x402f87.forecastPct);
             } _0x5578ce.forEach((_0x3b3797, _0x24ed4f) => { const _0x25f3ca = _0x24ed4f % 2 !== 0 ? 'nlnv-row-bg' : ''; const _0x1e95d6 = _0x3b3797.forecastPct >= 100 ? 'nlnv-val-green' : 'nlnv-val-red'; const _0x467b1f = _0x3b3797.forecastPct >= 100 ? 'background-color:#d9ead3;' : 'background-color:#fce4d6;'; const _0x5e5b2f = Math.min(_0x3b3797.pctComplete, 100); const _0x479510 = 'background: linear-gradient(to right, #c6efce ' + _0x5e5b2f + '%, transparent ' + _0x5e5b2f + '%); font-weight:bold;'; _0x42dcbe += '\n                        <tr class="' + _0x25f3ca + '">\n                            <td class="nlnv-item-name">' + _0x3b3797.cat + '</td>\n                            <td class="bold">' + UTILS.formatNumber(_0x3b3797.personalTarget) + '</td>\n                            <td class="bold">' + UTILS.formatNumber(_0x3b3797.actual) + '</td>\n                            <td style="' + _0x479510 + '">' + _0x3b3797.pctComplete + '%</td>\n                            <td class="' + _0x1e95d6 + '" style="' + _0x467b1f + '">' + _0x3b3797.forecastPct + '%</td>\n                        </tr>\n                    '; }); _0x42dcbe += '\n                        <tr>\n                            <td colspan="2" class="nlnv-footer-blue">S\u1ED1 l\u01B0\u1EE3ng Nh\u00F3m thi \u0111ua</td>\n                            <td class="nlnv-footer-blue">' + _0x1205b3.length + '</td>\n                            <td class="nlnv-footer-green">\u0110\u1EA1t: ' + _0x41104a + '</td>\n                            <td class="nlnv-footer-yellow">Kh\u00F4ng \u0111\u1EA1t: ' + _0x2f029e + '</td>\n                        </tr>\n                    </table>\n                </div>\n                '; return _0x42dcbe; }, getNLNVDailyReport: (_0x1c7797, _0x9c4d9d, _0xefd06f, _0x39bc82, _0xa55554, _0xe186ac, _0x41e30f) => { const _0x3f3516 = _0xefd06f.staffList || []; if (_0x3f3516.length === 0)
-                return '<div style="text-align:center; padding: 20px; font-weight:bold; color:red;">Ch\u01B0a khai b\u00E1o nh\u00E2n vi\u00EAn!</div>'; const _0x54371f = UI.HTML.resolveTimeContext(_0xefd06f, _0x41e30f); const _0x48db21 = String(_0x54371f.month).padStart(2, '0'); const _0x2ea53e = String(_0x54371f.year); const _0x29a64b = _0x54371f.daysPassed; const _0x4079ec = _0x54371f.daysInMonth; const _0x292c3e = _0x3f3516.find(_0xd1e210 => _0xd1e210.name === _0x39bc82) || _0x3f3516[0]; _0x39bc82 = _0x292c3e.name; const _0x510619 = _0x292c3e.shopIdx; const _0xa49228 = 'shop' + _0x510619; let _0x49e0ab = []; if (_0x1c7797) {
+                return '<div style="text-align:center; padding: 20px; font-weight:bold; color:red;">Ch\u01B0a khai b\u00E1o nh\u00E2n vi\u00EAn!</div>'; const _0x54371f = UI.HTML.resolveTimeContext(_0xefd06f, _0x41e30f); const _0x48db21 = String(_0x54371f.month).padStart(2, '0'); const _0x2ea53e = String(_0x54371f.year); const _0x29a64b = _0x54371f.daysPassed; const _0x4079ec = _0x54371f.daysInMonth; const _0x292c3e = _0x3f3516.find(_0xd1e210 => _0xd1e210.name === _0x39bc82) || _0x3f3516[0]; _0x39bc82 = _0x292c3e.name; const _0x510619 = _0x292c3e.shopIdx; const _0xa49228 = 'shop' + _0x510619; /* V17.14: lịch sử chưa có ngày hôm nay thì ghép số của lượt chạy hiện tại vào (chỉ để xem, không lưu lên Sheet) — giống bản đồng bộ ngầm */ try { const __now = new Date(), __key = String(__now.getDate()).padStart(2, '0') + '/' + String(__now.getMonth() + 1).padStart(2, '0') + '/' + __now.getFullYear(); if (_0xa55554 && typeof _0xa55554 === 'object' && Object.keys(_0xa55554).length && !(_0x1c7797 && _0x1c7797[__key])) { const __flat = (o, out = {}, pre = '') => { for (const k in o) { if (!Object.prototype.hasOwnProperty.call(o, k) || o[k] === undefined) continue; const v = o[k], kk = pre ? pre + '|||' + k : k; if (v && typeof v === 'object' && !Array.isArray(v)) __flat(v, out, kk); else out[kk] = v; } return out; }; _0x1c7797 = Object.assign({}, _0x1c7797 || {}, { [__key]: __flat(_0xa55554) }); } } catch (_) { } let _0x49e0ab = []; if (_0x1c7797) {
                 _0x49e0ab = Object.keys(_0x1c7797).filter(_0x488d7b => { const _0x31ab67 = _0x488d7b.split('/'); if (_0x31ab67.length === 3) {
                     const [_0x2753a9, _0x2afbec, _0x134ff7] = _0x31ab67;
                     return _0x2afbec === _0x48db21 && _0x134ff7 === _0x2ea53e && parseInt(_0x2753a9) > 1;
@@ -6394,8 +6409,7 @@ window.__AutoBIRun67 = (function () {
                 }
                 else {
                     _0x3e13e6 = parseFloat(_0xd768df[_0x126bab.flatKey]) || 0;
-                } if (_0x126bab.isHqqd)
-                    _0x3e13e6 = _0x3e13e6 * 100; let _0x4f4547 = _0x3e13e6; if (!_0x126bab.isInst && !_0x126bab.isHqqd) {
+                } /* V17.14: hqqd từ API đã là % (trước đây nhân 100 → ra số gấp 100 lần) */ let _0x4f4547 = _0x3e13e6; if (!_0x126bab.isInst && !_0x126bab.isHqqd) {
                     _0x4f4547 = _0x3e13e6 - _0x3145b2;
                     if (_0x4f4547 < 0)
                         _0x4f4547 = 0;
@@ -6581,7 +6595,7 @@ window.__AutoBIRun67 = (function () {
                 _0x1e69fc = '-'; _0x5453b9 += '\n                        <div class="chart-column-group">\n                            <div class="chart-bar bar-rate" style="height: ' + _0x30334a + '%; width: 40px; border-radius: 4px 4px 0 0; background: #00bfff; box-shadow: 0 0 5px rgba(0, 191, 255, 0.5);">\n                                <div class="bar-value" style="color: #007bff; top: -20px; font-size: 13px;">' + _0x1e69fc + '</div>\n                            </div>\n                            <div class="chart-x-label">' + _0x405ef4.dateStr + '</div>\n                        </div>\n                    '; }); _0x5453b9 += '\n                    </div>\n                </div>'; return _0x5453b9; }, getServiceChart: (_0x4ae2cb, _0x5b5066, _0x3a0b64) => { if (!_0x4ae2cb || Object.keys(_0x4ae2cb).length === 0) {
                 return '<div style="text-align:center; padding: 50px; font-weight:bold; color:red;">Ch\u01B0a c\u00F3 d\u1EEF li\u1EC7u \u0111\u1EC3 v\u1EBD bi\u1EC3u \u0111\u1ED3!</div>';
             } const _0x5eb5af = new Date(); const _0xf05a9e = String(_0x5eb5af.getMonth() + 1).padStart(2, '0'); const _0x4451f0 = String(_0x5eb5af.getFullYear()); const _0x5cfaca = Object.keys(_0x4ae2cb).filter(_0x2ba494 => { if (!/^\d{2}\/\d{2}\/\d{4}$/.test(_0x2ba494))
-                return false; const _0x3a31a8 = _0x2ba494.split('/'); return _0x3a31a8[1] === _0xf05a9e && _0x3a31a8[2] === _0x4451f0; }).sort((_0x393fc8, _0x574370) => { const _0x5f02c1 = _0x46bd88 => { const _0x5ba89e = _0x46bd88.split('/'); return parseInt(_0x5ba89e[2]) * 10000 + parseInt(_0x5ba89e[1]) * 100 + parseInt(_0x5ba89e[0]); }; return _0x5f02c1(_0x393fc8) - _0x5f02c1(_0x574370); }); if (_0x5cfaca.length === 0) {
+                return false; const _0x3a31a8 = _0x2ba494.split('/'); return _0x3a31a8[1] === _0xf05a9e && _0x3a31a8[2] === _0x4451f0 && (() => { /* V17.16: chỉ lấy ngày có số CRM (lượt chạy ban ngày CRM khóa giờ → không có số, trước đây vẽ thành 0%) */ const o = _0x4ae2cb[_0x2ba494] || {}; return Object.keys(o).some(k => k.startsWith('link9|||') && k.endsWith('|||ratePct') && isFinite(parseFloat(o[k]))); })(); }).sort((_0x393fc8, _0x574370) => { const _0x5f02c1 = _0x46bd88 => { const _0x5ba89e = _0x46bd88.split('/'); return parseInt(_0x5ba89e[2]) * 10000 + parseInt(_0x5ba89e[1]) * 100 + parseInt(_0x5ba89e[0]); }; return _0x5f02c1(_0x393fc8) - _0x5f02c1(_0x574370); }); if (_0x5cfaca.length === 0) {
                 return '<div style="text-align:center; padding: 50px; font-weight:bold; color:#007bff;">Ch\u01B0a c\u00F3 d\u1EEF li\u1EC7u trong th\u00E1ng ' + _0xf05a9e + '/' + _0x4451f0 + '!</div>';
             } const _0x505c0f = _0x5cfaca.slice(-14); let _0x4f6bd8 = _0x5b5066.cluster && _0x5b5066.cluster.trim() !== '' ? _0x5b5066.cluster : 'T\u1ED4NG C\u1EE4M'; if (_0x3a0b64 !== 'total') {
                 _0x4f6bd8 = _0x5b5066[_0x3a0b64 + 'Short'] || _0x5b5066[_0x3a0b64] || _0x3a0b64;
@@ -6614,9 +6628,9 @@ window.__AutoBIRun67 = (function () {
             }
             else {
                 _0x5bbfb8.push(_0x3a0b64.replace('shop', ''));
-            } const _0x511e49 = _0x7614e.filter(_0x5d0889 => _0x5bbfb8.includes(_0x5d0889.shopIdx.toString())); let _0x505069 = []; const _0x38776a = (_0x38a340, _0x878a68, _0x11e790) => { return parseFloat(_0x38a340['link8|||' + _0x878a68 + '|||' + _0x11e790]) || 0; }; const _0x51a183 = _0x5913a0 => { if (!_0x5913a0)
+            } const _0x511e49 = _0x7614e.filter(_0x5d0889 => _0x5bbfb8.includes(_0x5d0889.shopIdx.toString())); let _0x505069 = []; const _0x38776a = (_0x38a340, _0x878a68, _0x11e790) => { const v = parseFloat(_0x38a340['link8|||' + _0x878a68 + '|||' + _0x11e790]); if (!isFinite(v)) return 0; const lim = _0x11e790 === 'ratePct' ? 100 : _0x11e790 === 'score' ? 10 : 1e6; return v < 0 || v > lim ? 0 : v; /* V17.16: bỏ số rác (vd 2.208.926.524.000) */ }; const _0x51a183 = _0x5913a0 => { if (!_0x5913a0)
                 return ''; const _0x58a9d6 = _0x5913a0.match(/\d+/); return _0x58a9d6 ? _0x58a9d6[0] : ''; }; const _0xadc588 = _0x320fb0 => { if (!_0x320fb0)
-                return ''; const _0x4843ea = _0x320fb0.split('-'); return _0x4843ea[0].trim(); }; _0x511e49.forEach(_0x3160b4 => { const _0x5d2132 = _0x3160b4.name; const _0x15cf0a = _0x51a183(_0x5d2132); const _0x60d0a1 = _0xadc588(_0x5d2132); const _0x5d5190 = _0x38776a(_0x5468b3, _0x5d2132, 's5'); const _0x2cae6e = _0x38776a(_0x598137, _0x5d2132, 's5'); const _0x55adb8 = _0x5d5190 - _0x2cae6e; const _0x387560 = _0x38776a(_0x5468b3, _0x5d2132, 's4'); const _0x5f2305 = _0x38776a(_0x598137, _0x5d2132, 's4'); const _0x1e6a2e = _0x387560 - _0x5f2305; const _0x5ad8c2 = _0x38776a(_0x5468b3, _0x5d2132, 's3'); const _0x1d1cae = _0x38776a(_0x598137, _0x5d2132, 's3'); const _0x349685 = _0x5ad8c2 - _0x1d1cae; const _0x15359c = _0x38776a(_0x5468b3, _0x5d2132, 's2'); const _0x2815b1 = _0x38776a(_0x598137, _0x5d2132, 's2'); const _0x3fabe3 = _0x15359c - _0x2815b1; const _0x27f693 = _0x38776a(_0x5468b3, _0x5d2132, 's1'); const _0x2959b7 = _0x38776a(_0x598137, _0x5d2132, 's1'); const _0x5845c6 = _0x27f693 - _0x2959b7; const _0x3b5ed7 = _0x38776a(_0x5468b3, _0x5d2132, 'sent'); const _0x9cbc3 = _0x38776a(_0x598137, _0x5d2132, 'sent'); const _0x5e47bf = _0x3b5ed7 - _0x9cbc3; const _0xeac55d = _0x38776a(_0x5468b3, _0x5d2132, 'rated'); const _0x599b5c = _0x38776a(_0x598137, _0x5d2132, 'rated'); const _0x11386d = _0xeac55d - _0x599b5c; const _0x2353a7 = _0x38776a(_0x5468b3, _0x5d2132, 'ratePct'); const _0x252ee9 = _0x38776a(_0x598137, _0x5d2132, 'ratePct'); const _0x1d7c6c = _0x2353a7 - _0x252ee9; const _0x99e0cc = _0x38776a(_0x5468b3, _0x5d2132, 'score'); const _0x211684 = _0x38776a(_0x598137, _0x5d2132, 'score'); const _0x53b415 = _0x99e0cc - _0x211684; _0x505069.push({ name: _0x5d2132, userId: _0x15cf0a, cleanName: _0x60d0a1, s5: _0x5d5190, s5_diff: _0x55adb8, s4: _0x387560, s4_diff: _0x1e6a2e, s3: _0x5ad8c2, s3_diff: _0x349685, s2: _0x15359c, s2_diff: _0x3fabe3, s1: _0x27f693, s1_diff: _0x5845c6, sent: _0x3b5ed7, sent_diff: _0x5e47bf, rated: _0xeac55d, rated_diff: _0x11386d, ratePct: _0x2353a7, ratePct_diff: _0x1d7c6c, score: _0x99e0cc, score_diff: _0x53b415 }); }); _0x505069.sort((_0x92d57d, _0x275a0e) => _0x275a0e.score - _0x92d57d.score || _0x275a0e.s5 - _0x92d57d.s5); const _0x4cb47a = _0x2fce79 => _0x2fce79 === 0 ? '' : UTILS.formatNumber(_0x2fce79); const _0x98c2a3 = (_0xc54d0a, _0x49fae2 = false, _0x25441c = false) => { if (_0xc54d0a === 0 || isNaN(_0xc54d0a))
+                return ''; const _0x4843ea = _0x320fb0.split('-').map(x => x.trim()); return _0x4843ea.find(x => /[^\d\s]/.test(x)) || _0x4843ea[0]; /* V17.16: tên dạng "mã - Họ tên" → lấy phần họ tên */ }; _0x511e49.forEach(_0x3160b4 => { const _0x5d2132 = _0x3160b4.name; const _0x15cf0a = _0x51a183(_0x5d2132); const _0x60d0a1 = _0xadc588(_0x5d2132); const _0x5d5190 = _0x38776a(_0x5468b3, _0x5d2132, 's5'); const _0x2cae6e = _0x38776a(_0x598137, _0x5d2132, 's5'); const _0x55adb8 = _0x5d5190 - _0x2cae6e; const _0x387560 = _0x38776a(_0x5468b3, _0x5d2132, 's4'); const _0x5f2305 = _0x38776a(_0x598137, _0x5d2132, 's4'); const _0x1e6a2e = _0x387560 - _0x5f2305; const _0x5ad8c2 = _0x38776a(_0x5468b3, _0x5d2132, 's3'); const _0x1d1cae = _0x38776a(_0x598137, _0x5d2132, 's3'); const _0x349685 = _0x5ad8c2 - _0x1d1cae; const _0x15359c = _0x38776a(_0x5468b3, _0x5d2132, 's2'); const _0x2815b1 = _0x38776a(_0x598137, _0x5d2132, 's2'); const _0x3fabe3 = _0x15359c - _0x2815b1; const _0x27f693 = _0x38776a(_0x5468b3, _0x5d2132, 's1'); const _0x2959b7 = _0x38776a(_0x598137, _0x5d2132, 's1'); const _0x5845c6 = _0x27f693 - _0x2959b7; const _0x3b5ed7 = _0x38776a(_0x5468b3, _0x5d2132, 'sent'); const _0x9cbc3 = _0x38776a(_0x598137, _0x5d2132, 'sent'); const _0x5e47bf = _0x3b5ed7 - _0x9cbc3; const _0xeac55d = _0x38776a(_0x5468b3, _0x5d2132, 'rated'); const _0x599b5c = _0x38776a(_0x598137, _0x5d2132, 'rated'); const _0x11386d = _0xeac55d - _0x599b5c; const _0x2353a7 = _0x38776a(_0x5468b3, _0x5d2132, 'ratePct'); const _0x252ee9 = _0x38776a(_0x598137, _0x5d2132, 'ratePct'); const _0x1d7c6c = _0x2353a7 - _0x252ee9; const _0x99e0cc = _0x38776a(_0x5468b3, _0x5d2132, 'score'); const _0x211684 = _0x38776a(_0x598137, _0x5d2132, 'score'); const _0x53b415 = _0x99e0cc - _0x211684; _0x505069.push({ name: _0x5d2132, userId: _0x15cf0a, cleanName: _0x60d0a1, s5: _0x5d5190, s5_diff: _0x55adb8, s4: _0x387560, s4_diff: _0x1e6a2e, s3: _0x5ad8c2, s3_diff: _0x349685, s2: _0x15359c, s2_diff: _0x3fabe3, s1: _0x27f693, s1_diff: _0x5845c6, sent: _0x3b5ed7, sent_diff: _0x5e47bf, rated: _0xeac55d, rated_diff: _0x11386d, ratePct: _0x2353a7, ratePct_diff: _0x1d7c6c, score: _0x99e0cc, score_diff: _0x53b415 }); }); _0x505069.sort((_0x92d57d, _0x275a0e) => _0x275a0e.score - _0x92d57d.score || _0x275a0e.s5 - _0x92d57d.s5); const _0x4cb47a = _0x2fce79 => _0x2fce79 === 0 ? '' : UTILS.formatNumber(_0x2fce79); const _0x98c2a3 = (_0xc54d0a, _0x49fae2 = false, _0x25441c = false) => { if (_0xc54d0a === 0 || isNaN(_0xc54d0a))
                 return ''; if (_0xc54d0a > 0) {
                 const _0xc2ed9d = _0x49fae2 ? '+' + _0xc54d0a.toFixed(1) + '%' : _0x25441c ? '+' + _0xc54d0a.toFixed(2) : '+' + UTILS.formatNumber(_0xc54d0a);
                 return '<span style="color:#00B050; font-weight:bold;">' + _0xc2ed9d + '</span>';
@@ -6655,14 +6669,14 @@ window.__AutoBIRun67 = (function () {
                 _0x26a27a = _0x59636f.compData.map(_0x49a137 => _0x49a137.group); let _0x55c03a = [...new Set(_0x26a27a.filter(_0x129437 => _0x24ae1a.includes(_0x129437)))]; if (window.tgdd_hidden_report_groups && window.tgdd_hidden_report_groups.length > 0) {
                 _0x55c03a = _0x55c03a.filter(_0x24e061 => !window.tgdd_hidden_report_groups.includes(_0x24e061));
             } const _0x371fa0 = (_0x29a3be, _0x398f81, _0x3295d7, _0x12c88f) => { if (!_0x29a3be || Object.keys(_0x29a3be).length === 0)
-                return { r: 0, t: 0, rev: 0, comp: 0, hq: 0, tc: 0, groups: {} }; const _0x238d31 = parseFloat(_0x29a3be['link2|||' + _0x398f81 + '|||r']) || 0; const _0x14e1d3 = parseFloat(_0x29a3be['link2|||' + _0x398f81 + '|||dtlk']) || 0; const _0x7a4f64 = parseFloat(_0x29a3be['link2|||' + _0x398f81 + '|||t']) || (_0x398f81 === 'total' ? _0x59636f.totalTarget : _0x59636f['target' + _0x3295d7]); const _0x30b434 = parseFloat(_0x29a3be['link2|||' + _0x398f81 + '|||dk']) || 0; const _0x6aa5c8 = _0x14e1d3 > 0 ? _0x238d31 / _0x14e1d3 * 100 : 0; const _0x505a49 = parseFloat(_0x29a3be['link2|||' + _0x398f81 + '|||tg']) || 0; let _0x3db767 = {}; _0x55c03a.forEach(_0x1c1391 => { _0x3db767[_0x1c1391] = parseFloat(_0x29a3be['link4_smart|||' + _0x1c1391 + '|||' + _0x398f81 + '|||pd']) || 0; }); return { r: _0x238d31, t: _0x7a4f64, rev: _0x30b434, hq: _0x6aa5c8, tc: _0x505a49, groups: _0x3db767 }; }; const _0x4f841e = (_0x376a70, _0x1fdaee, _0xa7673b, _0x5a5580, _0x45aac6) => { if (!_0x376a70 || Object.keys(_0x376a70).length === 0)
+                return { r: 0, t: 0, rev: 0, comp: 0, hq: 0, tc: 0, groups: {} }; const _0x238d31 = parseFloat(_0x29a3be['link2|||' + _0x398f81 + '|||r']) || 0; const _0x14e1d3 = parseFloat(_0x29a3be['link2|||' + _0x398f81 + '|||dtlk']) || 0; const _0x7a4f64 = parseFloat(_0x29a3be['link2|||' + _0x398f81 + '|||t']) || (_0x398f81 === 'total' ? _0x59636f.totalTarget : _0x59636f['target' + _0x3295d7]); const _0x30b434 = parseFloat(_0x29a3be['link2|||' + _0x398f81 + '|||dk']) || 0; const _0x6aa5c8 = _0x14e1d3 > 0 ? _0x238d31 / _0x14e1d3 * 100 : 0; const _0x505a49 = parseFloat(_0x29a3be['link2|||' + _0x398f81 + '|||tg']) || 0; let _0x3db767 = {}; _0x55c03a.forEach(_0x1c1391 => { _0x3db767[_0x1c1391] = parseFloat(_0x29a3be['link4_smart|||' + _0x1c1391 + '|||' + _0x398f81 + '|||pd']) || 0; }); /* V17.16: "Dự kiến" = DT QĐ ÷ số ngày đã có số × số ngày trong tháng ÷ target (link2.dk là % hoàn thành, không phải dự kiến). Bản lưu ngày D chứa số đến hết ngày D−1 */ const __dp = (parseInt(_0x12c88f) || 0) - 1; const __rev = __dp >= 1 && _0x7a4f64 > 0 ? Math.round(_0x238d31 / __dp * _0x42e68c / _0x7a4f64 * 1000) / 10 : _0x30b434; return { r: _0x238d31, t: _0x7a4f64, rev: __rev, hq: _0x6aa5c8, tc: _0x505a49, groups: _0x3db767 }; }; const _0x4f841e = (_0x376a70, _0x1fdaee, _0xa7673b, _0x5a5580, _0x45aac6) => { if (!_0x376a70 || Object.keys(_0x376a70).length === 0)
                 return { r: 0, t: 0, rev: 0, comp: 0, hq: 0, tc: 0, groups: {} }; const _0x59eae8 = UTILS.getSafeFlatVal(_0x376a70, 'link6|||' + _0xa7673b + '|||revenue|||', '|||dtqd', _0x1fdaee, 3); const _0x593ae0 = UTILS.getSafeFlatVal(_0x376a70, 'link6|||' + _0xa7673b + '|||revenue|||', '|||dtlk', _0x1fdaee, 3); let _0x2fcd48 = parseFloat(_0x376a70['link2|||' + _0xa7673b + '|||t']) || 0; if (_0x2fcd48 === 0)
                 _0x2fcd48 = _0x59636f['target' + _0x5a5580] || 0; let _0x778e19 = 0; const _0x5a4aa3 = _0x1d4b5e.filter(_0x47aa6e => _0x47aa6e.shopIdx == _0x5a5580); const _0x460ac7 = _0x5a4aa3.filter(_0x385fe9 => _0x385fe9.rate && parseFloat(_0x385fe9.rate) > 0); const _0x2b644f = _0x5a4aa3.filter(_0x2fc528 => !_0x2fc528.rate || parseFloat(_0x2fc528.rate) <= 0); const _0x297d96 = _0x5a4aa3.find(_0xf3446f => UTILS.matchStaffNameSafe(_0xf3446f.name, _0x1fdaee)) || { rate: '' }; let _0x1d0005 = 0; _0x460ac7.forEach(_0x2c1c76 => _0x1d0005 += Math.round(_0x2fcd48 * parseFloat(_0x2c1c76.rate) / 100)); if (_0x297d96.rate && parseFloat(_0x297d96.rate) > 0) {
                 _0x778e19 = Math.round(_0x2fcd48 * parseFloat(_0x297d96.rate) / 100);
             }
             else if (_0x2b644f.length > 0) {
                 _0x778e19 = Math.round(Math.max(0, _0x2fcd48 - _0x1d0005) / _0x2b644f.length);
-            } const _0x3826c9 = _0x778e19 > 0 ? _0x59eae8 / _0x45aac6 * _0x42e68c / _0x778e19 * 100 : 0; const _0x4e5ab5 = _0x593ae0 > 0 ? _0x59eae8 / _0x593ae0 * 100 : 0; const _0x327380 = UTILS.getSafeFlatVal(_0x376a70, 'link7|||' + _0xa7673b + '|||', '', _0x1fdaee, 2); let _0x4822b9 = {}; _0x55c03a.forEach(_0x42e811 => { const _0x3db999 = _0x562646.find(_0x2dd395 => _0x2dd395.short === _0x42e811) || { type: 'soluong' }; const _0x2ed1c0 = _0x3db999.type.toLowerCase().includes('doanhthu') || _0x3db999.type.toLowerCase().includes('ti\u1EC1n'); const _0x4f706a = _0x2ed1c0 ? 1000 : 1; let _0x431e66 = parseFloat(_0x376a70['link4_smart|||' + _0x42e811 + '|||' + _0xa7673b + '|||t']) || 0; if (_0x431e66 > 0 && _0x2ed1c0)
+            } const _0x3826c9 = _0x778e19 > 0 ? _0x59eae8 / Math.max(1, _0x45aac6 - 1) * _0x42e68c / _0x778e19 * 100 : 0; const _0x4e5ab5 = _0x593ae0 > 0 ? _0x59eae8 / _0x593ae0 * 100 : 0; const _0x327380 = UTILS.getSafeFlatVal(_0x376a70, 'link7|||' + _0xa7673b + '|||', '', _0x1fdaee, 2); let _0x4822b9 = {}; _0x55c03a.forEach(_0x42e811 => { const _0x3db999 = _0x562646.find(_0x2dd395 => _0x2dd395.short === _0x42e811) || { type: 'soluong' }; const _0x2ed1c0 = _0x3db999.type.toLowerCase().includes('doanhthu') || _0x3db999.type.toLowerCase().includes('ti\u1EC1n'); const _0x4f706a = _0x2ed1c0 ? 1000 : 1; let _0x431e66 = parseFloat(_0x376a70['link4_smart|||' + _0x42e811 + '|||' + _0xa7673b + '|||t']) || 0; if (_0x431e66 > 0 && _0x2ed1c0)
                 _0x431e66 = _0x431e66 / 1000;
             else if (_0x431e66 === 0) {
                 const _0x30323f = _0x59636f.compData.find(_0x3db157 => _0x3db157.group === _0x42e811);
@@ -6673,7 +6687,7 @@ window.__AutoBIRun67 = (function () {
             }
             else if (_0x2b644f.length > 0) {
                 _0x52951c = Math.round(Math.max(0, _0x431e66 - _0x5e844f) / _0x2b644f.length) * _0x4f706a;
-            } const _0x336f8c = UTILS.getSafeFlatVal(_0x376a70, 'link6|||' + _0xa7673b + '|||competition|||', '|||' + _0x42e811, _0x1fdaee, 3); const _0x478165 = _0x52951c > 0 ? _0x336f8c / _0x45aac6 * _0x42e68c / _0x52951c * 100 : _0x336f8c > 0 ? 100 : 0; _0x4822b9[_0x42e811] = _0x478165; }); return { r: _0x59eae8, t: _0x778e19, rev: _0x3826c9, hq: _0x4e5ab5, tc: _0x327380, groups: _0x4822b9 }; }; const _0x7c5c6c = _0x389111.map(_0x5827e8 => { const _0x163157 = _0x3427f4[_0x5827e8.dateKey]; return _0xc1dafe ? _0x371fa0(_0x163157, _0x512385, _0x1087dd, _0x5827e8.dayNum) : _0x4f841e(_0x163157, _0x3c99bb, _0x512385, _0x1087dd, _0x5827e8.dayNum); }); const _0x377cb0 = _0x7c5c6c[_0x379297 - 1] || { r: 0, t: 0, rev: 0, hq: 0, tc: 0, groups: {} }; const _0x1db57d = _0x3427f4[_0x48bea6] || {}; const _0x305c4c = (_0x5bba17, _0xd90267, _0x45d5cc) => { const _0x4f670e = !!_0x3427f4[_0x389111[_0x5bba17].dateKey]; if (!_0x4f670e)
+            } const _0x336f8c = UTILS.getSafeFlatVal(_0x376a70, 'link6|||' + _0xa7673b + '|||competition|||', '|||' + _0x42e811, _0x1fdaee, 3); const _0x478165 = _0x52951c > 0 ? _0x336f8c / Math.max(1, _0x45aac6 - 1) * _0x42e68c / _0x52951c * 100 : _0x336f8c > 0 ? 100 : 0; _0x4822b9[_0x42e811] = _0x478165; }); return { r: _0x59eae8, t: _0x778e19, rev: _0x3826c9, hq: _0x4e5ab5, tc: _0x327380, groups: _0x4822b9 }; }; const _0x7c5c6c = _0x389111.map(_0x5827e8 => { const _0x163157 = _0x3427f4[_0x5827e8.dateKey]; return _0xc1dafe ? _0x371fa0(_0x163157, _0x512385, _0x1087dd, _0x5827e8.dayNum) : _0x4f841e(_0x163157, _0x3c99bb, _0x512385, _0x1087dd, _0x5827e8.dayNum); }); const _0x377cb0 = _0x7c5c6c[_0x379297 - 1] || { r: 0, t: 0, rev: 0, hq: 0, tc: 0, groups: {} }; const _0x1db57d = _0x3427f4[_0x48bea6] || {}; const _0x305c4c = (_0x5bba17, _0xd90267, _0x45d5cc) => { const _0x4f670e = !!_0x3427f4[_0x389111[_0x5bba17].dateKey]; if (!_0x4f670e)
                 return '<td style="border: 1px solid #000; font-size:15px; font-weight:bold; background-color:#ffffff;">-</td>'; const _0x25b504 = _0xd90267(_0x7c5c6c[_0x5bba17]); let _0x407bbb = ''; if (_0x5bba17 > 0) {
                 const _0x5d733e = _0xd90267(_0x7c5c6c[_0x5bba17 - 1]);
                 const _0x1d4add = !!_0x3427f4[_0x389111[_0x5bba17 - 1].dateKey];
@@ -8375,7 +8389,18 @@ window.__AutoBIBiTarget99 = (function () {
                 const smartphone = byCode('1491') || exact('Smartphone');
                 assign('Smartphone', smartphone);
                 assign('Android', smartphone);
-                assign('Apple', exact('Apple', 'iPhone', 'Apple iPhone') || starts('Apple iPhone', 'iPhone'));
+                /* V17.16: Apple lấy đúng iPhone. Nếu Apple là ngành riêng (không nằm trong Smartphone) thì cộng vào Smartphone,
+                   để Smartphone luôn ≥ Apple và Android (= Smartphone − Apple) ra đúng */
+                const __bare = r => String(r && r.key || '').replace(/^c?p-/, '');
+                const __under = (parent, r) => !!parent && !!r && String(r.key).startsWith('cp-' + __bare(parent) + '-');
+                let __apple = smartphone ? parsed.find(r => __under(smartphone, r) && /^(apple|iphone)/.test(slug(r.label))) : null;
+                if (!__apple) {
+                    const top = exact('Apple', 'iPhone', 'Apple iPhone') || starts('Apple iPhone', 'iPhone');
+                    __apple = top ? (parsed.find(r => __under(top, r) && slug(r.label).startsWith('iphone')) || top) : null;
+                }
+                assign('Apple', __apple);
+                if (__apple && smartphone && __apple !== smartphone && !__under(smartphone, __apple))
+                    out['Smartphone'] = { sl: num(smartphone.sl) + num(__apple.sl), dtqd: num(smartphone.dtqd) + num(__apple.dtqd), growth: smartphone.growth, tg_ratio: 0 };
                 assign('Samsung', starts('Samsung'));
                 assign('OPPO', starts('OPPO'));
                 assign('Xiaomi', starts('Xiaomi'));
@@ -8415,6 +8440,18 @@ window.__AutoBIBiTarget99 = (function () {
                 assign('Qu\u1EA1t \u0111i\u1EC1u h\u00F2a', starts('Qu\u1EA1t \u0111i\u1EC1u h\u00F2a'));
                 assign('H\u00FAt b\u1EE5i Robot', starts('H\u00FAt b\u1EE5i Robot', 'Robot h\u00FAt b\u1EE5i'));
 
+    /* V17.16: Tổng = tổng mọi ngành cấp 1 của BI; nhóm cha bằng 0 mà nhóm con có số thì cộng từ nhóm con */
+    try {
+      const top = rows.filter(x => x.level === 0);
+      if (top.length) out['T\u1ED5ng'] = { sl: top.reduce((a, x) => a + num(x.sl), 0), dtqd: top.reduce((a, x) => a + num(x.dtqd), 0), growth: 0, tg_ratio: 0 };
+      const fam = { 'Ph\u1EE5 ki\u1EC7n': ['Pin s\u1EA1c d\u1EF1 ph\u00F2ng', 'Camera', 'Tai nghe', '\u0110\u00E8n n\u0103ng l\u01B0\u1EE3ng m\u1EB7t tr\u1EDDi'], '\u0110i\u1EC7n t\u1EED': ['Tivi', 'Loa Karaoke', 'D\u00E0n m\u00E1y'], '\u0110i\u1EC7n l\u1EA1nh': ['T\u1EE7 l\u1EA1nh', 'T\u1EE7 \u0111\u00F4ng', 'T\u1EE7 m\u00E1t'] };
+      for (const [p, kids] of Object.entries(fam)) {
+        const cur = out[p];
+        if (cur && (num(cur.sl) || num(cur.dtqd))) continue;
+        const sl = kids.reduce((a, k) => a + num(out[k] && out[k].sl), 0), dt = kids.reduce((a, k) => a + num(out[k] && out[k].dtqd), 0);
+        if (sl || dt) out[p] = { sl, dtqd: dt, growth: 0, tg_ratio: 0 };
+      }
+    } catch (_) { }
     out.__autobiHealthTree75 = tree;
     return out;
   }
@@ -8434,7 +8471,20 @@ window.__AutoBIBiTarget99 = (function () {
     const data = b.matched.map((s, i) => [s.key, healthFrom(lists[i])]).filter(x => x[1]);
     if (!data.length) throw new Error('API không trả Ngành hàng BI');
     const total = healthFrom(sumHealthRows(lists));
-    writeCache(cache => { cache.link8_health = cache.link8_health || {}; data.forEach(([k, v]) => { cache.link8_health[k] = v; }); if (total) cache.link8_health.total = total; });
+    /* V17.16: cùng kỳ tháng trước (từ ngày 1 đến cùng ngày của tháng trước) cho mục So sánh BI CK khi lịch sử Sheet không có bản lưu tháng trước */
+    let prev = null;
+    try {
+      const to = b.cum.to, y = Math.floor(to / 10000), m = Math.floor(to / 100) % 100, d = to % 100;
+      const py = m === 1 ? y - 1 : y, pm = m === 1 ? 12 : m - 1, pd = Math.min(d, new Date(Date.UTC(py, pm, 0)).getUTCDate());
+      const pFrom = py * 10000 + pm * 100 + 1, pTo = py * 10000 + pm * 100 + pd;
+      const pLists = await pall(b.matched, s => api('reports/revenue-consolidated-get', revBody(pFrom, pTo, 'STORE', s.storeId, 'BICAT')));
+      const pData = {}; b.matched.forEach((s, i) => { const v = healthFrom(pLists[i]); if (v) pData[s.key] = v; });
+      const pTotal = healthFrom(sumHealthRows(pLists)); if (pTotal) pData.total = pTotal;
+      const td = b.today % 100, tm = Math.floor(b.today / 100) % 100, ty = Math.floor(b.today / 10000);
+      const ppm = tm === 1 ? 12 : tm - 1, ppy = tm === 1 ? ty - 1 : ty;
+      if (Object.keys(pData).length) prev = { data: pData, key: String(td).padStart(2, '0') + '/' + String(ppm).padStart(2, '0') + '/' + ppy, from: pFrom, to: pTo };
+    } catch (e) { note('Ngành hàng BI tháng trước: ' + (e && e.message || e)); }
+    writeCache(cache => { cache.link8_health = cache.link8_health || {}; data.forEach(([k, v]) => { cache.link8_health[k] = v; }); if (total) cache.link8_health.total = total; if (prev) { cache.link8_health_prev = prev.data; cache.__healthPrev = { key: prev.key, from: prev.from, to: prev.to }; } });
     return data.length;
   }
 
