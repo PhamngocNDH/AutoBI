@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.25
+// @name         AutoBI Core V17.26
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.25
+// @version      17.26
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -9089,4 +9089,54 @@ window.__AutoBIBiTarget99 = (function () {
   .lk-blk{margin-top:12px}`;
 
   window.__AutoBIRt2 = { render, renderLK, sortGroups: null, sortStaff: null, sortLKGroups: null, sortLKStaff: null };
+})();
+
+/* ==== V17.26: Báo có bản mới (__AutoBIUpdate) — đọc @version của AutoBI.user.js trên GitHub khi mở trang + 30 phút/lần; có bản cao hơn thì hiện dải vàng trên cùng. Bấm "Cập nhật ngay" mở link cài để Tampermonkey cập nhật. ==== */
+(function () {
+  'use strict';
+  if (location.hostname !== 'baocao.dienmayxanh.com') return;
+  try { if (window.top !== window.self) return; } catch (_) { return; }
+  const RAW = 'https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI.user.js';
+  const mine = () => { try { return String(GM_info.script.version || ''); } catch (_) { return ''; } };
+  const cmp = (a, b) => { const x = String(a).split('.').map(n => parseInt(n, 10) || 0), y = String(b).split('.').map(n => parseInt(n, 10) || 0); for (let i = 0; i < Math.max(x.length, y.length); i++) { const d = (x[i] || 0) - (y[i] || 0); if (d) return d > 0 ? 1 : -1; } return 0; };
+  let closedFor = '', shown = '';
+
+  function fetchRemote() {
+    return new Promise(res => {
+      try {
+        GM_xmlhttpRequest({ method: 'GET', url: RAW + '?t=' + Date.now(), timeout: 15000, headers: { 'Cache-Control': 'no-cache' },
+          onload: r => { const m = String(r.responseText || '').match(/@version\s+([\d.]+)/); res(r.status === 200 && m ? m[1] : ''); },
+          onerror: () => res(''), ontimeout: () => res('') });
+      } catch (_) { res(''); }
+    });
+  }
+  function hide() { const el = document.getElementById('autobi-update-bar'); if (el) el.remove(); document.documentElement.style.removeProperty('--autobi-upd-h'); document.body && (document.body.style.paddingTop = ''); shown = ''; }
+  function show(remote, local) {
+    if (shown === remote || closedFor === remote || !document.body) return;
+    hide();
+    const bar = document.createElement('div');
+    bar.id = 'autobi-update-bar';
+    bar.setAttribute('data-html2canvas-ignore', 'true');
+    bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:2147483646;background:#fdf3d7;border-bottom:1px solid #e9c46a;color:#7a4b00;font:14px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;display:flex;align-items:center;gap:12px;padding:8px 14px;flex-wrap:wrap;box-sizing:border-box';
+    bar.innerHTML = '<div style="flex:1;min-width:180px"><div style="font-weight:800">Có bản AutoBI mới: V' + remote + '</div><div style="font-size:12px">Máy đang dùng V' + (local || '?') + ' · bấm Cập nhật ngay → Tampermonkey hỏi thì bấm Cập nhật → tải lại trang</div></div>' +
+      '<button type="button" data-a="go" style="min-height:36px;padding:0 16px;border-radius:8px;border:1px solid #b7791f;background:#fff;color:#7a4b00;font-weight:800;cursor:pointer">Cập nhật ngay</button>' +
+      '<button type="button" data-a="x" aria-label="Đóng" style="min-height:36px;min-width:36px;border-radius:8px;border:1px solid #e9c46a;background:transparent;color:#7a4b00;font-weight:800;cursor:pointer">✕</button>';
+    bar.addEventListener('click', ev => {
+      const a = ev.target && ev.target.closest && ev.target.closest('[data-a]');
+      if (!a) return;
+      if (a.getAttribute('data-a') === 'go') window.open(RAW + '?v=' + encodeURIComponent(remote), '_blank');
+      else { closedFor = remote; hide(); }
+    });
+    document.body.appendChild(bar);
+    document.body.style.paddingTop = bar.offsetHeight + 'px';
+    shown = remote;
+  }
+  async function check() {
+    const local = mine(), remote = await fetchRemote();
+    if (!remote || !local) return;
+    if (cmp(remote, local) > 0) show(remote, local); else hide();
+  }
+  setTimeout(check, 4000);
+  setInterval(check, 30 * 60 * 1000);
+  window.__AutoBIUpdate = { check, cmp };
 })();
