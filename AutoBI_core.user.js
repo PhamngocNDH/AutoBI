@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.23
+// @name         AutoBI Core V17.25
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.23
+// @version      17.25
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -9028,8 +9028,19 @@ window.__AutoBIBiTarget99 = (function () {
     /* V17.23: nhiều nhóm thì chia ma trận thành nhiều khối (tối đa 14 nhóm/khối trên máy tính, 4 trên điện thoại), xếp chồng — không bị cắt cột */
     const perMax = mobile ? 4 : 14, nBlk = Math.max(1, Math.ceil(sg.length / perMax)), per = Math.ceil(sg.length / nBlk) || 1;
     const blocks = []; for (let k = 0; k < sg.length; k += per) blocks.push(sg.slice(k, k + per));
-    const mTable = (bg, last) => '<table class="rt2-tbl lk-mx"><thead><tr><th class="l">Nhân viên</th>' + bg.map(g => '<th title="' + esc(g) + '" style="text-align:center">' + short(g) + '</th>').join('') + (last ? '<th>Đạt</th>' : '') + '</tr></thead><tbody>' +
-      srows.map(x => '<tr>' + nmCell(x) + bg.map(g => { const v = x.cells[g]; return '<td style="text-align:center;background:' + cellBg(v.d) + '" title="' + esc(g) + ': ' + nf(v.a) + ' / ' + nf(v.t) + '"><b class="t-' + lvl(v.d) + '">' + Math.round(v.d) + '%</b></td>'; }).join('') + (last ? '<td><b>' + x.ok + '</b>/' + sg.length + '</td>' : '') + '</tr>').join('') + '</tbody></table>';
+    /* V17.24: cột nhóm chia đều, các khối thẳng hàng (cùng số cột = per, khối thiếu thì để ô trống); tiêu đề xuống dòng, không cắt tên;
+       ô chưa bán = "–" nền trắng; chỉ tô nền xanh (đạt) và vàng (80–99%); dưới 80% chỉ chữ đỏ; NV xếp theo số nhóm Đạt */
+    const mrows = srows.slice().sort((x, y) => y.ok - x.ok || sv(y.fc) - sv(x.fc));
+    const wName = mobile ? 34 : 17, wOk = mobile ? 12 : 6, wG = (100 - wName - wOk) / per;
+    const cols = '<colgroup><col style="width:' + wName + '%">' + Array.from({ length: per }, () => '<col style="width:' + wG.toFixed(3) + '%">').join('') + '<col style="width:' + wOk + '%"></colgroup>';
+    const cell = (g, v) => {
+      const tip = ' title="' + esc(g) + ': ' + nf(v.a) + ' / ' + nf(v.t) + '"';
+      /* V17.25: màu như V17.23 — mọi ô đều tô nền (xanh / vàng / đỏ nhạt), 0% vẫn hiện số */
+      const p = Math.round(v.d), bgc = v.d >= 100 ? 'lk-ok' : v.d >= 80 ? 'lk-mid' : 'lk-low';
+      return '<td class="lk-c ' + bgc + '"' + tip + '><b>' + p + '%</b></td>';
+    };
+    const mTable = (bg, last) => '<table class="rt2-tbl lk-mx">' + cols + '<thead><tr><th class="l">Nhân viên</th>' + bg.map(g => '<th class="lk-h" title="' + esc(g) + '">' + esc(g) + '</th>').join('') + Array.from({ length: per - bg.length }, () => '<th></th>').join('') + '<th>' + (last ? 'Đạt' : '') + '</th></tr></thead><tbody>' +
+      mrows.map(x => '<tr>' + nmCell(x) + bg.map(g => cell(g, x.cells[g])).join('') + Array.from({ length: per - bg.length }, () => '<td></td>').join('') + '<td>' + (last ? '<b class="t-' + (x.ok ? 'ok' : 'low') + '">' + x.ok + '</b>/' + sg.length : '') + '</td></tr>').join('') + '</tbody></table>';
     const mHtml = srows.length && sg.length ? blocks.map((bg, k) => '<div class="rt2-tblw' + (k ? ' lk-blk' : '') + '">' + mTable(bg, k === blocks.length - 1) + '</div>').join('') : '<div class="rt2-empty">Chưa có số thi đua nhân viên</div>';
 
     return '<style>' + CSS + LKCSS + '</style><div class="rt2' + (mobile ? ' rt2-m' : '') + '">' +
@@ -9055,7 +9066,7 @@ window.__AutoBIBiTarget99 = (function () {
           (srows.length ? '<tfoot><tr><td></td><td class="l">Tổng</td><td>' + nf(tMon, 1) + '</td><td>' + nf(tTgt) + '</td><td>' + (tTgt > 0 ? Math.round(tMon / tTgt * 100) + '%' : '—') + '</td><td>' + (tTgt > 0 && dp > 0 ? Math.round(tMon / dp * dim / tTgt * 100) + '%' : '—') + '</td><td></td></tr></tfoot>' : '') +
         '</table></div></div>' +
       '</div>' +
-      '<div class="rt2-card lk-matrix"><div class="rt2-lbl">THI ĐUA NHÂN VIÊN THEO NHÓM HÀNG<span class="rt2-sub">% dự kiến hoàn thành · xanh ≥100% · vàng 80–99% · đỏ &lt;80% · rê chuột xem số làm / target</span></div>' + mHtml + '</div>' +
+      '<div class="rt2-card lk-matrix"><div class="rt2-lbl">THI ĐUA NHÂN VIÊN THEO NHÓM HÀNG<span class="rt2-sub">% dự kiến hoàn thành · xanh ≥100% · vàng 80–99% · đỏ &lt;80% · xếp theo số nhóm đạt · rê chuột xem số làm / target</span></div>' + mHtml + '</div>' +
       '<div class="rt2-note">Nguồn: BI (API) · Dự kiến = lũy kế ÷ ngày đã qua × số ngày tháng ÷ target · AutoBI V' + esc((typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '') + '</div>' +
     '</div>';
   }
@@ -9067,7 +9078,14 @@ window.__AutoBIBiTarget99 = (function () {
   .lk-mx td,.lk-mx th{padding:7px 5px}
   .lk-mx td b{font-size:12px}
   .lk-mx th{font-size:10.5px}
-  .lk-mx th{overflow:hidden;text-overflow:ellipsis}
+  .lk-mx{table-layout:fixed}
+  .lk-mx th.lk-h{white-space:normal;text-align:center;vertical-align:bottom;line-height:1.25;word-break:break-word}
+  .lk-mx td.lk-c{text-align:center}
+  .lk-c.lk-ok{background:#dcf2e3}.lk-c.lk-ok b{color:#15803d}
+  .lk-c.lk-mid{background:#fdecc8}.lk-c.lk-mid b{color:#b45309}
+  .lk-c.lk-low{background:#fde2e1}.lk-c.lk-low b{color:#b42318}
+  .lk-c.lk-none{color:#94a3b8;font-weight:600}
+  .lk-mx td:first-child{white-space:normal}
   .lk-blk{margin-top:12px}`;
 
   window.__AutoBIRt2 = { render, renderLK, sortGroups: null, sortStaff: null, sortLKGroups: null, sortLKStaff: null };
