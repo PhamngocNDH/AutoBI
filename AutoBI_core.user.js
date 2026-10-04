@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.21
+// @name         AutoBI Core V17.22
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.21
+// @version      17.22
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -8091,6 +8091,8 @@ window.__AutoBIBiTarget99 = (function () {
     return out;
   }
   function shopOf(shops, cfg, label, id) {
+    /* V17.22: khớp theo mã siêu thị BI trước (dòng Thi đua có salegroupid = mã siêu thị) — tên nhóm bán hàng TGDĐ có thể khác tên shop ở Khai báo */
+    if (id != null && id !== '') { const byId = shops.find(x => x.storeId != null && String(x.storeId) === String(id)); if (byId) return byId; }
     try {
       const D = page.DATA || window.DATA;
       const k = D && D.identifyShopFromRowData && D.identifyShopFromRowData(String(label || ''), id != null ? 'store-' + id : '', cfg);
@@ -8256,7 +8258,7 @@ window.__AutoBIBiTarget99 = (function () {
         if (!rows.length) continue;
         const pick = new Map();
         for (const r of rows) {
-          const shop = shopOf(b.matched, b.cfg, r.salegroupname, null);
+          const shop = shopOf(b.matched, b.cfg, r.salegroupname, r.salegroupid);
           if (!shop) continue;
           const g = matchGroup(cache[key] || {}, r.programname, cfgGroups);
           if (!g) continue;
@@ -8512,7 +8514,7 @@ window.__AutoBIBiTarget99 = (function () {
     if (!staffList.length) throw new Error('Khai báo chưa có danh sách nhân viên');
     const shopRows = (await api('reports/competition-bymsg-get', compBody(month, 2, b.storeIds))).filter(r => String(r.columnname || '').toUpperCase() === 'STOREID');
     const ids = {};
-    for (const r of shopRows) { const shop = shopOf(b.matched, b.cfg, r.salegroupname, null); if (shop && r.salegroupid != null) (ids[shop.key] = ids[shop.key] || new Set()).add(String(r.salegroupid)); }
+    for (const r of shopRows) { const shop = shopOf(b.matched, b.cfg, r.salegroupname, r.salegroupid); if (shop && r.salegroupid != null) (ids[shop.key] = ids[shop.key] || new Set()).add(String(r.salegroupid)); }
     const jobs = [];
     for (const s of b.matched) for (const id of (ids[s.key] || [])) jobs.push({ s, id });
     const results = await pall(jobs, j => api('reports/competition-bymsg-get', compBody(month, 2, b.storeIds, 'STORE', j.id)));
