@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.22
+// @name         AutoBI Core V17.23
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.22
+// @version      17.23
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -9014,9 +9014,9 @@ window.__AutoBIBiTarget99 = (function () {
     const neg = v => v < 0 ? ' class="t-low"' : '';
     const nmCell = x => '<td class="l"><div class="rt2-nm">' + esc(x.nm) + '</div><div class="rt2-id">' + esc([x.id, view === 'total' ? x.shop : ''].filter(Boolean).join(' · ')) + '</div></td>';
     const stamp = 'Số đến hết<br>' + String(dp).padStart(2, '0') + '/' + String(tc.month).padStart(2, '0') + '/' + tc.year;
-    const short = g => esc(g.length > 9 ? g.slice(0, 8) + '…' : g);
+    const short = g => esc(g.length > 12 ? g.slice(0, 11) + '…' : g);
 
-    const gBody = rows.length ? rows.map((x, n) => '<tr><td class="l">' + (n + 1) + '</td><td class="l rt2-nm">' + esc(x.name) + '</td><td>' + nf(x.t) + '</td><td' + neg(x.r) + ' style="font-weight:700">' + nf(x.r) + '</td><td>' + Math.round(x.p) + '%</td><td class="l"><div class="rt2-pc">' + bar(x.d, lvl(x.d)) + '<b class="t-' + lvl(x.d) + '">' + (x.d >= 100 ? '✓ ' : '') + Math.round(x.d) + '%</b></div></td><td>' + (x.d >= 100 ? '—' : nf(Math.ceil(x.need))) + '</td></tr>').join('') : '<tr><td colspan="7" class="rt2-empty">Chưa có số thi đua lũy kế — bấm Bắt Đầu Chạy</td></tr>';
+    const gBody = rows.length ? rows.map((x, n) => '<tr><td class="l">' + (n + 1) + '</td><td class="l rt2-nm">' + esc(x.name) + '</td><td>' + nf(x.t) + '</td><td' + neg(x.r) + ' style="font-weight:700">' + nf(x.r) + '</td><td>' + Math.round(x.p) + '%</td><td><b class="t-' + lvl(x.d) + '">' + (x.d >= 100 ? '✓ ' : '') + Math.round(x.d) + '%</b></td><td>' + (x.d >= 100 ? '—' : nf(Math.ceil(x.need))) + '</td></tr>').join('') : '<tr><td colspan="7" class="rt2-empty">Chưa có số thi đua lũy kế — bấm Bắt Đầu Chạy</td></tr>';
     const sBody = srows.length ? srows.map((x, n) => '<tr><td class="l" style="font-weight:800;color:' + (n < 3 ? '#0b4fb3' : '#475569') + '">' + (n + 1) + '</td>' + nmCell(x) +
       '<td' + neg(x.mon) + ' style="font-weight:800">' + (x.mon == null ? '—' : nf(x.mon, 1)) + '</td><td>' + (x.tgt > 0 ? nf(x.tgt) : '—') + '</td>' +
       '<td>' + (x.ht == null ? '—' : Math.round(x.ht) + '%') + '</td>' +
@@ -9025,9 +9025,12 @@ window.__AutoBIBiTarget99 = (function () {
       : '<tr><td colspan="7" class="rt2-empty">Khai báo chưa có danh sách nhân viên</td></tr>';
 
     const cellBg = d => d >= 100 ? '#dcf2e3' : d >= 80 ? '#fdecc8' : '#fde2e1';
-    const mHead = '<tr><th class="l">Nhân viên</th>' + sg.map(g => '<th title="' + esc(g) + '" style="text-align:center">' + short(g) + '</th>').join('') + '<th>Đạt</th></tr>';
-    const mBody = srows.length && sg.length ? srows.map(x => '<tr>' + nmCell(x) + sg.map(g => { const v = x.cells[g]; return '<td style="text-align:center;background:' + cellBg(v.d) + '" title="' + esc(g) + ': ' + nf(v.a) + ' / ' + nf(v.t) + '"><b class="t-' + lvl(v.d) + '">' + Math.round(v.d) + '%</b></td>'; }).join('') + '<td><b>' + x.ok + '</b>/' + sg.length + '</td></tr>').join('')
-      : '<tr><td colspan="' + (sg.length + 2) + '" class="rt2-empty">Chưa có số thi đua nhân viên</td></tr>';
+    /* V17.23: nhiều nhóm thì chia ma trận thành nhiều khối (tối đa 14 nhóm/khối trên máy tính, 4 trên điện thoại), xếp chồng — không bị cắt cột */
+    const perMax = mobile ? 4 : 14, nBlk = Math.max(1, Math.ceil(sg.length / perMax)), per = Math.ceil(sg.length / nBlk) || 1;
+    const blocks = []; for (let k = 0; k < sg.length; k += per) blocks.push(sg.slice(k, k + per));
+    const mTable = (bg, last) => '<table class="rt2-tbl lk-mx"><thead><tr><th class="l">Nhân viên</th>' + bg.map(g => '<th title="' + esc(g) + '" style="text-align:center">' + short(g) + '</th>').join('') + (last ? '<th>Đạt</th>' : '') + '</tr></thead><tbody>' +
+      srows.map(x => '<tr>' + nmCell(x) + bg.map(g => { const v = x.cells[g]; return '<td style="text-align:center;background:' + cellBg(v.d) + '" title="' + esc(g) + ': ' + nf(v.a) + ' / ' + nf(v.t) + '"><b class="t-' + lvl(v.d) + '">' + Math.round(v.d) + '%</b></td>'; }).join('') + (last ? '<td><b>' + x.ok + '</b>/' + sg.length + '</td>' : '') + '</tr>').join('') + '</tbody></table>';
+    const mHtml = srows.length && sg.length ? blocks.map((bg, k) => '<div class="rt2-tblw' + (k ? ' lk-blk' : '') + '">' + mTable(bg, k === blocks.length - 1) + '</div>').join('') : '<div class="rt2-empty">Chưa có số thi đua nhân viên</div>';
 
     return '<style>' + CSS + LKCSS + '</style><div class="rt2' + (mobile ? ' rt2-m' : '') + '">' +
       '<div class="rt2-hd"><div><div class="rt2-kicker">BÁO CÁO LŨY KẾ (LK NEW)</div><div class="rt2-title">' + esc(title) + '</div></div><div class="rt2-time">' + stamp + '</div></div>' +
@@ -9047,12 +9050,12 @@ window.__AutoBIBiTarget99 = (function () {
         '</div>' +
       '</div>' +
       '<div class="rt2-row2 lk-row2">' +
-        '<div class="rt2-card"><div class="rt2-lbl">NHÓM HÀNG THI ĐUA LŨY KẾ<span class="rt2-sub">đạt khi Dự kiến ≥ 100%</span></div><div class="rt2-tblw"><table class="rt2-tbl"><thead><tr><th class="l">#</th>' + th('lg', 'name', 'Nhóm hàng', 1) + th('lg', 't', 'Target') + th('lg', 'r', 'Lũy kế') + th('lg', 'p', '%HT') + th('lg', 'd', 'Dự kiến', 1) + th('lg', 'need', 'Cần/ngày') + '</tr></thead><tbody>' + gBody + '</tbody></table></div></div>' +
+        '<div class="rt2-card"><div class="rt2-lbl">NHÓM HÀNG THI ĐUA LŨY KẾ<span class="rt2-sub">đạt khi Dự kiến ≥ 100%</span></div><div class="rt2-tblw"><table class="rt2-tbl"><thead><tr><th class="l">#</th>' + th('lg', 'name', 'Nhóm hàng', 1) + th('lg', 't', 'Target') + th('lg', 'r', 'Lũy kế') + th('lg', 'p', '%HT') + th('lg', 'd', 'Dự kiến') + th('lg', 'need', 'Cần/ngày') + '</tr></thead><tbody>' + gBody + '</tbody></table></div></div>' +
         '<div class="rt2-card"><div class="rt2-lbl">DOANH THU NHÂN VIÊN LŨY KẾ<span class="rt2-sub">mục tiêu theo phân bổ Khai báo</span></div><div class="rt2-tblw"><table class="rt2-tbl"><thead><tr><th class="l">#</th>' + th('ls', 'nm', 'Nhân viên', 1) + th('ls', 'mon', 'Lũy kế') + th('ls', 'tgt', 'Mục tiêu') + th('ls', 'ht', '%HT') + th('ls', 'fc', 'Dự kiến') + th('ls', 'ok', 'Nhóm đạt') + '</tr></thead><tbody>' + sBody + '</tbody>' +
           (srows.length ? '<tfoot><tr><td></td><td class="l">Tổng</td><td>' + nf(tMon, 1) + '</td><td>' + nf(tTgt) + '</td><td>' + (tTgt > 0 ? Math.round(tMon / tTgt * 100) + '%' : '—') + '</td><td>' + (tTgt > 0 && dp > 0 ? Math.round(tMon / dp * dim / tTgt * 100) + '%' : '—') + '</td><td></td></tr></tfoot>' : '') +
         '</table></div></div>' +
       '</div>' +
-      '<div class="rt2-card lk-matrix"><div class="rt2-lbl">THI ĐUA NHÂN VIÊN THEO NHÓM HÀNG<span class="rt2-sub">% dự kiến hoàn thành · xanh ≥100% · vàng 80–99% · đỏ &lt;80% · rê chuột xem số làm / target</span></div><div class="rt2-tblw"><table class="rt2-tbl lk-mx"><thead>' + mHead + '</thead><tbody>' + mBody + '</tbody></table></div></div>' +
+      '<div class="rt2-card lk-matrix"><div class="rt2-lbl">THI ĐUA NHÂN VIÊN THEO NHÓM HÀNG<span class="rt2-sub">% dự kiến hoàn thành · xanh ≥100% · vàng 80–99% · đỏ &lt;80% · rê chuột xem số làm / target</span></div>' + mHtml + '</div>' +
       '<div class="rt2-note">Nguồn: BI (API) · Dự kiến = lũy kế ÷ ngày đã qua × số ngày tháng ÷ target · AutoBI V' + esc((typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '') + '</div>' +
     '</div>';
   }
@@ -9063,7 +9066,9 @@ window.__AutoBIBiTarget99 = (function () {
   .rt2-m .lk-matrix{margin-top:0}
   .lk-mx td,.lk-mx th{padding:7px 5px}
   .lk-mx td b{font-size:12px}
-  .lk-mx th{font-size:10.5px}`;
+  .lk-mx th{font-size:10.5px}
+  .lk-mx th{overflow:hidden;text-overflow:ellipsis}
+  .lk-blk{margin-top:12px}`;
 
   window.__AutoBIRt2 = { render, renderLK, sortGroups: null, sortStaff: null, sortLKGroups: null, sortLKStaff: null };
 })();
