@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.20
+// @name         AutoBI Core V17.21
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.20
+// @version      17.21
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -2913,7 +2913,7 @@ window.__AutoBIRun67 = (function () {
             _0x275758();
             const _0x3506c6 = _0x28e709.format || 'image/jpeg';
             const _0x2df369 = _0xe17d94 ? 0.88 : _0x28e709.quality !== undefined ? _0x28e709.quality : 0.95;
-            const _0x3583bb = () => { const _0x1f1212 = { dashboard: 'Dashboard', health: 'S\u1EE9c kh\u1ECFe ST', oneshop: 'Realtime_V1', rt2: 'Realtime_V2', bcbottom: 'Realtime_V2_cu', rt3: 'Realtime_V3_cu', rt4: 'Realtime_V3', multirt: 'Multi_RT', multilk: 'Multi_LK', bcstaff: 'Chi ti\u1EBFt NV', nlnv: 'NangLuc_NV', compare_week: 'So s\u00E1nh tu\u1EA7n', compare: 'So s\u00E1nh CK BI', comparerp: 'So s\u00E1nh CK RP', revenue: 'Chart Doanh thu', service: 'Chart Ph\u1EE5c v\u1EE5' }; const _0x4bc01e = _0x1f1212[_0x18c6ea] || 'B\u00E1o c\u00E1o'; const _0x191319 = new Date(); const _0x3471a6 = String(_0x191319.getHours()).padStart(2, '0'); const _0x5e38a1 = String(_0x191319.getMinutes()).padStart(2, '0'); return _0x4bc01e + '_' + _0x3471a6 + 'h' + _0x5e38a1 + '.jpg'; };
+            const _0x3583bb = () => { const _0x1f1212 = { dashboard: 'Dashboard', health: 'S\u1EE9c kh\u1ECFe ST', oneshop: 'Realtime_V1', rt2: 'Realtime_V2', bcbottom: 'Realtime_V2_cu', rt3: 'Realtime_V3_cu', rt4: 'Realtime_V3', lknew: 'LK_NEW', multirt: 'Multi_RT', multilk: 'Multi_LK', bcstaff: 'Chi ti\u1EBFt NV', nlnv: 'NangLuc_NV', compare_week: 'So s\u00E1nh tu\u1EA7n', compare: 'So s\u00E1nh CK BI', comparerp: 'So s\u00E1nh CK RP', revenue: 'Chart Doanh thu', service: 'Chart Ph\u1EE5c v\u1EE5' }; const _0x4bc01e = _0x1f1212[_0x18c6ea] || 'B\u00E1o c\u00E1o'; const _0x191319 = new Date(); const _0x3471a6 = String(_0x191319.getHours()).padStart(2, '0'); const _0x5e38a1 = String(_0x191319.getMinutes()).padStart(2, '0'); return _0x4bc01e + '_' + _0x3471a6 + 'h' + _0x5e38a1 + '.jpg'; };
             return new Promise(_0x239f9d => { _0x226333.toBlob(_0x243178 => { if (!_0x243178) {
                 UI.showToast('\u274C Kh\u00F4ng th\u1EC3 t\u1EA1o \u1EA3nh!');
                 _0x239f9d(null);
@@ -4124,7 +4124,7 @@ window.__AutoBIRun67 = (function () {
         } let _0x592670 = ''; _0x133240.forEach(_0x31e83a => { _0x592670 += '<option value="' + _0x31e83a + '">' + _0x31e83a + '</option>'; }); const _0x339938 = window.tgdd_nlnv_date_range ? window.tgdd_nlnv_date_range.from : _0x133240[0]; const _0x137556 = window.tgdd_nlnv_date_range ? window.tgdd_nlnv_date_range.to : _0x133240[_0x133240.length - 1]; let _0x426169 = '\n                    <div style="text-align:left; font-weight:bold; color:#333; margin-bottom:15px;">\n                        <label>T\u1EEB ng\u00E0y:</label>\n                        <select id="sel-date-from" style="width:100%; padding:8px; border-radius:5px; border:1px solid #ccc; margin-top:5px; margin-bottom:10px;">\n                            ' + _0x592670 + '\n                        </select>\n                        <label>\u0110\u1EBFn ng\u00E0y:</label>\n                        <select id="sel-date-to" style="width:100%; padding:8px; border-radius:5px; border:1px solid #ccc; margin-top:5px;">\n                            ' + _0x592670 + '\n                        </select>\n                        <button id="btn-clear-time-filter" style="margin-top:15px; width:100%; padding:8px; background:#f8f9fa; border:1px solid #ccc; border-radius:5px; cursor:pointer; font-weight:bold; color:#d63031;">Hi\u1EC3n th\u1ECB To\u00E0n b\u1ED9 th\u00E1ng</button>\n                        <button id="btn-save-time-filter" class="tgdd-msg-btn" style="margin-top:10px; width:100%; background:#007bff;">\u00C1p d\u1EE5ng b\u1ED9 l\u1ECDc</button>\n                    </div>\n                '; _0x426169 += '<style>#tgdd-modal-btn-close { display: none !important; }</style>'; UI.showMsg('L\u1ECCC TH\u1EDCI GIAN', _0x426169, 'info'); setTimeout(() => { document.getElementById('sel-date-from').value = _0x339938; document.getElementById('sel-date-to').value = _0x137556; document.getElementById('btn-clear-time-filter').onclick = () => { window.tgdd_nlnv_date_range = null; document.getElementById(CONSTANTS.DOM_IDS.MSG_MODAL).style.display = 'none'; document.body.classList.remove('tgdd-body-lock'); _0x5d2d05(); }; document.getElementById('btn-save-time-filter').onclick = () => { const _0x1fcd1e = document.getElementById('sel-date-from').value; const _0x46f277 = document.getElementById('sel-date-to').value; const _0xd02de3 = parseInt(_0x1fcd1e.split('/')[0]); const _0x4fad06 = parseInt(_0x46f277.split('/')[0]); if (_0xd02de3 > _0x4fad06) {
             alert('L\u1ED7i: \'T\u1EEB ng\u00E0y\' kh\u00F4ng \u0111\u01B0\u1EE3c l\u1EDBn h\u01A1n \'\u0110\u1EBFn ng\u00E0y\'!');
             return;
-        } window.tgdd_nlnv_date_range = { from: _0x1fcd1e, to: _0x46f277 }; document.getElementById(CONSTANTS.DOM_IDS.MSG_MODAL).style.display = 'none'; document.body.classList.remove('tgdd-body-lock'); _0x5d2d05(); }; }, 200); }; const _0x598bb9 = document.createElement('div'); _0x598bb9.id = CONSTANTS.DOM_IDS.SCROLL_WRAPPER; const _0x2ad4ca = document.createElement('div'); _0x2ad4ca.id = CONSTANTS.DOM_IDS.CAPTURE_AREA; _0x598bb9.appendChild(_0x2ad4ca); document.body.appendChild(_0x598bb9); const _0x119aa7 = document.createElement('div'); _0x119aa7.id = CONSTANTS.DOM_IDS.REPORT_NAV; _0x119aa7.className = 'slide-hidden'; const _0x5aef00 = typeof GM_info !== 'undefined' && GM_info.script ? GM_info.script.name : 'Auto BI'; const _0x2e44ea = document.createElement('div'); _0x2e44ea.id = 'tgdd-sidebar-menu'; const _0x33f6de = '<svg viewBox="0 0 24 24"><path d="M12 3v9.28a4.39 4.39 0 0 0-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/></svg>'; const _0x1852d1 = '<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>'; _0x2e44ea.innerHTML = '\n                <div class="sidebar-header">\n                    <div class="sidebar-title">\uD83E\uDD16 ' + _0x5aef00 + '</div>\n                    <button class="sidebar-close" id="btn-close-sidebar">\u2715</button>\n                </div>\n\n                <div class="sidebar-view-wrapper">\n                    <!-- PANEL 1: MENU G\u1ED0C -->\n                    <div id="panel-menu" class="sidebar-panel">\n                        <div class="sidebar-content">\n                            <div class="tgdd-menu-item" id="btn-menu-comment">' + _0x5bfe13.comment + ' Auto Comment</div>\n                            <div class="tgdd-menu-item" id="btn-menu-deploy">' + _0x5bfe13.line + ' G\u1EEDi Line</div>\n                            <div class="tgdd-menu-item" id="btn-menu-cam">' + _0x5bfe13.cam + ' Ch\u1EE5p \u1EA3nh</div>\n                            <div class="tgdd-menu-item" id="btn-menu-tools">' + _0x5bfe13.tools + ' Ti\u1EC7n \u00EDch</div>\n                            <div class="tgdd-menu-item" id="btn-menu-plan" style="color:#e84393; font-weight:900;">' + _0x5bfe13.plan + ' K\u1EBF ho\u1EA1ch truy\u1EC1n th\u00F4ng</div>\n                                                        <div class="tgdd-menu-item" id="btn-menu-history" style="color:#e67e22;">' + _0x5bfe13.history + ' Xem l\u1EA1i l\u1ECBch s\u1EED</div>\n                            <div class="tgdd-menu-item" id="btn-menu-save-data" style="color:#007bff;">' + _0x5bfe13.save + ' L\u01B0u b\u00E1o c\u00E1o</div>\n                        </div>\n\n                        <div class="sidebar-footer">\n                            <div class="tgdd-menu-item" id="btn-menu-rerun" style="color: #d63031; font-weight:900;">' + _0x5bfe13.rerun + ' Ch\u1EA1y l\u1EA1i b\u00E1o c\u00E1o</div>\n                        </div>\n                    </div>\n                </div>\n            '; const _0x6bfd3c = document.createElement('div'); _0x6bfd3c.id = 'tgdd-sidebar-overlay'; document.body.appendChild(_0x6bfd3c); document.body.appendChild(_0x2e44ea); _0x119aa7.innerHTML = '\n                <!-- N\u00FAt Menu C\u1ED1 \u0110\u1ECBnh -->\n                <div id="btn-menu">\n                    ' + _0x5bfe13.menu + '<span>Menu</span>\n                </div>\n\n                <!-- V\u00F9ng Tr\u01B0\u1EE3t Ngang Ch\u1EE9a C\u00E1c Tab -->\n                <div class="rpt-nav-scroll-area">\n                    <div class="rpt-nav-item" data-tab="dashboard">' + _0x5bfe13.dashboard + '<span>Dashboard</span></div>\n                    <div class="rpt-nav-item active" data-tab="health">' + (_0x5bfe13.health || '\u2764\uFE0F') + '<span>S\u1EE9c kh\u1ECFe ST</span></div>\n                    <div class="rpt-nav-item active" data-tab="oneshop">' + _0x5bfe13.one + '<span>Realtime V1</span></div>\n                    <div class="rpt-nav-item" data-tab="rt2">' + _0x5bfe13.rt3 + '<span>Realtime V2</span></div>\n                    <div class="rpt-nav-item" data-tab="rt4">' + _0x5bfe13.rt4 + '<span>Realtime V3</span></div>\n                    <div class="rpt-nav-item" data-tab="multirt">' + _0x5bfe13.rt + '<span>Multi RT</span></div>\n                    <div class="rpt-nav-item" data-tab="multilk">' + _0x5bfe13.lk + '<span>Multi LK</span></div>\n                    <div class="rpt-nav-item" data-tab="bcstaff">' + _0x5bfe13.staff + '<span>Chi ti\u1EBFt NV</span></div>\n                    <div class="rpt-nav-item" data-tab="nlnv">' + _0x5bfe13.person + '<span>N\u0103ng l\u1EF1c NV</span></div>\n                    <div class="rpt-nav-item" data-tab="compare_week">' + (_0x5bfe13.compare || '\uD83D\uDCC8') + '<span>So s\u00E1nh tu\u1EA7n</span></div>\n                    <div class="rpt-nav-item" data-tab="compare">' + (_0x5bfe13.compare || '\uD83D\uDCC8') + '<span>So s\u00E1nh BI CK</span></div>\n                    <div class="rpt-nav-item" data-tab="comparerp">' + _0x5bfe13.comparerp + '<span>So s\u00E1nh RP CK</span></div>\n                    <div class="rpt-nav-item" data-tab="revenue">' + _0x5bfe13.chart + '<span>Chart Doanh thu</span></div>\n                    <div class="rpt-nav-item" data-tab="service">' + _0x5bfe13.donate + '<span>Chart Ph\u1EE5c v\u1EE5</span></div>\n                </div>\n            '; document.body.appendChild(_0x119aa7); if (!document.getElementById('btn-toggle-report-nav')) {
+        } window.tgdd_nlnv_date_range = { from: _0x1fcd1e, to: _0x46f277 }; document.getElementById(CONSTANTS.DOM_IDS.MSG_MODAL).style.display = 'none'; document.body.classList.remove('tgdd-body-lock'); _0x5d2d05(); }; }, 200); }; const _0x598bb9 = document.createElement('div'); _0x598bb9.id = CONSTANTS.DOM_IDS.SCROLL_WRAPPER; const _0x2ad4ca = document.createElement('div'); _0x2ad4ca.id = CONSTANTS.DOM_IDS.CAPTURE_AREA; _0x598bb9.appendChild(_0x2ad4ca); document.body.appendChild(_0x598bb9); const _0x119aa7 = document.createElement('div'); _0x119aa7.id = CONSTANTS.DOM_IDS.REPORT_NAV; _0x119aa7.className = 'slide-hidden'; const _0x5aef00 = typeof GM_info !== 'undefined' && GM_info.script ? GM_info.script.name : 'Auto BI'; const _0x2e44ea = document.createElement('div'); _0x2e44ea.id = 'tgdd-sidebar-menu'; const _0x33f6de = '<svg viewBox="0 0 24 24"><path d="M12 3v9.28a4.39 4.39 0 0 0-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/></svg>'; const _0x1852d1 = '<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>'; _0x2e44ea.innerHTML = '\n                <div class="sidebar-header">\n                    <div class="sidebar-title">\uD83E\uDD16 ' + _0x5aef00 + '</div>\n                    <button class="sidebar-close" id="btn-close-sidebar">\u2715</button>\n                </div>\n\n                <div class="sidebar-view-wrapper">\n                    <!-- PANEL 1: MENU G\u1ED0C -->\n                    <div id="panel-menu" class="sidebar-panel">\n                        <div class="sidebar-content">\n                            <div class="tgdd-menu-item" id="btn-menu-comment">' + _0x5bfe13.comment + ' Auto Comment</div>\n                            <div class="tgdd-menu-item" id="btn-menu-deploy">' + _0x5bfe13.line + ' G\u1EEDi Line</div>\n                            <div class="tgdd-menu-item" id="btn-menu-cam">' + _0x5bfe13.cam + ' Ch\u1EE5p \u1EA3nh</div>\n                            <div class="tgdd-menu-item" id="btn-menu-tools">' + _0x5bfe13.tools + ' Ti\u1EC7n \u00EDch</div>\n                            <div class="tgdd-menu-item" id="btn-menu-plan" style="color:#e84393; font-weight:900;">' + _0x5bfe13.plan + ' K\u1EBF ho\u1EA1ch truy\u1EC1n th\u00F4ng</div>\n                                                        <div class="tgdd-menu-item" id="btn-menu-history" style="color:#e67e22;">' + _0x5bfe13.history + ' Xem l\u1EA1i l\u1ECBch s\u1EED</div>\n                            <div class="tgdd-menu-item" id="btn-menu-save-data" style="color:#007bff;">' + _0x5bfe13.save + ' L\u01B0u b\u00E1o c\u00E1o</div>\n                        </div>\n\n                        <div class="sidebar-footer">\n                            <div class="tgdd-menu-item" id="btn-menu-rerun" style="color: #d63031; font-weight:900;">' + _0x5bfe13.rerun + ' Ch\u1EA1y l\u1EA1i b\u00E1o c\u00E1o</div>\n                        </div>\n                    </div>\n                </div>\n            '; const _0x6bfd3c = document.createElement('div'); _0x6bfd3c.id = 'tgdd-sidebar-overlay'; document.body.appendChild(_0x6bfd3c); document.body.appendChild(_0x2e44ea); _0x119aa7.innerHTML = '\n                <!-- N\u00FAt Menu C\u1ED1 \u0110\u1ECBnh -->\n                <div id="btn-menu">\n                    ' + _0x5bfe13.menu + '<span>Menu</span>\n                </div>\n\n                <!-- V\u00F9ng Tr\u01B0\u1EE3t Ngang Ch\u1EE9a C\u00E1c Tab -->\n                <div class="rpt-nav-scroll-area">\n                    <div class="rpt-nav-item" data-tab="dashboard">' + _0x5bfe13.dashboard + '<span>Dashboard</span></div>\n                    <div class="rpt-nav-item active" data-tab="health">' + (_0x5bfe13.health || '\u2764\uFE0F') + '<span>S\u1EE9c kh\u1ECFe ST</span></div>\n                    <div class="rpt-nav-item active" data-tab="oneshop">' + _0x5bfe13.one + '<span>Realtime V1</span></div>\n                    <div class="rpt-nav-item" data-tab="rt2">' + _0x5bfe13.rt3 + '<span>Realtime V2</span></div>\n                    <div class="rpt-nav-item" data-tab="rt4">' + _0x5bfe13.rt4 + '<span>Realtime V3</span></div>\n                    <div class="rpt-nav-item" data-tab="lknew">' + _0x5bfe13.plan + '<span>LK NEW</span></div>\n                    <div class="rpt-nav-item" data-tab="multirt">' + _0x5bfe13.rt + '<span>Multi RT</span></div>\n                    <div class="rpt-nav-item" data-tab="multilk">' + _0x5bfe13.lk + '<span>Multi LK</span></div>\n                    <div class="rpt-nav-item" data-tab="bcstaff">' + _0x5bfe13.staff + '<span>Chi ti\u1EBFt NV</span></div>\n                    <div class="rpt-nav-item" data-tab="nlnv">' + _0x5bfe13.person + '<span>N\u0103ng l\u1EF1c NV</span></div>\n                    <div class="rpt-nav-item" data-tab="compare_week">' + (_0x5bfe13.compare || '\uD83D\uDCC8') + '<span>So s\u00E1nh tu\u1EA7n</span></div>\n                    <div class="rpt-nav-item" data-tab="compare">' + (_0x5bfe13.compare || '\uD83D\uDCC8') + '<span>So s\u00E1nh BI CK</span></div>\n                    <div class="rpt-nav-item" data-tab="comparerp">' + _0x5bfe13.comparerp + '<span>So s\u00E1nh RP CK</span></div>\n                    <div class="rpt-nav-item" data-tab="revenue">' + _0x5bfe13.chart + '<span>Chart Doanh thu</span></div>\n                    <div class="rpt-nav-item" data-tab="service">' + _0x5bfe13.donate + '<span>Chart Ph\u1EE5c v\u1EE5</span></div>\n                </div>\n            '; document.body.appendChild(_0x119aa7); if (!document.getElementById('btn-toggle-report-nav')) {
             const _0x57e656 = document.createElement('div');
             _0x57e656.className = 'nav-toggle-btn';
             _0x57e656.id = 'btn-toggle-report-nav';
@@ -4159,7 +4159,7 @@ window.__AutoBIRun67 = (function () {
             window.tgdd_hidden_report_groups = _0x48ea5b.filter(_0xf12822 => _0xf12822 && !_0x47e81e.includes(_0xf12822));
         } const _0x522dab = _0x450ffb === 'nlnv' && (_0x197e7a === 'overview' || _0x197e7a === 'daily'); let _0x469731 = '<div style="max-height: 48vh; overflow-y: auto; text-align: left; padding-right: 5px;">'; _0x469731 += '<div style="font-weight:bold; color:#007bff; margin-bottom:10px; font-size:12.5px; border-bottom:1px dashed #ddd; padding-bottom:5px;">\u2699\uFE0F T\u00D9Y CH\u1ECCN HI\u1EC2N TH\u1ECA:</div>'; _0x469731 += '<div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px;">'; if (_0x450ffb === 'oneshop') {
             _0x469731 += '\n                        <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:bold; font-size:13px; color:#000;">\n                            <input type="checkbox" id="modal-cb-lk" ' + (_0x17901a ? 'checked' : '') + ' style="width:18px; height:18px; accent-color:#007bff;">\n                            \u1EA8n LK\n                        </label>\n                    ';
-        } if (['dashboard', 'health', 'oneshop', 'multirt', 'multilk', 'bcbottom', 'bcstaff', 'nlnv', 'rt4', 'rt2'].includes(_0x450ffb)) {
+        } if (['dashboard', 'health', 'oneshop', 'multirt', 'multilk', 'bcbottom', 'bcstaff', 'nlnv', 'rt4', 'rt2', 'lknew'].includes(_0x450ffb)) {
             _0x469731 += '\n                        <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:bold; font-size:13px; color:#000;">\n                            <input type="checkbox" id="modal-cb-target-bi" ' + (_0x4df754 ? 'checked' : '') + ' style="width:18px; height:18px; accent-color:#007bff;">\n                            Target BI\n                        </label>\n                    ';
         } if (['oneshop', 'multilk'].includes(_0x450ffb)) {
             const _0x58a12f = window.tgdd_show_remaining_cols || false;
@@ -4181,7 +4181,7 @@ window.__AutoBIRun67 = (function () {
             _0x469731 += '<div style="display:flex; flex-direction:column; gap:8px; margin-bottom:15px;">';
             _0x42a0a2.forEach(_0x9a3e90 => { const _0x4bcf77 = !window.tgdd_staff_hidden_tables.includes(_0x9a3e90.id); _0x469731 += '\n                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:12.5px; font-weight:bold; color:#333;">\n                                <input type="checkbox" class="chk-modal-staff-table" value="' + _0x9a3e90.id + '" ' + (_0x4bcf77 ? 'checked' : '') + ' style="width:16px; height:16px; accent-color:#007bff; flex-shrink:0;">\n                                <span>' + _0x9a3e90.name + '</span>\n                            </label>\n                        '; });
             _0x469731 += '</div>';
-        } if (['oneshop', 'multirt', 'multilk', 'compare_week', 'rt4', 'rt2'].includes(_0x450ffb) || _0x522dab) {
+        } if (['oneshop', 'multirt', 'multilk', 'compare_week', 'rt4', 'rt2', 'lknew'].includes(_0x450ffb) || _0x522dab) {
             _0x469731 += '<div style="font-weight:bold; color:#007bff; margin-bottom:10px; font-size:12.5px; border-bottom:1px dashed #ddd; padding-bottom:5px; display:flex; justify-content:space-between; align-items:center;">\n                        <span>\uD83C\uDFAF L\u1ECCC NH\u00D3M H\u00C0NG HI\u1EC2N TH\u1ECA:</span>\n                        <div style="font-size:11px; display:flex; gap:6px; align-items:center;">\n                            <span id="btn-filter-fav" style="cursor:pointer; font-size:14px; line-height:1;" title="B\u1EA5m \u0111\u1EC3 \u00E1p nhanh c\u1EA5u h\u00ECnh Y\u00EAu Th\u00EDch">\uD83D\uDC9F</span>\n                            <span id="btn-filter-select-all" style="color:#007bff; cursor:pointer; font-weight:900;">[Ch\u1ECDn h\u1EBFt]</span>\n                            <span id="btn-filter-select-none" style="color:#d63031; cursor:pointer; font-weight:900;">[B\u1ECF h\u1EBFt]</span>\n                        </div>\n                    </div>';
             _0x469731 += '<div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px 15px; margin-bottom:15px;">';
             _0x48ea5b.forEach(_0x229cfe => { if (!_0x229cfe)
@@ -4271,7 +4271,7 @@ window.__AutoBIRun67 = (function () {
         } }, 100); window.__AutoBILog5.mountHistoryButton(document.getElementById('tgdd-msg-extra')); }; _0x2e27ae.onclick = _0x43ef05; let _0x10626e = false; let _0x17901a = false; let _0x4df754 = _0x13b9c3.defaultTargetBI !== false; let _0x21008a = true; const _0x5d2d05 = () => { document.querySelectorAll('.rpt-nav-item').forEach(_0x319658 => { if (_0x319658.id !== 'btn-menu')
             _0x319658.classList.toggle('active', _0x319658.dataset.tab === _0x450ffb); }); let _0x37589a = _0x2e5685.value; if (_0x450ffb === 'nlnv' && _0x2e5685.dataset.isNlnv !== 'true') {
             _0x37589a = 'overview';
-        } const _0xfc8799 = _0x450ffb === 'nlnv' && (_0x37589a === 'overview' || _0x37589a === 'daily'); if (['dashboard', 'health', 'oneshop', 'multirt', 'multilk', 'compare_week', 'rt4', 'rt2', 'bcstaff'].includes(_0x450ffb) || _0xfc8799) {
+        } const _0xfc8799 = _0x450ffb === 'nlnv' && (_0x37589a === 'overview' || _0x37589a === 'daily'); if (['dashboard', 'health', 'oneshop', 'multirt', 'multilk', 'compare_week', 'rt4', 'rt2', 'lknew', 'bcstaff'].includes(_0x450ffb) || _0xfc8799) {
             if (typeof _0x2e27ae !== 'undefined') {
                 _0x2e27ae.style.display = 'flex';
             }
@@ -4423,6 +4423,9 @@ window.__AutoBIRun67 = (function () {
             else if (_0x450ffb === 'rt3') {
                 _0x329bab = UI.HTML.getRealtimeV3(_0x3aa5c8, _0x13b9c3, _0x37589a);
             }
+            else if (_0x450ffb === 'lknew') {
+                _0x329bab = UI.HTML.getLuyKeNew(_0x3aa5c8, _0x37b477, _0x13b9c3, _0x37589a, _0x4df754, _0x19aafa);
+            }
             else if (_0x450ffb === 'rt2') {
                 _0x329bab = UI.HTML.getRealtimeV2(_0x3aa5c8, _0x37b477, _0x13b9c3, _0x37589a, _0x4df754, _0x19aafa);
             }
@@ -4546,7 +4549,7 @@ window.__AutoBIRun67 = (function () {
             _0x2cfe17.innerHTML = '\uD83D\uDCBE L\u01B0u h\u1EC7 s\u1ED1';
             _0x2cfe17.onclick = () => { _0x2cfe17.innerText = '\u2601\uFE0F \u0110ang \u0111\u1ED3ng b\u1ED9...'; _0x2cfe17.disabled = true; _0x2cfe17.style.animation = 'none'; DATA.saveCloudConfig(_0x13b9c3, () => { UI.showToast('\u2705 \u0110\u00E3 c\u1EADp nh\u1EADt to\u00E0n b\u1ED9 h\u1EC7 s\u1ED1 l\u00EAn Cloud!'); _0x2cfe17.remove(); }); };
             _0x1309fb.appendChild(_0x2cfe17);
-        } _0x5d2d05(); }; }); }; const _0x128861 = ['dashboard', 'health', 'oneshop', 'rt2', 'bcbottom', 'rt3', 'rt4', 'multirt', 'multilk', 'bcstaff', 'nlnv', 'compare_week', 'compare', 'comparerp', 'revenue', 'service']; const _0x2d1469 = window.tgdd_prev_active_tab || 'oneshop'; const _0x1a643b = _0x128861.indexOf(_0x2d1469); const _0x258332 = _0x128861.indexOf(_0x450ffb); window.tgdd_prev_active_tab = _0x450ffb; let _0xa904f8 = ''; if (_0x1a643b !== -1 && _0x258332 !== -1 && _0x1a643b !== _0x258332) {
+        } _0x5d2d05(); }; }); }; const _0x128861 = ['dashboard', 'health', 'oneshop', 'rt2', 'bcbottom', 'rt3', 'rt4', 'lknew', 'multirt', 'multilk', 'bcstaff', 'nlnv', 'compare_week', 'compare', 'comparerp', 'revenue', 'service']; const _0x2d1469 = window.tgdd_prev_active_tab || 'oneshop'; const _0x1a643b = _0x128861.indexOf(_0x2d1469); const _0x258332 = _0x128861.indexOf(_0x450ffb); window.tgdd_prev_active_tab = _0x450ffb; let _0xa904f8 = ''; if (_0x1a643b !== -1 && _0x258332 !== -1 && _0x1a643b !== _0x258332) {
             _0xa904f8 = _0x258332 > _0x1a643b ? 'report-slide-right' : 'report-slide-left';
         }
         else {
@@ -4947,7 +4950,7 @@ window.__AutoBIRun67 = (function () {
                 _0x5035f6.forEach(_0x2aa55d => { _0x3779b5 += _0x407611 * (parseFloat(_0x2aa55d.rate) / 100); });
                 const _0x47ce14 = Math.max(0, _0x407611 - _0x3779b5);
                 _0x605fb7 = _0x47ce14 / _0xb50ba8.length;
-            } return UI.HTML.applyTargetRounding(_0x605fb7, _0x4084be); }, getRealtimeV2: (c, groups, cfg, view, useBi, timeArg) => { try { return window.__AutoBIRt2 ? window.__AutoBIRt2.render({ UI, UTILS }, c, groups, cfg, view, useBi, timeArg) : ''; } catch (e) { return '<div style="padding:40px;text-align:center;color:#b42318;font-weight:700;">Realtime V2 lỗi: ' + String(e && e.message || e) + '</div>'; } }, getRealtimeV4: (_0x11f2c6, _0x208609, _0xbf3329, _0x99373a, _0x1079b1, _0x1b65a9) => { const _0x2c9196 = UI.HTML.resolveTimeContext(_0xbf3329, _0x1b65a9); const _0x3241b4 = _0x2c9196.daysPassed; const _0x11109e = _0x2c9196.daysInMonth; const _0x457416 = window.tgdd_rt4_mode || 'realtime'; const _0x3c3819 = _0x457416 === 'realtime'; let _0x21a1ca = false; if (_0x99373a === 'total') {
+            } return UI.HTML.applyTargetRounding(_0x605fb7, _0x4084be); }, getLuyKeNew: (c, groups, cfg, view, useBi, timeArg) => { try { return window.__AutoBIRt2 ? window.__AutoBIRt2.renderLK({ UI, UTILS }, c, groups, cfg, view, useBi, timeArg) : ''; } catch (e) { return '<div style="padding:40px;text-align:center;color:#b42318;font-weight:700;">LK NEW lỗi: ' + String(e && e.message || e) + '</div>'; } }, getRealtimeV2: (c, groups, cfg, view, useBi, timeArg) => { try { return window.__AutoBIRt2 ? window.__AutoBIRt2.render({ UI, UTILS }, c, groups, cfg, view, useBi, timeArg) : ''; } catch (e) { return '<div style="padding:40px;text-align:center;color:#b42318;font-weight:700;">Realtime V2 lỗi: ' + String(e && e.message || e) + '</div>'; } }, getRealtimeV4: (_0x11f2c6, _0x208609, _0xbf3329, _0x99373a, _0x1079b1, _0x1b65a9) => { const _0x2c9196 = UI.HTML.resolveTimeContext(_0xbf3329, _0x1b65a9); const _0x3241b4 = _0x2c9196.daysPassed; const _0x11109e = _0x2c9196.daysInMonth; const _0x457416 = window.tgdd_rt4_mode || 'realtime'; const _0x3c3819 = _0x457416 === 'realtime'; let _0x21a1ca = false; if (_0x99373a === 'total') {
                 const _0xc428a = (_0xbf3329.shop1 || '').trim().toUpperCase();
                 const _0x5b5597 = (_0xbf3329.shop2 || '').trim().toUpperCase();
                 const _0x1bab49 = (_0xbf3329.shop3 || '').trim().toUpperCase();
@@ -7291,7 +7294,7 @@ const _0x133c09 = '<div style="font-size:15px; color:#333; line-height:1.6; text
             return 'Unknown'; const _0x21c256 = _0x15edb0.split('-'); if (_0x21c256.length >= 2) {
             const _0x224a1d = _0x21c256[_0x21c256.length - 1].trim().match(/\d+/);
             return _0x224a1d ? _0x224a1d[0] : _0x21c256[_0x21c256.length - 1].replace(/[^a-zA-Z0-9]/g, '');
-        } const _0x1ce8b3 = _0x15edb0.match(/\d+/); return _0x1ce8b3 ? _0x1ce8b3[0] : _0x15edb0.replace(/[^a-zA-Z0-9]/g, '_').trim(); }; const _0x2e49d8 = { dashboard: 'Dashboard', health: 'S\u1EE9c kh\u1ECFe ST', oneshop: 'Realtime_V1', rt2: 'Realtime_V2', bcbottom: 'Realtime_V2_cu', rt3: 'Realtime_V3_cu', rt4: 'Realtime_V3', multirt: 'Multi_RT', multilk: 'Multi_LK', bcstaff: 'Chi ti\u1EBFt NV', nlnv: 'N\u0103ng l\u1EF1c NV', compare_week: 'So s\u00E1nh tu\u1EA7n', compare: 'So s\u00E1nh CK BI', comparerp: 'So s\u00E1nh CK RP', revenue: 'Chart Doanh thu', service: 'Chart Ph\u1EE5c v\u1EE5' }; const _0x2bcc18 = new Date(); const _0xcc6501 = String(_0x2bcc18.getHours()).padStart(2, '0') + 'h' + String(_0x2bcc18.getMinutes()).padStart(2, '0'); const _0x362056 = String(_0x2bcc18.getDate()).padStart(2, '0') + '-' + String(_0x2bcc18.getMonth() + 1).padStart(2, '0') + '-' + _0xcc6501; UI.showToast('\uD83D\uDE80 B\u1EAFt \u0111\u1EA7u ch\u1EE5p \u1EA3nh & g\u1EEDi Drive t\u1EF1 \u0111\u1ED9ng...', 0); for (let _0x49688f = 0; _0x49688f < _0xd8560d.length; _0x49688f++) {
+        } const _0x1ce8b3 = _0x15edb0.match(/\d+/); return _0x1ce8b3 ? _0x1ce8b3[0] : _0x15edb0.replace(/[^a-zA-Z0-9]/g, '_').trim(); }; const _0x2e49d8 = { dashboard: 'Dashboard', health: 'S\u1EE9c kh\u1ECFe ST', oneshop: 'Realtime_V1', rt2: 'Realtime_V2', bcbottom: 'Realtime_V2_cu', rt3: 'Realtime_V3_cu', rt4: 'Realtime_V3', lknew: 'LK_NEW', multirt: 'Multi_RT', multilk: 'Multi_LK', bcstaff: 'Chi ti\u1EBFt NV', nlnv: 'N\u0103ng l\u1EF1c NV', compare_week: 'So s\u00E1nh tu\u1EA7n', compare: 'So s\u00E1nh CK BI', comparerp: 'So s\u00E1nh CK RP', revenue: 'Chart Doanh thu', service: 'Chart Ph\u1EE5c v\u1EE5' }; const _0x2bcc18 = new Date(); const _0xcc6501 = String(_0x2bcc18.getHours()).padStart(2, '0') + 'h' + String(_0x2bcc18.getMinutes()).padStart(2, '0'); const _0x362056 = String(_0x2bcc18.getDate()).padStart(2, '0') + '-' + String(_0x2bcc18.getMonth() + 1).padStart(2, '0') + '-' + _0xcc6501; UI.showToast('\uD83D\uDE80 B\u1EAFt \u0111\u1EA7u ch\u1EE5p \u1EA3nh & g\u1EEDi Drive t\u1EF1 \u0111\u1ED9ng...', 0); for (let _0x49688f = 0; _0x49688f < _0xd8560d.length; _0x49688f++) {
             const _0x1066c4 = _0xd8560d[_0x49688f];
             UI.showToast('\uD83D\uDCF8 [' + (_0x49688f + 1) + '/' + _0xd8560d.length + '] \u0110ang m\u1EDF tab: ' + _0x1066c4.toUpperCase() + '...', 0);
             const _0x41a9bb = document.querySelector('.rpt-nav-item[data-tab="' + _0x1066c4 + '"]');
@@ -8916,13 +8919,149 @@ window.__AutoBIBiTarget99 = (function () {
   document.addEventListener('click', ev => {
     const thEl = ev.target && ev.target.closest && ev.target.closest('[data-rt2-sort]');
     if (!thEl) return;
-    const [tbl, k] = thEl.getAttribute('data-rt2-sort').split(':');
-    const prop = tbl === 'g' ? 'sortGroups' : 'sortStaff';
+    const [tbl, k, tabName] = thEl.getAttribute('data-rt2-sort').split(':');
+    const prop = { g: 'sortGroups', s: 'sortStaff', lg: 'sortLKGroups', ls: 'sortLKStaff' }[tbl] || 'sortStaff';
     const cur = window.__AutoBIRt2[prop];
     window.__AutoBIRt2[prop] = { k, d: cur && cur.k === k ? -cur.d : (k === 'name' || k === 'nm' || k === 'shop' ? 1 : -1) };
-    const tab = document.querySelector('.rpt-nav-item[data-tab="rt2"]');
+    const tab = document.querySelector('.rpt-nav-item[data-tab="' + (tabName || 'rt2') + '"]');
     if (tab) tab.click();
   }, true);
 
-  window.__AutoBIRt2 = { render, sortGroups: null, sortStaff: null };
+
+  /* ==== V17.21: LK NEW (tab 'lknew') — báo cáo lũy kế buổi sáng, cùng giao diện Realtime V2. Chỉ đọc cache: link2, link4_smart, link6 (revenue, competition), staffReal. ==== */
+  function renderLK(h, c, groups, cfg, view, useBi, timeArg) {
+    const { UI, UTILS } = h;
+    c = c || {}; cfg = cfg || {}; groups = groups || [];
+    const mobile = UTILS.isMobile();
+    const tc = UI.HTML.resolveTimeContext(cfg, timeArg);
+    const dp = num(tc.daysPassed), dim = num(tc.daysInMonth) || 30;
+    const shopIdx = [1, 2, 3, 4, 5].filter(i => (cfg['shop' + i] || '').trim());
+    const idxs = view === 'total' ? shopIdx : [Number(String(view).replace('shop', ''))];
+    const title = view === 'total' ? 'Cụm: ' + (cfg.cluster && cfg.cluster.trim() ? cfg.cluster : 'TỔNG CỤM') : (cfg[view + 'Short'] || cfg[view] || view);
+    const fc = (v, t) => t > 0 && dp > 0 ? v / dp * dim / t * 100 : (v > 0 ? 100 : 0);
+    const arrow = p => (p >= 100 ? '▲ ' : '▼ ') + Math.round(p) + '%';
+
+    /* Doanh thu lũy kế */
+    const l2 = (c.link2 && c.link2[view]) || {};
+    const monT0 = view === 'total' ? num(cfg.totalTarget) : num(cfg['target' + idxs[0]]);
+    const monT = useBi ? (num(l2.t) || monT0) : (monT0 || num(l2.t));
+    const lk = num(l2.r), lkP = pctOf(lk, monT), timeP = pctOf(dp, dim);
+    const dk = useBi && l2.dk != null ? num(l2.dk) : fc(lk, monT);
+    const left = Math.max(0, dim - dp);
+    const needDay = left > 0 ? Math.max(0, monT - lk) / left : 0;
+    const avgDay = dp > 0 ? lk / dp : 0;
+    const tgLim = parseFloat(cfg.installment) || 30, tg = num(l2.tg);
+    const qd = pctOf(lk, num(l2.dtlk));
+
+    /* Nhóm hàng thi đua lũy kế — cách tính như Realtime V3 chế độ Lũy kế */
+    const allCh = idxs.some(i => (cfg['shop' + i] || '').trim().toUpperCase().startsWith('Đ'));
+    let gl = groups.filter(g => allCh ? true : g.channel === 'T');
+    gl = UTILS.filterActiveGroups(gl, cfg);
+    if (window.tgdd_hidden_report_groups && window.tgdd_hidden_report_groups.length) gl = gl.filter(g => !window.tgdd_hidden_report_groups.includes(g.short));
+    const gT = (g, key) => num(UI.HTML.getFinalGroupTarget((c.link4_smart && c.link4_smart[g] && c.link4_smart[g][key] || {}).t, g, key, cfg, groups, false, useBi));
+    const rows = gl.map(g => {
+      const b = (c.link4_smart && c.link4_smart[g.short] && c.link4_smart[g.short][view]) || {};
+      const t = gT(g.short, view), r = num(b.r);
+      const p = t > 0 ? r / t * 100 : (r > 0 ? 100 : 0);
+      const d = useBi && b.pd != null ? num(b.pd) : fc(r, t);
+      return { name: g.short, t, r, p, d, need: left > 0 ? Math.max(0, t - r) / left : 0 };
+    });
+    const st = window.__AutoBIRt2.sortLKGroups || { k: 'd', d: -1 };
+    rows.sort((x, y) => (x[st.k] > y[st.k] ? 1 : x[st.k] < y[st.k] ? -1 : 0) * st.d || y.d - x.d);
+    const pass = rows.filter(x => x.d >= 100).length;
+    const passP = pctOf(pass, rows.length);
+
+    /* Nhân viên: doanh thu + thi đua theo nhóm (cách tính như Chi tiết NV) */
+    const rateOf = x => { const r = parseFloat(x.rate); return isFinite(r) && r > 0 ? r : 0; };
+    const shopMon = i => { const s2 = (c.link2 && c.link2['shop' + i]) || {}; return useBi ? (num(s2.t) || num(cfg['target' + i])) : (num(cfg['target' + i]) || num(s2.t)); };
+    const mates = i => (cfg.staffList || []).filter(y => (Number(y.shopIdx) || 1) === i);
+    const alloc = (T, x, i) => {
+      if (T <= 0) return 0;
+      if (rateOf(x) > 0) return Math.round(T * rateOf(x) / 100);
+      const m = mates(i), fixed = m.filter(y => rateOf(y) > 0).reduce((a, y) => a + Math.round(T * rateOf(y) / 100), 0), auto = m.filter(y => !rateOf(y)).length;
+      return auto ? Math.round(Math.max(0, T - fixed) / auto) : 0;
+    };
+    const comp = (cfg.compData || []).map(x => x.group);
+    const sg = gl.map(g => g.short).filter(g => !comp.length || comp.includes(g));
+    const isMoney = g => { const o = groups.find(x => x.short === g); return !!(o && o.type && /doanhthu|tiền/i.test(o.type)); };
+    const staff = (cfg.staffList || []).filter(x => idxs.includes(Number(x.shopIdx) || 1));
+    const srows = staff.map(x => {
+      const i = Number(x.shopIdx) || 1, key = 'shop' + i;
+      const m = c.link6 && c.link6[key] && c.link6[key].revenue && c.link6[key].revenue[x.name];
+      const cp = (c.link6 && c.link6[key] && c.link6[key].competition) || {};
+      const tgt = alloc(shopMon(i), x, i);
+      const mon = m ? num(typeof m === 'object' ? m.dtqd : m) : null;
+      const cells = {};
+      let ok = 0;
+      sg.forEach(g => {
+        const a = num((cp[x.name] && cp[x.name][g]) || (c.staffReal && c.staffReal[x.name] && c.staffReal[x.name][g]) || 0);
+        const gt = UI.HTML.calculateStaffPersonalTarget(gT(g, key), x, mates(i), isMoney(g));
+        const d = gt > 0 ? a / dp * dim / gt * 100 : (a > 0 ? 100 : 0);
+        cells[g] = { a, t: gt, d: dp > 0 ? d : 0 };
+        if (dp > 0 && Math.round(d) >= 100) ok++;
+      });
+      const parts = String(x.name).split(' - ');
+      return { id: parts.length > 1 ? parts[0] : '', nm: parts.length > 1 ? parts.slice(1).join(' - ') : x.name, shop: cfg[key + 'Short'] || cfg[key] || key, mon, tgt, ht: mon != null && tgt > 0 ? mon / tgt * 100 : null, fc: mon != null && tgt > 0 && dp > 0 ? mon / dp * dim / tgt * 100 : null, ok, cells };
+    });
+    const ss = window.__AutoBIRt2.sortLKStaff || { k: 'fc', d: -1 };
+    const sv = v => v == null ? -Infinity : v;
+    srows.sort((x, y) => (sv(x[ss.k]) > sv(y[ss.k]) ? 1 : sv(x[ss.k]) < sv(y[ss.k]) ? -1 : 0) * ss.d || sv(y.mon) - sv(x.mon));
+    const tMon = srows.reduce((a, x) => a + num(x.mon), 0), tTgt = srows.reduce((a, x) => a + num(x.tgt), 0);
+
+    const th = (tbl, k, label, l) => { const s0 = tbl === 'lg' ? st : ss; const ar = s0.k === k ? (s0.d < 0 ? ' ▼' : ' ▲') : ''; return '<th' + (l ? ' class="l"' : '') + ' data-rt2-sort="' + tbl + ':' + k + ':lknew">' + label + ar + '</th>'; };
+    const neg = v => v < 0 ? ' class="t-low"' : '';
+    const nmCell = x => '<td class="l"><div class="rt2-nm">' + esc(x.nm) + '</div><div class="rt2-id">' + esc([x.id, view === 'total' ? x.shop : ''].filter(Boolean).join(' · ')) + '</div></td>';
+    const stamp = 'Số đến hết<br>' + String(dp).padStart(2, '0') + '/' + String(tc.month).padStart(2, '0') + '/' + tc.year;
+    const short = g => esc(g.length > 9 ? g.slice(0, 8) + '…' : g);
+
+    const gBody = rows.length ? rows.map((x, n) => '<tr><td class="l">' + (n + 1) + '</td><td class="l rt2-nm">' + esc(x.name) + '</td><td>' + nf(x.t) + '</td><td' + neg(x.r) + ' style="font-weight:700">' + nf(x.r) + '</td><td>' + Math.round(x.p) + '%</td><td class="l"><div class="rt2-pc">' + bar(x.d, lvl(x.d)) + '<b class="t-' + lvl(x.d) + '">' + (x.d >= 100 ? '✓ ' : '') + Math.round(x.d) + '%</b></div></td><td>' + (x.d >= 100 ? '—' : nf(Math.ceil(x.need))) + '</td></tr>').join('') : '<tr><td colspan="7" class="rt2-empty">Chưa có số thi đua lũy kế — bấm Bắt Đầu Chạy</td></tr>';
+    const sBody = srows.length ? srows.map((x, n) => '<tr><td class="l" style="font-weight:800;color:' + (n < 3 ? '#0b4fb3' : '#475569') + '">' + (n + 1) + '</td>' + nmCell(x) +
+      '<td' + neg(x.mon) + ' style="font-weight:800">' + (x.mon == null ? '—' : nf(x.mon, 1)) + '</td><td>' + (x.tgt > 0 ? nf(x.tgt) : '—') + '</td>' +
+      '<td>' + (x.ht == null ? '—' : Math.round(x.ht) + '%') + '</td>' +
+      '<td>' + (x.fc == null ? '—' : '<b class="t-' + lvl(x.fc) + '">' + arrow(x.fc) + '</b>') + '</td>' +
+      '<td><b class="t-' + lvl(pctOf(x.ok, sg.length)) + '">' + x.ok + '</b> / ' + sg.length + '</td></tr>').join('')
+      : '<tr><td colspan="7" class="rt2-empty">Khai báo chưa có danh sách nhân viên</td></tr>';
+
+    const cellBg = d => d >= 100 ? '#dcf2e3' : d >= 80 ? '#fdecc8' : '#fde2e1';
+    const mHead = '<tr><th class="l">Nhân viên</th>' + sg.map(g => '<th title="' + esc(g) + '" style="text-align:center">' + short(g) + '</th>').join('') + '<th>Đạt</th></tr>';
+    const mBody = srows.length && sg.length ? srows.map(x => '<tr>' + nmCell(x) + sg.map(g => { const v = x.cells[g]; return '<td style="text-align:center;background:' + cellBg(v.d) + '" title="' + esc(g) + ': ' + nf(v.a) + ' / ' + nf(v.t) + '"><b class="t-' + lvl(v.d) + '">' + Math.round(v.d) + '%</b></td>'; }).join('') + '<td><b>' + x.ok + '</b>/' + sg.length + '</td></tr>').join('')
+      : '<tr><td colspan="' + (sg.length + 2) + '" class="rt2-empty">Chưa có số thi đua nhân viên</td></tr>';
+
+    return '<style>' + CSS + LKCSS + '</style><div class="rt2' + (mobile ? ' rt2-m' : '') + '">' +
+      '<div class="rt2-hd"><div><div class="rt2-kicker">BÁO CÁO LŨY KẾ (LK NEW)</div><div class="rt2-title">' + esc(title) + '</div></div><div class="rt2-time">' + stamp + '</div></div>' +
+      '<div class="rt2-row1">' +
+        '<div class="rt2-card rt2-hero"><div class="rt2-lbl">DOANH THU LŨY KẾ THÁNG ' + tc.month + '<span class="rt2-badge ' + (dk >= 100 ? 't-ok' : 't-low') + '">' + (dk >= 100 ? 'Đúng tiến độ' : 'Chậm tiến độ') + '</span></div>' +
+          '<div class="rt2-big"><b>' + nf(lk) + '</b><span>/ ' + nf(monT) + '</span><em>' + lkP.toFixed(1) + '%</em></div>' +
+          '<div class="rt2-bar"><i class="hero" style="width:' + Math.min(100, lkP).toFixed(1) + '%"></i><span class="rt2-mark" style="left:' + Math.min(100, timeP).toFixed(1) + '%;background:#fff"></span></div>' +
+          '<div class="rt2-foot"><span>Target tháng: ' + nf(monT) + '</span><span>Còn thiếu: ' + nf(Math.max(0, monT - lk)) + '</span></div></div>' +
+        '<div class="rt2-card"><div class="rt2-lbl">TIẾN ĐỘ THÁNG<span class="rt2-sub">' + dp + '/' + dim + ' ngày · còn ' + left + ' ngày</span></div>' +
+          '<div class="rt2-big"><b style="font-size:34px" class="t-' + lvl(dk) + '">' + arrow(dk) + '</b><span style="color:#334155">dự kiến hoàn thành</span></div>' +
+          '<div class="rt2-mini3"><div class="rt2-mini"><div>Thời gian qua</div><b>' + timeP.toFixed(1) + '%</b></div><div class="rt2-mini"><div>Bình quân / ngày</div><b>' + nf(avgDay) + '</b></div><div class="rt2-mini"><div>Cần / ngày</div><b class="' + (needDay > avgDay ? 't-low' : 't-ok') + '">' + nf(needDay) + '</b></div></div></div>' +
+        '<div class="rt2-kpi4">' +
+          '<div class="rt2-kpi"><div>% TRẢ CHẬM LK</div><b class="' + (tg >= tgLim ? 't-ok' : 't-low') + '">' + Math.round(tg) + '% <small>/ ' + tgLim + '%</small></b></div>' +
+          '<div class="rt2-kpi"><div>TỈ LỆ QUY ĐỔI LK</div><b>' + Math.round(qd) + '%</b></div>' +
+          '<div class="rt2-kpi"><div>NHÓM HÀNG ĐẠT (DK)</div><b>' + pass + ' <small>/ ' + rows.length + '</small></b></div>' +
+          '<div class="rt2-kpi"><div>%HT THI ĐUA</div><b class="' + (passP >= 50 ? 't-ok' : 't-low') + '">' + Math.round(passP) + '%</b></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="rt2-row2 lk-row2">' +
+        '<div class="rt2-card"><div class="rt2-lbl">NHÓM HÀNG THI ĐUA LŨY KẾ<span class="rt2-sub">đạt khi Dự kiến ≥ 100%</span></div><div class="rt2-tblw"><table class="rt2-tbl"><thead><tr><th class="l">#</th>' + th('lg', 'name', 'Nhóm hàng', 1) + th('lg', 't', 'Target') + th('lg', 'r', 'Lũy kế') + th('lg', 'p', '%HT') + th('lg', 'd', 'Dự kiến', 1) + th('lg', 'need', 'Cần/ngày') + '</tr></thead><tbody>' + gBody + '</tbody></table></div></div>' +
+        '<div class="rt2-card"><div class="rt2-lbl">DOANH THU NHÂN VIÊN LŨY KẾ<span class="rt2-sub">mục tiêu theo phân bổ Khai báo</span></div><div class="rt2-tblw"><table class="rt2-tbl"><thead><tr><th class="l">#</th>' + th('ls', 'nm', 'Nhân viên', 1) + th('ls', 'mon', 'Lũy kế') + th('ls', 'tgt', 'Mục tiêu') + th('ls', 'ht', '%HT') + th('ls', 'fc', 'Dự kiến') + th('ls', 'ok', 'Nhóm đạt') + '</tr></thead><tbody>' + sBody + '</tbody>' +
+          (srows.length ? '<tfoot><tr><td></td><td class="l">Tổng</td><td>' + nf(tMon, 1) + '</td><td>' + nf(tTgt) + '</td><td>' + (tTgt > 0 ? Math.round(tMon / tTgt * 100) + '%' : '—') + '</td><td>' + (tTgt > 0 && dp > 0 ? Math.round(tMon / dp * dim / tTgt * 100) + '%' : '—') + '</td><td></td></tr></tfoot>' : '') +
+        '</table></div></div>' +
+      '</div>' +
+      '<div class="rt2-card lk-matrix"><div class="rt2-lbl">THI ĐUA NHÂN VIÊN THEO NHÓM HÀNG<span class="rt2-sub">% dự kiến hoàn thành · xanh ≥100% · vàng 80–99% · đỏ &lt;80% · rê chuột xem số làm / target</span></div><div class="rt2-tblw"><table class="rt2-tbl lk-mx"><thead>' + mHead + '</thead><tbody>' + mBody + '</tbody></table></div></div>' +
+      '<div class="rt2-note">Nguồn: BI (API) · Dự kiến = lũy kế ÷ ngày đã qua × số ngày tháng ÷ target · AutoBI V' + esc((typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '') + '</div>' +
+    '</div>';
+  }
+  const LKCSS = `
+  .lk-matrix{margin-top:14px}
+  .rt2 .lk-row2{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .rt2-m .lk-row2{grid-template-columns:minmax(0,1fr)}
+  .rt2-m .lk-matrix{margin-top:0}
+  .lk-mx td,.lk-mx th{padding:7px 5px}
+  .lk-mx td b{font-size:12px}
+  .lk-mx th{font-size:10.5px}`;
+
+  window.__AutoBIRt2 = { render, renderLK, sortGroups: null, sortStaff: null, sortLKGroups: null, sortLKStaff: null };
 })();
