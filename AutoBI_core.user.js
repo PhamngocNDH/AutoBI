@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.26
+// @name         AutoBI Core V17.32
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.26
+// @version      17.32
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -3014,7 +3014,7 @@ window.__AutoBIRun67 = (function () {
             return;
         } let _0x5daa04 = []; document.querySelectorAll('.chk-cmt-opt:checked').forEach(_0x1cb599 => _0x5daa04.push(_0x1cb599.value)); let _0x508632 = null; const _0x502329 = document.querySelectorAll('.chk-table-select'); if (_0x502329.length > 0) {
             _0x508632 = Array.from(_0x502329).filter(_0x5190ae => _0x5190ae.checked).map(_0x541c95 => _0x541c95.value);
-        } _0x4b9ef0.remove(); document.body.classList.remove('tgdd-body-lock'); _0xe98bb0(_0x42fa4c, _0x5daa04, _0x508632); }; }, initHome: () => { if (document.getElementById(CONSTANTS.DOM_IDS.BOTTOM_NAV))
+        } _0x4b9ef0.remove(); document.body.classList.remove('tgdd-body-lock'); _0xe98bb0(_0x42fa4c, _0x5daa04, _0x508632); }; }, initHome: () => { try { window.__AutoBIUI = UI; window.__AutoBIAuthGet = () => AUTH_STATE; } catch (_) { } if (document.getElementById(CONSTANTS.DOM_IDS.BOTTOM_NAV))
             return; if (!document.body)
             return; const _0x375309 = document.createElement('div'); _0x375309.id = CONSTANTS.DOM_IDS.BOTTOM_NAV; const _0x238a51 = GM_getValue(CONSTANTS.KEYS.AUTO_STATE, -1); const _0x52010d = _0x238a51 >= 0 && _0x238a51 < 99; const _0x204bb5 = window.location.href; const _0x553dff = _0x204bb5.includes('crm.thegioididong.com'); if (_0x553dff && !_0x52010d)
             return; if (_0x52010d) {
@@ -4607,6 +4607,10 @@ window.__AutoBIRun67 = (function () {
             _0x18f3e4 = UI.HTML.generateCommentMultiShop(_0x3aa5c8, _0x37b477, _0x13b9c3, _0x27b159, _0x4df754);
             _0x2c7bf9 = 'Auto Comment (' + (_0x27b159 ? 'Realtime' : 'L\u0169y k\u1EBF') + ')';
         }
+        else if (_0x2ec2fe === 'rt2' || _0x2ec2fe === 'lknew') {
+            _0x18f3e4 = window.__AutoBIRt2 ? window.__AutoBIRt2.comment({ UI, UTILS }, _0x3aa5c8, _0x37b477, _0x13b9c3, _0x4df754, null, _0x2ec2fe === 'rt2' ? 'rt' : 'lk') : '';
+            _0x2c7bf9 = 'Auto Comment (' + (_0x2ec2fe === 'rt2' ? 'Realtime V2' : 'LK NEW') + ')';
+        }
         else if (_0x2ec2fe === 'bcstaff') {
             const _0x538af7 = _0x2e5685.value;
             _0x18f3e4 = UI.HTML.generateCommentStaff(_0x3aa5c8, _0x37b477, _0x13b9c3, _0x538af7, _0x4df754);
@@ -4780,6 +4784,9 @@ window.__AutoBIRun67 = (function () {
             }
             else if (_0x35f21c === 'multirt' || _0x35f21c === 'multilk') {
                 _0x45525b = UI.HTML.generateCommentMultiShop(_0x3aa5c8, _0x37b477, _0x13b9c3, _0x35f21c === 'multirt', _0x4df754);
+            }
+            else if ((_0x35f21c === 'rt2' || _0x35f21c === 'lknew') && window.__AutoBIRt2) {
+                _0x45525b = window.__AutoBIRt2.comment({ UI, UTILS }, _0x3aa5c8, _0x37b477, _0x13b9c3, _0x4df754, null, _0x35f21c === 'rt2' ? 'rt' : 'lk');
             }
             else if (_0x35f21c === 'bcstaff') {
                 _0x45525b = UI.HTML.generateCommentStaff(_0x3aa5c8, _0x37b477, _0x13b9c3, _0x2e5685.value, _0x4df754);
@@ -5474,7 +5481,7 @@ window.__AutoBIRun67 = (function () {
             else {
                 if ((_0x15615f[_0x3f9170] || '').toUpperCase().startsWith('\u0110'))
                     _0x4a938a = true;
-            } const _0x5c120e = _0xb5fce1[_0x124321] || {}; const _0x304648 = _0xb5fce1[_0x6a0e67] || (() => { /* V17.16: Sheet chưa có bản lưu tháng trước → dùng số cùng kỳ lấy từ API ở lượt chạy gần nhất */ try { const c = GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {}; if (!c.link8_health_prev || !c.__healthPrev || c.__healthPrev.key !== _0x6a0e67) return {}; const out = {}; const fl = (o, pre) => { for (const k in o) { if (!Object.prototype.hasOwnProperty.call(o, k)) continue; const v = o[k], kk = pre + '|||' + k; if (v && typeof v === 'object' && !Array.isArray(v)) fl(v, kk); else out[kk] = v; } }; fl(c.link8_health_prev, 'link8_health'); return out; } catch (_) { return {}; } })(); const _0x772f57 = _0x56cba4 => ['Android', 'Samsung', 'OPPO', 'Xiaomi', 'Vivo', 'Realme', 'Laptop', 'Tablet', '\u0110i\u1EC7n t\u1EED', 'Tivi', 'Loa Karaoke', 'D\u00E0n m\u00E1y', '\u0110i\u1EC7n l\u1EA1nh', 'T\u1EE7 l\u1EA1nh', 'T\u1EE7 \u0111\u00F4ng', 'T\u1EE7 m\u00E1t', 'M\u00E1y gi\u1EB7t', 'M\u00E1y s\u1EA5y', 'M\u00E1y l\u1EA1nh', 'M\u00E1y r\u1EEDa ch\u00E9n', 'M\u00E1y n\u01B0\u1EDBc n\u00F3ng'].includes(_0x56cba4); const _0xf97549 = (_0x48a4c7, _0x1ef6cd) => { if (_0x1ef6cd === 'Android') {
+            } const _0x5c120e = _0xb5fce1[_0x124321] || {}; const _0x304648 = ((apiPrev, sheetPrev) => Object.keys(apiPrev).length ? apiPrev : (sheetPrev || {}))((() => { /* V17.27: ưu tiên số cùng kỳ tháng trước lấy từ API (cùng nguồn với SK ST); chỉ dùng bản lưu Sheet khi API không có số cho ngày đang xem. Trước đây Sheet có bản lưu cũ (thiếu Ngành hàng BI) thì cột Tháng trước ra toàn "-" */ try { const c = GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {}; if (!c.link8_health_prev || !c.__healthPrev || c.__healthPrev.key !== _0x6a0e67) return {}; const out = {}; const fl = (o, pre) => { for (const k in o) { if (!Object.prototype.hasOwnProperty.call(o, k)) continue; const v = o[k], kk = pre + '|||' + k; if (v && typeof v === 'object' && !Array.isArray(v)) fl(v, kk); else out[kk] = v; } }; fl(c.link8_health_prev, 'link8_health'); return out; } catch (_) { return {}; } })(), _0xb5fce1[_0x6a0e67]); const _0x772f57 = _0x56cba4 => ['Android', 'Samsung', 'OPPO', 'Xiaomi', 'Vivo', 'Realme', 'Laptop', 'Tablet', '\u0110i\u1EC7n t\u1EED', 'Tivi', 'Loa Karaoke', 'D\u00E0n m\u00E1y', '\u0110i\u1EC7n l\u1EA1nh', 'T\u1EE7 l\u1EA1nh', 'T\u1EE7 \u0111\u00F4ng', 'T\u1EE7 m\u00E1t', 'M\u00E1y gi\u1EB7t', 'M\u00E1y s\u1EA5y', 'M\u00E1y l\u1EA1nh', 'M\u00E1y r\u1EEDa ch\u00E9n', 'M\u00E1y n\u01B0\u1EDBc n\u00F3ng'].includes(_0x56cba4); const _0xf97549 = (_0x48a4c7, _0x1ef6cd) => { if (_0x1ef6cd === 'Android') {
                 const _0x1f8409 = { sl: parseFloat(_0x48a4c7['link8_health|||' + _0x3f9170 + '|||Smartphone|||sl']) || 0, dt: parseFloat(_0x48a4c7['link8_health|||' + _0x3f9170 + '|||Smartphone|||dtqd']) || 0 };
                 const _0x2d16fb = { sl: parseFloat(_0x48a4c7['link8_health|||' + _0x3f9170 + '|||Apple|||sl']) || 0, dt: parseFloat(_0x48a4c7['link8_health|||' + _0x3f9170 + '|||Apple|||dtqd']) || 0 };
                 return { sl: Math.max(0, _0x1f8409.sl - _0x2d16fb.sl), dt: Math.max(0, _0x1f8409.dt - _0x2d16fb.dt) };
@@ -5686,7 +5693,7 @@ window.__AutoBIRun67 = (function () {
                 }
             } _0x4985d9 += '<tr><td class="' + _0x36f66d + ' bold" style="' + _0x4f10d3 + ' text-align:left;">' + _0x4c090f + '</td><td class="bg-white">' + UTILS.formatNumber(_0x1cf117.t) + '</td><td class="bg-white bold">' + UTILS.formatRealData(_0x1cf117.r) + '</td><td class="' + _0x210497 + ' bold">' + UTILS.formatPercent(_0x1cf117.p) + '</td>' + _0x548fb6 + '</tr>'; }); const _0x33d101 = _0x706aa3 ? 7 : 5; const _0x2a7f0b = _0x16e4e9 ? '\u25BC' : '\u25BD'; let _0x26114d = _0x379ab6 ? '' : '<td class="bg-header-blue os-text">Nh\u00F3m h\u00E0ng</td><td class="bg-header-blue os-text">Target</td><td class="bg-header-blue os-text">Th\u1EF1c hi\u1EC7n</td><td class="bg-header-blue os-text">% Hi\u1EC7n t\u1EA1i</td><td class="bg-header-blue os-text" id="tgdd-sort-btn-one" style="cursor:pointer;">D\u1EF1 ki\u1EBFn <span class="sort-btn">' + _0x2a7f0b + '</span></td>'; if (!_0x379ab6 && _0x706aa3) {
                 _0x26114d += '<td class="bg-header-blue os-text" style="background-color: #fce4d6; color: #c65911; font-size: 11px;">Target c\u00F2n l\u1EA1i</td><td class="bg-header-blue os-text" style="background-color: #fce4d6; color: #c65911; font-size: 11px;">Target ng\u00E0y c\u00F2n l\u1EA1i</td>';
-            } const _0x11e18f = _0x379ab6 ? '\n                    <tr style="height:30px;"><td colspan="2" style="border-right:none; text-align:left;">\uD83D\uDD52 <span class="txt-red os-text">Time:</span></td><td colspan="2" style="border-left:none;" class="txt-red bold os-text">' + _0x4823e5.realtimeStr + '</td>\n                    <tr style="height:30px;"><td colspan="2" class="bg-red os-text">M\u1EE5c ti\u00EAu ng\u00E0y</td><td colspan="2" class="bg-green os-text">Th\u1EF1c hi\u1EC7n</td></tr>\n                    <tr style="height:35px;"><td colspan="2" class="txt-red fs-xlarge bold os-text">' + UTILS.formatNumber(_0x3b35bc) + ' Tri\u1EC7u</td><td colspan="2" class="txt-blue fs-xlarge bold os-text">' + UTILS.formatNumber(_0xc9879f) + ' Tri\u1EC7u</td></tr>\n                    <tr style="height:35px;"><td class="txt-green bold os-text">Ho\u00E0n th\u00E0nh</td><td class="os-text">' + UTILS.formatPercent(_0x424d75) + '</td><td class="bold os-text">%Q\u0110</td><td class="txt-blue bold os-text">' + UTILS.formatPercent(_0x291f57) + '</td></tr>\n                    <tr style="height:35px;"><td colspan="2" class="txt-red bold os-text">M\u1EE5c ti\u00EAu tr\u1EA3 ch\u1EADm:</td><td colspan="2" class="bg-yellow txt-red bold fs-large os-text">' + _0x5c3992.installment + '%</td></tr>\n                    <tr style="height:35px;"><td colspan="2" class="txt-red bold fs-large os-text">Realtime:</td><td colspan="2" class="fs-large bold os-text">' + UTILS.formatPercent(_0x3e8dcb.tg) + '</td></tr>\n                    <tr style="height:35px; font-weight:bold;"><td colspan="2" class="bg-yellow os-text">Realtime: ' + _0x3038b3 + ' Nh\u00F3m</td><td class="bg-yellow os-text">\u0110\u1EA1t:</td><td class="bg-yellow os-text" style="font-size:16px;">' + _0x409988 + '</td></tr>\n                ' : '\n                    <tr style="height:30px;"><td colspan="2" style="border-right:none; text-align:left;">\uD83D\uDD52 <span class="txt-red os-text">Time:</span></td><td colspan="2" style="border-left:none;" class="txt-red bold os-text">' + _0x4823e5.realtimeStr + '</td><td colspan="3" class="txt-red fs-large bold os-text" style="text-align:left;">Target Q\u0110: ' + UTILS.formatNumber(_0x3f1e3e) + '</td><td colspan="' + (_0x33d101 - 3) + '" class="txt-green fs-large bold os-text">Th\u1EF1c hi\u1EC7n Q\u0110: ' + UTILS.formatNumber(_0x2751ef) + '</td></tr>\n                    <tr style="height:30px;"><td colspan="2" class="bg-red os-text">M\u1EE5c ti\u00EAu ng\u00E0y</td><td colspan="2" class="bg-green os-text">Th\u1EF1c hi\u1EC7n</td><td colspan="3" class="txt-orange bold os-text" style="text-align:left; padding-left:10px;">Ho\u00E0n th\u00E0nh: ' + UTILS.formatPercent(_0x4a2a82) + '</td><td colspan="' + (_0x33d101 - 3) + '" class="txt-blue bold os-text" style="text-align:center; padding-left:10px;">C\u00F2n l\u1EA1i: ' + UTILS.formatNumber(_0x3b89a0) + '</td></tr>\n                    <tr style="height:35px;"><td colspan="2" class="txt-red fs-xlarge bold os-text">' + UTILS.formatNumber(_0x3b35bc) + ' Tri\u1EC7u</td><td colspan="2" class="txt-blue fs-xlarge bold os-text">' + UTILS.formatNumber(_0xc9879f) + ' Tri\u1EC7u</td><td colspan="3" class="bold os-text" style="text-align:left; padding-left:10px;">D\u1EF1 ki\u1EBFn cu\u1ED1i th\u00E1ng:</td><td colspan="' + (_0x33d101 - 3) + '" class="txt-gold fs-xlarge bold os-text">' + UTILS.formatPercent(_0x192c7b) + '</td></tr>\n                    <tr style="height:35px;"><td class="txt-green bold os-text">Ho\u00E0n th\u00E0nh</td><td class="os-text" style="font-weight: bold; color: #0070C0;">' + UTILS.formatPercent(_0x424d75) + '</td><td class="bold os-text">%Q\u0110</td><td class="txt-blue bold os-text">' + UTILS.formatPercent(_0x291f57) + '</td><td colspan="3" class="bold os-text" style="text-align:left; padding-left:10px;">L\u0169y k\u1EBF Doanh thu th\u1EF1c:</td><td colspan="' + (_0x33d101 - 3) + '" class="fs-xlarge bold os-text">' + UTILS.formatNumber(_0x45f4e6) + '</td></tr>\n                    <tr style="height:35px;"><td colspan="2" class="txt-red bold os-text">M\u1EE5c ti\u00EAu tr\u1EA3 ch\u1EADm:</td><td colspan="2" class="bg-yellow txt-red bold fs-large os-text">' + _0x5c3992.installment + '%</td><td colspan="3" class="bold os-text" style="text-align:left; padding-left:10px;">%Quy \u0111\u1ED5i/th\u1EF1c:</td><td colspan="' + (_0x33d101 - 3) + '" class="txt-orange fs-xlarge bold os-text">' + UTILS.formatPercent(_0x591eba) + '</td></tr>\n                    <tr style="height:35px;"><td colspan="2" class="txt-red bold fs-large os-text">Realtime:</td><td colspan="2" class="fs-large bold os-text">' + UTILS.formatPercent(_0x3e8dcb.tg) + '</td><td colspan="3" class="txt-red bold os-text" style="text-align:left; padding-left:10px;">L\u0169y k\u1EBF tr\u1EA3 ch\u1EADm:</td><td colspan="' + (_0x33d101 - 3) + '" class="fs-xlarge bold os-text">' + UTILS.formatPercent(_0x4c0f0d.tg) + '</td></tr>\n                    <tr style="height:35px; font-weight:bold;"><td colspan="2" class="bg-yellow os-text">Realtime: ' + _0x3038b3 + ' Nh\u00F3m</td><td class="bg-yellow os-text">\u0110\u1EA1t:</td><td class="bg-yellow os-text" style="font-size:16px;">' + _0x409988 + '</td><td colspan="2" class="bg-header-blue os-text">L\u0169y k\u1EBF: ' + _0x3038b3 + ' Nh\u00F3m</td><td colspan="' + (_0x33d101 - 3) + '" class="bg-header-blue os-text">\u0110\u1EA1t</td><td class="bg-header-blue os-text" style="font-size:16px;">' + _0x4f61ec + '</td></tr>\n                '; return '<div style="text-align:center; margin-bottom:5px; color:#00B050; font-weight:bold; font-size:16px;">' + _0x473af1 + '</div><table class="mwg-table">' + _0x11e18f + '<tr><td class="bg-header-yellow os-text">Nh\u00F3m h\u00E0ng</td><td class="bg-header-yellow os-text">Target</td><td class="bg-header-yellow os-text">Th\u1EF1c hi\u1EC7n</td><td class="bg-header-yellow os-text">T\u1EC9 l\u1EC7</td>' + _0x26114d + '</tr>' + _0x4985d9 + '</table>'; }, generateCommentMultiShop: (_0x559fc5, _0x46d843, _0x58f96d, _0x5d826e, _0x52e337) => { const _0x5e0fb8 = []; _0x5e0fb8.push({ id: 'total', name: 'C\u1EE5m' }); if (_0x58f96d.shop1)
+            } const _0x11e18f = _0x379ab6 ? '\n                    <tr style="height:30px;"><td colspan="2" style="border-right:none; text-align:left;">\uD83D\uDD52 <span class="txt-red os-text">Time:</span></td><td colspan="2" style="border-left:none;" class="txt-red bold os-text">' + _0x4823e5.realtimeStr + '</td>\n                    <tr style="height:30px;"><td colspan="2" class="bg-red os-text">M\u1EE5c ti\u00EAu ng\u00E0y</td><td colspan="2" class="bg-green os-text">Th\u1EF1c hi\u1EC7n</td></tr>\n                    <tr style="height:35px;"><td colspan="2" class="txt-red fs-xlarge bold os-text">' + UTILS.formatNumber(_0x3b35bc) + ' Tri\u1EC7u</td><td colspan="2" class="txt-blue fs-xlarge bold os-text">' + UTILS.formatNumber(_0xc9879f) + ' Tri\u1EC7u</td></tr>\n                    <tr style="height:35px;"><td class="txt-green bold os-text">Ho\u00E0n th\u00E0nh</td><td class="os-text">' + UTILS.formatPercent(_0x424d75) + '</td><td class="bold os-text">%Q\u0110</td><td class="txt-blue bold os-text">' + UTILS.formatPercent(_0x291f57) + '</td></tr>\n                    <tr style="height:35px;"><td colspan="2" class="txt-red bold os-text">M\u1EE5c ti\u00EAu tr\u1EA3 ch\u1EADm:</td><td colspan="2" class="bg-yellow txt-red bold fs-large os-text">' + _0x5c3992.installment + '%</td></tr>\n                    <tr style="height:35px;"><td colspan="2" class="txt-red bold fs-large os-text">Realtime:</td><td colspan="2" class="fs-large bold os-text">' + UTILS.formatPercent(_0x3e8dcb.tg) + '</td></tr>\n                    <tr style="height:35px; font-weight:bold;"><td colspan="2" class="bg-yellow os-text">Realtime: ' + _0x3038b3 + ' Nh\u00F3m</td><td class="bg-yellow os-text">\u0110\u1EA1t:</td><td class="bg-yellow os-text" style="font-size:16px;">' + _0x409988 + '</td></tr>\n                ' : '\n                    <tr style="height:30px;"><td colspan="2" style="border-right:none; text-align:left;">\uD83D\uDD52 <span class="txt-red os-text">Time:</span></td><td colspan="2" style="border-left:none;" class="txt-red bold os-text">' + _0x4823e5.realtimeStr + '</td><td colspan="3" class="txt-red fs-large bold os-text" style="text-align:left;">Target Q\u0110: ' + UTILS.formatNumber(_0x3f1e3e) + '</td><td colspan="' + (_0x33d101 - 3) + '" class="txt-green fs-large bold os-text">Th\u1EF1c hi\u1EC7n Q\u0110: ' + UTILS.formatNumber(_0x2751ef) + '</td></tr>\n                    <tr style="height:30px;"><td colspan="2" class="bg-red os-text">M\u1EE5c ti\u00EAu ng\u00E0y</td><td colspan="2" class="bg-green os-text">Th\u1EF1c hi\u1EC7n</td><td colspan="3" class="txt-orange bold os-text" style="text-align:left; padding-left:10px;">Ho\u00E0n th\u00E0nh: ' + UTILS.formatPercent(_0x4a2a82) + '</td><td colspan="' + (_0x33d101 - 3) + '" class="txt-blue bold os-text" style="text-align:center; padding-left:10px;">C\u00F2n l\u1EA1i: ' + UTILS.formatNumber(_0x3b89a0) + '</td></tr>\n                    <tr style="height:35px;"><td colspan="2" class="txt-red fs-xlarge bold os-text">' + UTILS.formatNumber(_0x3b35bc) + ' Tri\u1EC7u</td><td colspan="2" class="txt-blue fs-xlarge bold os-text">' + UTILS.formatNumber(_0xc9879f) + ' Tri\u1EC7u</td><td colspan="3" class="bold os-text" style="text-align:left; padding-left:10px;">D\u1EF1 ki\u1EBFn cu\u1ED1i th\u00E1ng:</td><td colspan="' + (_0x33d101 - 3) + '" class="txt-gold fs-xlarge bold os-text">' + UTILS.formatPercent(_0x192c7b) + '</td></tr>\n                    <tr style="height:35px;"><td class="txt-green bold os-text">Ho\u00E0n th\u00E0nh</td><td class="os-text" style="font-weight: bold; color: #0070C0;">' + UTILS.formatPercent(_0x424d75) + '</td><td class="bold os-text">%Q\u0110</td><td class="txt-blue bold os-text">' + UTILS.formatPercent(_0x291f57) + '</td><td colspan="3" class="bold os-text" style="text-align:left; padding-left:10px;">L\u0169y k\u1EBF Doanh thu th\u1EF1c:</td><td colspan="' + (_0x33d101 - 3) + '" class="fs-xlarge bold os-text">' + UTILS.formatNumber(_0x45f4e6) + '</td></tr>\n                    <tr style="height:35px;"><td colspan="2" class="txt-red bold os-text">M\u1EE5c ti\u00EAu tr\u1EA3 ch\u1EADm:</td><td colspan="2" class="bg-yellow txt-red bold fs-large os-text">' + _0x5c3992.installment + '%</td><td colspan="3" class="bold os-text" style="text-align:left; padding-left:10px;">%Quy \u0111\u1ED5i/th\u1EF1c:</td><td colspan="' + (_0x33d101 - 3) + '" class="txt-orange fs-xlarge bold os-text">' + UTILS.formatPercent(_0x591eba) + '</td></tr>\n                    <tr style="height:35px;"><td colspan="2" class="txt-red bold fs-large os-text">Realtime:</td><td colspan="2" class="fs-large bold os-text">' + UTILS.formatPercent(_0x3e8dcb.tg) + '</td><td colspan="3" class="txt-red bold os-text" style="text-align:left; padding-left:10px;">L\u0169y k\u1EBF tr\u1EA3 ch\u1EADm:</td><td colspan="' + (_0x33d101 - 3) + '" class="fs-xlarge bold os-text">' + UTILS.formatPercent(_0x4c0f0d.tg) + '</td></tr>\n                    <tr style="height:35px; font-weight:bold;"><td colspan="2" class="bg-yellow os-text">Realtime: ' + _0x3038b3 + ' Nh\u00F3m</td><td class="bg-yellow os-text">\u0110\u1EA1t:</td><td class="bg-yellow os-text" style="font-size:16px;">' + _0x409988 + '</td><td colspan="2" class="bg-header-blue os-text">L\u0169y k\u1EBF: ' + _0x3038b3 + ' Nh\u00F3m</td><td colspan="' + (_0x33d101 - 3) + '" class="bg-header-blue os-text">\u0110\u1EA1t</td><td class="bg-header-blue os-text" style="font-size:16px;">' + _0x4f61ec + '</td></tr>\n                '; return '<div style="text-align:center; margin-bottom:5px; color:#00B050; font-weight:bold; font-size:16px;">' + _0x473af1 + '</div><table class="mwg-table">' + _0x11e18f + '<tr><td class="bg-header-yellow os-text">Nh\u00F3m h\u00E0ng</td><td class="bg-header-yellow os-text">Target</td><td class="bg-header-yellow os-text">Th\u1EF1c hi\u1EC7n</td><td class="bg-header-yellow os-text">T\u1EC9 l\u1EC7</td>' + _0x26114d + '</tr>' + _0x4985d9 + '</table>'; }, generateCommentMultiShop: (a, b, cf, isRT, e) => { /* V17.32: Multi LK dùng comment kiểu mới; Multi RT giữ kiểu cũ */ if (!isRT && window.__AutoBIRt2) { try { return window.__AutoBIRt2.comment({ UI, UTILS }, a, b, cf, e, null, 'lk'); } catch (_) { } } return UI.HTML.generateCommentMultiShopOld(a, b, cf, isRT, e); }, generateCommentMultiShopOld: (_0x559fc5, _0x46d843, _0x58f96d, _0x5d826e, _0x52e337) => { const _0x5e0fb8 = []; _0x5e0fb8.push({ id: 'total', name: 'C\u1EE5m' }); if (_0x58f96d.shop1)
                 _0x5e0fb8.push({ id: 'shop1', name: _0x58f96d.shop1Short || _0x58f96d.shop1 }); if (_0x58f96d.shop2)
                 _0x5e0fb8.push({ id: 'shop2', name: _0x58f96d.shop2Short || _0x58f96d.shop2 }); if (_0x58f96d.shop3)
                 _0x5e0fb8.push({ id: 'shop3', name: _0x58f96d.shop3Short || _0x58f96d.shop3 }); if (_0x58f96d.shop4)
@@ -5748,7 +5755,7 @@ window.__AutoBIRun67 = (function () {
                     _0x361f7d += '<div class="comment-item comment-highlight-red">\uD83D\uDD25 Ti\u1EBFp t\u1EE5c T\u0103ng t\u1ED1c cho c\u00E1c Nh\u00F3m:</div>';
                     _0x41bcab.forEach(_0x9f0d63 => _0x361f7d += '<div class="comment-item">\uD83D\uDE80 ' + _0x9f0d63.name + ' > D\u1EF1 ki\u1EBFn: ' + Math.round(_0x9f0d63.p) + '%</div>');
                 }
-            } _0x108668 += '\n                        <div class="comment-col">\n                            <div class="comment-header">' + _0x1c84ad.name + '</div>\n                            <div class="comment-body">' + _0x361f7d + '</div>\n                        </div>\n                    '; }); _0x108668 += '</div>'; return _0x108668; }, generateCommentOneShop: (_0x3bcaac, _0x15210d, _0x527a77, _0x392d5e, _0x3f27f3) => { const _0x1ad7c5 = new Date(); const _0x1ce0e1 = _0x1ad7c5.getDate(); const _0xd22615 = new Date(_0x1ad7c5); _0xd22615.setDate(_0x1ad7c5.getDate() - 1); const _0x452f63 = parseInt(_0x527a77.dp); const _0x336e3e = _0x452f63 >= 1 && _0x452f63 <= 31 ? _0x452f63 : _0x1ce0e1 > 1 ? _0x1ce0e1 - 1 : 1; const _0x45ccb6 = parseInt(_0x527a77.eom); const _0x52e132 = _0x45ccb6 >= 1 && _0x45ccb6 <= 31 ? _0x45ccb6 : new Date(_0x1ad7c5.getFullYear(), _0x1ad7c5.getMonth() + 1, 0).getDate(); const _0x255444 = Math.max(0, _0x52e132 - _0x336e3e); let _0x2d78c4 = false; if (_0x392d5e === 'total') {
+            } _0x108668 += '\n                        <div class="comment-col">\n                            <div class="comment-header">' + _0x1c84ad.name + '</div>\n                            <div class="comment-body">' + _0x361f7d + '</div>\n                        </div>\n                    '; }); _0x108668 += '</div>'; return _0x108668; }, generateCommentOneShop: (a, b, cf, view, e) => { /* V17.32: Realtime V1 dùng comment kiểu mới */ if (window.__AutoBIRt2) { try { return window.__AutoBIRt2.commentOneShop({ UI, UTILS }, a, b, cf, e, null, view); } catch (_) { } } return UI.HTML.generateCommentOneShopOld(a, b, cf, view, e); }, generateCommentOneShopOld: (_0x3bcaac, _0x15210d, _0x527a77, _0x392d5e, _0x3f27f3) => { const _0x1ad7c5 = new Date(); const _0x1ce0e1 = _0x1ad7c5.getDate(); const _0xd22615 = new Date(_0x1ad7c5); _0xd22615.setDate(_0x1ad7c5.getDate() - 1); const _0x452f63 = parseInt(_0x527a77.dp); const _0x336e3e = _0x452f63 >= 1 && _0x452f63 <= 31 ? _0x452f63 : _0x1ce0e1 > 1 ? _0x1ce0e1 - 1 : 1; const _0x45ccb6 = parseInt(_0x527a77.eom); const _0x52e132 = _0x45ccb6 >= 1 && _0x45ccb6 <= 31 ? _0x45ccb6 : new Date(_0x1ad7c5.getFullYear(), _0x1ad7c5.getMonth() + 1, 0).getDate(); const _0x255444 = Math.max(0, _0x52e132 - _0x336e3e); let _0x2d78c4 = false; if (_0x392d5e === 'total') {
                 const _0x179d68 = (_0x527a77.shop1 || '').trim().toUpperCase();
                 if (_0x179d68.startsWith('\u0110'))
                     _0x2d78c4 = true;
@@ -6379,7 +6386,7 @@ window.__AutoBIRun67 = (function () {
             else
                 _0x2f029e++; return { cat: _0x57e639, personalTarget: _0x1ae8c2, actual: _0x1ae416, pctComplete: _0xc3b6ad, forecastPct: _0x3951de }; }); if (_0x22b237) {
                 _0x5578ce.sort((_0x402f87, _0xc0ffab) => _0xc0ffab.forecastPct - _0x402f87.forecastPct);
-            } _0x5578ce.forEach((_0x3b3797, _0x24ed4f) => { const _0x25f3ca = _0x24ed4f % 2 !== 0 ? 'nlnv-row-bg' : ''; const _0x1e95d6 = _0x3b3797.forecastPct >= 100 ? 'nlnv-val-green' : 'nlnv-val-red'; const _0x467b1f = _0x3b3797.forecastPct >= 100 ? 'background-color:#d9ead3;' : 'background-color:#fce4d6;'; const _0x5e5b2f = Math.min(_0x3b3797.pctComplete, 100); const _0x479510 = 'background: linear-gradient(to right, #c6efce ' + _0x5e5b2f + '%, transparent ' + _0x5e5b2f + '%); font-weight:bold;'; _0x42dcbe += '\n                        <tr class="' + _0x25f3ca + '">\n                            <td class="nlnv-item-name">' + _0x3b3797.cat + '</td>\n                            <td class="bold">' + UTILS.formatNumber(_0x3b3797.personalTarget) + '</td>\n                            <td class="bold">' + UTILS.formatNumber(_0x3b3797.actual) + '</td>\n                            <td style="' + _0x479510 + '">' + _0x3b3797.pctComplete + '%</td>\n                            <td class="' + _0x1e95d6 + '" style="' + _0x467b1f + '">' + _0x3b3797.forecastPct + '%</td>\n                        </tr>\n                    '; }); _0x42dcbe += '\n                        <tr>\n                            <td colspan="2" class="nlnv-footer-blue">S\u1ED1 l\u01B0\u1EE3ng Nh\u00F3m thi \u0111ua</td>\n                            <td class="nlnv-footer-blue">' + _0x1205b3.length + '</td>\n                            <td class="nlnv-footer-green">\u0110\u1EA1t: ' + _0x41104a + '</td>\n                            <td class="nlnv-footer-yellow">Kh\u00F4ng \u0111\u1EA1t: ' + _0x2f029e + '</td>\n                        </tr>\n                    </table>\n                </div>\n                '; return _0x42dcbe; }, getNLNVDailyReport: (_0x1c7797, _0x9c4d9d, _0xefd06f, _0x39bc82, _0xa55554, _0xe186ac, _0x41e30f) => { const _0x3f3516 = _0xefd06f.staffList || []; if (_0x3f3516.length === 0)
+            } _0x5578ce.forEach((_0x3b3797, _0x24ed4f) => { const _0x25f3ca = _0x24ed4f % 2 !== 0 ? 'nlnv-row-bg' : ''; const _0x1e95d6 = _0x3b3797.forecastPct >= 100 ? 'nlnv-val-green' : 'nlnv-val-red'; const _0x467b1f = _0x3b3797.forecastPct >= 100 ? 'background-color:#d9ead3;' : 'background-color:#fce4d6;'; const _0x5e5b2f = Math.min(_0x3b3797.pctComplete, 100); const _0x479510 = 'background: linear-gradient(to right, #c6efce ' + _0x5e5b2f + '%, transparent ' + _0x5e5b2f + '%); font-weight:bold;'; _0x42dcbe += '\n                        <tr class="' + _0x25f3ca + '">\n                            <td class="nlnv-item-name">' + _0x3b3797.cat + '</td>\n                            <td class="bold">' + UTILS.formatNumber(_0x3b3797.personalTarget) + '</td>\n                            <td class="bold">' + UTILS.formatNumber(_0x3b3797.actual) + '</td>\n                            <td style="' + _0x479510 + '">' + _0x3b3797.pctComplete + '%</td>\n                            <td class="' + _0x1e95d6 + '" style="' + _0x467b1f + '">' + _0x3b3797.forecastPct + '%</td>\n                        </tr>\n                    '; }); _0x42dcbe += '\n                        <tr>\n                            <td colspan="2" class="nlnv-footer-blue">S\u1ED1 l\u01B0\u1EE3ng Nh\u00F3m thi \u0111ua</td>\n                            <td class="nlnv-footer-blue">' + _0x1205b3.length + '</td>\n                            <td class="nlnv-footer-green">\u0110\u1EA1t: ' + _0x41104a + '</td>\n                            <td class="nlnv-footer-yellow">Kh\u00F4ng \u0111\u1EA1t: ' + _0x2f029e + '</td>\n                        </tr>\n                    </table>\n                </div>\n                '; return _0x42dcbe; }, getNLNVDailyReport: (_0x1c7797, _0x9c4d9d, _0xefd06f, _0x39bc82, _0xa55554, _0xe186ac, _0x41e30f) => { _0x1c7797 = window.__AutoBIHistFix ? window.__AutoBIHistFix(_0x1c7797) : _0x1c7797; const _0x3f3516 = _0xefd06f.staffList || []; if (_0x3f3516.length === 0)
                 return '<div style="text-align:center; padding: 20px; font-weight:bold; color:red;">Ch\u01B0a khai b\u00E1o nh\u00E2n vi\u00EAn!</div>'; const _0x54371f = UI.HTML.resolveTimeContext(_0xefd06f, _0x41e30f); const _0x48db21 = String(_0x54371f.month).padStart(2, '0'); const _0x2ea53e = String(_0x54371f.year); const _0x29a64b = _0x54371f.daysPassed; const _0x4079ec = _0x54371f.daysInMonth; const _0x292c3e = _0x3f3516.find(_0xd1e210 => _0xd1e210.name === _0x39bc82) || _0x3f3516[0]; _0x39bc82 = _0x292c3e.name; const _0x510619 = _0x292c3e.shopIdx; const _0xa49228 = 'shop' + _0x510619; /* V17.14: lịch sử chưa có ngày hôm nay thì ghép số của lượt chạy hiện tại vào (chỉ để xem, không lưu lên Sheet) — giống bản đồng bộ ngầm */ try { const __now = new Date(), __key = String(__now.getDate()).padStart(2, '0') + '/' + String(__now.getMonth() + 1).padStart(2, '0') + '/' + __now.getFullYear(); if (_0xa55554 && typeof _0xa55554 === 'object' && Object.keys(_0xa55554).length && !(_0x1c7797 && _0x1c7797[__key])) { const __flat = (o, out = {}, pre = '') => { for (const k in o) { if (!Object.prototype.hasOwnProperty.call(o, k) || o[k] === undefined) continue; const v = o[k], kk = pre ? pre + '|||' + k : k; if (v && typeof v === 'object' && !Array.isArray(v)) __flat(v, out, kk); else out[kk] = v; } return out; }; _0x1c7797 = Object.assign({}, _0x1c7797 || {}, { [__key]: __flat(_0xa55554) }); } } catch (_) { } let _0x49e0ab = []; if (_0x1c7797) {
                 _0x49e0ab = Object.keys(_0x1c7797).filter(_0x488d7b => { const _0x31ab67 = _0x488d7b.split('/'); if (_0x31ab67.length === 3) {
                     const [_0x2753a9, _0x2afbec, _0x134ff7] = _0x31ab67;
@@ -6451,7 +6458,7 @@ window.__AutoBIRun67 = (function () {
             }
             else {
                 _0x51e3d6.forEach(_0x2beb00 => { let _0x456ef4 = _0x2beb00 === 0 ? '-' : _0x126bab.isInst || _0x126bab.isHqqd ? _0x2beb00.toFixed(1) + '%' : UTILS.formatNumber(_0x2beb00); const _0x191be3 = _0x2beb00 === 0 ? 'color: #999;' : 'color: #000000; font-weight:bold;'; _0x2d8734 += '<td class="nlnv-daily-val" style="' + _0x191be3 + '">' + _0x456ef4 + '</td>'; });
-            } _0x2d8734 += '</tr>'; }); _0x2d8734 += '</tbody></table></div>'; return _0x2d8734; }, getNLNVProductGroupReport: (_0x27b034, _0x5493c3, _0x390638, _0x4786ec, _0x5437a9) => { const _0x4eee9a = _0x390638.staffList || []; if (_0x4eee9a.length === 0)
+            } _0x2d8734 += '</tr>'; }); _0x2d8734 += '</tbody></table></div>'; return _0x2d8734; }, getNLNVProductGroupReport: (_0x27b034, _0x5493c3, _0x390638, _0x4786ec, _0x5437a9) => { _0x27b034 = window.__AutoBIHistFix ? window.__AutoBIHistFix(_0x27b034) : _0x27b034; const _0x4eee9a = _0x390638.staffList || []; if (_0x4eee9a.length === 0)
                 return '<div style="text-align:center; padding: 20px; font-weight:bold; color:red;">Ch\u01B0a khai b\u00E1o nh\u00E2n vi\u00EAn!</div>'; const _0x40987e = UI.HTML.resolveTimeContext(_0x390638); const _0x4f8856 = String(_0x40987e.month).padStart(2, '0'); const _0x4f5006 = String(_0x40987e.year); const _0x1bd340 = _0x40987e.daysPassed; const _0x4549de = _0x40987e.daysInMonth; let _0x1acfe2 = []; if (_0x27b034) {
                 _0x1acfe2 = Object.keys(_0x27b034).filter(_0x5a153d => { const _0x17bb41 = _0x5a153d.split('/'); if (_0x17bb41.length === 3) {
                     const [_0x2d4a51, _0x17f450, _0xedd619] = _0x17bb41;
@@ -9088,7 +9095,96 @@ window.__AutoBIBiTarget99 = (function () {
   .lk-mx td:first-child{white-space:normal}
   .lk-blk{margin-top:12px}`;
 
-  window.__AutoBIRt2 = { render, renderLK, sortGroups: null, sortStaff: null, sortLKGroups: null, sortLKStaff: null };
+  /* ==== V17.31: Auto Comment cho Realtime V2 ('rt') và LK NEW ('lk') — ngắn gọn, đủ ý; mỗi thẻ: Cụm + từng siêu thị. Cùng khung thẻ (.comment-col/.comment-header/.comment-body/.comment-item) với Auto Comment cũ để nhấp đúp copy + Gửi Line dùng lại được. ==== */
+  function commentCtx(h, c, groups, cfg, useBi, timeArg) {
+    const { UI, UTILS } = h;
+    c = c || {}; cfg = cfg || {}; groups = groups || [];
+    const tc = UI.HTML.resolveTimeContext(cfg, timeArg);
+    const dp = num(tc.daysPassed), dim = num(tc.daysInMonth) || 30, left = Math.max(0, dim - dp);
+    const shopIdx = [1, 2, 3, 4, 5].filter(i => (cfg['shop' + i] || '').trim());
+    const views = [{ id: 'total', name: 'Cụm', idxs: shopIdx }].concat(shopIdx.map(i => ({ id: 'shop' + i, name: cfg['shop' + i + 'Short'] || cfg['shop' + i], idxs: [i] })));
+    const f = v => nf(Math.round(num(v))), pc = v => Math.round(num(v)) + '%';
+    const rateOf = x => { const r = parseFloat(x.rate); return isFinite(r) && r > 0 ? r : 0; };
+    const shopMon = i => { const s2 = (c.link2 && c.link2['shop' + i]) || {}; return useBi ? (num(s2.t) || num(cfg['target' + i])) : (num(cfg['target' + i]) || num(s2.t)); };
+    const mates = i => (cfg.staffList || []).filter(y => (Number(y.shopIdx) || 1) === i);
+    const alloc = (T, x, i) => { if (T <= 0) return 0; if (rateOf(x) > 0) return Math.round(T * rateOf(x) / 100); const m = mates(i), fx = m.filter(y => rateOf(y) > 0).reduce((a, y) => a + Math.round(T * rateOf(y) / 100), 0), au = m.filter(y => !rateOf(y)).length; return au ? Math.round(Math.max(0, T - fx) / au) : 0; };
+    const nm = x => { const p = String(x.name).split(' - '); return p.length > 1 ? p.slice(1).join(' - ') : x.name; };
+    const today = c.link6rt && c.link6rt.day === vnToday() ? c.link6rt.data || {} : null;
+    const now = new Date(), hh = now.getHours() + 'h' + String(now.getMinutes()).padStart(2, '0');
+    const it = (t, cls) => '<div class="comment-item' + (cls ? ' ' + cls : '') + '">' + t + '</div>';
+    const list = (arr, n) => arr.slice(0, n).join(', ') + (arr.length > n ? ' +' + (arr.length - n) : '');
+    const body = (v, mode) => {
+      const allCh = v.idxs.some(i => (cfg['shop' + i] || '').trim().toUpperCase().startsWith('Đ'));
+      let gl = groups.filter(g => allCh ? true : g.channel === 'T');
+      gl = UTILS.filterActiveGroups(gl, cfg);
+      if (window.tgdd_hidden_report_groups && window.tgdd_hidden_report_groups.length) gl = gl.filter(g => !window.tgdd_hidden_report_groups.includes(g.short));
+      const l1 = (c.link1 && c.link1[v.id]) || {}, l2 = (c.link2 && c.link2[v.id]) || {};
+      const monT0 = v.id === 'total' ? num(cfg.totalTarget) : num(cfg['target' + v.idxs[0]]);
+      const monT = useBi ? (num(l2.t) || monT0) : (monT0 || num(l2.t));
+      const lk = num(l2.r), dk = useBi && l2.dk != null ? num(l2.dk) : (monT > 0 && dp > 0 ? lk / dp * dim / monT * 100 : 0);
+      const staff = (cfg.staffList || []).filter(x => v.idxs.includes(Number(x.shopIdx) || 1));
+      let b = '';
+      if (mode === 'rt' || mode === 'eod') {
+        const dayCfg = i => { const d = num(cfg['targetDay' + i]); return d > 0 ? d : Math.round(num(cfg['target' + i]) / dim); };
+        const dayT0 = v.idxs.reduce((a, i) => a + dayCfg(i), 0), dayT = useBi ? (num(l1.t) || dayT0) : dayT0, rt = num(l1.r);
+        const rows = gl.map(g => { const a = (c.link3_smart && c.link3_smart[g.short] && c.link3_smart[g.short][v.id]) || {}, bb = (c.link4_smart && c.link4_smart[g.short] && c.link4_smart[g.short][v.id]) || {}; const t = num(UI.HTML.getFinalGroupTarget(bb.t, g.short, v.id, cfg, groups, true, useBi)), r = num(a.r); return { n: g.short, t, r, p: t > 0 ? r / t * 100 : (r > 0 ? 100 : 0) }; });
+        const ok = rows.filter(x => x.p >= 100).sort((x, y) => y.p - x.p), low = rows.filter(x => x.p < 100 && x.t > 0).sort((x, y) => (y.t - y.r) - (x.t - x.r));
+        if (mode === 'eod') {
+          const lk2 = lk + rt, dk2 = monT > 0 ? lk2 / (dp + 1) * dim / monT * 100 : 0, sold = rows.filter(x => x.r > 0 && x.p < 100).sort((x, y) => x.p - y.p), none = rows.filter(x => !(x.r > 0) && x.t > 0);
+          b += it('🌙 ' + v.name + ' – Tổng kết cuối ngày ' + now.getDate() + '/' + (now.getMonth() + 1));
+          b += it('💰 DT hôm nay: ' + f(rt) + '/' + f(dayT) + ' triệu (' + pc(dayT > 0 ? rt / dayT * 100 : 0) + ')' + (rt >= dayT ? ' ✅ đạt target ngày' : ' – thiếu ' + f(dayT - rt) + ' triệu'), 'comment-highlight-red');
+          b += it('📅 LK tháng tính cả hôm nay: ' + f(lk2) + '/' + f(monT) + ' triệu · dự kiến ' + pc(dk2));
+          if (ok.length) b += it('🏆 Về đích: ' + list(ok.map(x => x.n + ' ' + pc(x.p)), 4));
+          if (sold.length) b += it('⚠️ Chưa đạt: ' + list(sold.map(x => x.n + ' ' + pc(x.p)), 4));
+          if (none.length) b += it('🥚 Chưa bán: ' + list(none.map(x => x.n), 5));
+          if (today) { const st = staff.map(x => { const d = today['shop' + (Number(x.shopIdx) || 1)] && today['shop' + (Number(x.shopIdx) || 1)][x.name]; return { n: nm(x), d: d ? num(d.dtqd) : 0 }; }).filter(x => x.d > 0).sort((x, y) => y.d - x.d); if (st.length) b += it('👏 Xuất sắc hôm nay: ' + list(st.map(x => x.n + ' ' + nf(x.d, 1) + 'tr'), 3)); }
+          return b;
+        }
+        b += it('📣 ' + v.name + ' – Realtime ' + hh);
+        b += it('💰 DT: ' + f(rt) + '/' + f(dayT) + ' triệu (' + pc(dayT > 0 ? rt / dayT * 100 : 0) + ')' + (rt < dayT ? ' – còn thiếu ' + f(dayT - rt) + ' triệu' : ' – vượt target ngày'), 'comment-highlight-red');
+        b += it('📅 LK tháng: ' + f(lk) + '/' + f(monT) + ' triệu · dự kiến ' + pc(dk));
+        if (ok.length) b += it('✅ Đạt ' + ok.length + '/' + rows.length + ' nhóm: ' + list(ok.map(x => x.n + ' ' + pc(x.p)), 4));
+        if (low.length) b += it('⚠️ Cần đẩy: ' + list(low.map(x => x.n + ' còn ' + f(x.t - x.r)), 4));
+        if (today) {
+          const st = staff.map(x => { const d = today['shop' + (Number(x.shopIdx) || 1)] && today['shop' + (Number(x.shopIdx) || 1)][x.name]; return { n: nm(x), d: d ? num(d.dtqd) : 0 }; });
+          const top = st.filter(x => x.d > 0).sort((x, y) => y.d - x.d), zero = st.filter(x => !(x.d > 0));
+          if (top.length) b += it('👏 Dẫn đầu: ' + list(top.map(x => x.n + ' ' + nf(x.d, 1) + 'tr'), 3));
+          if (zero.length) b += it('⏳ Chưa có DT: ' + list(zero.map(x => x.n), 5));
+        }
+      } else {
+        const need = left > 0 ? Math.max(0, monT - lk) / left : 0, tg = num(l2.tg), tgLim = parseFloat(cfg.installment) || 30, qd = pctOf(lk, num(l2.dtlk));
+        const rows = gl.map(g => { const bb = (c.link4_smart && c.link4_smart[g.short] && c.link4_smart[g.short][v.id]) || {}; const t = num(UI.HTML.getFinalGroupTarget(bb.t, g.short, v.id, cfg, groups, false, useBi)), r = num(bb.r); const d = useBi && bb.pd != null ? num(bb.pd) : (t > 0 && dp > 0 ? r / dp * dim / t * 100 : (r > 0 ? 100 : 0)); return { n: g.short, d }; });
+        const ok = rows.filter(x => x.d >= 100).sort((x, y) => y.d - x.d), bad = rows.filter(x => x.d < 80).sort((x, y) => x.d - y.d);
+        b += it('📣 ' + v.name + ' – Lũy kế hết ngày ' + dp + '/' + tc.month);
+        b += it('💰 DT: ' + f(lk) + '/' + f(monT) + ' triệu (' + (monT > 0 ? (lk / monT * 100).toFixed(1) : 0) + '%) · dự kiến ' + pc(dk) + (need > 0 ? ' · cần ' + f(need) + ' triệu/ngày' : ''), 'comment-highlight-red');
+        b += it('💳 Trả chậm ' + pc(tg) + '/' + tgLim + '%' + (tg >= tgLim ? ' ✅' : ' ❗') + ' · Quy đổi ' + pc(qd));
+        if (ok.length) b += it('✅ Đạt ' + ok.length + '/' + rows.length + ' nhóm: ' + list(ok.map(x => x.n + ' ' + pc(x.d)), 4));
+        if (bad.length) b += it('❌ Dưới 80%: ' + list(bad.map(x => x.n + ' ' + pc(x.d)), 5));
+        if (dp > 0) {
+          const st = staff.map(x => { const i = Number(x.shopIdx) || 1, m = c.link6 && c.link6['shop' + i] && c.link6['shop' + i].revenue && c.link6['shop' + i].revenue[x.name]; const mon = m ? num(typeof m === 'object' ? m.dtqd : m) : null, t = alloc(shopMon(i), x, i); return { n: nm(x), fc: mon != null && t > 0 ? mon / dp * dim / t * 100 : null }; }).filter(x => x.fc != null);
+          const top = st.filter(x => x.fc >= 100).sort((x, y) => y.fc - x.fc), weak = st.filter(x => x.fc < 80).sort((x, y) => x.fc - y.fc);
+          if (top.length) b += it('👏 NV đúng tiến độ: ' + list(top.map(x => x.n + ' ' + pc(x.fc)), 3));
+          if (weak.length) b += it('💪 NV cần tăng tốc: ' + list(weak.map(x => x.n + ' ' + pc(x.fc)), 3));
+        }
+      }
+      return b;
+    };
+    return { views, body };
+  }
+  const card = (head, b) => '<div class="comment-col"><div class="comment-header">' + esc(head) + '</div><div class="comment-body">' + b + '</div></div>';
+  /* Thẻ Cụm + từng siêu thị (Realtime V2, LK NEW, Multi LK) */
+  function comment(h, c, groups, cfg, useBi, timeArg, mode) {
+    const x = commentCtx(h, c, groups, cfg, useBi, timeArg);
+    return '<div class="comment-grid" id="comment-content-body">' + x.views.map(v => card(v.name, x.body(v, mode))).join('') + '</div>';
+  }
+  /* V17.32: Realtime V1 — 3 thẻ Realtime / Đầu ngày / Cuối ngày cho siêu thị đang chọn (giữ đúng tên thẻ cũ để Gửi Line chọn thẻ như trước) */
+  function commentOneShop(h, c, groups, cfg, useBi, timeArg, view) {
+    const x = commentCtx(h, c, groups, cfg, useBi, timeArg);
+    const v = x.views.find(y => y.id === view) || x.views[0];
+    return '<div class="comment-grid" id="comment-content-body">' + card('Realtime', x.body(v, 'rt')) + card('Đầu ngày', x.body(v, 'lk')) + card('Cuối ngày', x.body(v, 'eod')) + '</div>';
+  }
+
+  window.__AutoBIRt2 = { render, renderLK, comment, commentOneShop, sortGroups: null, sortStaff: null, sortLKGroups: null, sortLKStaff: null };
 })();
 
 /* ==== V17.26: Báo có bản mới (__AutoBIUpdate) — đọc @version của AutoBI.user.js trên GitHub khi mở trang + 30 phút/lần; có bản cao hơn thì hiện dải vàng trên cùng. Bấm "Cập nhật ngay" mở link cài để Tampermonkey cập nhật. ==== */
@@ -9139,4 +9235,228 @@ window.__AutoBIBiTarget99 = (function () {
   setTimeout(check, 4000);
   setInterval(check, 30 * 60 * 1000);
   window.__AutoBIUpdate = { check, cmp };
+})();
+
+/* ==== V17.28: Lọc số lũy kế lỗi trong bản lưu lịch sử (__AutoBIHistFix) cho Năng lực NV.
+   Số thi đua/doanh thu NV trong bản lưu mỗi ngày là LŨY KẾ nên không thể lớn hơn hẳn số của ngày mới nhất trong tháng.
+   Ngày nào lớn hơn 1,2 lần (+1) số ngày mới nhất → coi là lỗi, thay bằng số của ngày trước đó (ngày đó tính 0, các ngày sau tính đúng). ==== */
+(function () {
+  'use strict';
+  const memo = new WeakMap();
+  const isCum = k => k.startsWith('link6|||') && (k.includes('|||competition|||') || k.includes('|||revenue|||'));
+  function fix(hist) {
+    if (!hist || typeof hist !== 'object') return hist;
+    if (memo.has(hist)) return memo.get(hist);
+    const out = Object.assign({}, hist);
+    const byMonth = {};
+    Object.keys(hist).forEach(d => { const p = d.split('/'); if (p.length === 3) (byMonth[p[1] + '/' + p[2]] = byMonth[p[1] + '/' + p[2]] || []).push(d); });
+    let fixed = 0;
+    Object.values(byMonth).forEach(days => {
+      days.sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+      const last = hist[days[days.length - 1]] || {};
+      const keys = new Set();
+      days.forEach(d => Object.keys(hist[d] || {}).forEach(k => { if (isCum(k)) keys.add(k); }));
+      keys.forEach(k => {
+        const lv = parseFloat(last[k]);
+        if (!isFinite(lv) || lv < 0) return;
+        let prev = 0;
+        days.forEach(d => {
+          const snap = hist[d] || {}, v = parseFloat(snap[k]);
+          if (isFinite(v) && v > lv * 1.2 + 1) {
+            if (out[d] === hist[d]) out[d] = Object.assign({}, hist[d]);
+            out[d][k] = prev; fixed++;
+          } else if (isFinite(v)) prev = v;
+        });
+      });
+    });
+    if (fixed) try { console.log('[AutoBI] Năng lực NV: đã bỏ qua ' + fixed + ' số lũy kế lỗi trong bản lưu lịch sử'); } catch (_) { }
+    memo.set(hist, out);
+    return out;
+  }
+  window.__AutoBIHistFix = fix;
+})();
+
+/* ==== V17.29: Cụm nút nổi góc phải (__AutoBIDock) — ẩn thanh dưới cũ (#tgdd-bottom-nav).
+   Nút tam giác = Bắt đầu chạy (bấm hộ #nav-report); đang chạy thì thành nút Dừng (bấm hộ .autobi-stop85).
+   Nút ba chấm = menu gọn: tài khoản, Khai báo, Menu công cụ (#nav-home-menu), Tài khoản (#nav-user), phiên bản + bản quyền.
+   Nút cũ vẫn còn trong trang (ẩn) nên mọi xử lý cũ — xác thực, chọn báo cáo, Dừng — giữ nguyên. ==== */
+(function () {
+  'use strict';
+  if (location.hostname !== 'baocao.dienmayxanh.com') return;
+  try { if (window.top !== window.self) return; } catch (_) { return; }
+  const ver = () => { try { return String(GM_info.script.version || ''); } catch (_) { return ''; } };
+  const running = () => { try { return !!(window.__AutoBIRunning88 && window.__AutoBIRunning88()); } catch (_) { return false; } };
+  const auth = () => { try { return (window.__AutoBIAuthGet && window.__AutoBIAuthGet()) || {}; } catch (_) { return {}; } };
+  const userId = () => { const n = String(auth().userName || ''); const m = n.match(/\d+/); return m ? m[0] : (n.trim() || '---'); };
+  const clickId = id => { const el = document.getElementById(id); if (el) el.click(); return !!el; };
+  const SAFE = 'env(safe-area-inset-bottom, 0px)';
+  try {
+    GM_addStyle(`
+      #tgdd-bottom-nav, #btn-toggle-bottom-nav { display: none !important; }
+      #autobi-version-badge { right: 10px !important; bottom: calc(112px + ${SAFE}) !important; }
+      html.autobi-running88 #autobi-version-badge { bottom: calc(112px + ${SAFE}) !important; }
+      html.autobi-dock29 #tgdd-spaceship-wrapper { display: none !important; }
+      #autobi-dock29 { position: fixed; right: 10px; bottom: calc(10px + ${SAFE}); z-index: 2147483645; display: flex; flex-direction: column; align-items: center; gap: 8px; width: 58px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
+      #autobi-dock29 button { -webkit-tap-highlight-color: transparent; font-family: inherit; }
+      #autobi-dock29 .dk-play { position: relative; width: 52px; height: 52px; border-radius: 50%; border: 2px solid #fff; background: #ffd23f; box-shadow: 0 2px 8px rgba(15,27,45,.25); display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+      #autobi-dock29 .dk-play:active { transform: scale(.95); }
+      #autobi-dock29 .dk-play.is-run { background: #dc2626; }
+      #autobi-dock29 .dk-dot { position: absolute; right: 1px; top: 1px; width: 11px; height: 11px; border-radius: 50%; border: 2px solid #fff; background: #94a3b8; }
+      #autobi-dock29 .dk-dot.ok { background: #16a34a; }
+      #autobi-dock29 .dk-play.is-run .dk-dot { display: none; }
+      #autobi-dock29 .dk-more { width: 36px; height: 36px; border-radius: 50%; border: 1px solid #cbd5e1; background: #fff; color: #475569; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; box-shadow: 0 1px 4px rgba(15,27,45,.15); }
+      #autobi-dock29 .dk-more.open { background: #e8f0fd; color: #0b4fb3; border-color: #9cbcf0; }
+      #autobi-dock29-pop { position: fixed; right: 10px; bottom: calc(150px + ${SAFE}); z-index: 2147483646; width: 220px; background: #fff; border: 1px solid #dfe5ee; border-radius: 14px; box-shadow: 0 8px 24px rgba(15,27,45,.18); padding: 10px; display: none; flex-direction: column; gap: 2px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; color: #0f1b2d; }
+      #autobi-dock29-pop.show { display: flex; }
+      #autobi-dock29-pop .pp-hd { display: flex; align-items: center; gap: 10px; padding: 4px 6px 10px; border-bottom: 1px solid #edf1f6; margin-bottom: 4px; }
+      #autobi-dock29-pop .pp-av { width: 34px; height: 34px; border-radius: 50%; background: #e8f0fd; color: #0b4fb3; display: flex; align-items: center; justify-content: center; }
+      #autobi-dock29-pop .pp-id { font-size: 14px; font-weight: 800; display: flex; align-items: center; gap: 4px; }
+      #autobi-dock29-pop .pp-st { font-size: 12px; color: #475569; }
+      #autobi-dock29-pop .pp-it { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 40px; padding: 0 8px; border: 0; border-radius: 9px; background: transparent; font-size: 14px; font-weight: 600; color: #0f1b2d; cursor: pointer; text-align: left; }
+      #autobi-dock29-pop .pp-it:hover, #autobi-dock29-pop .pp-it:active { background: #f2f5f9; }
+      #autobi-dock29-pop .pp-it svg { flex: none; color: #475569; }
+      #autobi-dock29-pop .pp-ft { font-size: 11.5px; color: #64748b; line-height: 1.45; padding: 9px 8px 2px; border-top: 1px solid #edf1f6; margin-top: 4px; }
+    `);
+  } catch (_) { }
+
+  const I = {
+    play: '<svg width="20" height="22" viewBox="0 0 20 22" aria-hidden="true"><path d="M4 2.5 L18 11 L4 19.5 Z" fill="#3a2a00" stroke="#3a2a00" stroke-width="1.5" stroke-linejoin="round"/></svg>',
+    stop: '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="2.5" fill="#fff"/></svg>',
+    dots: '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2" fill="currentColor"/><circle cx="12" cy="12" r="2" fill="currentColor"/><circle cx="19" cy="12" r="2" fill="currentColor"/></svg>',
+    x: '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>',
+    user: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>',
+    gear: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+    grid: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
+    check: '<svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#1877F2"/><path d="M7 12.5l3.2 3.2L17 9" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+  };
+
+  let dock, play, more, pop;
+  function closePop() { if (pop) pop.classList.remove('show'); if (more) { more.classList.remove('open'); more.innerHTML = I.dots; more.setAttribute('aria-label', 'Mở menu AutoBI'); } }
+  function fillPop() {
+    const ok = !!auth().isAuthorized, v = ver();
+    pop.innerHTML =
+      '<div class="pp-hd"><div class="pp-av">' + I.user + '</div><div><div class="pp-id">' + userId() + (ok ? I.check : '') + '</div><div class="pp-st">' + (ok ? 'Đã xác thực' : 'Chưa xác thực') + '</div></div></div>' +
+      '<button type="button" class="pp-it" data-a="config">' + I.gear + 'Khai báo</button>' +
+      '<button type="button" class="pp-it" data-a="menu">' + I.grid + 'Menu công cụ</button>' +
+      '<button type="button" class="pp-it" data-a="user">' + I.user + 'Tài khoản</button>' +
+      '<div class="pp-ft">AutoBI V' + v + '<br>Bản quyền thuộc về 38967 © 2025</div>';
+  }
+  function act(a) {
+    closePop();
+    if (a === 'user') return clickId('nav-user');
+    if (a === 'menu') return clickId('nav-home-menu');
+    if (a === 'config') {
+      const ui = window.__AutoBIUI;
+      if (!auth().isAuthorized || !ui || typeof ui.openConfigModal !== 'function') return clickId('nav-user');
+      try { ui.openConfigModal(); } catch (_) { clickId('nav-user'); }
+    }
+  }
+  function build() {
+    if (document.getElementById('autobi-dock29') || !document.body) return;
+    dock = document.createElement('div'); dock.id = 'autobi-dock29'; dock.setAttribute('data-autobi-ui', '1'); dock.setAttribute('data-html2canvas-ignore', 'true');
+    play = document.createElement('button'); play.type = 'button'; play.className = 'dk-play';
+    more = document.createElement('button'); more.type = 'button'; more.className = 'dk-more';
+    pop = document.createElement('div'); pop.id = 'autobi-dock29-pop'; pop.setAttribute('data-autobi-ui', '1'); pop.setAttribute('data-html2canvas-ignore', 'true');
+    dock.appendChild(play); dock.appendChild(more);
+    document.body.appendChild(dock); document.body.appendChild(pop);
+    document.documentElement.classList.add('autobi-dock29');
+    play.addEventListener('click', ev => {
+      ev.stopPropagation(); closePop();
+      if (running()) { const s = document.querySelector('.autobi-stop85'); if (s) s.click(); return; }
+      clickId('nav-report');
+    });
+    more.addEventListener('click', ev => { ev.stopPropagation(); if (pop.classList.contains('show')) return closePop(); fillPop(); pop.classList.add('show'); more.classList.add('open'); more.innerHTML = I.x; more.setAttribute('aria-label', 'Đóng menu AutoBI'); });
+    pop.addEventListener('click', ev => { const b = ev.target.closest && ev.target.closest('[data-a]'); if (b) act(b.getAttribute('data-a')); ev.stopPropagation(); });
+    document.addEventListener('click', ev => { if (pop.classList.contains('show') && !pop.contains(ev.target) && !dock.contains(ev.target)) closePop(); });
+    document.addEventListener('keydown', ev => { if (ev.key === 'Escape') closePop(); });
+    closePop(); sync();
+  }
+  let lastState = '';
+  function sync() {
+    if (!dock) return;
+    const run = running(), ready = !!document.getElementById('tgdd-bottom-nav'), st = (run ? 'run' : 'idle') + (ready ? 1 : 0) + (auth().isAuthorized ? 1 : 0);
+    if (st === lastState) return; lastState = st;
+    play.classList.toggle('is-run', run);
+    play.innerHTML = run ? I.stop : I.play + '<span class="dk-dot' + (ready && auth().isAuthorized ? ' ok' : '') + '"></span>';
+    play.setAttribute('aria-label', run ? 'Dừng' : 'Bắt đầu chạy');
+    play.title = run ? 'Dừng' : (ready ? 'Bắt đầu chạy' : 'AutoBI đang khởi tạo…');
+  }
+  const start = () => { build(); setInterval(() => { if (!document.getElementById('autobi-dock29')) { dock = null; lastState = ''; build(); } sync(); }, 500); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true }); else start();
+  window.__AutoBIDock = { sync, close: closePop };
+})();
+
+/* ==== V17.30: Danh mục gọn đẹp (__AutoBISidebar) — đồng bộ kiểu cụm nút nổi.
+   Không dựng lại menu: chỉ xếp các mục có sẵn (giữ nguyên xử lý bấm) vào nhóm Báo cáo / Dữ liệu & công cụ / Cài đặt / Hướng dẫn,
+   ẩn thanh dưới của Danh mục (đã có nút ✕), thêm chân trang: tài khoản + phiên bản + bản quyền. Mục nào đang bị ẩn vẫn giữ ẩn. ==== */
+(function () {
+  'use strict';
+  if (location.hostname !== 'baocao.dienmayxanh.com') return;
+  const ver = () => { try { return String(GM_info.script.version || ''); } catch (_) { return ''; } };
+  const auth = () => { try { return (window.__AutoBIAuthGet && window.__AutoBIAuthGet()) || {}; } catch (_) { return {}; } };
+  const userId = () => { const n = String(auth().userName || ''); const m = n.match(/\d+/); return m ? m[0] : (n.trim() || '---'); };
+  const GROUPS = [
+    ['Báo cáo', ['btn-menu-rerun', 'btn-menu-rerun-logic', 'btn-menu-cam', 'btn-menu-deploy', 'btn-menu-comment', 'btn-menu-save-data', 'btn-menu-save-logic']],
+    ['Dữ liệu và công cụ', ['btn-menu-bonus-points', 'btn-menu-history', 'btn-menu-tools', 'btn-menu-plan', '.tgdd-pinned-container']],
+    ['Cài đặt', ['btn-menu-config-home', 'btn-menu-config-report']],
+    ['Hướng dẫn', ['.btn-tutorial-link']]
+  ];
+  try {
+    GM_addStyle(`
+      #tgdd-sidebar-menu.ab-sb30 { width: 320px !important; }
+      #tgdd-sidebar-menu.ab-sb30 .sidebar-bottom-nav { display: none !important; }
+      #tgdd-sidebar-menu.ab-sb30 .sidebar-header { border-bottom: 1px solid #edf1f6 !important; padding: 16px 18px 12px !important; }
+      #tgdd-sidebar-menu.ab-sb30 .sidebar-title { font-size: 16px !important; font-weight: 800 !important; letter-spacing: .6px; color: #0f1b2d !important; }
+      #tgdd-sidebar-menu.ab-sb30 .sidebar-close { width: 34px; height: 34px; background: #f2f5f9; color: #475569; }
+      #tgdd-sidebar-menu.ab-sb30 .ab-sb-body { flex: 1; overflow-y: auto; overflow-x: hidden; margin-right: 10px; padding: 6px 10px 10px; display: flex; flex-direction: column; gap: 4px; }
+      #tgdd-sidebar-menu.ab-sb30 .ab-sb-sec { display: flex; flex-direction: column; gap: 2px; }
+      #tgdd-sidebar-menu.ab-sb30 .ab-sb-sec.is-empty { display: none; }
+      #tgdd-sidebar-menu.ab-sb30 .ab-sb-lbl { font-size: 11.5px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; color: #64748b; padding: 12px 8px 4px; }
+      #tgdd-sidebar-menu.ab-sb30 .tgdd-menu-item { min-height: 46px; padding: 0 10px !important; gap: 12px !important; border: 0 !important; border-radius: 11px; font-size: 14.5px !important; font-weight: 600 !important; color: #0f1b2d !important; margin: 0 !important; }
+      #tgdd-sidebar-menu.ab-sb30 .tgdd-menu-item:hover { background: #f2f5f9 !important; padding-left: 10px !important; color: #0b4fb3 !important; }
+      #tgdd-sidebar-menu.ab-sb30 .tgdd-menu-item svg { width: 18px !important; height: 18px !important; box-sizing: content-box; padding: 8px; border-radius: 10px; background: #f2f5f9; fill: #475569; margin: 0 !important; flex: none; }
+      #tgdd-sidebar-menu.ab-sb30 #btn-menu-bonus-points svg { fill: none !important; stroke: #6f42c1 !important; background: #f1ecfb; }
+      #tgdd-sidebar-menu.ab-sb30 #btn-menu-config-home, #tgdd-sidebar-menu.ab-sb30 #btn-menu-config-report { color: #0b4fb3 !important; }
+      #tgdd-sidebar-menu.ab-sb30 #btn-menu-config-home svg, #tgdd-sidebar-menu.ab-sb30 #btn-menu-config-report svg { background: #e8f0fd; fill: #0b4fb3; }
+      #tgdd-sidebar-menu.ab-sb30 #btn-menu-rerun, #tgdd-sidebar-menu.ab-sb30 #btn-menu-rerun-logic { color: #b42318 !important; }
+      #tgdd-sidebar-menu.ab-sb30 #btn-menu-rerun svg, #tgdd-sidebar-menu.ab-sb30 #btn-menu-rerun-logic svg { background: #fde8e7; fill: #b42318; }
+      #tgdd-sidebar-menu.ab-sb30 .btn-tutorial-link { font-weight: 500 !important; font-size: 13.5px !important; min-height: 40px; }
+      #tgdd-sidebar-menu.ab-sb30 .btn-tutorial-link svg { background: #fdecec; }
+      #tgdd-sidebar-menu.ab-sb30 .sidebar-tab-content:empty, #tgdd-sidebar-menu.ab-sb30 .sidebar-content:empty, #tgdd-sidebar-menu.ab-sb30 .sidebar-footer:empty, #tgdd-sidebar-menu.ab-sb30 .sidebar-tab-footer:empty { display: none !important; }
+      #tgdd-sidebar-menu.ab-sb30 .ab-sb-ft { flex-shrink: 0; margin: 0 10px 0 0; padding: 12px 18px 14px; border-top: 1px solid #edf1f6; display: flex; align-items: center; gap: 10px; }
+      #tgdd-sidebar-menu.ab-sb30 .ab-sb-av { width: 34px; height: 34px; border-radius: 50%; background: #e8f0fd; color: #0b4fb3; display: flex; align-items: center; justify-content: center; flex: none; }
+      #tgdd-sidebar-menu.ab-sb30 .ab-sb-id { font-size: 13.5px; font-weight: 800; color: #0f1b2d; display: flex; align-items: center; gap: 4px; }
+      #tgdd-sidebar-menu.ab-sb30 .ab-sb-cp { font-size: 11.5px; color: #64748b; line-height: 1.4; }
+    `);
+  } catch (_) { }
+  const visible = el => { try { return getComputedStyle(el).display !== 'none'; } catch (_) { return true; } };
+  function pick(root, sel) { return sel.startsWith('.') ? [...root.querySelectorAll(sel)] : [root.querySelector('#' + sel)].filter(Boolean); }
+  function process(menu) {
+    const content = menu.querySelector('.sidebar-tab-content, .sidebar-content');
+    if (!content || menu.querySelector('.ab-sb-body')) return;
+    menu.classList.add('ab-sb30');
+    const body = document.createElement('div'); body.className = 'ab-sb-body';
+    const used = new Set();
+    const secs = GROUPS.map(([label, sels]) => {
+      const sec = document.createElement('div'); sec.className = 'ab-sb-sec';
+      sec.innerHTML = '<div class="ab-sb-lbl">' + label + '</div>';
+      sels.forEach(sel => pick(menu, sel).forEach(el => { if (!used.has(el)) { used.add(el); sec.appendChild(el); } }));
+      return sec;
+    });
+    [...menu.querySelectorAll('.tgdd-menu-item')].forEach(el => { if (!used.has(el) && !el.closest('.ab-sb-body')) { used.add(el); secs[1].appendChild(el); } });
+    secs.forEach(s => body.appendChild(s));
+    const host = content.parentNode; host.insertBefore(body, content);
+    const ok = !!auth().isAuthorized;
+    const ft = document.createElement('div'); ft.className = 'ab-sb-ft';
+    ft.innerHTML = '<div class="ab-sb-av"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div>' +
+      '<div><div class="ab-sb-id">' + userId() + (ok ? '<svg width="14" height="14" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#1877F2"/><path d="M7 12.5l3.2 3.2L17 9" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '') + '</div>' +
+      '<div class="ab-sb-cp">AutoBI V' + ver() + '<br>Bản quyền thuộc về 38967 © 2025</div></div>';
+    (menu.querySelector('.sidebar-panel-tab, .sidebar-panel') || menu).appendChild(ft);
+    requestAnimationFrame(() => secs.forEach(s => { const items = [...s.children].slice(1); s.classList.toggle('is-empty', !items.some(visible)); }));
+  }
+  function scan() { const m = document.getElementById('tgdd-sidebar-menu'); if (m) process(m); }
+  const mo = new MutationObserver(scan);
+  const start = () => { scan(); mo.observe(document.body, { childList: true, subtree: true }); };
+  if (document.body) start(); else document.addEventListener('DOMContentLoaded', start, { once: true });
+  window.__AutoBISidebar = { scan };
 })();
