@@ -3,7 +3,7 @@
 Đổ **tồn kho** (BI 4286) và **xuất bán ngành Điện thoại** (BI 77) theo cụm siêu thị, xem theo hãng / nhân viên / sản phẩm / IMEI và tải Excel. Dùng trên **máy tính** (Chrome hoặc Edge).
 
 ## Cài đặt (1 lần)
-
+l
 1. Cài tiện ích **Tampermonkey** cho Chrome / Edge.
 2. Bấm link cài:
    **https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_Kho_XuatBan.user.js**
