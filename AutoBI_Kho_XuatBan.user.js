@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AutoBI - Kho & Xuất Bán
 // @namespace    https://github.com/PhamngocNDH/AutoBI/kho-xuatban-test
-// @version      1.5.0
+// @version      1.5.5
 // @description  Đổ tồn kho (BI 4286) và xuất bán (BI 77) theo cụm siêu thị cho máy tính: lấy thẳng dữ liệu BI có điều tốc, sổ ngày, bộ chọn tồn kho, Excel.
 // @author       AutoBI / 38967 - Mr Phạm
 // @homepageURL  https://github.com/PhamngocNDH/AutoBI
@@ -35,15 +35,13 @@
  */
 (function () {
     'use strict';
-    const VERSION = '1.5.0';
-    // Ghi chú bản mới: hiện 1 lần sau khi cập nhật, và hiện trước trên thông báo "Có bản mới" (đọc từ file trên GitHub)
-    const CHANGES = ["Xuất bán: thêm bộ lọc Loại hàng (Mới / Đã sử dụng…) theo cột Trạng thái hồ sơ của BI 77", "Xuất bán: cột Loại hàng ở tab Chi tiết và Excel", "Thông báo khi có bản mới trên GitHub, bấm là cập nhật", "Tồn kho: in phiếu kiểm A4 dọc có ô KIỂM"];
+    const VERSION = '1.5.5';
     const UPDATE_URL = 'https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_Kho_XuatBan.user.js';
-    const SALES_SCHEMA = 2;                             // 2 = dòng bán có Loại hàng; ngày lưu bằng bản cũ sẽ được lấy lại
+    const SALES_SCHEMA = 3;                             // 3 = tất cả ngành hàng + Loại hàng; ngày lưu bằng bản cũ sẽ được lấy lại
     const PREFIX = 'autobi_kxb_test_v1_';               // giữ khóa cũ để không mất khai báo shop
     const AUTH_SHEET = Object.freeze({ id: '17PxnghjkKIP36fWoSd656wo3DhlOmMiTiyjlf1g23UU', gid: '1237161146' });
     const REPORT = Object.freeze({ inventory: 4286, sales: 77 });
-    const SALES_FILTER = Object.freeze({ exportType: '3', warehouseMode: '2', category: '13' });
+    const SALES_FILTER = Object.freeze({ exportType: '3', warehouseMode: '2', category: '' });   // '' = tất cả ngành hàng
     const RECHECK_DAYS = 60;                            // ngày còn treo: xem lại tối đa 60 ngày
 
     /* ================= TIỆN ÍCH CHUNG (thuần, test được bằng node) ================= */
@@ -138,7 +136,7 @@
     const RULE = [['exported', 'Đã xuất', 'Chưa xuất'], ['delivered', 'Đã giao', 'Chưa giao'], ['cancelled', 'Chưa hủy', 'Đã hủy'], ['returned', 'Chưa trả', 'Đã trả hàng']];
     function reasons(line) {
         const out = RULE.filter(([k, ok]) => !same(line[k], ok)).map(([, , label]) => label);
-        if (!hasCode(line.category, SALES_FILTER.category)) out.push('Ngành khác 13');
+        if (SALES_FILTER.category && !hasCode(line.category, SALES_FILTER.category)) out.push('Ngành khác ' + SALES_FILTER.category);
         if (!/xuat ban hang tai sieu thi$/.test(norm(line.exportType))) out.push('Hình thức xuất khác 3');
         return out;
     }
@@ -160,11 +158,11 @@
         const valid = [], excluded = {}, pendingOrders = new Set(), pendingLines = [], returnedLines = [];
         const returnedOrders = new Set(lines.filter(isReturned).map(l => l.order));
         const brief = l => ({ created: l.created, time: l.time, shipped: l.shipped, shop: l.shop, order: l.order, orderType: l.orderType, creator: l.creator,
-            brand: l.brand, product: l.product, productName: l.productName, imei: l.imei, condition: l.condition, qty: l.qty, price: l.price, exported: l.exported, delivered: l.delivered, returned: l.returned });
+            brand: l.brand, product: l.product, productName: l.productName, imei: l.imei, condition: l.condition, category: l.category, group: l.group, qty: l.qty, price: l.price, exported: l.exported, delivered: l.delivered, returned: l.returned });
         for (const l of lines) {
             if (returnedOrders.has(l.order)) {
                 excluded['Đơn khách nhập trả'] = (excluded['Đơn khách nhập trả'] || 0) + 1;
-                if (hasCode(l.category, SALES_FILTER.category) && l.price > 0) returnedLines.push(brief(l));
+                if ((!SALES_FILTER.category || hasCode(l.category, SALES_FILTER.category)) && l.price > 0) returnedLines.push(brief(l));
                 continue;
             }
             if (pending(l)) { pendingOrders.add(l.order); pendingLines.push(brief(l)); }
@@ -406,17 +404,14 @@ tr{break-inside:avoid;page-break-inside:avoid}
     }
     function parseRemoteScript(text) {
         const v = /@version\s+([\d.]+)/.exec(text || '');
-        let notes = [];
-        const m = /const CHANGES = (\[[^\n]*\]);/.exec(text || '');
-        if (m) try { notes = JSON.parse(m[1]).filter(x => typeof x === 'string').slice(0, 12); } catch { notes = []; }
-        return v ? { version: v[1], notes } : null;
+        return v ? { version: v[1] } : null;
     }
 
     // Hàm thuần cho kiểm thử offline; không cài global trên website thật.
     if (typeof module === 'object' && module.exports) {
         module.exports = { clean, norm, hasCode, day, toBI, addDays, validateRange, daysIn, apiNumber, parseDelimited,
             lineFromApi, reasons, pending, validateSalesLines, splitSales, summarizeSales, inPeriod, dayStatus, daysToFetch,
-            parseRateLimit, waitBeforeCall, inventoryRecordFromApi, summarizeInventory, filterInventory, inventoryOptions, inventoryViews, validateShops, authorizeSheetRows, escHtml, inventoryChecklist, inventoryPrintHtml, conditionKey, conditionText, newerVersion, parseRemoteScript, CHANGES };
+            parseRateLimit, waitBeforeCall, inventoryRecordFromApi, summarizeInventory, filterInventory, inventoryOptions, inventoryViews, validateShops, authorizeSheetRows, escHtml, inventoryChecklist, inventoryPrintHtml, conditionKey, conditionText, newerVersion, parseRemoteScript };
         return;
     }
 
@@ -429,7 +424,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
     const save = (key, value) => GM_setValue(PREFIX + key, value);
     let config = { ...defaults, ...load('config', {}) };
     let ui, running = null, auth = null;
-    const view = { tab: 'sales', sales: null, salesTab: 'brand', salesShops: null, salesConds: new Set(), salesQuery: '', openStaff: new Set(), inv: null, invTab: 'group', invShops: null, invFilter: { category: '', group: '', brand: '', conditions: [], q: '' } };
+    const view = { tab: 'sales', sales: null, salesTab: 'category', salesShops: null, salesConds: new Set(), salesCat: '', salesQuery: '', openStaff: new Set(), inv: null, invTab: 'group', invShops: null, invFilter: { category: '', group: '', brand: '', conditions: [], q: '' } };
     let journal = load('journal', []).slice(-300);
     if (load('journalVersion', '') !== VERSION) { journal = []; try { save('journal', journal); save('journalVersion', VERSION); } catch { /* bỏ qua */ } }
     function log(message, kind = 'info') {
@@ -608,7 +603,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
     async function salesDay(iso, session, onWait) {
         const rows = await runReport(REPORT.sales, {
             V_FROMDATE: toBI(iso), V_TODATE: toBI(iso), V_OUTPUTTYPEIDLIST: SALES_FILTER.exportType, V_STORESEARCHTYPE: SALES_FILTER.warehouseMode,
-            V_STOREIDLIST: shopsKey(), V_MAINGROUPIDLIST: SALES_FILTER.category, V_SALEORDERTYPEIDLIST: '', V_PRODUCTIDLIST: '',
+            V_STOREIDLIST: shopsKey(), V_MAINGROUPIDLIST: SALES_FILTER.category,   // '' = tất cả ngành V_SALEORDERTYPEIDLIST: '', V_PRODUCTIDLIST: '',
             V_DELIVERYTYPEIDLIST: '', V_COMPANYID: '1', V_LANGUAGEID: '2', V_USERNAME: ''
         }, session, 180000, onWait);
         check(session);
@@ -743,11 +738,23 @@ tr{break-inside:avoid;page-break-inside:avoid}
     }
 
     /* ---------- Tab Xuất bán ---------- */
+    const categoryText = c => clean(c).replace(/^\d+\s*-\s*/, '') || 'Chưa rõ';
+    function salesByCategory(lines, codes) {
+        const m = new Map(), byShop = {}; let qty = 0, rev = 0;
+        for (const l of lines) {
+            const k = l.category + '|' + l.group, x = m.get(k) || { category: categoryText(l.category), group: l.group, byShop: {}, qty: 0, rev: 0 };
+            x.byShop[l.shop] = (x.byShop[l.shop] || 0) + l.qty; x.qty += l.qty; x.rev += l.qty * l.price; m.set(k, x);
+            byShop[l.shop] = (byShop[l.shop] || 0) + l.qty; qty += l.qty; rev += l.qty * l.price;
+        }
+        const catRev = new Map(); for (const x of m.values()) catRev.set(x.category, (catRev.get(x.category) || 0) + x.rev);
+        const rows = [...m.values()].sort((a, b) => catRev.get(b.category) - catRev.get(a.category) || a.category.localeCompare(b.category, 'vi') || b.rev - a.rev);   // ngành doanh thu cao lên trên
+        return { rows, byShop, qty, rev };
+    }
     // Áp bộ chọn siêu thị + tính lại tổng hợp
     function salesData() {
         const r = view.sales; if (!r) return null;
-        const shops = view.salesShops, conds = view.salesConds;
-        const keep = l => shops.has(l.shop) && (!conds.size || conds.has(conditionText(l.condition)));
+        const shops = view.salesShops, conds = view.salesConds, cat = view.salesCat;
+        const keep = l => shops.has(l.shop) && (!conds.size || conds.has(conditionText(l.condition))) && (!cat || categoryText(l.category) === cat);
         const lines = r.allLines.filter(keep);
         return { ...r, lines, summary: summarizeSales(lines, r.basis), pendingLines: r.pendingLines.filter(keep), returnedLines: (r.returnedLines || []).filter(keep) };
     }
@@ -766,34 +773,56 @@ tr{break-inside:avoid;page-break-inside:avoid}
             b.classList.toggle('on', on); b.setAttribute('aria-pressed', on);
             b.onclick = () => { if (on && view.salesShops.size === 1) return; on ? view.salesShops.delete(c) : view.salesShops.add(c); renderSales(); };
         });
-        const condBox = ui.querySelector('[data-sales-conds]'); condBox.replaceChildren();
-        const byCond = new Map();
-        (view.sales ? view.sales.allLines : []).filter(l => view.salesShops.has(l.shop)).forEach(l => { const k = conditionText(l.condition); byCond.set(k, (byCond.get(k) || 0) + l.qty); });
-        [...view.salesConds].forEach(k => { if (!byCond.has(k)) byCond.set(k, 0); });
-        const condList = [...byCond.keys()].sort((a, b) => (a === 'Mới' ? -1 : b === 'Mới' ? 1 : a.localeCompare(b, 'vi')));
-        const allBtn = el('button', 'Tất cả', condBox, 'chip'); allBtn.type = 'button'; allBtn.classList.toggle('on', !view.salesConds.size);
-        allBtn.onclick = () => { view.salesConds.clear(); renderSales(); };
-        condList.forEach(k => {
-            const on = view.salesConds.has(k), b = el('button', `${k} · ${fmt(byCond.get(k))}`, condBox, 'chip'); b.type = 'button';
-            b.classList.toggle('on', on); b.setAttribute('aria-pressed', on);
-            b.onclick = () => { on ? view.salesConds.delete(k) : view.salesConds.add(k); renderSales(); };
-        });
-        if (!condList.length) el('span', 'Đổ xuất bán để có danh sách loại hàng', condBox, 'kxb-muted');
+        const shopLines = (view.sales ? view.sales.allLines : []).filter(l => view.salesShops.has(l.shop));
+        const chipRow = (box, set, keyOf, sortFirst, empty, src) => {
+            box.replaceChildren();
+            const by = new Map(); src.forEach(l => { const k = keyOf(l); by.set(k, (by.get(k) || 0) + l.qty); });
+            [...set].forEach(k => { if (!by.has(k)) by.set(k, 0); });
+            const list = [...by.keys()].sort((a, b) => (a === sortFirst ? -1 : b === sortFirst ? 1 : a.localeCompare(b, 'vi', { numeric: true })));
+            const all = el('button', 'Tất cả', box, 'chip'); all.type = 'button'; all.classList.toggle('on', !set.size);
+            all.onclick = () => { set.clear(); renderSales(); };
+            list.forEach(k => {
+                const on = set.has(k), b = el('button', `${k} · SL ${fmt(by.get(k))}`, box, 'chip'); b.type = 'button';
+                b.classList.toggle('on', on); b.setAttribute('aria-pressed', on);
+                b.onclick = () => { on ? set.delete(k) : set.add(k); renderSales(); };
+            });
+            if (!list.length) el('span', empty, box, 'kxb-muted');
+        };
+        // Ngành hàng: danh sách thả xuống, ngành doanh thu cao lên trên
+        const catSel = ui.querySelector('[data-sales-cat]'), byCat = new Map();
+        shopLines.filter(l => !view.salesConds.size || view.salesConds.has(conditionText(l.condition))).forEach(l => { const k = categoryText(l.category), x = byCat.get(k) || { q: 0, r: 0 }; x.q += l.qty; x.r += l.qty * l.price; byCat.set(k, x); });
+        if (view.salesCat && !byCat.has(view.salesCat)) byCat.set(view.salesCat, { q: 0, r: 0 });
+        const tq = [...byCat.values()].reduce((a, v) => a + v.q, 0);
+        catSel.replaceChildren();
+        const o0 = el('option', byCat.size ? `Tất cả ngành · SL ${fmt(tq)}` : 'Tất cả ngành', catSel); o0.value = '';
+        [...byCat.entries()].sort((a, b) => b[1].r - a[1].r || b[1].q - a[1].q || a[0].localeCompare(b[0], 'vi')).forEach(([k, v]) => { const o = el('option', `${k} · SL ${fmt(v.q)}`, catSel); o.value = k; });
+        catSel.value = view.salesCat;
+        catSel.classList.toggle('on', !!view.salesCat);
+        catSel.onchange = () => { view.salesCat = catSel.value; renderSales(); };
+        chipRow(ui.querySelector('[data-sales-conds]'), view.salesConds, l => conditionText(l.condition), 'Mới', 'Đổ xuất bán để có danh sách loại hàng',
+            shopLines.filter(l => !view.salesCat || categoryText(l.category) === view.salesCat));   // SL loại hàng theo ngành đang chọn
         const r = salesData();
         if (!r) { el('div', 'Chọn kỳ rồi bấm "Đổ xuất bán". Ngày đã lấy được lưu lại, lần sau chỉ lấy ngày còn thiếu. Bấm "Xem số đã lưu" để xem ngay không cần gọi BI.', area, 'kxb-empty'); return; }
         const s = r.summary, codes = config.shops.map(x => keyCode(x.code)).filter(c => view.salesShops.has(c));
         if (r.missing) el('div', `Còn ${r.missing} ngày chưa lấy trong kỳ ${toBI(r.range.from)}–${toBI(r.range.to)} — số chưa đủ. Bấm "Đổ xuất bán" để lấy tiếp.`, area, 'kxb-warn');
-        if (r.oldSchema) el('div', `${r.oldSchema} ngày lưu bằng bản cũ chưa có Loại hàng (hiện "Chưa rõ"). Bấm "Đổ xuất bán" để lấy lại các ngày này.`, area, 'kxb-warn');
+        if (r.oldSchema) el('div', `${r.oldSchema} ngày lưu bằng bản cũ (chỉ ngành Điện thoại). Bấm "Đổ xuất bán" để lấy lại các ngày này với tất cả ngành hàng.`, area, 'kxb-warn');
+        if (view.salesCat) el('div', `Đang lọc ngành: ${view.salesCat} — chọn "Tất cả ngành" để bỏ lọc.`, area, 'kxb-warn');
         if (view.salesConds.size) el('div', `Đang lọc loại hàng: ${[...view.salesConds].join(', ')} — bấm "Tất cả" để bỏ lọc.`, area, 'kxb-warn');
         const pendOrders = new Set(r.pendingLines.map(l => l.order)).size, retOrders = new Set(r.returnedLines.map(l => l.order)).size;
-        kpis(area, [['Đã bán', `${fmt(s.quantity)} máy`, mil(s.revenue)],
-            ...codes.map(c => { const x = s.shops.find(z => z.code === c) || { quantity: 0, revenue: 0 }; return [shopName(c), `${fmt(x.quantity)} máy`, mil(x.revenue)]; }),
-            ['Đơn treo', fmt(pendOrders), 'chưa xuất / chưa giao'], ['Khách nhập trả', fmt(retOrders), `đã bỏ ${fmt(r.returnedLines.reduce((a, l) => a + l.qty, 0))} máy · ${mil(r.returnedLines.reduce((a, l) => a + l.qty * l.price, 0))}`]]);
-        el('div', `Kỳ ${toBI(r.range.from)}–${toBI(r.range.to)} · ngành 13 · tính theo ${r.basis === 'shipped' ? 'ngày xuất' : 'ngày tạo'} · dòng Đã xuất – Đã giao – Chưa hủy · loại hàng: ${view.salesConds.size ? [...view.salesConds].join(', ') : 'tất cả'} · bỏ cả đơn khách nhập trả (kiểm tra lại ${config.returnDays} ngày gần nhất) · doanh thu = Giá bán × SL (gồm VAT)`, area, 'kxb-muted');
-        subtabs(area, [['brand', 'Theo hãng'], ['staff', 'Nhân viên × hãng'], ['staffProduct', 'Nhân viên × sản phẩm'], ['product', 'Sản phẩm'], ['daily', 'Theo ngày'], ['pending', `Đơn treo (${pendOrders})`], ['returned', `Nhập trả (${retOrders})`], ['detail', 'Chi tiết']], view.salesTab, k => { view.salesTab = k; renderSales(); });
+        kpis(area, [['Đã bán', `SL ${fmt(s.quantity)}`, mil(s.revenue)],
+            ...codes.map(c => { const x = s.shops.find(z => z.code === c) || { quantity: 0, revenue: 0 }; return [shopName(c), `SL ${fmt(x.quantity)}`, mil(x.revenue)]; }),
+            ['Đơn treo', fmt(pendOrders), 'chưa xuất / chưa giao'], ['Khách nhập trả', fmt(retOrders), `đã bỏ SL ${fmt(r.returnedLines.reduce((a, l) => a + l.qty, 0))} · ${mil(r.returnedLines.reduce((a, l) => a + l.qty * l.price, 0))}`]]);
+        el('div', `Kỳ ${toBI(r.range.from)}–${toBI(r.range.to)} · Kho tạo · ngành: ${view.salesCat || 'tất cả'} · tính theo ${r.basis === 'shipped' ? 'ngày xuất' : 'ngày tạo'} · dòng Đã xuất – Đã giao – Chưa hủy · loại hàng: ${view.salesConds.size ? [...view.salesConds].join(', ') : 'tất cả'} · bỏ cả đơn khách nhập trả (kiểm tra lại ${config.returnDays} ngày gần nhất) · doanh thu = Giá bán × SL (gồm VAT)`, area, 'kxb-muted');
+        subtabs(area, [['category', 'Theo ngành hàng'], ['brand', 'Theo hãng'], ['staff', 'Nhân viên × hãng'], ['staffProduct', 'Nhân viên × sản phẩm'], ['product', 'Sản phẩm'], ['daily', 'Theo ngày'], ['pending', `Đơn treo (${pendOrders})`], ['returned', `Nhập trả (${retOrders})`], ['detail', 'Chi tiết']], view.salesTab, k => { view.salesTab = k; renderSales(); });
         const pane = el('div', undefined, area);
         const n = (from, count) => Array.from({ length: count }, (_, i) => from + i);
-        if (view.salesTab === 'brand') table(pane, ['Hãng', ...codes.map(shopName), 'SL', '% SL', 'Doanh thu', '% DT', 'Giá TB / máy'],
+        if (view.salesTab === 'category') {
+            const v = salesByCategory(r.lines, codes);
+            table(pane, ['Ngành hàng', 'Nhóm hàng', ...codes.map(shopName), 'SL', 'Doanh thu', '% DT'],
+                [...v.rows.map(x => [x.category, x.group, ...codes.map(c => x.byShop[c] ? fmt(x.byShop[c]) : ''), fmt(x.qty), mil(x.rev), pct(v.rev ? x.rev / v.rev * 100 : 0)]),
+                 ['Tổng', '', ...codes.map(c => fmt(v.byShop[c] || 0)), fmt(v.qty), mil(v.rev), '100%']], { num: n(2, codes.length + 3), total: true });
+        }
+        if (view.salesTab === 'brand') table(pane, ['Hãng', ...codes.map(shopName), 'SL', '% SL', 'Doanh thu', '% DT', 'Giá TB'],
             [...s.brands.map(b => [b.label, ...codes.map(c => fmt(s.brandShop[norm(b.label) + '|' + c]?.quantity || 0)), fmt(b.quantity), pct(b.pctQty), mil(b.revenue), pct(b.pctRev), mil(b.quantity ? b.revenue / b.quantity : 0)]),
              ['Tổng', ...codes.map(c => fmt(s.shops.find(z => z.code === c)?.quantity || 0)), fmt(s.quantity), '100%', mil(s.revenue), '100%', mil(s.quantity ? s.revenue / s.quantity : 0)]], { num: n(1, codes.length + 5), total: true });
         if (view.salesTab === 'staff') {
@@ -807,7 +836,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
             for (const st of s.staff) {
                 const box = el('details', undefined, pane, 'kxb-staff'); box.open = view.openStaff.has(st.label);
                 box.ontoggle = () => { box.open ? view.openStaff.add(st.label) : view.openStaff.delete(st.label); };
-                el('summary', `${shopName(st.shop)} · ${st.label} — ${fmt(st.quantity)} máy · ${mil(st.revenue)} · ${st.brands.map(b => `${b.label} ${fmt(b.quantity)}`).join(', ')}`, box);
+                el('summary', `${shopName(st.shop)} · ${st.label} — SL ${fmt(st.quantity)} · ${mil(st.revenue)} · ${st.brands.map(b => `${b.label} ${fmt(b.quantity)}`).join(', ')}`, box);
                 table(box, ['Sản phẩm', 'Hãng', 'Mã SP', 'SL', '% của NV', 'Doanh thu', 'IMEI'], st.products.map(v => [v.label, v.brand, v.product, fmt(v.quantity), pct(v.pctQty), mil(v.revenue), r.lines.filter(l => l.creator === st.label && l.product === v.product && l.imei).map(l => l.imei).join(', ')]), { num: [3, 4, 5] });
             }
         }
@@ -923,10 +952,14 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const sheet = (name, aoa, widths) => { const ws = X.utils.aoa_to_sheet(aoa); if (widths) ws['!cols'] = widths.map(w => ({ wch: w })); X.utils.book_append_sheet(wb, ws, name); };
         if (view.tab === 'sales') {
             const r = salesData(); invariant(r, 'Chưa có số xuất bán'); const s = r.summary, codes = config.shops.map(x => keyCode(x.code)).filter(c => view.salesShops.has(c));
-            const title = `Kỳ ${toBI(r.range.from)}–${toBI(r.range.to)} · ${codes.map(shopName).join(', ')} · ngành 13 · theo ${r.basis === 'shipped' ? 'ngày xuất' : 'ngày tạo'} · Đã xuất – Đã giao – Chưa hủy · loại hàng ${view.salesConds.size ? [...view.salesConds].join(', ') : 'tất cả'} · bỏ đơn khách nhập trả` + (r.missing ? ` · CHƯA ĐỦ: còn ${r.missing} ngày chưa lấy` : '');
+            const title = `Kỳ ${toBI(r.range.from)}–${toBI(r.range.to)} · ${codes.map(shopName).join(', ')} · Kho tạo · ngành ${view.salesCat || 'tất cả'} · theo ${r.basis === 'shipped' ? 'ngày xuất' : 'ngày tạo'} · Đã xuất – Đã giao – Chưa hủy · loại hàng ${view.salesConds.size ? [...view.salesConds].join(', ') : 'tất cả'} · bỏ đơn khách nhập trả` + (r.missing ? ` · CHƯA ĐỦ: còn ${r.missing} ngày chưa lấy` : '');
             sheet('TheoHang', [['Bán theo hãng · ' + title], [], ['Hãng', ...codes.flatMap(c => [shopName(c) + ' SL', shopName(c) + ' DT (đ)']), 'Cụm SL', '% SL', 'Cụm DT (đ)', '% DT'],
                 ...s.brands.map(b => [b.label, ...codes.flatMap(c => { const x = s.brandShop[norm(b.label) + '|' + c]; return [x ? x.quantity : 0, x ? x.revenue : 0]; }), b.quantity, b.pctQty / 100, b.revenue, b.pctRev / 100]),
                 ['Tổng', ...codes.flatMap(c => { const x = s.shops.find(z => z.code === c); return [x ? x.quantity : 0, x ? x.revenue : 0]; }), s.quantity, 1, s.revenue, 1]], [16, ...codes.flatMap(() => [12, 15]), 9, 8, 15, 8]);
+            const vc = salesByCategory(r.lines, codes);
+            sheet('TheoNganh', [['Bán theo ngành hàng · ' + title], [], ['Ngành hàng', 'Nhóm hàng', ...codes.map(c => shopName(c) + ' SL'), 'SL', 'Doanh thu (đ)', '% DT'],
+                ...vc.rows.map(x => [x.category, x.group, ...codes.map(c => x.byShop[c] || 0), x.qty, x.rev, vc.rev ? x.rev / vc.rev : 0]),
+                ['Tổng', '', ...codes.map(c => vc.byShop[c] || 0), vc.qty, vc.rev, 1]], [24, 30, ...codes.map(() => 10), 8, 15, 8]);
             const m = staffMatrix(s);
             sheet('NhanVien_x_Hang', [['Nhân viên × hãng (SL) · ' + title], [], ['Siêu thị', 'Nhân viên (người tạo)', ...m.brands, 'Tổng SL', '% shop', 'Doanh thu (đ)'],
                 ...m.rows.map(x => [shopName(x.staff.shop), x.staff.label, ...x.cells, x.staff.quantity, x.staff.pctShop / 100, x.staff.revenue]),
@@ -942,8 +975,8 @@ tr{break-inside:avoid;page-break-inside:avoid}
                 ...r.pendingLines.map(l => [toBI(l.created), l.time, shopName(l.shop), l.order, l.orderType, l.creator, l.brand, l.product, l.productName, l.imei || '', conditionText(l.condition), l.qty, l.price, l.exported, l.delivered])], [11, 6, 14, 20, 24, 26, 10, 16, 40, 18, 12, 5, 12, 10, 10]);
             sheet('NhapTra', [['Đơn khách nhập trả — không tính vào số bán'], [], ['Ngày tạo', 'Ngày xuất', 'Siêu thị', 'Mã đơn', 'Nhân viên', 'Hãng', 'Mã SP', 'Sản phẩm', 'IMEI', 'Loại hàng', 'SL', 'Giá bán', 'Trả hàng'],
                 ...r.returnedLines.map(l => [toBI(l.created), l.shipped ? toBI(l.shipped) : '', shopName(l.shop), l.order, l.creator, l.brand, l.product, l.productName, l.imei || '', conditionText(l.condition), l.qty, l.price, l.returned])], [11, 11, 14, 20, 26, 10, 16, 40, 18, 12, 5, 12, 10]);
-            sheet('Ban_ChiTiet', [['Ngày tạo', 'Giờ', 'Ngày xuất', 'Kho tạo', 'Siêu thị', 'Mã đơn', 'Loại YCX', 'Nhân viên', 'Hãng', 'Mã SP', 'Tên SP', 'IMEI', 'Loại hàng', 'Nhóm', 'SL', 'Giá bán', 'Giá trước VAT', 'Doanh thu'],
-                ...r.lines.map(l => [toBI(l.created), l.time, l.shipped ? toBI(l.shipped) : '', l.shop, shopName(l.shop), l.order, l.orderType, l.creator, l.brand, l.product, l.productName, l.imei || '', conditionText(l.condition), l.group, l.qty, l.price, l.priceNet, l.qty * l.price])], [11, 6, 11, 8, 14, 20, 24, 26, 10, 16, 40, 18, 12, 20, 5, 12, 12, 13]);
+            sheet('Ban_ChiTiet', [['Ngày tạo', 'Giờ', 'Ngày xuất', 'Kho tạo', 'Siêu thị', 'Mã đơn', 'Loại YCX', 'Nhân viên', 'Hãng', 'Mã SP', 'Tên SP', 'IMEI', 'Loại hàng', 'Ngành', 'Nhóm', 'SL', 'Giá bán', 'Giá trước VAT', 'Doanh thu'],
+                ...r.lines.map(l => [toBI(l.created), l.time, l.shipped ? toBI(l.shipped) : '', l.shop, shopName(l.shop), l.order, l.orderType, l.creator, l.brand, l.product, l.productName, l.imei || '', conditionText(l.condition), l.category, l.group, l.qty, l.price, l.priceNet, l.qty * l.price])], [11, 6, 11, 8, 14, 20, 24, 26, 10, 16, 40, 18, 12, 22, 20, 5, 12, 12, 13]);
             X.writeFile(wb, `AutoBI_XuatBan_${r.range.from.replace(/-/g, '')}-${r.range.to.replace(/-/g, '')}.xlsx`);
         } else {
             invariant(view.inv, 'Chưa có số tồn kho');
@@ -1025,18 +1058,10 @@ tr{break-inside:avoid;page-break-inside:avoid}
         if (hasNew) {
             const b = el('div', undefined, box, 'kxb-update');
             el('b', `🔔 Có bản mới V${info.version} (đang dùng V${VERSION})`, b);
-            if (info.notes?.length) { const ul = el('ul', undefined, b); info.notes.forEach(n => el('li', n, ul)); }
             const row = el('div', undefined, b, 'bar');
             const a = el('a', '⬇ Cập nhật ngay', row, 'btn primary'); a.href = UPDATE_URL; a.target = '_blank'; a.rel = 'noopener';
             el('span', 'Tampermonkey mở trang cài → bấm "Cập nhật" → quay lại đây tải lại trang BI (F5).', row, 'kxb-muted');
             return;
-        }
-        if (load('seenVersion', '') !== VERSION) {
-            const b = el('div', undefined, box, 'kxb-update done');
-            const x = el('button', '✕', b, 'x'); x.type = 'button'; x.title = 'Đã xem';
-            x.onclick = () => { save('seenVersion', VERSION); renderUpdate(); };
-            el('b', `✅ Đang dùng V${VERSION} — có gì mới:`, b);
-            const ul = el('ul', undefined, b); CHANGES.forEach(n => el('li', n, ul));
         }
     }
 
@@ -1061,6 +1086,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         #kxb-panel button.danger{background:#b91c1c;color:#fff;border-color:#b91c1c}
         #kxb-panel .busy-only{display:none}#kxb-panel.busy .busy-only{display:inline-block}#kxb-panel.busy .idle-only{display:none}
         #kxb-panel input,#kxb-panel select{min-height:36px;padding:6px 8px;border:1px solid #b8c9ce;border-radius:8px;color:#172a3a;background:#fff;font:inherit}
+        #kxb-panel select.on{border-color:#087f8c;background:#e6f4f5;font-weight:600}
         #kxb-panel label{display:inline-flex;flex-direction:column;gap:3px;font-size:12px;color:#4a5a66}
         #kxb-panel .bar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;margin-bottom:12px}
         #kxb-panel .kxb-status{padding:8px 12px;border-radius:8px;background:#f2f7f8;margin-bottom:6px}
@@ -1113,7 +1139,6 @@ tr{break-inside:avoid;page-break-inside:avoid}
             <div data-shops></div><button type="button" data-add>+ Thêm siêu thị</button>
             <div class="bar" style="margin-top:10px"><label>Tính doanh số theo<select data-cfg="basis"><option value="created">Ngày tạo đơn</option><option value="shipped">Ngày xuất hàng</option></select></label>
               <label>Kiểm tra lại nhập trả (ngày gần nhất)<input type="number" min="2" max="35" data-cfg="returnDays" style="width:120px"></label></div>
-            <p class="kxb-muted">Quyền chạy kiểm tra từ sheet AutoBi HA, tab Auth: chỉ UserID ACTIVE.</p>
             <button type="button" class="primary" data-save>Lưu cài đặt</button> <button type="button" data-check-update>🔄 Kiểm tra bản mới</button></details>
           <div data-status class="kxb-status">Sẵn sàng.</div><div class="prog"><div data-bar></div></div>
           <div data-pane="sales">
@@ -1123,6 +1148,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
                 <label style="flex-direction:row;align-items:center;gap:6px;font-size:13px"><input type="checkbox" data-refetch style="min-height:auto">Lấy lại cả ngày đã chốt</label>
                 <span style="flex:1"></span><button type="button" class="idle-only" data-view>Xem số đã lưu</button><button type="button" class="primary idle-only" data-run-sales>Đổ xuất bán</button></div>
               <div class="group"><b>Siêu thị</b><span class="group" data-sales-shops></span></div>
+              <div class="group"><b>Ngành hàng</b><select data-sales-cat style="min-width:320px"></select></div>
               <div class="group"><b>Loại hàng</b><span class="group" data-sales-conds></span></div></div>
             <div data-sales-result></div></div>
           <div data-pane="inventory" hidden>
