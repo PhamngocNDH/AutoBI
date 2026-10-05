@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.35
+// @name         AutoBI Core V17.39
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.35
+// @version      17.39
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -140,6 +140,23 @@ window.__AutoBIGroupList = (function () {
   const valid = g => !!g && typeof g === 'object' && okName(g.short) && (g.full == null || String(g.full).trim() === '' || okName(g.full));
   const clean = list => (Array.isArray(list) ? list.filter(valid) : []);
   const looksLikePage = txt => /<\s*(!doctype|html|head|body|script|meta|div|title)\b|document\.|window\./i.test(String(txt || '').slice(0, 20000));
+  /* V17.36: cột "Loại TĐ" trong Sheet nhóm hàng (Chính / Phụ). Tìm cột theo tiêu đề; không thấy thì dùng cột H.
+     tier(v): 'chinh' | 'phu' | '' (chưa phân loại). tierOf(short): đọc từ danh sách đã lưu. */
+  const sl = v => String(v == null ? '' : v).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  function tierCol(head) {
+    const h = (Array.isArray(head) ? head : []).map(sl);
+    const i = h.findIndex(x => /\bloai\s*(td|thi\s*dua)\b|\bphan\s*loai\b|\bchinh\s*phu\b|\bnhom\s*chinh\b/.test(x));
+    return i >= 0 ? i : 7;
+  }
+  function tier(v) {
+    const x = sl(v);
+    if (!x) return '';
+    if (/^(chinh|c|main|tdc|td chinh|thi dua chinh)$/.test(x) || /\bchinh\b/.test(x)) return 'chinh';
+    if (/^(phu|p|vt|vuot troi|td phu|thi dua phu)$/.test(x) || /\b(phu|vuot troi)\b/.test(x)) return 'phu';
+    return '';
+  }
+  function tierOf(short) { const g = clean(read()).find(x => x.short === short); return g && g.tier ? g.tier : ''; }
+  function tierCount(list) { const a = clean(list); return { chinh: a.filter(g => g.tier === 'chinh').length, phu: a.filter(g => g.tier === 'phu').length, none: a.filter(g => !g.tier).length }; }
   function read() {
     const v = GM_getValue(KEY, []);
     if (Array.isArray(v)) return v;
@@ -152,7 +169,7 @@ window.__AutoBIGroupList = (function () {
     try { console.warn('[AutoBI] V17.9: bỏ ' + bad + ' nhóm hàng không hợp lệ trong danh sách đã lưu'); } catch (_) { }
     return bad;
   }
-  return { valid, clean, looksLikePage, read, heal };
+  return { valid, clean, looksLikePage, read, heal, tier, tierCol, tierOf, tierCount };
 })();
 try { window.__AutoBIGroupList.heal(); } catch (_) { }
 
@@ -1839,11 +1856,12 @@ window.__AutoBIRun67 = (function () {
                 _0x12088e(_0xe26698); } }); }, fetchConfigForModal: _0x3cf3ef => { const _0x4f84af = 'https://docs.google.com/spreadsheets/d/' + CONSTANTS.GSHEET.DATA.ID + '/export?format=csv&gid=' + CONSTANTS.GSHEET.DATA.GID; GM_xmlhttpRequest({ method: 'GET', url: _0x4f84af, onload: _0x50c319 => { if (_0x50c319.status === 200) {
                 let _0x53d7e0 = [];
                 const _0x4d90d0 = _0x50c319.responseText.split('\n');
+                const __tc = window.__AutoBIGroupList.tierCol(UTILS.parseCSVLine((_0x4d90d0[0] || '').trim())); /* V17.36 */
                 for (let _0x4ca568 = 1; _0x4ca568 < _0x4d90d0.length; _0x4ca568++) {
                     if (_0x4d90d0[_0x4ca568].trim()) {
                         const _0x5d2eeb = UTILS.parseCSVLine(_0x4d90d0[_0x4ca568].trim());
                         if (_0x5d2eeb.length >= 3) {
-                            _0x53d7e0.push({ full: _0x5d2eeb[0], short: _0x5d2eeb[1] ? _0x5d2eeb[1].trim() : '', type: UTILS.toUltraSlug(_0x5d2eeb[2]), color: _0x5d2eeb[3] ? _0x5d2eeb[3].trim() : '#FFF2CC', category: _0x5d2eeb[4] ? _0x5d2eeb[4].trim() : '', channel: _0x5d2eeb.length > 5 && _0x5d2eeb[5] ? _0x5d2eeb[5].trim().toUpperCase() : 'T', customSlug: _0x5d2eeb.length > 6 && _0x5d2eeb[6] ? UTILS.toUltraSlug(_0x5d2eeb[6]) : '' });
+                            _0x53d7e0.push({ full: _0x5d2eeb[0], short: _0x5d2eeb[1] ? _0x5d2eeb[1].trim() : '', type: UTILS.toUltraSlug(_0x5d2eeb[2]), color: _0x5d2eeb[3] ? _0x5d2eeb[3].trim() : '#FFF2CC', category: _0x5d2eeb[4] ? _0x5d2eeb[4].trim() : '', channel: _0x5d2eeb.length > 5 && _0x5d2eeb[5] ? _0x5d2eeb[5].trim().toUpperCase() : 'T', customSlug: _0x5d2eeb.length > 6 && _0x5d2eeb[6] ? UTILS.toUltraSlug(_0x5d2eeb[6]) : '', tier: window.__AutoBIGroupList.tier(_0x5d2eeb[__tc]) });
                         }
                     }
                 }
@@ -1881,6 +1899,7 @@ window.__AutoBIRun67 = (function () {
                             category: _0xdb2aa4.category || '',
                             channel: _0xdb2aa4.channel || 'T',
                             customSlug: _0xdb2aa4.customSlug || '',
+                            tier: _0xdb2aa4.tier || '',
                             mult: parseInt(_0x33bd17.mult) || 1,
                             t1: _0x49fad7 ? 0 : UTILS.parseFormattedNumber(_0x33bd17.t1) || 0,
                             t2: _0x49fad7 ? 0 : UTILS.parseFormattedNumber(_0x33bd17.t2) || 0,
@@ -2093,17 +2112,18 @@ window.__AutoBIRun67 = (function () {
             const __done = () => { GM_setValue('tgdd_active_run_config', _0x5f53e4); console.log('[Auto BI] \u2705 \u0110\u00E3 n\u1EA1p c\u1EA5u h\u00ECnh chu\u1EA9n c\u1EE7a Th\u00E1ng hi\u1EC7n t\u1EA1i (Target: ' + _0x5f53e4.target1 + ')'); _0xb0716(); };
             const __parse = __txt => { let _0x32ec7c = [];
                     const _0x43913f = __txt.split('\n');
+                    const __tc = __G.tierCol(UTILS.parseCSVLine((_0x43913f[0] || '').trim())); /* V17.36 */
                     for (let _0x32f2e7 = 1; _0x32f2e7 < _0x43913f.length; _0x32f2e7++) {
                         if (_0x43913f[_0x32f2e7].trim()) {
                             const _0x4d740d = UTILS.parseCSVLine(_0x43913f[_0x32f2e7].trim());
                             if (_0x4d740d.length >= 3) {
-                                _0x32ec7c.push({ full: _0x4d740d[0], short: _0x4d740d[1], type: UTILS.toUltraSlug(_0x4d740d[2]), color: _0x4d740d[3] ? _0x4d740d[3].trim() : '#FFF2CC', category: _0x4d740d[4] ? _0x4d740d[4].trim() : '', channel: _0x4d740d.length > 5 && _0x4d740d[5] ? _0x4d740d[5].trim().toUpperCase() : 'T', customSlug: _0x4d740d.length > 6 && _0x4d740d[6] ? UTILS.toUltraSlug(_0x4d740d[6]) : '' });
+                                _0x32ec7c.push({ full: _0x4d740d[0], short: _0x4d740d[1], type: UTILS.toUltraSlug(_0x4d740d[2]), color: _0x4d740d[3] ? _0x4d740d[3].trim() : '#FFF2CC', category: _0x4d740d[4] ? _0x4d740d[4].trim() : '', channel: _0x4d740d.length > 5 && _0x4d740d[5] ? _0x4d740d[5].trim().toUpperCase() : 'T', customSlug: _0x4d740d.length > 6 && _0x4d740d[6] ? UTILS.toUltraSlug(_0x4d740d[6]) : '', tier: __G.tier(_0x4d740d[__tc]) });
                             }
                         }
                     }
                     return __G.clean(_0x32ec7c); };
             const __get = (url, cb) => GM_xmlhttpRequest({ method: 'GET', url, timeout: 6000, onload: r => { const page = !!r && __G.looksLikePage(r.responseText); cb(r && r.status === 200 && !page ? __parse(r.responseText) : [], r ? ('HTTP ' + r.status + (page ? ', trang web thay cho CSV' : '')) : 'lỗi mạng'); }, onerror: () => cb([], 'lỗi mạng'), ontimeout: () => cb([], 'hết giờ') });
-            const __save = list => { GM_setValue(CONSTANTS.KEYS.CONFIG_LIST, list); GM_setValue('autobi_cfglist_at', Date.now()); };
+            const __save = list => { GM_setValue(CONSTANTS.KEYS.CONFIG_LIST, list); GM_setValue('autobi_cfglist_at', Date.now()); try { const n = __G.tierCount(list); __note('Nhóm hàng: ' + list.length + ' nhóm — chính ' + n.chinh + ' · phụ ' + n.phu + (n.none ? ' · chưa phân loại ' + n.none : '')); } catch (_) { } };
             const __gviz = 'https://docs.google.com/spreadsheets/d/' + CONSTANTS.GSHEET.DATA.ID + '/gviz/tq?tqx=out:csv&gid=' + CONSTANTS.GSHEET.DATA.GID + '&_t=' + Date.now();
             if (__cfgFresh) setTimeout(__done, 0);
             else __get(_0x4000ac, (list, why) => {
@@ -8831,8 +8851,22 @@ window.__AutoBIBiTarget99 = (function () {
   const rwKy = c => { const r = c && c.link10_reward; if (!r) return ''; const d = k => String(k).slice(6, 8) + '/' + String(k).slice(4, 6); return d(r.from) + ' - ' + d(r.to); };
   const pctOf = (a, b) => b > 0 ? a / b * 100 : 0;
   const lvl = p => p >= 100 ? 'ok' : p >= 80 ? 'mid' : 'low';
+  const rp = p => p < 100 && Math.round(p) >= 100 ? 99 : Math.round(p); /* V17.37: 99,6% chưa đạt thì ghi 99%, không ghi 100% */
   const bar = (p, cls) => '<div class="rt2-bar"><i class="' + cls + '" style="width:' + Math.max(0, Math.min(100, p)).toFixed(1) + '%"></i></div>';
   const vnToday = () => { try { return window.__AutoBIApi.vnDay(); } catch (_) { const d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); } };
+  /* V17.36: ngày (yyyymmdd) giờ VN; loại nhóm Chính / Vượt trội từ cột "Loại TĐ" của Sheet nhóm hàng (nhóm chưa phân loại tính là Vượt trội) */
+  const vnDayOff = o => { try { return window.__AutoBIApi.vnDay(o); } catch (_) { const d = new Date(Date.now() + 7 * 3600e3 + o * 86400e3); return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate(); } };
+  const dayOfMs = ms => { const d = new Date(num(ms) + 7 * 3600e3); return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate(); };
+  const tierOf = g => { const t = g && g.tier ? g.tier : ''; if (t) return t; try { return window.__AutoBIGroupList ? window.__AutoBIGroupList.tierOf(g && g.short) : ''; } catch (_) { return ''; } };
+  /* Chia bảng nhóm hàng thành 2 khối. rowFn(x, n) vẽ 1 dòng; secFn(cls, tên, danh sách) vẽ dải tiêu đề. Không nhóm nào có loại → bảng phẳng như cũ */
+  const splitGroups = (rows, rowFn, secFn, cols) => {
+    if (!rows.some(x => x.tier)) return rows.map(rowFn).join('');
+    const C = rows.filter(x => x.tier === 'chinh'), V = rows.filter(x => x.tier !== 'chinh');
+    let h = '';
+    if (C.length) h += secFn('m', 'NHÓM CHÍNH', C) + C.map(rowFn).join('');
+    if (V.length) h += (C.length ? '<tr class="g-gap"><td colspan="' + cols + '"></td></tr>' : '') + secFn('v', 'NHÓM VƯỢT TRỘI', V) + V.map(rowFn).join('');
+    return h;
+  };
 
   const CSS = `
   .rt2{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;color:#0f1b2d;background:#f2f5f9;padding:18px 20px;box-sizing:border-box;font-variant-numeric:tabular-nums;width:1240px}
@@ -8883,7 +8917,24 @@ window.__AutoBIBiTarget99 = (function () {
   .rt2-pc{display:flex;align-items:center;gap:8px}.rt2-pc .rt2-bar{flex:1;height:8px;min-width:40px}.rt2-pc b{min-width:58px;text-align:right}
   .rt2-nm{font-weight:700}.rt2-id{font-size:11px;color:#475569;font-weight:600}
   .rt2-note{font-size:11px;font-weight:600;color:#475569;text-align:center;margin-top:12px}
-  .rt2-empty{padding:18px;text-align:center;color:#475569;font-weight:600}`;
+  .rt2-empty{padding:18px;text-align:center;color:#475569;font-weight:600}
+  .rt2-tbl tr.g-sec td{font-size:12px;font-weight:900;letter-spacing:.5px;padding:7px 8px;border-bottom:none;text-align:right}
+  .rt2-tbl tr.g-sec td.g-nm{text-align:center}
+  .rt2-tbl tr.g-sec td.g-nm{position:relative}.rt2-tbl tr.g-sec td.g-nm>span{position:absolute;left:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center;white-space:nowrap}.rt2-tbl tr.g-sec td.g-nm.lk>span{width:calc(100% + 168px)}.rt2-tbl tr.g-sec td.g-nm.rt>span{width:calc(100% + 198px)}
+  .rt2-tbl th.w-lk{width:84px}.rt2-tbl th.w-p{width:124px}.rt2-tbl th.w-left{width:74px}
+  .rt2-tbl tr.g-sec.m td{background:#e3edff;color:#0b4fb3}.rt2-tbl tr.g-sec.m td.g-nm{border-left:4px solid #0b4fb3}
+  .rt2-tbl tr.g-sec.v td{background:#f1eafe;color:#7c3aed}.rt2-tbl tr.g-sec.v td.g-nm{border-left:4px solid #7c3aed}
+  .rt2-tbl tr.g-gap td{border:none;padding:4px}
+  .rt2-tbl th.lk-mai{background:#e8f0ff;color:#0b4fb3}.rt2-tbl td.lk-mai{background:#f3f7ff}
+  .rt2-kpi .lk-pass{display:flex;justify-content:space-between;align-items:baseline;gap:4px;flex-wrap:wrap;font-size:inherit;letter-spacing:0;color:inherit}
+  .rt2-kpi.lk-kp{padding-left:12px;padding-right:12px}
+  .lk-k4 .rt2-kpi{justify-content:flex-start}
+  .rt2-kpi .lk-pass{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-top:3px;font-size:inherit;letter-spacing:0;color:inherit}
+  .rt2-kpi .lk-pass b,.rt2-kpi .lk-pass span{font-size:17px;font-weight:900;line-height:1.15;white-space:nowrap}
+  .rt2-kpi .lk-pass span{color:#0b4fb3;background:#e8f0ff;border-radius:999px;padding:2px 8px}
+  .lk-mai-line{border-top:1px solid rgba(255,255,255,.3);padding-top:8px;display:flex;justify-content:space-between;align-items:baseline;font-size:13px;font-weight:600}
+  .lk-mai-line b{font-size:16px;font-weight:900}.lk-mai-line i{font-style:normal;color:#ffd23f}.lk-mai-line .lk-mai-p{color:#ffd23f}
+  .rt2-mini.lk-mai-mini{background:#e8f0ff}.rt2-mini.lk-mai-mini div{color:#0b4fb3}`;
 
   function render(h, c, groups, cfg, view, useBi, timeArg) {
     const { UI, UTILS } = h;
@@ -8920,7 +8971,7 @@ window.__AutoBIBiTarget99 = (function () {
       const b = (c.link4_smart && c.link4_smart[g.short] && c.link4_smart[g.short][view]) || {};
       const t = num(UI.HTML.getFinalGroupTarget(b.t, g.short, view, cfg, groups, true, useBi));
       const r = num(a.r), p = t > 0 ? r / t * 100 : (r > 0 ? 100 : 0);
-      return { name: g.short, t, r, p, left: Math.max(0, t - r) };
+      return { name: g.short, t, r, p, left: Math.max(0, t - r), tier: tierOf(g) };
     });
     const st = window.__AutoBIRt2.sortGroups || { k: 'p', d: -1 };
     rows.sort((x, y) => (x[st.k] > y[st.k] ? 1 : x[st.k] < y[st.k] ? -1 : 0) * st.d || y.p - x.p);
@@ -8965,7 +9016,9 @@ window.__AutoBIBiTarget99 = (function () {
     const neg = v => v < 0 ? ' class="t-low"' : '';
     const th = (tbl, k, label, l) => { const s0 = tbl === 'g' ? st : ss; const ar = s0.k === k ? (s0.d < 0 ? ' ▼' : ' ▲') : ''; return '<th' + (l ? ' class="l"' : '') + ' data-rt2-sort="' + tbl + ':' + k + '">' + label + ar + '</th>'; };
 
-    const gBody = rows.length ? rows.map((x, n) => '<tr><td class="l">' + (n + 1) + '</td><td class="l rt2-nm">' + esc(x.name) + '</td><td>' + nf(x.t) + '</td><td' + neg(x.r) + ' style="font-weight:700">' + nf(x.r) + '</td><td class="l"><div class="rt2-pc">' + bar(x.p, lvl(x.p)) + '<b class="t-' + lvl(x.p) + '">' + (x.p >= 100 ? '✓ ' : '') + Math.round(x.p) + '%</b></div></td><td>' + nf(x.left) + '</td></tr>').join('') : '<tr><td colspan="6" class="rt2-empty">Chưa có số thi đua — bấm Bắt Đầu Chạy</td></tr>';
+    const gRow = (x, n) => '<tr><td class="l">' + (n + 1) + '</td><td class="l rt2-nm">' + esc(x.name) + '</td><td>' + nf(x.t) + '</td><td' + neg(x.r) + ' style="font-weight:700">' + nf(x.r) + '</td><td class="l"><div class="rt2-pc">' + bar(x.p, lvl(x.p)) + '<b class="t-' + lvl(x.p) + '">' + (x.p >= 100 ? '✓ ' : '') + rp(x.p) + '%</b></div></td><td>' + nf(x.left) + '</td></tr>';
+    const gSec = (cls, name, a) => '<tr class="g-sec ' + cls + '"><td class="g-nm rt" colspan="4">&nbsp;<span>' + name + '</span></td><td>' + a.filter(x => x.p >= 100).length + '/' + a.length + '</td><td></td></tr>';
+    const gBody = rows.length ? splitGroups(rows, gRow, gSec, 6) : '<tr><td colspan="6" class="rt2-empty">Chưa có số thi đua — bấm Bắt Đầu Chạy</td></tr>';
 
     const sBody = srows.length ? srows.map((x, n) => '<tr><td class="l" style="font-weight:800;color:' + (n < 3 ? '#0b4fb3' : '#475569') + '">' + (n + 1) + '</td><td class="l"><div class="rt2-nm">' + esc(x.nm) + '</div><div class="rt2-id">' + esc([x.id, view === 'total' ? x.shop : ''].filter(Boolean).join(' · ')) + '</div></td>' +
       '<td' + neg(x.day) + ' style="font-weight:800">' + (x.day == null ? '—' : nf(x.day, 1)) + '</td><td' + neg(x.mon) + '>' + (x.mon == null ? '—' : nf(x.mon, 1)) + '</td><td>' + (x.tgt > 0 ? nf(x.tgt) : '—') + '</td>' +
@@ -8992,7 +9045,7 @@ window.__AutoBIBiTarget99 = (function () {
         '</div>' +
       '</div>' +
       '<div class="rt2-row2">' +
-        '<div class="rt2-card"><div class="rt2-lbl">NHÓM HÀNG THI ĐUA HÔM NAY<span class="rt2-sub">bấm tiêu đề cột để sắp xếp</span></div><div class="rt2-tblw"><table class="rt2-tbl"><thead><tr><th class="l">#</th>' + th('g', 'name', 'Nhóm hàng', 1) + th('g', 't', 'Target') + th('g', 'r', 'Realtime') + th('g', 'p', '%HT', 1) + th('g', 'left', 'Còn lại') + '</tr></thead><tbody>' + gBody + '</tbody></table></div></div>' +
+        '<div class="rt2-card"><div class="rt2-lbl">NHÓM HÀNG THI ĐUA HÔM NAY<span class="rt2-sub">bấm tiêu đề cột để sắp xếp</span></div><div class="rt2-tblw"><table class="rt2-tbl"><thead><tr><th class="l">#</th>' + th('g', 'name', 'Nhóm hàng', 1) + th('g', 't', 'Target') + th('g', 'r', 'Realtime') + th('g', 'p', '%HT', 1).replace('class="l"', 'class="l w-p"') + th('g', 'left', 'Còn lại').replace('<th', '<th class="w-left"') + '</tr></thead><tbody>' + gBody + '</tbody></table></div></div>' +
         '<div class="rt2-card"><div class="rt2-lbl">DOANH THU NHÂN VIÊN<span class="rt2-sub">' + (today ? 'Hôm nay + lũy kế tháng' : 'Chưa có số hôm nay') + '</span></div><div class="rt2-tblw"><table class="rt2-tbl"><thead><tr><th class="l">#</th>' + th('s', 'nm', 'Nhân viên', 1) + th('s', 'day', 'Hôm nay') + th('s', 'mon', 'Tháng') + th('s', 'tgt', 'Mục tiêu') + th('s', 'ht', '%HT tháng', 1) + th('s', 'fc', 'Dự kiến') + '</tr></thead><tbody>' + sBody + '</tbody>' +
           (srows.length ? '<tfoot><tr><td></td><td class="l">Tổng</td>' + '<td>' + (today ? nf(sum('day'), 1) : '—') + '</td><td>' + nf(tMon, 1) + '</td><td>' + nf(tTgt) + '</td><td class="l">' + (tTgt > 0 ? Math.round(tMon / tTgt * 100) + '%' : '—') + '</td><td>' + (tTgt > 0 && dp > 0 ? Math.round(tMon / dp * dim / tTgt * 100) + '%' : '—') + '</td></tr></tfoot>' : '') +
         '</table></div></div>' +
@@ -9039,6 +9092,18 @@ window.__AutoBIBiTarget99 = (function () {
     const tgLim = parseFloat(cfg.installment) || 30, tg = num(l2.tg);
     const qd = pctOf(lk, num(l2.dtlk));
 
+    /* V17.36: ☀️ DK mai = lũy kế (hết hôm qua) + realtime hôm nay, tính như đã qua thêm 1 ngày.
+       Chỉ cộng khi: số realtime là của HÔM NAY và lũy kế đúng "đến hết hôm qua" (cùng tháng). Không thì DK mai = Dự kiến (chưa có realtime). */
+    const today = vnToday(), yday = vnDayOff(-1);
+    const ar = c.__apiRevenue || {}, acp = c.__apiCompetition || {};
+    const maiOk = !tc.isPastMonth && num(ar.rtDay) === today && num(ar.cumTo) === yday && Math.floor(yday / 100) === Math.floor(today / 100) && dp === yday % 100 && dp < dim;
+    const rtToday = maiOk ? num(((c.link1 && c.link1[view]) || {}).r) : 0;
+    const dpM = maiOk ? dp + 1 : dp, leftM = Math.max(0, dim - dpM);
+    const fcM = (v, t) => t > 0 && dpM > 0 ? v / dpM * dim / t * 100 : (v > 0 ? 100 : 0);
+    const lkM = lk + rtToday, dkM = maiOk ? fcM(lkM, monT) : dk;
+    const compM = maiOk && !!c.link3_smart && dayOfMs(acp.at) === today;
+    const hhmm = ms => { const d = new Date(num(ms)); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+
     /* Nhóm hàng thi đua lũy kế — cách tính như Realtime V3 chế độ Lũy kế */
     const allCh = idxs.some(i => (cfg['shop' + i] || '').trim().toUpperCase().startsWith('Đ'));
     let gl = groups.filter(g => allCh ? true : g.channel === 'T');
@@ -9050,12 +9115,15 @@ window.__AutoBIBiTarget99 = (function () {
       const t = gT(g.short, view), r = num(b.r);
       const p = t > 0 ? r / t * 100 : (r > 0 ? 100 : 0);
       const d = useBi && b.pd != null ? num(b.pd) : fc(r, t);
-      return { name: g.short, t, r, p, d, need: left > 0 ? Math.max(0, t - r) / left : 0 };
+      const a3 = compM ? ((c.link3_smart[g.short] && c.link3_smart[g.short][view]) || {}) : {};
+      const rr = compM ? num(a3.r) : 0, dm = compM ? fcM(r + rr, t) : d;
+      return { name: g.short, t, r, p, d, need: left > 0 ? Math.max(0, t - r) / left : 0, rr, dm, needM: leftM > 0 ? Math.max(0, t - r - rr) / leftM : 0, tier: tierOf(g) };
     });
     const st = window.__AutoBIRt2.sortLKGroups || { k: 'd', d: -1 };
     rows.sort((x, y) => (x[st.k] > y[st.k] ? 1 : x[st.k] < y[st.k] ? -1 : 0) * st.d || y.d - x.d);
     const pass = rows.filter(x => x.d >= 100).length;
     const passP = pctOf(pass, rows.length);
+    const passM = rows.filter(x => x.dm >= 100).length;
 
     /* Nhân viên: doanh thu + thi đua theo nhóm (cách tính như Chi tiết NV) */
     const rateOf = x => { const r = parseFloat(x.rate); return isFinite(r) && r > 0 ? r : 0; };
@@ -9098,10 +9166,15 @@ window.__AutoBIBiTarget99 = (function () {
     const th = (tbl, k, label, l) => { const s0 = tbl === 'lg' ? st : ss; const ar = s0.k === k ? (s0.d < 0 ? ' ▼' : ' ▲') : ''; return '<th' + (l ? ' class="l"' : '') + ' data-rt2-sort="' + tbl + ':' + k + ':lknew">' + label + ar + '</th>'; };
     const neg = v => v < 0 ? ' class="t-low"' : '';
     const nmCell = x => '<td class="l"><div class="rt2-nm">' + esc(x.nm) + '</div><div class="rt2-id">' + esc([x.id, view === 'total' ? x.shop : ''].filter(Boolean).join(' · ')) + '</div></td>';
-    const stamp = 'Số đến hết<br>' + String(dp).padStart(2, '0') + '/' + String(tc.month).padStart(2, '0') + '/' + tc.year;
+    const stamp = 'Số đến hết<br>' + String(dp).padStart(2, '0') + '/' + String(tc.month).padStart(2, '0') + '/' + tc.year +
+      (tc.isPastMonth ? '' : '<br><span style="color:#0b4fb3">☀️ DK mai: ' + (maiOk ? 'RT lúc ' + hhmm(ar.at) : 'chưa có số hôm nay') + '</span>');
     const short = g => esc(g.length > 12 ? g.slice(0, 11) + '…' : g);
 
-    const gBody = rows.length ? rows.map((x, n) => '<tr><td class="l">' + (n + 1) + '</td><td class="l rt2-nm">' + esc(x.name) + '</td><td>' + nf(x.t) + '</td><td' + neg(x.r) + ' style="font-weight:700">' + nf(x.r) + '</td><td>' + Math.round(x.p) + '%</td><td><b class="t-' + lvl(x.d) + '">' + (x.d >= 100 ? '✓ ' : '') + Math.round(x.d) + '%</b></td><td>' + (x.d >= 100 ? '—' : nf(Math.ceil(x.need))) + '</td></tr>').join('') : '<tr><td colspan="7" class="rt2-empty">Chưa có số thi đua lũy kế — bấm Bắt Đầu Chạy</td></tr>';
+    /* V17.36: cột Cần/ngày → ☀️ DK mai (Cần/ngày xem khi rê chuột); chia khối Nhóm chính / Nhóm vượt trội */
+    const maiTip = x => compM ? 'Lũy kế mai: ' + nf(x.r + x.rr) + ' (+' + nf(x.rr) + ' hôm nay)&#10;Cần/ngày từ mai: ' + (x.dm >= 100 ? '—' : nf(Math.ceil(x.needM))) : 'Chưa có số realtime hôm nay — DK mai = Dự kiến';
+    const gRow = (x, n) => '<tr><td class="l">' + (n + 1) + '</td><td class="l rt2-nm">' + esc(x.name) + '</td><td>' + nf(x.t) + '</td><td' + neg(x.r) + ' style="font-weight:700">' + nf(x.r) + '</td><td>' + Math.round(x.p) + '%</td><td title="Cần/ngày: ' + (x.d >= 100 ? '—' : nf(Math.ceil(x.need))) + '"><b class="t-' + lvl(x.d) + '">' + (x.d >= 100 ? '✓ ' : '') + rp(x.d) + '%</b></td><td class="lk-mai" title="' + maiTip(x) + '"><b class="t-' + lvl(x.dm) + '">' + (x.dm >= 100 ? '✓ ' : '') + rp(x.dm) + '%</b></td></tr>';
+    const gSec = (cls, name, a) => '<tr class="g-sec ' + cls + '"><td class="g-nm lk" colspan="5">&nbsp;<span>' + name + '</span></td><td>' + a.filter(x => x.d >= 100).length + '/' + a.length + '</td><td>' + a.filter(x => x.dm >= 100).length + '/' + a.length + '</td></tr>';
+    const gBody = rows.length ? splitGroups(rows, gRow, gSec, 7) : '<tr><td colspan="7" class="rt2-empty">Chưa có số thi đua lũy kế — bấm Bắt Đầu Chạy</td></tr>';
     const sBody = srows.length ? srows.map((x, n) => '<tr><td class="l" style="font-weight:800;color:' + (n < 3 ? '#0b4fb3' : '#475569') + '">' + (n + 1) + '</td>' + nmCell(x) +
       '<td' + neg(x.mon) + ' style="font-weight:800">' + (x.mon == null ? '—' : nf(x.mon, 1)) + '</td><td>' + (x.tgt > 0 ? nf(x.tgt) : '—') + '</td>' +
       '<td>' + (x.ht == null ? '—' : Math.round(x.ht) + '%') + '</td>' +
@@ -9134,26 +9207,27 @@ window.__AutoBIBiTarget99 = (function () {
       '<div class="rt2-row1">' +
         '<div class="rt2-card rt2-hero"><div class="rt2-lbl">DOANH THU LŨY KẾ THÁNG ' + tc.month + '<span class="rt2-badge ' + (dk >= 100 ? 't-ok' : 't-low') + '">' + (dk >= 100 ? 'Đúng tiến độ' : 'Chậm tiến độ') + '</span></div>' +
           '<div class="rt2-big"><b>' + nf(lk) + '</b><span>/ ' + nf(monT) + '</span><em>' + lkP.toFixed(1) + '%</em></div>' +
-          '<div class="rt2-bar"><i class="hero" style="width:' + Math.min(100, lkP).toFixed(1) + '%"></i><span class="rt2-mark" style="left:' + Math.min(100, timeP).toFixed(1) + '%;background:#fff"></span></div>' +
-          '<div class="rt2-foot"><span>Target tháng: ' + nf(monT) + '</span><span>Còn thiếu: ' + nf(Math.max(0, monT - lk)) + '</span></div></div>' +
+          '<div class="rt2-bar"><i class="hero" style="width:' + Math.min(100, lkP).toFixed(1) + '%"></i>' + (rtToday > 0 && lkP < 100 ? '<span style="position:absolute;top:0;bottom:0;left:' + Math.min(100, lkP).toFixed(1) + '%;width:' + Math.max(0, Math.min(100, pctOf(lkM, monT)) - Math.min(100, lkP)).toFixed(1) + '%;background:#fff3b0;opacity:.85"></span>' : '') + '<span class="rt2-mark" style="left:' + Math.min(100, timeP).toFixed(1) + '%;background:#fff"></span></div>' +
+          '<div class="rt2-foot"><span>Target tháng: ' + nf(monT) + '</span><span>Còn thiếu: ' + nf(Math.max(0, monT - lk)) + '</span></div>' +
+          (tc.isPastMonth ? '' : '<div class="lk-mai-line"><span>☀️ Mai: <b>' + nf(lkM) + '</b> <i>' + (rtToday < 0 ? '' : '+') + nf(rtToday) + ' hôm nay</i></span><b class="lk-mai-p">' + pctOf(lkM, monT).toFixed(1) + '%</b></div>') + '</div>' +
         '<div class="rt2-card"><div class="rt2-lbl">TIẾN ĐỘ THÁNG<span class="rt2-sub">' + dp + '/' + dim + ' ngày · còn ' + left + ' ngày</span></div>' +
           '<div class="rt2-big"><b style="font-size:34px" class="t-' + lvl(dk) + '">' + arrow(dk) + '</b><span style="color:#334155">dự kiến hoàn thành</span></div>' +
-          '<div class="rt2-mini3"><div class="rt2-mini"><div>Thời gian qua</div><b>' + timeP.toFixed(1) + '%</b></div><div class="rt2-mini"><div>Bình quân / ngày</div><b>' + nf(avgDay) + '</b></div><div class="rt2-mini"><div>Cần / ngày</div><b class="' + (needDay > avgDay ? 't-low' : 't-ok') + '">' + nf(needDay) + '</b></div></div></div>' +
-        '<div class="rt2-kpi4">' +
-          '<div class="rt2-kpi"><div>% TRẢ CHẬM LK</div><b class="' + (tg >= tgLim ? 't-ok' : 't-low') + '">' + Math.round(tg) + '% <small>/ ' + tgLim + '%</small></b></div>' +
+          '<div class="rt2-mini3"><div class="rt2-mini"><div>Thời gian qua</div><b>' + timeP.toFixed(1) + '%</b></div><div class="rt2-mini"><div>Bình quân / ngày</div><b>' + nf(avgDay) + '</b></div>' + (tc.isPastMonth ? '<div class="rt2-mini"><div>Cần / ngày</div><b class="' + (needDay > avgDay ? 't-low' : 't-ok') + '">' + nf(needDay) + '</b></div>' : '<div class="rt2-mini lk-mai-mini" title="Cần / ngày: ' + nf(needDay) + (maiOk ? ' · từ mai: ' + nf(leftM > 0 ? Math.max(0, monT - lkM) / leftM : 0) : '') + '"><div>☀️ DK mai</div><b class="t-' + lvl(dkM) + '">' + arrow(dkM) + '</b></div>') + '</div></div>' +
+        '<div class="rt2-kpi4 lk-k4">' +
+          '<div class="rt2-kpi" title="Mức trả chậm: ' + tgLim + '%"><div>% TRẢ CHẬM LK</div><b class="' + (tg >= tgLim ? 't-ok' : 't-low') + '">' + Math.round(tg) + '%</b></div>' +
           '<div class="rt2-kpi"><div>TỈ LỆ QUY ĐỔI LK</div><b>' + Math.round(qd) + '%</b></div>' +
-          '<div class="rt2-kpi"><div>NHÓM HÀNG ĐẠT (DK)</div><b>' + pass + ' <small>/ ' + rows.length + '</small></b></div>' +
+          '<div class="rt2-kpi lk-kp"><div>NHÓM HÀNG ĐẠT</div><div class="lk-pass"><b>' + pass + '/' + rows.length + '</b>' + (tc.isPastMonth ? '' : '<span title="☀️ DK mai: số nhóm đạt sáng mai">☀️ ' + passM + '/' + rows.length + '</span>') + '</div></div>' +
           '<div class="rt2-kpi"><div>%HT THI ĐUA</div><b class="' + (passP >= 50 ? 't-ok' : 't-low') + '">' + Math.round(passP) + '%</b></div>' +
         '</div>' +
       '</div>' +
       '<div class="rt2-row2 lk-row2">' +
-        '<div class="rt2-card"><div class="rt2-lbl">NHÓM HÀNG THI ĐUA LŨY KẾ<span class="rt2-sub">đạt khi Dự kiến ≥ 100%</span></div><div class="rt2-tblw"><table class="rt2-tbl"><thead><tr><th class="l">#</th>' + th('lg', 'name', 'Nhóm hàng', 1) + th('lg', 't', 'Target') + th('lg', 'r', 'Lũy kế') + th('lg', 'p', '%HT') + th('lg', 'd', 'Dự kiến') + th('lg', 'need', 'Cần/ngày') + '</tr></thead><tbody>' + gBody + '</tbody></table></div></div>' +
+        '<div class="rt2-card"><div class="rt2-lbl">NHÓM HÀNG THI ĐUA LŨY KẾ<span class="rt2-sub">đạt khi Dự kiến ≥ 100%</span></div><div class="rt2-tblw"><table class="rt2-tbl"><thead><tr><th class="l">#</th>' + th('lg', 'name', 'Nhóm hàng', 1) + th('lg', 't', 'Target') + th('lg', 'r', 'Lũy kế') + th('lg', 'p', '%HT') + th('lg', 'd', 'Dự kiến').replace('<th', '<th class="w-lk"') + th('lg', 'dm', '☀️ DK mai').replace('<th', '<th class="lk-mai w-lk"') + '</tr></thead><tbody>' + gBody + '</tbody></table></div></div>' +
         '<div class="rt2-card"><div class="rt2-lbl">DOANH THU NHÂN VIÊN LŨY KẾ<span class="rt2-sub">mục tiêu theo phân bổ Khai báo</span></div><div class="rt2-tblw"><table class="rt2-tbl lk-st"><thead><tr><th class="l">#</th>' + th('ls', 'nm', 'Nhân viên', 1) + th('ls', 'mon', 'Lũy kế') + th('ls', 'tgt', 'Mục tiêu') + th('ls', 'ht', '%HT') + th('ls', 'fc', 'Dự kiến') + th('ls', 'ok', 'Nhóm đạt') + th('ls', 'rw', '<span title="Tổng thưởng (điểm thực lãnh, newinsite' + (rwKy(c) ? ' ' + rwKy(c) : '') + ')">Thưởng</span>') + '</tr></thead><tbody>' + sBody + '</tbody>' +
           (srows.length ? '<tfoot><tr><td></td><td class="l">Tổng</td><td>' + nf(tMon, 1) + '</td><td>' + nf(tTgt) + '</td><td>' + (tTgt > 0 ? Math.round(tMon / tTgt * 100) + '%' : '—') + '</td><td>' + (tTgt > 0 && dp > 0 ? Math.round(tMon / dp * dim / tTgt * 100) + '%' : '—') + '</td><td></td><td' + (hasRw ? ' title="' + nf(tRw) + '" style="color:#15803d"' : '') + '>' + (hasRw ? trf(tRw) : '—') + '</td></tr></tfoot>' : '') +
         '</table></div></div>' +
       '</div>' +
       '<div class="rt2-card lk-matrix"><div class="rt2-lbl">THI ĐUA NHÂN VIÊN THEO NHÓM HÀNG<span class="rt2-sub">% dự kiến hoàn thành · xanh ≥100% · vàng 80–99% · đỏ &lt;80% · xếp theo số nhóm đạt · rê chuột xem số làm / target</span></div>' + mHtml + '</div>' +
-      '<div class="rt2-note">Nguồn: BI (API) · Dự kiến = lũy kế ÷ ngày đã qua × số ngày tháng ÷ target · AutoBI V' + esc((typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '') + '</div>' +
+      '<div class="rt2-note">Nguồn: BI (API) · Dự kiến = lũy kế ÷ ngày đã qua × số ngày tháng ÷ target · ☀️ DK mai = (lũy kế + realtime hôm nay) ÷ (ngày đã qua + 1) × số ngày tháng ÷ target · AutoBI V' + esc((typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '') + '</div>' +
     '</div>';
   }
   const LKCSS = `
