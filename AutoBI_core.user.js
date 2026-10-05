@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.34
+// @name         AutoBI Core V17.35
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.34
+// @version      17.35
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -8336,15 +8336,22 @@ window.__AutoBIBiTarget99 = (function () {
     const byId = new Map(staffList.map(x => [staffIdOf(x.name), x]));
     const map = {};
     let n = 0;
+    /* V17.35: NV bán ở nhiều siêu thị trong cụm có 1 dòng ở MỖI siêu thị → phải CỘNG DỒN (trước đây dòng sau ghi đè dòng trước → DT/DTQĐ NV thấp hơn BI) */
+    const seen = {}, split = [];
     for (const rows of lists) for (const row of rows) {
       const st = byId.get(String(row.rowcode || row.rowid || ''));
       if (!st) continue;
-      const key = 'shop' + (st.shopIdx || 1), dtqd = num(row.revenue_kfactor), dtlk = num(row.revenue);
+      const key = 'shop' + (st.shopIdx || 1);
       map[key] = map[key] || {};
-      map[key][st.name] = { dtqd, dtlk, hqqd: dtlk > 0 ? (dtqd - dtlk) / dtlk * 100 : 0, tragop: num(row.revenue_tragop) };
-      n++;
+      const v = map[key][st.name] = map[key][st.name] || { dtqd: 0, dtlk: 0, hqqd: 0, tragop: 0 };
+      v.dtqd += num(row.revenue_kfactor); v.dtlk += num(row.revenue); v.tragop += num(row.revenue_tragop);
+      v.hqqd = v.dtlk > 0 ? (v.dtqd - v.dtlk) / v.dtlk * 100 : 0;
+      seen[st.name] = (seen[st.name] || 0) + 1;
+      if (seen[st.name] === 2) split.push(st.name);
+      else if (seen[st.name] === 1) n++;
     }
     if (!n) throw new Error('API không trả nhân viên nào khớp danh sách Khai báo');
+    if (split.length) note('Doanh thu NV: ' + split.length + ' NV có số ở nhiều siêu thị → đã cộng dồn (' + split.slice(0, 5).map(x => String(x).split(' - ').pop()).join(', ') + (split.length > 5 ? ', +' + (split.length - 5) : '') + ')');
     return map;
   }
   async function applyStaffRevenue(cfgIn) {
