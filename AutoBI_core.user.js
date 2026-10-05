@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.39
+// @name         AutoBI Core V17.40
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.39
+// @version      17.40
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -31,6 +31,17 @@
 // @require      https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js
 // ==/UserScript==
+/* V17.40: chặn trình duyệt TỰ DỊCH trang (Chrome Google Dịch, Safari Dịch). Bị dịch thì tên nhóm "Camera" thành "Máy ảnh",
+   "Cáp - Sạc" thành "chồng -"… và Khai báo lưu luôn tên đã dịch → lệch target. Trang BI vốn tiếng Việt nên tắt dịch không mất gì. */
+(function () {
+  try {
+    const h = document.documentElement;
+    h.setAttribute('translate', 'no'); h.classList.add('notranslate');
+    const add = () => { try { if (!document.head || document.head.querySelector('meta[name="google"][content="notranslate"]')) return; const m = document.createElement('meta'); m.name = 'google'; m.content = 'notranslate'; document.head.appendChild(m); } catch (_) { } };
+    add(); document.addEventListener('DOMContentLoaded', add);
+  } catch (_) { }
+})();
+
 /* V17.10: CRM trên iPhone. Safari không gửi phiên CRM (cookie) khi AutoBI gọi chéo từ trang BI sang crm.thegioididong.com,
    nên CRM trả trang đăng nhập dù đã đăng nhập. Gọi chéo không có phiên → AutoBI mở trang CRM, lấy số ngay trên trang đó
    (cùng tên miền, chắc chắn có phiên), lưu kết quả rồi quay lại BI chạy tiếp lượt. Máy tính gọi chéo được thì không đổi gì.
@@ -3194,7 +3205,7 @@ window.__AutoBIRun67 = (function () {
                 }
                 el.textContent = message;
             };
-            const formSignature = () => JSON.stringify(Array.from(_0x91b279.querySelectorAll('input,select,textarea')).filter(el => !el.closest('#cfg-group-picker')).map(el => [el.id, el.className, el.value, el.checked]).concat(Array.from(_0x91b279.querySelectorAll('.cfg-target-row')).map(row => row.cells[1].textContent)));
+            const formSignature = () => JSON.stringify(Array.from(_0x91b279.querySelectorAll('input,select,textarea')).filter(el => !el.closest('#cfg-group-picker')).map(el => [el.id, el.className, el.value, el.checked]).concat(Array.from(_0x91b279.querySelectorAll('.cfg-target-row')).map(row => (row.dataset.group || row.cells[1].textContent))));
             const awaitConfig = (start, label) => new Promise((resolve, reject) => {
                 let settled = false;
                 const timer = setTimeout(() => finish(new Error(label + ': qu\u00E1 th\u1EDDi gian ch\u1EDD. B\u1EA1n c\u00F3 th\u1EC3 l\u01B0u l\u1EA1i.')), 45000);
@@ -3215,10 +3226,11 @@ window.__AutoBIRun67 = (function () {
             const appendSheetGroup70 = (name, refresh = () => { }) => {
                 const key = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/\s+/g, ' ').trim();
                 name = String(name || '').trim();
-                if (!name || Array.from(_0x91b279.querySelectorAll('#tbl-target-body .cfg-target-row')).some(row => key(row.cells[1].textContent) === key(name)))
+                if (!name || Array.from(_0x91b279.querySelectorAll('#tbl-target-body .cfg-target-row')).some(row => key((row.dataset.group || row.cells[1].textContent)) === key(name)))
                     return false;
                 const row = document.createElement('tr');
                 row.className = 'cfg-target-row';
+                row.dataset.group = name; /* V17.40: tên gốc, không bị trình duyệt dịch */
                 row.innerHTML = '<td class="cfg-target-stt" style="text-align:center"></td><td style="text-align:left;font-weight:bold;padding-left:8px"></td><td><select class="t-mult"><option value="1">x1</option><option value="2">x2</option><option value="3">x3</option></select></td>' + Array.from({
                     length: 5
                 }, (_, i) => '<td><input type="text" class="t-s' + (i + 1) + ' formatted-input" value="0"></td>').join('') + '<td><button type="button" class="tgdd-btn-del">X</button></td>';
@@ -3261,7 +3273,7 @@ window.__AutoBIRun67 = (function () {
                 const draw = () => {
                     const list = panel.querySelector('.cfg-group-options');
                     list.replaceChildren();
-                    const existing = new Set(Array.from(document.querySelectorAll('#tbl-target-body .cfg-target-row')).map(row => key(row.cells[1].textContent)));
+                    const existing = new Set(Array.from(document.querySelectorAll('#tbl-target-body .cfg-target-row')).map(row => key((row.dataset.group || row.cells[1].textContent))));
                     const dmx = Array.from({
                         length: 5
                     }, (_, i) => (document.getElementById('cfg-name-' + (i + 1))?.value || _0x29c64e['shop' + (i + 1)] || '').trim().toUpperCase()).some(name => name.startsWith('\u0110'));
@@ -3276,7 +3288,7 @@ window.__AutoBIRun67 = (function () {
                         button.textContent = '+ ' + name;
                         button.style.cssText = 'display:block;width:100%;text-align:left;padding:7px;margin:3px 0;cursor:pointer;';
                         button.onclick = () => {
-                            if (Array.from(document.querySelectorAll('#tbl-target-body .cfg-target-row')).some(row => key(row.cells[1].textContent) === id)) {
+                            if (Array.from(document.querySelectorAll('#tbl-target-body .cfg-target-row')).some(row => key((row.dataset.group || row.cells[1].textContent)) === id)) {
                                 draw();
                                 return;
                             }
@@ -3540,8 +3552,9 @@ window.__AutoBIRun67 = (function () {
                     _0x5cfe49.forEach((_0x1b0b55, _0xa2e613) => {
                         const _0x288fd8 = document.createElement('tr');
                         _0x288fd8.className = 'cfg-target-row';
+                        _0x288fd8.dataset.group = _0x1b0b55.group; /* V17.40 */
                         let _0x6db286 = _0x1b0b55.mult || 1;
-                        _0x288fd8.innerHTML = '\n                            <td class="cfg-target-stt" style="text-align:center; font-weight:bold; color:#64748b;">' + (_0xa2e613 + 1) + '</td>\n                            <td style="text-align:left; font-weight:bold; padding-left:8px;">' + _0x1b0b55.group + '</td>\n                            <td><select class="t-mult" style="padding:4px"><option value="1" ' + (_0x6db286 == 1 ? 'selected' : '') + '>x1</option><option value="2" ' + (_0x6db286 == 2 ? 'selected' : '') + '>x2</option><option value="3" ' + (_0x6db286 == 3 ? 'selected' : '') + '>x3</option></select></td>\n                            <td><input type="text" class="t-s1 formatted-input" value="' + _0x5816a0(_0x1b0b55.t1) + '"></td>\n                            <td><input type="text" class="t-s2 formatted-input" value="' + _0x5816a0(_0x1b0b55.t2) + '"></td>\n                            <td><input type="text" class="t-s3 formatted-input" value="' + _0x5816a0(_0x1b0b55.t3) + '"></td>\n                            <td><input type="text" class="t-s4 formatted-input" value="' + _0x5816a0(_0x1b0b55.t4) + '"></td>\n                            <td><input type="text" class="t-s5 formatted-input" value="' + _0x5816a0(_0x1b0b55.t5) + '"></td>\n                            <td><button class="tgdd-btn-del">X</button></td>\n                        ';
+                        _0x288fd8.innerHTML = '\n                            <td class="cfg-target-stt" style="text-align:center; font-weight:bold; color:#64748b;">' + (_0xa2e613 + 1) + '</td>\n                            <td style="text-align:left; font-weight:bold; padding-left:8px;' + ((() => { try { const k = v => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/\s+/g, ' ').trim(); const cat = window.__AutoBIGroupList ? window.__AutoBIGroupList.read().map(g => k(g && g.short)) : []; return cat.length && cat.indexOf(k(_0x1b0b55.group)) < 0; } catch (_) { return false; } })() ? ' color:#b42318;" title="Không có trong Sheet nhóm hàng — có thể do trình duyệt tự dịch tên. Xóa dòng này rồi thêm lại nhóm đúng từ Sheet.">⚠ ' : '">') + _0x1b0b55.group + '</td>\n                            <td><select class="t-mult" style="padding:4px"><option value="1" ' + (_0x6db286 == 1 ? 'selected' : '') + '>x1</option><option value="2" ' + (_0x6db286 == 2 ? 'selected' : '') + '>x2</option><option value="3" ' + (_0x6db286 == 3 ? 'selected' : '') + '>x3</option></select></td>\n                            <td><input type="text" class="t-s1 formatted-input" value="' + _0x5816a0(_0x1b0b55.t1) + '"></td>\n                            <td><input type="text" class="t-s2 formatted-input" value="' + _0x5816a0(_0x1b0b55.t2) + '"></td>\n                            <td><input type="text" class="t-s3 formatted-input" value="' + _0x5816a0(_0x1b0b55.t3) + '"></td>\n                            <td><input type="text" class="t-s4 formatted-input" value="' + _0x5816a0(_0x1b0b55.t4) + '"></td>\n                            <td><input type="text" class="t-s5 formatted-input" value="' + _0x5816a0(_0x1b0b55.t5) + '"></td>\n                            <td><button class="tgdd-btn-del">X</button></td>\n                        ';
                         _0x288fd8.querySelectorAll('input').forEach(_0x4d2d4a => _0x4d2d4a.addEventListener('input', _0x484a84 => {
                             _0x2697cd(_0x484a84);
                             _0x144116();
@@ -3749,7 +3762,7 @@ window.__AutoBIRun67 = (function () {
                         const body = document.getElementById('tbl-target-body');
                         let removed = 0;
                         Array.from(body.querySelectorAll('.cfg-target-row')).forEach(row => {
-                            if (!wantedKeys.has(gkey(row.cells[1].textContent))) {
+                            if (!wantedKeys.has(gkey((row.dataset.group || row.cells[1].textContent)))) {
                                 row.remove();
                                 removed++;
                             }
@@ -3760,7 +3773,7 @@ window.__AutoBIRun67 = (function () {
                                 added++;
                         const rows = Array.from(body.querySelectorAll('.cfg-target-row'));
                         for (const name of wanted) {
-                            const row = rows.find(r => gkey(r.cells[1].textContent) === gkey(name));
+                            const row = rows.find(r => gkey((r.dataset.group || r.cells[1].textContent)) === gkey(name));
                             if (row)
                                 body.appendChild(row);
                         }
@@ -3839,7 +3852,7 @@ window.__AutoBIRun67 = (function () {
                     const _0x18eaf6 = [];
                     document.querySelectorAll('.cfg-target-row').forEach(_0x5e1a1a => {
                         _0x18eaf6.push({
-                            group: _0x5e1a1a.querySelector('td:nth-child(2)')?.['innerText'] || '',
+                            group: _0x5e1a1a.dataset.group || _0x5e1a1a.querySelector('td:nth-child(2)')?.['innerText'] || '',
                             mult: parseInt(_0x5e1a1a.querySelector('.t-mult')?.['value']) || 1,
                             t1: UTILS.parseFormattedNumber(_0x5e1a1a.querySelector('.t-s1')?.['value']),
                             t2: UTILS.parseFormattedNumber(_0x5e1a1a.querySelector('.t-s2')?.['value']),
