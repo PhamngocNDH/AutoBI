@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.50
+// @name         AutoBI Core V17.51
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.50
+// @version      17.51
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -4522,6 +4522,9 @@ window.__AutoBIRun67 = (function () {
         }
         catch (_0x283759) {
             console.error('[Auto BI] \u274C L\u1ED7i render tab:', _0x450ffb, _0x283759);
+            /* V17.51: lỗi vẽ báo cáo thì hiện lỗi + ghi nhật ký, không để trang trắng */
+            _0x329bab = '<div style="padding:40px;text-align:center;color:#b42318;font-weight:700;">Lỗi vẽ báo cáo (' + _0x450ffb + '): ' + String(_0x283759 && _0x283759.message || _0x283759).replace(/[<>&]/g, '') + '<br><span style="font-weight:400;color:#475569">Chụp màn hình này gửi người quản lý AutoBI</span></div>';
+            try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Lỗi vẽ tab ' + _0x450ffb + ': ' + String(_0x283759 && _0x283759.message || _0x283759)); } catch (_) { }
         } const _0x2be4b4 = () => { const _0x54ba72 = _0x2ad4ca.querySelector('#tgdd-rt4-mode-select'); if (_0x54ba72) {
             _0x54ba72.onchange = _0xcc0800 => { window.tgdd_rt4_mode = _0xcc0800.target.value; _0x5d2d05(); };
         } const _0x5d0422 = document.getElementById('tgdd-weekly-subject-selector'); if (_0x5d0422) {
@@ -5690,7 +5693,7 @@ window.__AutoBIRun67 = (function () {
                 }
             } let _0x3b89a0 = _0x3f1e3e - _0x2751ef; if (_0x3b89a0 < 0)
                 _0x3b89a0 = 0; const _0x291f57 = _0x3e8dcb.dtlk > 0 ? _0xc9879f / _0x3e8dcb.dtlk * 100 : 0; const _0x591eba = _0x45f4e6 > 0 ? _0x2751ef / _0x45f4e6 * 100 : 0; const _0x473af1 = _0x129bf0 === 'total' ? 'C\u1EE5m: ' + (_0x5c3992.shop1Short || _0x5c3992.cluster) : 'Shop: ' + (_0x5c3992[_0x129bf0 + 'Short'] || _0x5c3992[_0x129bf0]); let _0x419308 = [..._0x5aab3e]; if (_0x16e4e9) {
-                _0x419308.sort((_0xf6ffa, _0x274f93) => { const _0x5dd4d7 = _0x37b250.link4_smart && _0x37b250.link4_smart[_0xf6ffa.short] ? _0x37b250.link4_smart[_0xf6ffa.short][_0x129bf0] : { t: 0, r: 0, pd: 0 }; const _0x8e8916 = _0x37b250.link4_smart && _0x37b250.link4_smart[_0x274f93.short] ? _0x37b250.link4_smart[_0x274f93.short][_0x129bf0] : { t: 0, r: 0, pd: 0 }; let _0x343d27 = 0, _0x3f3feb = 0; if (_0x900d20) {
+                _0x419308.sort((_0xf6ffa, _0x274f93) => { /* V17.51: nhóm có trong dữ liệu nhưng chưa có số của siêu thị đang xem → coi như 0 (trước đây lỗi làm trắng trang khi bấm sắp xếp) */ const _0x5dd4d7 = (_0x37b250.link4_smart && _0x37b250.link4_smart[_0xf6ffa.short] && _0x37b250.link4_smart[_0xf6ffa.short][_0x129bf0]) || { t: 0, r: 0, pd: 0 }; const _0x8e8916 = (_0x37b250.link4_smart && _0x37b250.link4_smart[_0x274f93.short] && _0x37b250.link4_smart[_0x274f93.short][_0x129bf0]) || { t: 0, r: 0, pd: 0 }; let _0x343d27 = 0, _0x3f3feb = 0; if (_0x900d20) {
                     _0x343d27 = _0x5dd4d7.pd || 0;
                     _0x3f3feb = _0x8e8916.pd || 0;
                 }
