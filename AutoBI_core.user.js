@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.40
+// @name         AutoBI Core V17.46
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.40
+// @version      17.46
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -2945,7 +2945,7 @@ window.__AutoBIRun67 = (function () {
             _0x275758();
             const _0x3506c6 = _0x28e709.format || 'image/jpeg';
             const _0x2df369 = _0xe17d94 ? 0.88 : _0x28e709.quality !== undefined ? _0x28e709.quality : 0.95;
-            const _0x3583bb = () => { const _0x1f1212 = { dashboard: 'Dashboard', health: 'S\u1EE9c kh\u1ECFe ST', oneshop: 'Realtime_V1', rt2: 'Realtime_V2', bcbottom: 'Realtime_V2_cu', rt3: 'Realtime_V3_cu', rt4: 'Realtime_V3', lknew: 'LK_NEW', multirt: 'Multi_RT', multilk: 'Multi_LK', bcstaff: 'Chi ti\u1EBFt NV', nlnv: 'NangLuc_NV', compare_week: 'So s\u00E1nh tu\u1EA7n', compare: 'So s\u00E1nh CK BI', comparerp: 'So s\u00E1nh CK RP', revenue: 'Chart Doanh thu', service: 'Chart Ph\u1EE5c v\u1EE5' }; const _0x4bc01e = _0x1f1212[_0x18c6ea] || 'B\u00E1o c\u00E1o'; const _0x191319 = new Date(); const _0x3471a6 = String(_0x191319.getHours()).padStart(2, '0'); const _0x5e38a1 = String(_0x191319.getMinutes()).padStart(2, '0'); return _0x4bc01e + '_' + _0x3471a6 + 'h' + _0x5e38a1 + '.jpg'; };
+            const _0x3583bb = () => { const _0x1f1212 = { dashboard: 'Dashboard', health: 'S\u1EE9c kh\u1ECFe ST', oneshop: 'Realtime_V1', rt2: 'Realtime_V2', bcbottom: 'Realtime_V2_cu', rt3: 'Realtime_V3_cu', rt4: 'Realtime_V3', lknew: 'LK_NEW', nkbh: 'NK_Ban_Hang', multirt: 'Multi_RT', multilk: 'Multi_LK', bcstaff: 'Chi ti\u1EBFt NV', nlnv: 'NangLuc_NV', compare_week: 'So s\u00E1nh tu\u1EA7n', compare: 'So s\u00E1nh CK BI', comparerp: 'So s\u00E1nh CK RP', revenue: 'Chart Doanh thu', service: 'Chart Ph\u1EE5c v\u1EE5' }; const _0x4bc01e = _0x1f1212[_0x18c6ea] || 'B\u00E1o c\u00E1o'; const _0x191319 = new Date(); const _0x3471a6 = String(_0x191319.getHours()).padStart(2, '0'); const _0x5e38a1 = String(_0x191319.getMinutes()).padStart(2, '0'); return _0x4bc01e + '_' + _0x3471a6 + 'h' + _0x5e38a1 + '.jpg'; };
             return new Promise(_0x239f9d => { _0x226333.toBlob(_0x243178 => { if (!_0x243178) {
                 UI.showToast('\u274C Kh\u00F4ng th\u1EC3 t\u1EA1o \u1EA3nh!');
                 _0x239f9d(null);
@@ -4158,7 +4158,7 @@ window.__AutoBIRun67 = (function () {
         } let _0x592670 = ''; _0x133240.forEach(_0x31e83a => { _0x592670 += '<option value="' + _0x31e83a + '">' + _0x31e83a + '</option>'; }); const _0x339938 = window.tgdd_nlnv_date_range ? window.tgdd_nlnv_date_range.from : _0x133240[0]; const _0x137556 = window.tgdd_nlnv_date_range ? window.tgdd_nlnv_date_range.to : _0x133240[_0x133240.length - 1]; let _0x426169 = '\n                    <div style="text-align:left; font-weight:bold; color:#333; margin-bottom:15px;">\n                        <label>T\u1EEB ng\u00E0y:</label>\n                        <select id="sel-date-from" style="width:100%; padding:8px; border-radius:5px; border:1px solid #ccc; margin-top:5px; margin-bottom:10px;">\n                            ' + _0x592670 + '\n                        </select>\n                        <label>\u0110\u1EBFn ng\u00E0y:</label>\n                        <select id="sel-date-to" style="width:100%; padding:8px; border-radius:5px; border:1px solid #ccc; margin-top:5px;">\n                            ' + _0x592670 + '\n                        </select>\n                        <button id="btn-clear-time-filter" style="margin-top:15px; width:100%; padding:8px; background:#f8f9fa; border:1px solid #ccc; border-radius:5px; cursor:pointer; font-weight:bold; color:#d63031;">Hi\u1EC3n th\u1ECB To\u00E0n b\u1ED9 th\u00E1ng</button>\n                        <button id="btn-save-time-filter" class="tgdd-msg-btn" style="margin-top:10px; width:100%; background:#007bff;">\u00C1p d\u1EE5ng b\u1ED9 l\u1ECDc</button>\n                    </div>\n                '; _0x426169 += '<style>#tgdd-modal-btn-close { display: none !important; }</style>'; UI.showMsg('L\u1ECCC TH\u1EDCI GIAN', _0x426169, 'info'); setTimeout(() => { document.getElementById('sel-date-from').value = _0x339938; document.getElementById('sel-date-to').value = _0x137556; document.getElementById('btn-clear-time-filter').onclick = () => { window.tgdd_nlnv_date_range = null; document.getElementById(CONSTANTS.DOM_IDS.MSG_MODAL).style.display = 'none'; document.body.classList.remove('tgdd-body-lock'); _0x5d2d05(); }; document.getElementById('btn-save-time-filter').onclick = () => { const _0x1fcd1e = document.getElementById('sel-date-from').value; const _0x46f277 = document.getElementById('sel-date-to').value; const _0xd02de3 = parseInt(_0x1fcd1e.split('/')[0]); const _0x4fad06 = parseInt(_0x46f277.split('/')[0]); if (_0xd02de3 > _0x4fad06) {
             alert('L\u1ED7i: \'T\u1EEB ng\u00E0y\' kh\u00F4ng \u0111\u01B0\u1EE3c l\u1EDBn h\u01A1n \'\u0110\u1EBFn ng\u00E0y\'!');
             return;
-        } window.tgdd_nlnv_date_range = { from: _0x1fcd1e, to: _0x46f277 }; document.getElementById(CONSTANTS.DOM_IDS.MSG_MODAL).style.display = 'none'; document.body.classList.remove('tgdd-body-lock'); _0x5d2d05(); }; }, 200); }; const _0x598bb9 = document.createElement('div'); _0x598bb9.id = CONSTANTS.DOM_IDS.SCROLL_WRAPPER; const _0x2ad4ca = document.createElement('div'); _0x2ad4ca.id = CONSTANTS.DOM_IDS.CAPTURE_AREA; _0x598bb9.appendChild(_0x2ad4ca); document.body.appendChild(_0x598bb9); const _0x119aa7 = document.createElement('div'); _0x119aa7.id = CONSTANTS.DOM_IDS.REPORT_NAV; _0x119aa7.className = 'slide-hidden'; const _0x5aef00 = typeof GM_info !== 'undefined' && GM_info.script ? GM_info.script.name : 'Auto BI'; const _0x2e44ea = document.createElement('div'); _0x2e44ea.id = 'tgdd-sidebar-menu'; const _0x33f6de = '<svg viewBox="0 0 24 24"><path d="M12 3v9.28a4.39 4.39 0 0 0-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/></svg>'; const _0x1852d1 = '<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>'; _0x2e44ea.innerHTML = '\n                <div class="sidebar-header">\n                    <div class="sidebar-title">\uD83E\uDD16 ' + _0x5aef00 + '</div>\n                    <button class="sidebar-close" id="btn-close-sidebar">\u2715</button>\n                </div>\n\n                <div class="sidebar-view-wrapper">\n                    <!-- PANEL 1: MENU G\u1ED0C -->\n                    <div id="panel-menu" class="sidebar-panel">\n                        <div class="sidebar-content">\n                            <div class="tgdd-menu-item" id="btn-menu-comment">' + _0x5bfe13.comment + ' Auto Comment</div>\n                            <div class="tgdd-menu-item" id="btn-menu-deploy">' + _0x5bfe13.line + ' G\u1EEDi Line</div>\n                            <div class="tgdd-menu-item" id="btn-menu-cam">' + _0x5bfe13.cam + ' Ch\u1EE5p \u1EA3nh</div>\n                            <div class="tgdd-menu-item" id="btn-menu-tools">' + _0x5bfe13.tools + ' Ti\u1EC7n \u00EDch</div>\n                            <div class="tgdd-menu-item" id="btn-menu-plan" style="color:#e84393; font-weight:900;">' + _0x5bfe13.plan + ' K\u1EBF ho\u1EA1ch truy\u1EC1n th\u00F4ng</div>\n                                                        <div class="tgdd-menu-item" id="btn-menu-history" style="color:#e67e22;">' + _0x5bfe13.history + ' Xem l\u1EA1i l\u1ECBch s\u1EED</div>\n                            <div class="tgdd-menu-item" id="btn-menu-save-data" style="color:#007bff;">' + _0x5bfe13.save + ' L\u01B0u b\u00E1o c\u00E1o</div>\n                        </div>\n\n                        <div class="sidebar-footer">\n                            <div class="tgdd-menu-item" id="btn-menu-rerun" style="color: #d63031; font-weight:900;">' + _0x5bfe13.rerun + ' Ch\u1EA1y l\u1EA1i b\u00E1o c\u00E1o</div>\n                        </div>\n                    </div>\n                </div>\n            '; const _0x6bfd3c = document.createElement('div'); _0x6bfd3c.id = 'tgdd-sidebar-overlay'; document.body.appendChild(_0x6bfd3c); document.body.appendChild(_0x2e44ea); _0x119aa7.innerHTML = '\n                <!-- N\u00FAt Menu C\u1ED1 \u0110\u1ECBnh -->\n                <div id="btn-menu">\n                    ' + _0x5bfe13.menu + '<span>Menu</span>\n                </div>\n\n                <!-- V\u00F9ng Tr\u01B0\u1EE3t Ngang Ch\u1EE9a C\u00E1c Tab -->\n                <div class="rpt-nav-scroll-area">\n                    <div class="rpt-nav-item" data-tab="dashboard">' + _0x5bfe13.dashboard + '<span>Dashboard</span></div>\n                    <div class="rpt-nav-item active" data-tab="health">' + (_0x5bfe13.health || '\u2764\uFE0F') + '<span>S\u1EE9c kh\u1ECFe ST</span></div>\n                    <div class="rpt-nav-item active" data-tab="oneshop">' + _0x5bfe13.one + '<span>Realtime V1</span></div>\n                    <div class="rpt-nav-item" data-tab="rt2">' + _0x5bfe13.rt3 + '<span>Realtime V2</span></div>\n                    <div class="rpt-nav-item" data-tab="rt4">' + _0x5bfe13.rt4 + '<span>Realtime V3</span></div>\n                    <div class="rpt-nav-item" data-tab="lknew">' + _0x5bfe13.plan + '<span>LK NEW</span></div>\n                    <div class="rpt-nav-item" data-tab="multirt">' + _0x5bfe13.rt + '<span>Multi RT</span></div>\n                    <div class="rpt-nav-item" data-tab="multilk">' + _0x5bfe13.lk + '<span>Multi LK</span></div>\n                    <div class="rpt-nav-item" data-tab="bcstaff">' + _0x5bfe13.staff + '<span>Chi ti\u1EBFt NV</span></div>\n                    <div class="rpt-nav-item" data-tab="nlnv">' + _0x5bfe13.person + '<span>N\u0103ng l\u1EF1c NV</span></div>\n                    <div class="rpt-nav-item" data-tab="compare_week">' + (_0x5bfe13.compare || '\uD83D\uDCC8') + '<span>So s\u00E1nh tu\u1EA7n</span></div>\n                    <div class="rpt-nav-item" data-tab="compare">' + (_0x5bfe13.compare || '\uD83D\uDCC8') + '<span>So s\u00E1nh BI CK</span></div>\n                    <div class="rpt-nav-item" data-tab="comparerp">' + _0x5bfe13.comparerp + '<span>So s\u00E1nh RP CK</span></div>\n                    <div class="rpt-nav-item" data-tab="revenue">' + _0x5bfe13.chart + '<span>Chart Doanh thu</span></div>\n                    <div class="rpt-nav-item" data-tab="service">' + _0x5bfe13.donate + '<span>Chart Ph\u1EE5c v\u1EE5</span></div>\n                </div>\n            '; document.body.appendChild(_0x119aa7); if (!document.getElementById('btn-toggle-report-nav')) {
+        } window.tgdd_nlnv_date_range = { from: _0x1fcd1e, to: _0x46f277 }; document.getElementById(CONSTANTS.DOM_IDS.MSG_MODAL).style.display = 'none'; document.body.classList.remove('tgdd-body-lock'); _0x5d2d05(); }; }, 200); }; const _0x598bb9 = document.createElement('div'); _0x598bb9.id = CONSTANTS.DOM_IDS.SCROLL_WRAPPER; const _0x2ad4ca = document.createElement('div'); _0x2ad4ca.id = CONSTANTS.DOM_IDS.CAPTURE_AREA; _0x598bb9.appendChild(_0x2ad4ca); document.body.appendChild(_0x598bb9); const _0x119aa7 = document.createElement('div'); _0x119aa7.id = CONSTANTS.DOM_IDS.REPORT_NAV; _0x119aa7.className = 'slide-hidden'; const _0x5aef00 = typeof GM_info !== 'undefined' && GM_info.script ? GM_info.script.name : 'Auto BI'; const _0x2e44ea = document.createElement('div'); _0x2e44ea.id = 'tgdd-sidebar-menu'; const _0x33f6de = '<svg viewBox="0 0 24 24"><path d="M12 3v9.28a4.39 4.39 0 0 0-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/></svg>'; const _0x1852d1 = '<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>'; _0x2e44ea.innerHTML = '\n                <div class="sidebar-header">\n                    <div class="sidebar-title">\uD83E\uDD16 ' + _0x5aef00 + '</div>\n                    <button class="sidebar-close" id="btn-close-sidebar">\u2715</button>\n                </div>\n\n                <div class="sidebar-view-wrapper">\n                    <!-- PANEL 1: MENU G\u1ED0C -->\n                    <div id="panel-menu" class="sidebar-panel">\n                        <div class="sidebar-content">\n                            <div class="tgdd-menu-item" id="btn-menu-comment">' + _0x5bfe13.comment + ' Auto Comment</div>\n                            <div class="tgdd-menu-item" id="btn-menu-deploy">' + _0x5bfe13.line + ' G\u1EEDi Line</div>\n                            <div class="tgdd-menu-item" id="btn-menu-cam">' + _0x5bfe13.cam + ' Ch\u1EE5p \u1EA3nh</div>\n                            <div class="tgdd-menu-item" id="btn-menu-tools">' + _0x5bfe13.tools + ' Ti\u1EC7n \u00EDch</div>\n                            <div class="tgdd-menu-item" id="btn-menu-plan" style="color:#e84393; font-weight:900;">' + _0x5bfe13.plan + ' K\u1EBF ho\u1EA1ch truy\u1EC1n th\u00F4ng</div>\n                                                        <div class="tgdd-menu-item" id="btn-menu-history" style="color:#e67e22;">' + _0x5bfe13.history + ' Xem l\u1EA1i l\u1ECBch s\u1EED</div>\n                            <div class="tgdd-menu-item" id="btn-menu-save-data" style="color:#007bff;">' + _0x5bfe13.save + ' L\u01B0u b\u00E1o c\u00E1o</div>\n                        </div>\n\n                        <div class="sidebar-footer">\n                            <div class="tgdd-menu-item" id="btn-menu-rerun" style="color: #d63031; font-weight:900;">' + _0x5bfe13.rerun + ' Ch\u1EA1y l\u1EA1i b\u00E1o c\u00E1o</div>\n                        </div>\n                    </div>\n                </div>\n            '; const _0x6bfd3c = document.createElement('div'); _0x6bfd3c.id = 'tgdd-sidebar-overlay'; document.body.appendChild(_0x6bfd3c); document.body.appendChild(_0x2e44ea); _0x119aa7.innerHTML = '\n                <!-- N\u00FAt Menu C\u1ED1 \u0110\u1ECBnh -->\n                <div id="btn-menu">\n                    ' + _0x5bfe13.menu + '<span>Menu</span>\n                </div>\n\n                <!-- V\u00F9ng Tr\u01B0\u1EE3t Ngang Ch\u1EE9a C\u00E1c Tab -->\n                <div class="rpt-nav-scroll-area">\n                    <div class="rpt-nav-item" data-tab="dashboard">' + _0x5bfe13.dashboard + '<span>Dashboard</span></div>\n                    <div class="rpt-nav-item active" data-tab="health">' + (_0x5bfe13.health || '\u2764\uFE0F') + '<span>S\u1EE9c kh\u1ECFe ST</span></div>\n                    <div class="rpt-nav-item active" data-tab="oneshop">' + _0x5bfe13.one + '<span>Realtime V1</span></div>\n                    <div class="rpt-nav-item" data-tab="rt2">' + _0x5bfe13.rt3 + '<span>Realtime V2</span></div>\n                    <div class="rpt-nav-item" data-tab="rt4">' + _0x5bfe13.rt4 + '<span>Realtime V3</span></div>\n                    <div class="rpt-nav-item" data-tab="lknew">' + _0x5bfe13.plan + '<span>LK NEW</span></div>\n                    <div class="rpt-nav-item" data-tab="multirt">' + _0x5bfe13.rt + '<span>Multi RT</span></div>\n                    <div class="rpt-nav-item" data-tab="multilk">' + _0x5bfe13.lk + '<span>Multi LK</span></div>\n                    <div class="rpt-nav-item" data-tab="bcstaff">' + _0x5bfe13.staff + '<span>Chi ti\u1EBFt NV</span></div>\n                    <div class="rpt-nav-item" data-tab="nlnv">' + _0x5bfe13.person + '<span>N\u0103ng l\u1EF1c NV</span></div>\n                    <div class="rpt-nav-item" data-tab="nkbh">' + _0x5bfe13.list + '<span>NK B\u00E1n h\u00E0ng</span></div>\n                    <div class="rpt-nav-item" data-tab="compare_week">' + (_0x5bfe13.compare || '\uD83D\uDCC8') + '<span>So s\u00E1nh tu\u1EA7n</span></div>\n                    <div class="rpt-nav-item" data-tab="compare">' + (_0x5bfe13.compare || '\uD83D\uDCC8') + '<span>So s\u00E1nh BI CK</span></div>\n                    <div class="rpt-nav-item" data-tab="comparerp">' + _0x5bfe13.comparerp + '<span>So s\u00E1nh RP CK</span></div>\n                    <div class="rpt-nav-item" data-tab="revenue">' + _0x5bfe13.chart + '<span>Chart Doanh thu</span></div>\n                    <div class="rpt-nav-item" data-tab="service">' + _0x5bfe13.donate + '<span>Chart Ph\u1EE5c v\u1EE5</span></div>\n                </div>\n            '; document.body.appendChild(_0x119aa7); if (!document.getElementById('btn-toggle-report-nav')) {
             const _0x57e656 = document.createElement('div');
             _0x57e656.className = 'nav-toggle-btn';
             _0x57e656.id = 'btn-toggle-report-nav';
@@ -4457,6 +4457,9 @@ window.__AutoBIRun67 = (function () {
             else if (_0x450ffb === 'rt3') {
                 _0x329bab = UI.HTML.getRealtimeV3(_0x3aa5c8, _0x13b9c3, _0x37589a);
             }
+            else if (_0x450ffb === 'nkbh') {
+                _0x329bab = UI.HTML.getNhatKyBH(_0x3aa5c8, _0x37b477, _0x13b9c3, _0x37589a, _0x4df754, _0x19aafa);
+            }
             else if (_0x450ffb === 'lknew') {
                 _0x329bab = UI.HTML.getLuyKeNew(_0x3aa5c8, _0x37b477, _0x13b9c3, _0x37589a, _0x4df754, _0x19aafa);
             }
@@ -4583,7 +4586,7 @@ window.__AutoBIRun67 = (function () {
             _0x2cfe17.innerHTML = '\uD83D\uDCBE L\u01B0u h\u1EC7 s\u1ED1';
             _0x2cfe17.onclick = () => { _0x2cfe17.innerText = '\u2601\uFE0F \u0110ang \u0111\u1ED3ng b\u1ED9...'; _0x2cfe17.disabled = true; _0x2cfe17.style.animation = 'none'; DATA.saveCloudConfig(_0x13b9c3, () => { UI.showToast('\u2705 \u0110\u00E3 c\u1EADp nh\u1EADt to\u00E0n b\u1ED9 h\u1EC7 s\u1ED1 l\u00EAn Cloud!'); _0x2cfe17.remove(); }); };
             _0x1309fb.appendChild(_0x2cfe17);
-        } _0x5d2d05(); }; }); }; const _0x128861 = ['dashboard', 'health', 'oneshop', 'rt2', 'bcbottom', 'rt3', 'rt4', 'lknew', 'multirt', 'multilk', 'bcstaff', 'nlnv', 'compare_week', 'compare', 'comparerp', 'revenue', 'service']; const _0x2d1469 = window.tgdd_prev_active_tab || 'oneshop'; const _0x1a643b = _0x128861.indexOf(_0x2d1469); const _0x258332 = _0x128861.indexOf(_0x450ffb); window.tgdd_prev_active_tab = _0x450ffb; let _0xa904f8 = ''; if (_0x1a643b !== -1 && _0x258332 !== -1 && _0x1a643b !== _0x258332) {
+        } _0x5d2d05(); }; }); }; const _0x128861 = ['dashboard', 'health', 'oneshop', 'rt2', 'bcbottom', 'rt3', 'rt4', 'lknew', 'multirt', 'multilk', 'bcstaff', 'nlnv', 'nkbh', 'compare_week', 'compare', 'comparerp', 'revenue', 'service']; const _0x2d1469 = window.tgdd_prev_active_tab || 'oneshop'; const _0x1a643b = _0x128861.indexOf(_0x2d1469); const _0x258332 = _0x128861.indexOf(_0x450ffb); window.tgdd_prev_active_tab = _0x450ffb; let _0xa904f8 = ''; if (_0x1a643b !== -1 && _0x258332 !== -1 && _0x1a643b !== _0x258332) {
             _0xa904f8 = _0x258332 > _0x1a643b ? 'report-slide-right' : 'report-slide-left';
         }
         else {
@@ -4991,7 +4994,7 @@ window.__AutoBIRun67 = (function () {
                 _0x5035f6.forEach(_0x2aa55d => { _0x3779b5 += _0x407611 * (parseFloat(_0x2aa55d.rate) / 100); });
                 const _0x47ce14 = Math.max(0, _0x407611 - _0x3779b5);
                 _0x605fb7 = _0x47ce14 / _0xb50ba8.length;
-            } return UI.HTML.applyTargetRounding(_0x605fb7, _0x4084be); }, getLuyKeNew: (c, groups, cfg, view, useBi, timeArg) => { try { return window.__AutoBIRt2 ? window.__AutoBIRt2.renderLK({ UI, UTILS }, c, groups, cfg, view, useBi, timeArg) : ''; } catch (e) { return '<div style="padding:40px;text-align:center;color:#b42318;font-weight:700;">LK NEW lỗi: ' + String(e && e.message || e) + '</div>'; } }, getRealtimeV2: (c, groups, cfg, view, useBi, timeArg) => { try { return window.__AutoBIRt2 ? window.__AutoBIRt2.render({ UI, UTILS }, c, groups, cfg, view, useBi, timeArg) : ''; } catch (e) { return '<div style="padding:40px;text-align:center;color:#b42318;font-weight:700;">Realtime V2 lỗi: ' + String(e && e.message || e) + '</div>'; } }, getRealtimeV4: (_0x11f2c6, _0x208609, _0xbf3329, _0x99373a, _0x1079b1, _0x1b65a9) => { const _0x2c9196 = UI.HTML.resolveTimeContext(_0xbf3329, _0x1b65a9); const _0x3241b4 = _0x2c9196.daysPassed; const _0x11109e = _0x2c9196.daysInMonth; const _0x457416 = window.tgdd_rt4_mode || 'realtime'; const _0x3c3819 = _0x457416 === 'realtime'; let _0x21a1ca = false; if (_0x99373a === 'total') {
+            } return UI.HTML.applyTargetRounding(_0x605fb7, _0x4084be); }, getLuyKeNew: (c, groups, cfg, view, useBi, timeArg) => { try { return window.__AutoBIRt2 ? window.__AutoBIRt2.renderLK({ UI, UTILS }, c, groups, cfg, view, useBi, timeArg) : ''; } catch (e) { return '<div style="padding:40px;text-align:center;color:#b42318;font-weight:700;">LK NEW lỗi: ' + String(e && e.message || e) + '</div>'; } }, getNhatKyBH: (c, groups, cfg, view, useBi, timeArg) => { try { if (!window.tgdd_history_cache && cfg && cfg.historySheetId && !window.__nkbhHistLoading) { window.__nkbhHistLoading = true; DATA.fetchHistoryFromSheet(cfg, hs => { window.tgdd_history_cache = hs || {}; const t = document.querySelector('.rpt-nav-item.active[data-tab="nkbh"]'); if (t) t.click(); }); } return window.__AutoBINkbh ? window.__AutoBINkbh.render({ UI, UTILS }, c, groups, cfg, view, useBi, timeArg) : ''; } catch (e) { return '<div style="padding:40px;text-align:center;color:#b42318;font-weight:700;">NK Bán hàng lỗi: ' + String(e && e.message || e) + '</div>'; } }, getRealtimeV2: (c, groups, cfg, view, useBi, timeArg) => { try { return window.__AutoBIRt2 ? window.__AutoBIRt2.render({ UI, UTILS }, c, groups, cfg, view, useBi, timeArg) : ''; } catch (e) { return '<div style="padding:40px;text-align:center;color:#b42318;font-weight:700;">Realtime V2 lỗi: ' + String(e && e.message || e) + '</div>'; } }, getRealtimeV4: (_0x11f2c6, _0x208609, _0xbf3329, _0x99373a, _0x1079b1, _0x1b65a9) => { const _0x2c9196 = UI.HTML.resolveTimeContext(_0xbf3329, _0x1b65a9); const _0x3241b4 = _0x2c9196.daysPassed; const _0x11109e = _0x2c9196.daysInMonth; const _0x457416 = window.tgdd_rt4_mode || 'realtime'; const _0x3c3819 = _0x457416 === 'realtime'; let _0x21a1ca = false; if (_0x99373a === 'total') {
                 const _0xc428a = (_0xbf3329.shop1 || '').trim().toUpperCase();
                 const _0x5b5597 = (_0xbf3329.shop2 || '').trim().toUpperCase();
                 const _0x1bab49 = (_0xbf3329.shop3 || '').trim().toUpperCase();
@@ -7335,7 +7338,7 @@ const _0x133c09 = '<div style="font-size:15px; color:#333; line-height:1.6; text
             return 'Unknown'; const _0x21c256 = _0x15edb0.split('-'); if (_0x21c256.length >= 2) {
             const _0x224a1d = _0x21c256[_0x21c256.length - 1].trim().match(/\d+/);
             return _0x224a1d ? _0x224a1d[0] : _0x21c256[_0x21c256.length - 1].replace(/[^a-zA-Z0-9]/g, '');
-        } const _0x1ce8b3 = _0x15edb0.match(/\d+/); return _0x1ce8b3 ? _0x1ce8b3[0] : _0x15edb0.replace(/[^a-zA-Z0-9]/g, '_').trim(); }; const _0x2e49d8 = { dashboard: 'Dashboard', health: 'S\u1EE9c kh\u1ECFe ST', oneshop: 'Realtime_V1', rt2: 'Realtime_V2', bcbottom: 'Realtime_V2_cu', rt3: 'Realtime_V3_cu', rt4: 'Realtime_V3', lknew: 'LK_NEW', multirt: 'Multi_RT', multilk: 'Multi_LK', bcstaff: 'Chi ti\u1EBFt NV', nlnv: 'N\u0103ng l\u1EF1c NV', compare_week: 'So s\u00E1nh tu\u1EA7n', compare: 'So s\u00E1nh CK BI', comparerp: 'So s\u00E1nh CK RP', revenue: 'Chart Doanh thu', service: 'Chart Ph\u1EE5c v\u1EE5' }; const _0x2bcc18 = new Date(); const _0xcc6501 = String(_0x2bcc18.getHours()).padStart(2, '0') + 'h' + String(_0x2bcc18.getMinutes()).padStart(2, '0'); const _0x362056 = String(_0x2bcc18.getDate()).padStart(2, '0') + '-' + String(_0x2bcc18.getMonth() + 1).padStart(2, '0') + '-' + _0xcc6501; UI.showToast('\uD83D\uDE80 B\u1EAFt \u0111\u1EA7u ch\u1EE5p \u1EA3nh & g\u1EEDi Drive t\u1EF1 \u0111\u1ED9ng...', 0); for (let _0x49688f = 0; _0x49688f < _0xd8560d.length; _0x49688f++) {
+        } const _0x1ce8b3 = _0x15edb0.match(/\d+/); return _0x1ce8b3 ? _0x1ce8b3[0] : _0x15edb0.replace(/[^a-zA-Z0-9]/g, '_').trim(); }; const _0x2e49d8 = { dashboard: 'Dashboard', health: 'S\u1EE9c kh\u1ECFe ST', oneshop: 'Realtime_V1', rt2: 'Realtime_V2', bcbottom: 'Realtime_V2_cu', rt3: 'Realtime_V3_cu', rt4: 'Realtime_V3', lknew: 'LK_NEW', nkbh: 'NK_Ban_Hang', multirt: 'Multi_RT', multilk: 'Multi_LK', bcstaff: 'Chi ti\u1EBFt NV', nlnv: 'N\u0103ng l\u1EF1c NV', compare_week: 'So s\u00E1nh tu\u1EA7n', compare: 'So s\u00E1nh CK BI', comparerp: 'So s\u00E1nh CK RP', revenue: 'Chart Doanh thu', service: 'Chart Ph\u1EE5c v\u1EE5' }; const _0x2bcc18 = new Date(); const _0xcc6501 = String(_0x2bcc18.getHours()).padStart(2, '0') + 'h' + String(_0x2bcc18.getMinutes()).padStart(2, '0'); const _0x362056 = String(_0x2bcc18.getDate()).padStart(2, '0') + '-' + String(_0x2bcc18.getMonth() + 1).padStart(2, '0') + '-' + _0xcc6501; UI.showToast('\uD83D\uDE80 B\u1EAFt \u0111\u1EA7u ch\u1EE5p \u1EA3nh & g\u1EEDi Drive t\u1EF1 \u0111\u1ED9ng...', 0); for (let _0x49688f = 0; _0x49688f < _0xd8560d.length; _0x49688f++) {
             const _0x1066c4 = _0xd8560d[_0x49688f];
             UI.showToast('\uD83D\uDCF8 [' + (_0x49688f + 1) + '/' + _0xd8560d.length + '] \u0110ang m\u1EDF tab: ' + _0x1066c4.toUpperCase() + '...', 0);
             const _0x41a9bb = document.querySelector('.rpt-nav-item[data-tab="' + _0x1066c4 + '"]');
@@ -8326,7 +8329,7 @@ window.__AutoBIBiTarget99 = (function () {
         cache[key] = out;
         total += groups.size;
       }
-      if (total) cache.__apiCompetition = { at: Date.now(), groups: total, month };
+      if (total) cache.__apiCompetition = { at: Date.now(), groups: total, month, cumTo: b.cum && b.cum.to };
     });
     if (!total) throw new Error('API không trả số Thi đua khớp nhóm Khai báo (danh sách nhóm hàng: ' + list.length + ' nhóm' + (list.length ? '' : ' — chưa tải được Sheet nhóm hàng') + ')');
     return total;
@@ -8389,6 +8392,7 @@ window.__AutoBIBiTarget99 = (function () {
   }
   async function applyStaffRevenue(cfgIn) {
     const map = await staffRevenueMap(cfgIn, null);
+    const b0 = await baseData(cfgIn).catch(() => null); /* V17.41: ghi ngày lũy kế cho NK Bán hàng */
     let n = 0;
     writeCache(cache => {
       cache.link6 = cache.link6 || {}; cache.link7 = cache.link7 || {};
@@ -8400,6 +8404,7 @@ window.__AutoBIBiTarget99 = (function () {
         cache.link7[key][name] = { tg: v.dtlk ? Math.round(v.tragop / v.dtlk * 10000) / 100 : 0, dt_sieu_thi: v.dtlk, dt_tragop: v.tragop };
         n++;
       }
+      if (b0 && b0.cum) cache.__apiStaffRev = { at: Date.now(), cumTo: b0.cum.to };
     });
     return n;
   }
@@ -8584,7 +8589,7 @@ window.__AutoBIBiTarget99 = (function () {
     });
     if (missing.length) note('Thi đua nhân viên: không tìm thấy mã Thi đua của ' + missing.join(', '));
     if (!Object.keys(ids).length) throw new Error('API không trả mã Thi đua shop nào');
-    writeCache(cache => { cache.link6 = cache.link6 || {}; for (const [k, out] of Object.entries(outs)) { cache.link6[k] = cache.link6[k] || { revenue: {}, competition: {}, crossSell: {} }; cache.link6[k].competition = out; } });
+    writeCache(cache => { cache.link6 = cache.link6 || {}; for (const [k, out] of Object.entries(outs)) { cache.link6[k] = cache.link6[k] || { revenue: {}, competition: {}, crossSell: {} }; cache.link6[k].competition = out; } cache.__apiStaffComp = { at: Date.now(), cumTo: b.cum && b.cum.to }; });
     return n;
   }
 
@@ -9633,4 +9638,530 @@ window.__AutoBIBiTarget99 = (function () {
   const start = () => { scan(); mo.observe(document.body, { childList: true, subtree: true }); };
   if (document.body) start(); else document.addEventListener('DOMContentLoaded', start, { once: true });
   window.__AutoBISidebar = { scan };
+})();
+
+/* ==== V17.41: NK Bán hàng (tab 'nkbh', __AutoBINkbh) — nhật ký bán hàng theo tuần (Thứ 2 → CN, cắt theo tháng).
+   ① Phân bổ mục tiêu tuần (chọn nhóm chạy tuần, quy đổi "1 cái = ? triệu", chia NV theo % Khai báo × số ngày làm, khóa + lịch sử sửa)
+   ② Nhật ký NV: phiếu đầu tuần (NV tự điền) / phiếu kết quả (AutoBI điền), in A4
+   ③ Tổng kết & so sánh tuần
+   Số từng ngày = lũy kế ngày đó − lũy kế ngày trước. Lũy kế lấy từ: bản chụp riêng của tab này (lưu mỗi lần đổ LK, khóa theo ngày lũy kế)
+   rồi tới lịch sử Google Sheet (khóa dd/mm/yyyy = lũy kế đến hết ngày trước). Số cái làm tròn: lẻ < 0,5 bỏ, ≥ 0,5 tính 1; làm tròn trên TỔNG.
+   Dữ liệu tab lưu trên máy: GM 'autobi_nkbh_v1' (phân bổ), 'autobi_nkbh_snap_v1' (bản chụp lũy kế). ==== */
+(function () {
+  'use strict';
+  if (location.hostname !== 'baocao.dienmayxanh.com') return;
+  const KEY = 'autobi_nkbh_v1', SNAP = 'autobi_nkbh_snap_v1';
+  const DOW = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'];
+  const num = v => { const n = typeof v === 'number' ? v : parseFloat(String(v == null ? '' : v).replace(/,/g, '')); return isFinite(n) ? n : 0; };
+  const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  const nf = (v, dec) => { if (v == null || !isFinite(v)) return '—'; const x = dec ? Math.round(v * 10) / 10 : Math.round(v); return x.toLocaleString('vi-VN'); };
+  const pad = n => String(n).padStart(2, '0');
+  const load = (k, d) => { try { const v = GM_getValue(k, null); const o = typeof v === 'string' ? JSON.parse(v) : v; return o && typeof o === 'object' ? o : d; } catch (_) { return d; } };
+  const save = (k, o) => { try { GM_setValue(k, JSON.stringify(o)); } catch (_) { } };
+  const vnDay = off => window.__AutoBIApi && window.__AutoBIApi.vnDay ? window.__AutoBIApi.vnDay(off || 0) : (() => { const d = new Date(Date.now() + 7 * 3600e3 + (off || 0) * 864e5); return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate(); })();
+  const who = () => { try { const a = window.__AutoBIAuthGet && window.__AutoBIAuthGet(); return (a && (a.userName || a.user)) || 'Người dùng'; } catch (_) { return 'Người dùng'; } };
+  const stamp = () => { const d = new Date(); return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+
+  /* Trạng thái giao diện (chỉ trong phiên) */
+  const S = { tab: 'pb', w: null, shop: null, nv: null, mode: 'blank', unit: 'sl', all: false, onlyOn: false, vtFirst: false, img: false, month: null };
+
+  /* ---------- Tuần trong tháng: Thứ 2 → CN, cắt theo ranh giới tháng ---------- */
+  function weeksOf(y, m, dim) {
+    const out = []; let d = 1, k = 1;
+    while (d <= dim) { const dow = (new Date(y, m - 1, d).getDay() + 6) % 7; const t = Math.min(dim, d + 6 - dow); out.push({ i: out.length, k: 'T' + k++, f: d, t }); d = t + 1; }
+    return out;
+  }
+  const wlen = W => W.t - W.f + 1;
+
+  /* ---------- Phân bổ (lưu trên máy) ---------- */
+  const store = () => { const o = load(KEY, null) || {}; o.plans = o.plans || {}; o.units = o.units || {}; return o; };
+  const planKey = (ym, shop, wi) => ym + '|' + shop + '|' + wi;
+
+  /* ---------- Bản chụp lũy kế theo ngày ---------- */
+  function recordSnap(c, cfg, shopKeys) {
+    const sc = c.__apiStaffComp, sr = c.__apiStaffRev, ac = c.__apiCompetition, ar = c.__apiRevenue;
+    if (!sc && !sr && !ac && !ar) return;
+    const db = load(SNAP, null) || {};
+    let changed = false;
+    const put = (day, shop, field, val) => { if (!day || val == null) return; const d = db[day] = db[day] || {}; const s = d[shop] = d[shop] || {}; s[field] = val; changed = true; };
+    for (const shop of shopKeys) {
+      const l6 = (c.link6 && c.link6[shop]) || {};
+      if (sc && sc.cumTo && l6.competition && Object.keys(l6.competition).length) put(sc.cumTo, shop, 'nv', l6.competition);
+      if (sr && sr.cumTo && l6.revenue && Object.keys(l6.revenue).length) { const dt = {}; for (const [n, v] of Object.entries(l6.revenue)) dt[n] = num(v && typeof v === 'object' ? v.dtqd : v); put(sr.cumTo, shop, 'dt', dt); }
+      if (ac && ac.cumTo && c.link4_smart) { const sh = {}; for (const [g, o] of Object.entries(c.link4_smart)) if (o && o[shop]) sh[g] = num(o[shop].r); if (Object.keys(sh).length) put(ac.cumTo, shop, 'sh', sh); }
+      if (ar && ar.cumTo && c.link2 && c.link2[shop]) put(ar.cumTo, shop, 'sdt', num(c.link2[shop].r));
+    }
+    if (changed) { const keys = Object.keys(db).sort(); while (keys.length > 75) delete db[keys.shift()]; save(SNAP, db); }
+  }
+
+  /* Nguồn lũy kế: bản chụp → lịch sử Sheet (khóa ngày D+1) */
+  function makeSource(y, m, dim) {
+    const snap = load(SNAP, null) || {};
+    let hist = window.tgdd_history_cache || null;
+    try { if (hist && window.__AutoBIHistFix) hist = window.__AutoBIHistFix(hist); } catch (_) { }
+    const ymd = d => y * 10000 + m * 100 + d;
+    const histKey = d => { const t = new Date(y, m - 1, d + 1); return pad(t.getDate()) + '/' + pad(t.getMonth() + 1) + '/' + t.getFullYear(); };
+    const hrow = d => (hist && hist[histKey(d)]) || null;
+    const srow = (d, shop) => (snap[ymd(d)] && snap[ymd(d)][shop]) || null;
+    const hv = (row, k) => row && row[k] !== undefined ? num(row[k]) : 0;
+    const memo = {};
+    const scan = (d, pre, suf) => { const k = d + '|' + pre + '|' + (suf || ''); if (k in memo) return memo[k]; const h = hrow(d); return memo[k] = !!(h && Object.keys(h).some(x => x.indexOf(pre) === 0 && (!suf || x.indexOf(suf) > 0))); };
+    return {
+      /* có số NV của ngày d? (nhóm hàng) */
+      has(d, shop) { if (d <= 0) return true; const s = srow(d, shop); if (s && s.nv) return true; return scan(d, 'link6|||' + shop + '|||competition|||'); },
+      nv(d, shop, name, g) { if (d <= 0) return 0; const s = srow(d, shop); if (s && s.nv) return num(s.nv[name] && s.nv[name][g]); return hv(hrow(d), 'link6|||' + shop + '|||competition|||' + name + '|||' + g); },
+      dt(d, shop, name) { if (d <= 0) return 0; const s = srow(d, shop); if (s && s.dt) return num(s.dt[name]); return hv(hrow(d), 'link6|||' + shop + '|||revenue|||' + name + '|||dtqd'); },
+      hasShop(d, shop) { if (d <= 0) return true; const s = srow(d, shop); if (s && s.sh) return true; return scan(d, 'link4_smart|||', '|||' + shop + '|||r'); },
+      shop(d, shop, g) { if (d <= 0) return 0; const s = srow(d, shop); if (s && s.sh) return num(s.sh[g]); return hv(hrow(d), 'link4_smart|||' + g + '|||' + shop + '|||r'); },
+      sdt(d, shop) { if (d <= 0) return 0; const s = srow(d, shop); if (s && s.sdt != null) return num(s.sdt); return hv(hrow(d), 'link2|||' + shop + '|||r'); },
+      histLoaded: !!hist
+    };
+  }
+
+  /* ---------- Bối cảnh tính toán cho một siêu thị ---------- */
+  function ctx(h, c, groups, cfg, shopIdx, useBi, timeArg) {
+    const { UI, UTILS } = h;
+    const tc = UI.HTML.resolveTimeContext(cfg, timeArg);
+    const y = num(tc.year), m = num(tc.month), dim = num(tc.daysInMonth) || 30, dp = Math.min(dim, num(tc.daysPassed));
+    const ym = y * 100 + m, shop = 'shop' + shopIdx;
+    const W = weeksOf(y, m, dim);
+    const src = makeSource(y, m, dim);
+    const allCh = (cfg[shop] || '').trim().toUpperCase().startsWith('Đ');
+    let gl = groups.filter(g => allCh ? true : g.channel === 'T');
+    gl = UTILS.filterActiveGroups(gl, cfg);
+    const GL = window.__AutoBIGroupList;
+    const tier = g => { try { return GL && GL.tierOf ? GL.tierOf(g) : (g.tier || ''); } catch (_) { return g.tier || ''; } };
+    const isMoney = g => !!(g.type && /doanhthu|tiền|tien/i.test(g.type));
+    const st = store(), units = st.units[ym] || {};
+    const G = gl.map(g => ({ short: g.short, money: isMoney(g), main: tier(g) === 'chinh', u: isMoney(g) ? (num(units[g.short]) || 5) : 0 }));
+    const staff = (cfg.staffList || []).filter(x => (Number(x.shopIdx) || 1) === shopIdx);
+    const rateOf = x => { const r = parseFloat(x.rate); return isFinite(r) && r > 0 ? r : 0; };
+    const fixed = staff.reduce((a, x) => a + rateOf(x), 0), autoN = staff.filter(x => !rateOf(x)).length;
+    const baseW = staff.map(x => rateOf(x) ? rateOf(x) / 100 : (autoN ? Math.max(0, 100 - fixed) / 100 / autoN : 0));
+    const shopMon = useBi ? (num(((c.link2 || {})[shop] || {}).t) || num(cfg['target' + shopIdx])) : (num(cfg['target' + shopIdx]) || num(((c.link2 || {})[shop] || {}).t));
+    const gT = g => num(UI.HTML.getFinalGroupTarget((c.link4_smart && c.link4_smart[g] && c.link4_smart[g][shop] || {}).t, g, shop, cfg, groups, false, useBi));
+    const staffT = (g, x) => num(UI.HTML.calculateStaffPersonalTarget(gT(g.short), x, staff, g.money));
+    const code = String(cfg['makho' + shopIdx] || cfg['shopCode' + shopIdx] || cfg['code' + shopIdx] || '').trim();
+    const sname = cfg[shop + 'Short'] || cfg[shop] || shop;
+    /* lũy kế gần nhất có số, tại hoặc trước ngày d */
+    const prevNV = d => { while (d > 0 && !src.has(d, shop)) d--; return d; };
+    const prevSh = d => { while (d > 0 && !src.hasShop(d, shop)) d--; return d; };
+    return { tc, y, m, dim, dp, ym, shop, shopIdx, W, src, G, staff, baseW, shopMon, gT, staffT, code, sname, prevNV, prevSh, cfg, c, h };
+  }
+
+  const cai = (g, v) => g.money ? Math.round(v / (g.u * 1000) + 1e-9) : Math.round(v);
+  const unitV = g => g.money ? g.u * 1000 : 1;
+  /* Chia số chẵn: mỗi NV nhận phần nguyên, phần dư phát lần lượt cho NV có phần lẻ lớn nhất.
+     V17.46: phần lẻ BẰNG NHAU thì ưu tiên NV đang thiếu nhiều nhất so với mục tiêu tháng (pri lớn trước), rồi mới tới thứ tự Khai báo. */
+  function lr(total, w, pri) { const s = w.reduce((a, b) => a + b, 0) || 1, raw = w.map(x => total * x / s), fl = raw.map(Math.floor); let left = total - fl.reduce((a, b) => a + b, 0); raw.map((x, i) => [Math.round((x - fl[i]) * 1e6), (pri && pri[i]) || 0, i]).sort((a, b) => b[0] - a[0] || b[1] - a[1] || a[2] - b[2]).slice(0, Math.max(0, left)).forEach(p => fl[p[2]]++); return fl; }
+  /* Mức thiếu của từng NV tới đầu tuần: nhóm = mục tiêu tháng NV − lũy kế NV (quy ra cái); doanh thu = mục tiêu tháng NV − DT QĐ lũy kế */
+  const needG = (X, wi, g) => { const d = X.prevNV(X.W[wi].f - 1); return X.staff.map(x => (X.staffT(g, x) - X.src.nv(d, X.shop, x.name, g.short)) / unitV(g)); };
+  const needDT = (X, wi) => { const d = X.prevNV(X.W[wi].f - 1); return X.staff.map((x, j) => X.shopMon * (X.baseW[j] || 0) - X.src.dt(d, X.shop, x.name)); };
+  const WR = (X, plan) => X.baseW.map((w, i) => w * (num(plan && plan.days && plan.days[X.staff[i].name] != null ? plan.days[X.staff[i].name] : 7)) / 7);
+
+  /* Số tuần của NV (đã làm tròn) và chi tiết từng ngày */
+  function weekNV(X, W, x, g) {
+    const end = Math.min(W.t, X.dp), d0 = X.prevNV(W.f - 1), lastD = X.prevNV(end);
+    if (end < W.f || lastD < W.f) return { v: 0, n: 0, start: d0, days: {} };
+    const base = X.src.nv(d0, X.shop, x.name, g.short);
+    const days = {}; let prevC = 0, prevV = base;
+    for (let d = W.f; d <= end; d++) {
+      if (!X.src.has(d, X.shop)) { days[d] = { gop: true }; continue; }
+      const lk = X.src.nv(d, X.shop, x.name, g.short), cum = lk - base, c2 = cai(g, cum);
+      days[d] = { v: lk - prevV, c: c2 - prevC }; prevC = c2; prevV = lk;
+    }
+    return { v: X.src.nv(lastD, X.shop, x.name, g.short) - base, n: end - W.f + 1, start: d0, days };
+  }
+  function weekDT(X, W, x) {
+    const end = Math.min(W.t, X.dp), d0 = X.prevNV(W.f - 1), lastD = X.prevNV(end);
+    if (end < W.f || lastD < W.f) return { v: 0, n: 0, days: {} };
+    const base = X.src.dt(d0, X.shop, x.name), days = {}; let prev = base;
+    for (let d = W.f; d <= end; d++) { if (!X.src.has(d, X.shop)) { days[d] = { gop: true }; continue; } const lk = X.src.dt(d, X.shop, x.name); days[d] = { v: lk - prev }; prev = lk; }
+    return { v: X.src.dt(lastD, X.shop, x.name) - base, n: end - W.f + 1, days };
+  }
+  const shopWeek = (X, W, g) => X.staff.reduce((a, x) => a + weekNV(X, W, x, g).v, 0);
+
+  /* ---------- Phân bổ của một tuần: đã lưu hoặc bản nháp gợi ý ---------- */
+  function getPlan(X, wi, opt) {
+    const st = store(), key = planKey(X.ym, X.shop, wi), saved = st.plans[key];
+    if (saved && !(opt && opt.fresh)) return normalize(X, saved);
+    return draft(X, wi, (saved && saved.k) || 100, saved && saved.days);
+  }
+  function normalize(X, p) {
+    p.on = p.on || {}; p.st = p.st || {}; p.a = p.a || {}; p.why = p.why || {}; p.u = p.u || {}; p.days = p.days || {}; p.log = p.log || [];
+    p.dt = p.dt || { st: 0, a: {} };
+    X.G.forEach(g => { if (g.money && num(p.u[g.short])) g.u = num(p.u[g.short]); });
+    return p;
+  }
+  function draft(X, wi, k, days) {
+    const W = X.W[wi], asOf = W.f - 1, rem = Math.max(1, X.dim - asOf), nd = wlen(W);
+    const p = { draft: true, k: k || 100, on: {}, st: {}, a: {}, why: {}, u: {}, days: Object.assign({}, days || {}), log: [], dt: { st: 0, a: {} } };
+    const w = WR(X, p), dS = X.prevSh(asOf), lkAsOf = dS;
+    const rows = X.G.map(g => {
+      const T = X.gT(g.short), L = X.src.shop(lkAsOf, X.shop, g.short);
+      const dk = lkAsOf > 0 && T > 0 ? L / lkAsOf * X.dim / T * 100 : null;
+      const sug = Math.ceil(Math.max(0, T - L) / rem * nd * p.k / 100 / unitV(g));
+      p.st[g.short] = sug; p.u[g.short] = g.money ? g.u : 0;
+      const a = lr(sug, w, needG(X, wi, g)); p.a[g.short] = {}; X.staff.forEach((x, i) => { p.a[g.short][x.name] = a[i]; });
+      return { g, T, L, dk, sug };
+    });
+    pickSmart(X, wi, p, rows);
+    const L = X.src.sdt(lkAsOf, X.shop), dtS = Math.ceil(Math.max(0, X.shopMon - L) / rem * nd * p.k / 100);
+    p.dt.st = dtS; const a = lr(dtS, w, needDT(X, wi)); X.staff.forEach((x, i) => { p.dt.a[x.name] = a[i]; });
+    return p;
+  }
+  /* Gợi ý thông minh: ưu tiên nhóm Chính có DK thấp + nhóm tuần trước còn thiếu; tối đa 6 nhóm */
+  function pickSmart(X, wi, p, rows) {
+    rows = rows || planRows(X, wi, p);
+    const prev = wi > 0 ? store().plans[planKey(X.ym, X.shop, wi - 1)] : null;
+    rows.forEach(r => {
+      let ms = 0;
+      if (prev && prev.on && prev.on[r.g.short] && X.dp >= X.W[wi - 1].f) ms = Math.max(0, num(prev.st[r.g.short]) - cai(r.g, shopWeek(X, X.W[wi - 1], r.g)));
+      r.ms = ms; r.sc = (r.dk != null && r.dk < 100 ? 100 - r.dk : 0) * (r.g.main ? 1.5 : 1) + ms * 10;
+    });
+    let pick = rows.filter(r => r.sc > 0).sort((a, b) => b.sc - a.sc).slice(0, 6);
+    if (!pick.length) pick = rows.filter(r => r.g.main).slice(0, 6);
+    X.G.forEach(g => { p.on[g.short] = false; });
+    pick.forEach(r => { p.on[r.g.short] = true; const t = []; if (r.g.main) t.push('Chính'); if (r.dk != null) t.push('DK ' + Math.round(r.dk) + '%'); if (r.ms) t.push('thiếu ' + r.ms + ' cái'); p.why[r.g.short] = t.join(' · ') || 'Tập trung chạy tuần'; });
+  }
+  function planRows(X, wi, p) {
+    const W = X.W[wi], asOf = X.prevSh(W.f - 1), rem = Math.max(1, X.dim - (W.f - 1)), nd = wlen(W);
+    return X.G.map(g => { const T = X.gT(g.short), L = X.src.shop(asOf, X.shop, g.short); return { g, T, L, dk: asOf > 0 && T > 0 ? L / asOf * X.dim / T * 100 : null, sug: Math.ceil(Math.max(0, T - L) / rem * nd * num(p.k || 100) / 100 / unitV(g)) }; });
+  }
+  function persist(X, wi, p, logMsg) {
+    const st = store(), key = planKey(X.ym, X.shop, wi);
+    delete p.draft;
+    if (logMsg && (p.saved || p.log.length)) p.log.push(stamp() + ' · ' + logMsg + ' (' + who() + ')');
+    st.plans[key] = p;
+    const u = st.units[X.ym] = st.units[X.ym] || {}; X.G.forEach(g => { if (g.money && num(p.u[g.short])) u[g.short] = num(p.u[g.short]); });
+    save(KEY, st);
+  }
+
+  /* ---------- CSS ---------- */
+  const CSS = `
+  .nk-root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;color:#0f1b2d;background:#f2f5f9;padding:18px 20px;box-sizing:border-box;font-variant-numeric:tabular-nums;width:1240px}
+  .nk-root *{box-sizing:border-box}
+  .nk-hd{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin-bottom:12px}
+  .nk-kicker{font-size:12px;font-weight:800;letter-spacing:1.4px;color:#0b4fb3}.nk-title{font-size:22px;font-weight:900;line-height:1.2}
+  .nk-time{font-size:12px;font-weight:700;color:#475569;text-align:right}
+  .nk-dots i{font-style:normal;color:#15803d;margin:0 1px}.nk-dots i.x{color:#b42318}
+  .nk-pills{display:flex;align-items:center;gap:6px;margin:0 0 12px;font-size:12px;font-weight:800;color:#475569;flex-wrap:wrap}
+  .nk-pills button{border:1px solid #dfe5ee;background:#fff;color:#0f1b2d;border-radius:999px;padding:5px 12px;font-weight:800;font-size:12px;font-family:inherit;cursor:pointer}
+  .nk-pills button.big{font-size:13px;padding:8px 16px}.nk-pills button small{font-weight:600;color:#64748b}
+  .nk-pills button.on{background:#0b4fb3;border-color:#0b4fb3;color:#fff}.nk-pills button.on small{color:#cfe0ff}
+  .nk-pills button.off{opacity:.45;cursor:default}
+  .nk-card{background:#fff;border:1px solid #dfe5ee;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+  .nk-lbl{font-size:12px;font-weight:800;letter-spacing:.8px;color:#0b4fb3;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+  .nk-sub{font-size:12px;font-weight:600;color:#475569;letter-spacing:0}
+  .nk-tblw{overflow-x:auto;max-width:100%}
+  .nk-tbl{width:100%;border-collapse:collapse;font-size:13px}
+  .nk-tbl th{background:#f5f7fb;font-size:11px;font-weight:800;color:#475569;text-align:right;padding:8px 6px;border-bottom:1.5px solid #0f1b2d;white-space:nowrap}
+  .nk-tbl td{padding:6px;text-align:right;border-bottom:1px solid #edf1f6;white-space:nowrap}
+  .nk-tbl .l{text-align:left}.nk-tbl tfoot td{font-weight:900;border-top:1.5px solid #0f1b2d;border-bottom:none}
+  .nk-nm{font-weight:700}.nk-id{font-size:11px;color:#475569;font-weight:600}
+  .nk-note{font-size:11px;font-weight:600;color:#475569;margin-top:6px}
+  .nk-empty{padding:18px;text-align:center;color:#475569;font-weight:600}
+  .t-ok{color:#15803d!important}.t-mid{color:#b45309!important}.t-low{color:#b42318!important}
+  .nk-sec td{font-size:12px;font-weight:900;letter-spacing:.5px;padding:7px 8px;text-align:center!important}
+  .nk-sec.m td{background:#e3edff;color:#0b4fb3;border-left:4px solid #0b4fb3}.nk-sec.v td{background:#f1eafe;color:#7c3aed;border-left:4px solid #7c3aed}
+  .nk-hl{background:#f3f7ff}
+  .nk-in{width:46px;text-align:right;border:1px solid #cbd5e1;border-radius:6px;padding:3px 5px;font:inherit;font-weight:800;background:#fffdf3}
+  .nk-in.wide{width:180px;text-align:left;font-weight:600;color:#0b4fb3}.nk-in:disabled{background:#f1f5f9;color:#64748b}
+  .nk-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;font-weight:600;color:#475569}.nk-tools .grow{margin-right:auto}
+  .nk-tools button,.nk-pick button,.nk-msg-h button,.nk-lock button{border:1px solid #cbd5e1;background:#fff;border-radius:8px;padding:5px 10px;font-weight:800;font-size:12px;font-family:inherit;cursor:pointer;color:#0f1b2d}
+  .nk-tools button.pri{background:#15803d;border-color:#15803d;color:#fff}
+  .nk-pick{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;background:#f5f7fb;border-radius:10px;padding:8px 10px}.nk-pick b{color:#0b4fb3;font-size:13px}
+  .nk-pb th.nvh{background:#fde8d7;color:#7c2d12;white-space:normal;width:96px;text-align:center}
+  .nk-off td{background:#fafbfd;color:#94a3b8}.nk-days td{background:#f5f7fb}.nk-dt td{background:#fffbea}
+  .nk-warn td{color:#b45309;font-size:12px;text-align:right;padding:2px 8px 6px}
+  .nk-lock{background:#ecfdf3;border:1px solid #86efac;color:#14532d;border-radius:10px;padding:8px 12px;font-size:12.5px;font-weight:700}
+  .nk-lock.open{background:#fff7ed;border-color:#fdba74;color:#7c2d12}.nk-lock details{margin-top:4px;font-weight:600}.nk-lock summary{cursor:pointer}
+  .nk-todo{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#fff7d6;border:1px solid #f1d27a;border-radius:12px;padding:8px 12px;margin:0 0 12px;font-size:13px;color:#5a4300}
+  .nk-todo button{border:1px solid #e0b84a;background:#fff;border-radius:999px;padding:4px 12px;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit;color:#5a4300}
+  .nk-shot{border:2px solid #0b4fb3;border-radius:14px;padding:12px 14px;background:#fff}.nk-shot-t{font-size:18px;font-weight:900;color:#0b4fb3;text-align:center}.nk-shot-s{font-size:12.5px;font-weight:700;color:#475569;text-align:center;margin:2px 0 8px}
+  .nk-msgs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  .nk-msg{border:1px solid #dfe5ee;border-radius:12px;background:#f8fafc;overflow:hidden}.nk-msg-h{display:flex;justify-content:space-between;align-items:center;gap:6px;background:#0b4fb3;color:#fff;font-weight:800;font-size:13px;padding:7px 10px}
+  .nk-msg pre{margin:0;padding:10px 12px;font:600 12.5px/1.6 -apple-system,"Segoe UI",sans-serif;white-space:pre-wrap;color:#0f1b2d}
+  .nk-ph-t{text-align:center;font-size:17px;font-weight:900}.nk-ph-s{text-align:center;font-size:12.5px;font-weight:600;color:#475569;margin-top:-4px}
+  .nk-nk th,.nk-nk td{text-align:center}.nk-nk .l{text-align:left}.nk-nk .bl{border-left:2px solid #0f1b2d}
+  .nk-blank .nk-nk tbody td{height:40px;border:1px solid #cbd5e1}.nk-blank .nk-nk td.bl{border-left:2px solid #0f1b2d}
+  .nk-foot{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;font-size:13px;line-height:1.7}.nk-foot>div{border:1.5px solid #0b4fb3;border-radius:10px;padding:10px 12px}
+  .nk-u{font-size:10px;font-weight:600;color:#94a3b8;margin-left:2px}.nk-s2{font-size:10.5px;font-weight:600;color:#64748b;line-height:1.2}
+  .nk-gop{color:#b45309!important;font-weight:900;background:#fff7ed}
+  .nk-mx{table-layout:fixed}.nk-mx th.h{white-space:normal;text-align:center;line-height:1.25}.nk-mx td.c{text-align:center}
+  .nk-mx td.ok{background:#dcf2e3}.nk-mx td.ok b{color:#15803d}.nk-mx td.mid{background:#fdecc8}.nk-mx td.mid b{color:#b45309}.nk-mx td.low{background:#fde2e1}.nk-mx td.low b{color:#b42318}.nk-mx td.none{color:#94a3b8}
+  .nk-row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;margin-top:14px;align-items:start}
+  .is-capturing .nk-noshot,.is-capturing .nk-pills,.is-capturing .nk-todo,.is-capturing .nk-swap,.is-capturing .nk-tools button,.is-capturing .nk-pick{display:none!important}
+  .nk-swap{margin-left:10px;border:1px solid currentColor;background:#fff;color:inherit;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit}`;
+
+  /* ---------- Thứ tự khối Nhóm chính / Nhóm vượt trội ---------- */
+  const ordered = X => { const a = X.G.filter(g => g.main), b = X.G.filter(g => !g.main); return S.vtFirst ? b.concat(a) : a.concat(b); };
+  const sec = (main, cols, extra) => '<tr class="nk-sec ' + (main ? 'm' : 'v') + '"><td colspan="' + cols + '">' + (main ? 'NHÓM CHÍNH' : 'NHÓM VƯỢT TRỘI') + (extra || '') + '</td></tr>';
+  const pctCls = p => p == null ? '' : p >= 100 ? 't-ok' : p >= 80 ? 't-mid' : 't-low';
+  const shortNm = x => { const p = String(x.name).split(' - '); return { id: p.length > 1 ? p[0] : '', nm: p.length > 1 ? p.slice(1).join(' - ') : x.name }; };
+  const gIdx = (X, g) => X.G.indexOf(g);
+
+  function head(X, plan) {
+    const W = X.W[S.w], days = [];
+    let ok = 0, n = 0;
+    for (let d = W.f; d <= Math.min(W.t, X.dp); d++) { n++; const has = X.src.has(d, X.shop); if (has) ok++; days.push('<i class="' + (has ? '' : 'x') + '" title="' + d + '/' + X.m + (has ? ' có số' : ' chưa có lịch sử → gộp vào ngày sau') + '">' + (has ? '✓' : '✗') + '</i>'); }
+    const shops = [1, 2, 3, 4, 5].filter(i => (X.cfg['shop' + i] || '').trim());
+    const tabs = [['pb', '① Phân bổ mục tiêu tuần'], ['nk', '② Nhật ký NV (phiếu)'], ['tk', '③ Tổng kết & so sánh tuần']];
+    return '<div class="nk-hd"><div><div class="nk-kicker">NK BÁN HÀNG · THEO TUẦN</div><div class="nk-title">ST ' + esc(X.sname) + ' · Tuần ' + W.k + ' (' + pad(W.f) + '–' + pad(W.t) + '/' + pad(X.m) + ')</div></div>' +
+      '<div class="nk-time">Lũy kế đến hết ' + pad(X.dp) + '/' + pad(X.m) + '/' + X.y + '<br>' + (n ? 'Lịch sử tuần: <span class="nk-dots">' + days.join('') + '</span> ' + ok + '/' + n : 'Tuần chưa có ngày nào') + (X.src.histLoaded ? '' : '<br><span class="t-mid">chưa tải lịch sử Sheet</span>') + '</div></div>' +
+      '<div class="nk-pills">' + (shops.length > 1 ? shops.map(i => '<button data-nk-shop="' + i + '" class="' + (i === X.shopIdx ? 'on' : '') + '">' + esc(X.cfg['shop' + i + 'Short'] || X.cfg['shop' + i]) + '</button>').join('') + '<span style="width:10px"></span>' : '') +
+      tabs.map(t => '<button data-nk-tab="' + t[0] + '" class="big' + (S.tab === t[0] ? ' on' : '') + '">' + t[1] + '</button>').join('') +
+      '<span style="margin-left:auto">Tuần:</span>' + X.W.map((x, i) => { const av = x.f <= X.dp + 1, sp = store().plans[planKey(X.ym, X.shop, i)]; return '<button data-nk-w="' + i + '" class="' + (i === S.w ? 'on' : '') + (av ? '' : ' off') + '">' + x.k + ' <small>' + x.f + '–' + x.t + '</small>' + (sp && sp.saved ? ' ✅' : '') + '</button>'; }).join('') + '</div>' + todo(X);
+  }
+
+  function todo(X) {
+    const dow = (new Date().getDay() + 6) % 7, cur = X.W.findIndex(w => X.dp + 1 >= w.f && X.dp + 1 <= w.t);
+    if (cur < 0 || X.tc.isPastMonth) return '';
+    const it = [];
+    if (dow === 0) { if (cur > 0) it.push(['tk', cur - 1, 'Xem tổng kết ' + X.W[cur - 1].k]); it.push(['pb', cur, 'Phân bổ ' + X.W[cur].k]); it.push(['nk', cur, 'In / gửi phiếu NV']); }
+    else if (dow >= 5) it.push(['tk', cur, 'Xem kết quả ' + X.W[cur].k + ' đến giờ'], ['pb', Math.min(cur + 1, X.W.length - 1), 'Chuẩn bị phân bổ tuần sau']);
+    else it.push(['nk', cur, 'Xem phiếu kết quả NV ' + X.W[cur].k], ['tk', cur, 'Tổng kết ' + X.W[cur].k + ' đến giờ']);
+    return '<div class="nk-todo"><b>📌 Việc hôm nay (' + DOW[dow] + '):</b>' + it.map(x => '<button data-nk-go="' + x[0] + ':' + x[1] + '">' + esc(x[2]) + ' →</button>').join('') + '</div>';
+  }
+
+  /* ---------- ① Phân bổ ---------- */
+  function tabPb(X) {
+    const wi = S.w, W = X.W[wi];
+    if (W.f > X.dp + 1) return '<div class="nk-card"><div class="nk-empty">Tuần chưa tới. Phân bổ mở vào sáng Thứ 2 đầu tuần.</div></div>';
+    const p = getPlan(X, wi), RO = !!p.locked, rows = planRows(X, wi, p), asOf = X.prevSh(W.f - 1), nd = wlen(W), rem = Math.max(1, X.dim - (W.f - 1));
+    const dis = RO ? ' disabled' : '', on = X.G.filter(g => p.on[g.short]).length;
+    const nvh = X.staff.map((x, i) => { const s = shortNm(x); return '<th class="nvh">' + esc(s.nm) + '<br><span style="font-weight:600">' + esc(s.id) + ' · ' + Math.round(X.baseW[i] * 100) + '%</span></th>'; }).join('');
+    const COLS = 10 + X.staff.length;
+    const th = '<tr><th class="l">Nhóm thi đua</th><th>QĐ<br>1 cái =</th><th>Target<br>tháng</th><th>Lũy kế<br>đến ' + (asOf ? pad(asOf) + '/' + pad(X.m) : '—') + '</th><th>%HT</th><th>DK HT</th><th>Chạy<br>tuần</th><th class="l">Lý do</th><th>Gợi ý<br>(cái)</th><th class="nk-hl">Chốt ST<br>(cái)</th>' + nvh + '</tr>';
+    const daysRow = '<tr class="nk-days"><td class="l" colspan="10"><b>📅 Ngày làm tuần này</b> <span style="font-size:12px;color:#475569">— NV nghỉ phép thì giảm số ngày, target tự chia lại</span></td>' + X.staff.map((x, j) => '<td><input class="nk-in" data-nk-days="' + j + '" value="' + num(p.days[x.name] != null ? p.days[x.name] : 7) + '"' + dis + '><span class="nk-u">ngày</span></td>').join('') + '</tr>';
+    const dL = X.src.sdt(asOf, X.shop), dtDk = asOf > 0 && X.shopMon > 0 ? dL / asOf * X.dim / X.shopMon * 100 : null, dtSug = Math.ceil(Math.max(0, X.shopMon - dL) / rem * nd * num(p.k) / 100);
+    const dtRow = '<tr class="nk-dt"><td class="l"><b>💰 Doanh thu QĐ</b></td><td>tr</td><td>' + nf(X.shopMon) + '</td><td>' + nf(dL) + '</td><td>' + (X.shopMon ? Math.round(dL / X.shopMon * 100) + '%' : '—') + '</td><td><b class="' + pctCls(dtDk) + '">' + (dtDk == null ? '—' : Math.round(dtDk) + '%') + '</b></td><td>✓</td><td class="l" style="font-size:12px;color:#475569">luôn giao mỗi tuần</td><td style="color:#64748b">' + nf(dtSug) + '</td><td class="nk-hl"><input class="nk-in" style="width:60px" data-nk-dtst value="' + num(p.dt.st) + '"' + dis + '></td>' + X.staff.map((x, j) => '<td><input class="nk-in" style="width:60px" data-nk-dta="' + j + '" value="' + num(p.dt.a[x.name]) + '"' + dis + '></td>').join('') + '</tr>';
+    let last = null, first = true;
+    const body = ordered(X).map(g => {
+      const r = rows.find(z => z.g === g), i = gIdx(X, g), isOn = !!p.on[g.short];
+      let s = '';
+      if (g.main !== last) { last = g.main; if (X.G.some(z => z.main) && X.G.some(z => !z.main) && (!S.onlyOn || X.G.some(z => z.main === g.main && p.on[z.short]))) { s = sec(g.main, COLS, first ? ' <button class="nk-swap" data-nk-swap>⇅ đổi thứ tự khối</button>' : ''); first = false; } }
+      if (!isOn) return S.onlyOn ? s : s + '<tr class="nk-off"><td class="l">' + esc(g.short) + '</td><td>' + (g.money ? g.u + ' tr' : 'SL') + '</td><td>' + nf(g.money ? r.T / 1000 : r.T, g.money) + '</td><td>' + nf(g.money ? r.L / 1000 : r.L, g.money) + '</td><td>' + (r.T ? Math.round(r.L / r.T * 100) + '%' : '—') + '</td><td><b class="' + pctCls(r.dk) + '">' + (r.dk == null ? '—' : Math.round(r.dk) + '%') + '</b></td><td><input type="checkbox" data-nk-on="' + i + '"' + dis + '></td><td class="l" colspan="' + (3 + X.staff.length) + '" style="font-size:12px">không chạy tuần này · tick để thêm</td></tr>';
+      const sumA = X.staff.reduce((a, x) => a + num(p.a[g.short] && p.a[g.short][x.name]), 0), stv = num(p.st[g.short]);
+      return s + '<tr><td class="l"><b>' + esc(g.short) + '</b></td><td>' + (g.money ? '<input class="nk-in" style="width:38px" data-nk-u="' + i + '" value="' + g.u + '"' + dis + '> tr' : 'SL') + '</td><td>' + nf(g.money ? r.T / 1000 : r.T, g.money) + '</td><td>' + nf(g.money ? r.L / 1000 : r.L, g.money) + '</td><td>' + (r.T ? Math.round(r.L / r.T * 100) + '%' : '—') + '</td><td><b class="' + pctCls(r.dk) + '">' + (r.dk == null ? '—' : Math.round(r.dk) + '%') + '</b></td>' +
+        '<td><input type="checkbox" checked data-nk-on="' + i + '"' + dis + '></td><td class="l"><input class="nk-in wide" data-nk-why="' + i + '" value="' + esc(p.why[g.short] || '') + '"' + dis + '></td><td style="color:#64748b">' + r.sug + '</td><td class="nk-hl"><input class="nk-in" data-nk-st="' + i + '" value="' + stv + '"' + dis + '></td>' +
+        X.staff.map((x, j) => '<td><input class="nk-in" data-nk-a="' + i + '|' + j + '" value="' + num(p.a[g.short] && p.a[g.short][x.name]) + '"' + dis + '></td>').join('') + '</tr>' +
+        (sumA !== stv ? '<tr class="nk-warn"><td colspan="' + COLS + '">⚠ ' + esc(g.short) + ': tổng NV ' + sumA + ' ≠ chốt ST ' + stv + (RO ? '' : ' — <a href="#" data-nk-fix="' + i + '">chia lại theo tỉ lệ</a>') + '</td></tr>' : '');
+    }).join('');
+    const lock = p.locked ? '<div class="nk-lock">🔒 Đã chốt &amp; gửi NV lúc ' + esc(p.at || '') + ' — các ô đã khóa <button data-nk-unlock>🔓 Mở khóa để sửa</button>' + logHtml(p) + '</div>' : (p.log.length ? '<div class="nk-lock open">🔓 Đang mở khóa — sửa xong bấm Lưu phân bổ để khóa lại' + logHtml(p, true) + '</div>' : '');
+    const pick = '<div class="nk-pick"' + (RO ? ' style="pointer-events:none;opacity:.5"' : '') + '><b>Chọn nhóm chạy tuần ' + W.k + ': ' + on + '/' + X.G.length + ' nhóm</b><button data-nk-pick="smart">🧠 Gợi ý thông minh</button><button data-nk-pick="dk">Nhóm DK thấp nhất</button><button data-nk-copyprev>⧉ Chép cả số tuần trước</button><button data-nk-pick="prev">Giống tuần trước</button><button data-nk-pick="chinh">Nhóm Chính</button><button data-nk-pick="none">✕ Bỏ hết</button><label style="margin-left:auto;pointer-events:auto"><input type="checkbox" data-nk-onlyon' + (S.onlyOn ? ' checked' : '') + '> Chỉ hiện nhóm đã chọn</label></div>';
+    return '<div class="nk-card"><div class="nk-lbl">PHÂN BỔ MỤC TIÊU TUẦN ' + W.k + ' (' + W.f + '–' + W.t + '/' + X.m + ') · ST ' + esc(String(X.sname).toUpperCase()) + '<span class="nk-sub">' + (p.saved ? '✅ Đã chốt lúc ' + esc(p.at || '') : '📝 Bản nháp — AutoBI tự gợi ý, sửa rồi bấm Lưu') + '</span></div>' + lock +
+      '<div class="nk-tools"><span class="grow">Gợi ý = (Target − Lũy kế) ÷ ' + rem + ' ngày còn lại × ' + nd + ' ngày tuần × hệ số đẩy</span><label>Hệ số đẩy <input class="nk-in" data-nk-k value="' + num(p.k || 100) + '"' + dis + '>%</label>' + (RO ? '' : '<button data-nk-regen>↻ Tính lại gợi ý</button><button data-nk-copy>⇢ Lấy gợi ý làm số chốt</button><button class="pri" data-nk-save>💾 Lưu phân bổ (' + on + ' nhóm)</button>') + '</div>' + pick +
+      '<div class="nk-tblw"><table class="nk-tbl nk-pb"><thead>' + th + '</thead><tbody>' + daysRow + dtRow + body + '</tbody></table></div>' +
+      '<div class="nk-note">Chia NV theo tỉ lệ ở Khai báo × số ngày làm, làm tròn sao cho tổng NV = chốt ST; cái dư khi chia bằng nhau giao cho NV đang thiếu nhiều nhất so với mục tiêu tháng · ô nào cũng sửa tay được · nhóm tiền quy ra cái theo "1 cái = ? tr" (mặc định 5 tr, sửa được, lưu theo tháng) · QL và TC đều sửa được, lịch sử ghi tên người sửa · phân bổ lưu trên máy này</div></div>' + sendPanel(X, wi, p);
+  }
+  const logHtml = (p, open) => '<details' + (open ? ' open' : '') + '><summary>Lịch sử sửa (' + p.log.length + ')</summary>' + p.log.map(x => '<div>• ' + esc(x) + '</div>').join('') + '</details>';
+
+  function msgOf(X, wi, p, j) {
+    const x = X.staff[j], s = shortNm(x), W = X.W[wi], L = [];
+    const lkD = X.prevNV(W.f - 1), lkN = X.src.dt(lkD, X.shop, x.name), tM = X.shopMon * (X.baseW[j] || 0);
+    L.push('📣 MỤC TIÊU TUẦN ' + W.k + ' (' + W.f + '–' + W.t + '/' + X.m + ') – ĐMX ' + String(X.sname).toUpperCase());
+    L.push('👤 ' + s.nm + (s.id ? ' – ' + s.id : ''));
+    L.push('💰 Doanh thu QĐ tuần: ' + nf(num(p.dt.a[x.name])) + ' triệu (~' + nf(num(p.dt.a[x.name]) / wlen(W)) + ' tr/ngày)');
+    L.push('🎯 Nhóm hàng tuần:');
+    ordered(X).forEach(g => { const v = num(p.a[g.short] && p.a[g.short][x.name]); if (p.on[g.short] && v) L.push('  • ' + g.short + ': ' + v + ' cái' + (g.money ? ' (~' + nf(v * g.u) + ' tr)' : '')); });
+    if (lkD > 0) L.push('📊 Lũy kế DT QĐ đến ' + lkD + '/' + X.m + ': ' + nf(lkN) + (tM ? ' / ' + nf(tM) + ' tr (' + Math.round(lkN / tM * 100) + '%)' : ' tr'));
+    L.push('💪 Cả tuần cùng cố gắng nhé!');
+    return L.join('\n');
+  }
+  function sendTable(X, wi, p) {
+    const W = X.W[wi], on = ordered(X).filter(g => p.on[g.short]);
+    const th = '<tr><th class="l">Nhân viên</th><th>Doanh thu QĐ<br>(triệu)</th>' + on.map(g => '<th class="h" style="text-align:center;white-space:normal;color:' + (g.main ? '#0b4fb3' : '#7c3aed') + '">' + esc(g.short) + '<br><span style="font-weight:600;color:#64748b">' + (g.money ? 'cái · ' + g.u + 'tr' : 'SL') + '</span></th>').join('') + '</tr>';
+    const tr = X.staff.map(x => { const s = shortNm(x); return '<tr><td class="l"><div class="nk-nm">' + esc(s.nm) + '</div><div class="nk-id">' + esc(s.id) + '</div></td><td><b>' + nf(num(p.dt.a[x.name])) + '</b></td>' + on.map(g => '<td style="text-align:center"><b>' + (num(p.a[g.short] && p.a[g.short][x.name]) || '–') + '</b></td>').join('') + '</tr>'; }).join('');
+    const tot = '<tfoot><tr><td class="l">Cả siêu thị</td><td>' + nf(num(p.dt.st)) + '</td>' + on.map(g => '<td style="text-align:center">' + num(p.st[g.short]) + '</td>').join('') + '</tr></tfoot>';
+    return '<div class="nk-shot"><div class="nk-shot-t">🎯 MỤC TIÊU TUẦN ' + W.k + ' (' + W.f + '–' + W.t + '/' + X.m + ') · ĐMX ' + esc(String(X.sname).toUpperCase()) + '</div><div class="nk-shot-s">Doanh thu QĐ tuần này cần ' + nf(num(p.dt.st)) + ' tr · ' + on.length + ' nhóm hàng tập trung</div><div class="nk-tblw"><table class="nk-tbl"><thead>' + th + '</thead><tbody>' + tr + '</tbody>' + tot + '</table></div></div>';
+  }
+  function sendPanel(X, wi, p) {
+    const cards = X.staff.map((x, j) => '<div class="nk-msg"><div class="nk-msg-h">' + esc(shortNm(x).nm) + '<span><button data-nk-cp="' + j + '">📋 Sao chép</button></span></div><pre>' + esc(msgOf(X, wi, p, j)) + '</pre></div>').join('');
+    return '<div class="nk-card" style="margin-top:14px"><div class="nk-lbl">📤 GỬI NHÂN VIÊN — MỤC TIÊU TUẦN ' + X.W[wi].k + '<span class="nk-sub">' + (p.saved ? 'sẵn sàng gửi' : '⚠ bản nháp: bấm Lưu phân bổ trước khi gửi') + '</span></div>' + sendTable(X, wi, p) +
+      '<div class="nk-tools" style="justify-content:flex-end"><button data-nk-blank>📝 Phiếu trắng cho NV điền (in)</button><button data-nk-img>📷 Chỉ hiện bảng này để chụp ảnh / gửi Line</button></div>' +
+      '<div class="nk-lbl">TIN NHẮN RIÊNG TỪNG NHÂN VIÊN<span class="nk-sub">bấm Sao chép rồi dán Zalo/Line</span></div><div class="nk-msgs">' + cards + '</div></div>';
+  }
+
+  /* ---------- ② Phiếu NV ---------- */
+  function phieu(X, j, wi, p) {
+    const BL = S.mode === 'blank', sl = S.unit === 'sl', W = X.W[wi], x = X.staff[j], s = shortNm(x);
+    const cols = Array(7).fill(null); for (let d = W.f; d <= W.t; d++) cols[(new Date(X.y, X.m - 1, d).getDay() + 6) % 7] = d;
+    const lkD = X.prevNV(W.f - 1);
+    const cell = (k, inner) => '<td class="' + (k ? '' : 'bl') + '">' + inner + '</td>';
+    const dayCells = fn => cols.map((d, k) => d == null ? '<td class="' + (k ? '' : 'bl') + '" style="background:#f1f5f9"></td>' : (d > X.dp || BL) ? cell(k, '') : fn(d, k)).join('');
+    let ok = 0, cnt = 0;
+    const dw = weekDT(X, W, x), dtg = p ? num(p.dt.a[x.name]) : null;
+    const dtRow = '<tr class="nk-dt"><td>–</td><td class="l"><b>💰 Doanh thu QĐ (tr)</b></td><td class="bl">' + nf(X.shopMon * (X.baseW[j] || 0)) + '</td><td>' + nf(X.src.dt(lkD, X.shop, x.name)) + '</td>' +
+      dayCells((d, k) => { const o = dw.days[d] || {}; return o.gop ? '<td class="' + (k ? '' : 'bl') + ' nk-gop" title="Chưa có lịch sử ngày ' + d + ' → gộp vào ngày sau">↪</td>' : cell(k, nf(o.v)); }) +
+      (BL ? '<td class="bl"></td><td><b>' + (dtg == null ? '—' : nf(dtg)) + '</b></td><td></td>' : '<td class="bl nk-hl"><b>' + nf(dw.v) + '</b></td><td>' + (dtg == null ? '—' : nf(dtg)) + '</td><td>' + (dtg ? (dw.v >= dtg ? '<b class="t-ok">✓ Đạt ' + Math.round(dw.v / dtg * 100) + '%</b>' : '<b class="' + pctCls(dw.v / dtg * 100) + '">✗ Thiếu ' + nf(dtg - dw.v) + ' tr</b>') : '—') + '</td>') + '</tr>';
+    let stt = 0, last = null;
+    const rows = ordered(X).map(g => {
+      if (p && !p.on[g.short]) return '';
+      stt++;
+      const sc = ''; /* V17.44: phiếu NV không còn dải Nhóm chính / Nhóm vượt trội (in rộng hơn); vẫn xếp nhóm chính trước */
+      const tgM = X.staffT(g, x), lk = X.src.nv(lkD, X.shop, x.name, g.short), wk = weekNV(X, W, x, g), tgW = p ? num(p.a[g.short] && p.a[g.short][x.name]) : null;
+      const totC = cai(g, wk.v);
+      if (tgW) { cnt++; if (totC >= tgW) ok++; }
+      const fmt = v => g.money ? (sl ? '<b title="' + nf(v / 1000, 1) + ' tr">' + cai(g, v) + '</b>' : nf(v / 1000, 1)) : '<b>' + nf(v) + '</b>';
+      const day = (d, k) => { const o = wk.days[d] || {}; if (o.gop) return '<td class="' + (k ? '' : 'bl') + ' nk-gop" title="Chưa có lịch sử ngày ' + d + ' → gộp vào ngày sau">↪</td>'; if (!o.v || Math.abs(o.v) < 0.05) return cell(k, '<span style="color:#cbd5e1">–</span>'); if (!g.money) return cell(k, nf(o.v)); if (!sl) return cell(k, nf(o.v / 1000, 1)); return cell(k, '<span title="' + nf(o.v / 1000, 1) + ' tr">' + (o.c ? '<b>' + o.c + '</b>' : '<span style="color:#94a3b8">0</span>') + '</span>'); };
+      const tgC = tgW == null ? '—' : (sl || !g.money) ? '<b title="' + (g.money ? nf(tgW * g.u) + ' tr' : '') + '">' + tgW + '</b>' : nf(tgW * g.u);
+      const need = tgW ? tgW * unitV(g) : 0, pc = need ? wk.v / need * 100 : null;
+      const ev = !tgW ? '<span style="color:#94a3b8">—</span>' : totC >= tgW ? '<b class="t-ok">✓ Đạt ' + Math.round(pc) + '%</b>' : '<b class="' + pctCls(pc) + '">✗ Còn ' + (tgW - totC) + ' cái</b>' + (g.money ? '<div class="nk-s2">cần thêm ' + nf(Math.max(0.1, ((tgW - 0.5) * unitV(g) - wk.v) / 1000), 1) + ' tr</div>' : '');
+      const tm = sl ? (g.money ? Math.ceil(tgM / unitV(g)) : nf(tgM)) : nf(g.money ? tgM / 1000 : tgM, g.money);
+      return sc + '<tr><td>' + stt + '</td><td class="l"><b>' + esc(g.short) + '</b><div class="nk-s2">' + (g.money ? '1 cái = ' + g.u + ' tr' : 'tính số lượng') + '</div></td><td class="bl">' + tm + '</td><td>' + fmt(lk) + '</td>' + dayCells(day) +
+        (BL ? '<td class="bl"></td><td>' + tgC + '</td><td></td>' : '<td class="bl nk-hl">' + fmt(wk.v) + '</td><td>' + tgC + '</td><td>' + ev + '</td>') + '</tr>';
+    }).join('');
+    const th = '<tr><th>STT</th><th class="l">Nhóm hàng thi đua</th><th class="bl">Mục tiêu<br>tháng NV</th><th>Lũy kế NV<br>đến ' + (lkD ? lkD + '/' + X.m : '—') + '</th>' + DOW.map((t, k) => '<th class="' + (k ? '' : 'bl') + '">' + t + '<br><span style="font-weight:600">' + (cols[k] ? cols[k] + '/' + X.m : '') + '</span></th>').join('') + '<th class="bl nk-hl">Tổng<br>tuần</th><th>Target NV<br>' + W.f + '–' + W.t + '/' + X.m + '</th><th>Đánh giá KQ</th></tr>';
+    const dtL = X.src.sdt(X.dp, X.shop) || num(((X.c.link2 || {})[X.shop] || {}).r);
+    return '<div class="nk-card nk-phieu' + (BL ? ' nk-blank' : '') + '" style="margin-bottom:14px"><div class="nk-ph-t">NHẬT KÝ BÁN HÀNG NHÂN VIÊN ĐIỆN MÁY XANH ' + esc(String(X.sname).toUpperCase()) + ' – TUẦN ' + W.k.slice(1) + ' THÁNG ' + pad(X.m) + '/' + X.y + '</div>' +
+      (BL ? '<div class="nk-ph-s">Phiếu đầu tuần · ' + esc(s.nm) + (s.id ? ' (' + esc(s.id) + ')' : '') + ' · Mỗi ngày ghi <b>số cái</b> bán được (nhóm tiền: đủ số tiền 1 cái thì ghi 1)</div>' : '') +
+      '<div class="nk-tblw"><table class="nk-tbl nk-nk"><thead>' + th + '</thead><tbody>' + dtRow + (rows || '<tr><td colspan="16" class="nk-empty">Tuần này chưa chọn nhóm nào</td></tr>') + '</tbody></table></div>' +
+      '<div class="nk-foot"><div><b>' + esc(X.code ? X.code + ' – ' : '') + 'ĐMX ' + esc(String(X.sname).toUpperCase()) + '</b><br>1. Doanh thu: Target ' + nf(X.shopMon) + ' tr · LK đến ' + X.dp + '/' + X.m + ': ' + nf(dtL) + ' tr · Dự kiến: ' + (X.dp && X.shopMon ? Math.round(dtL / X.dp * X.dim / X.shopMon * 100) + '%' : '—') + '<br>2. Nhóm hàng tuần: ' + (p ? X.G.filter(g => p.on[g.short]).length : 0) + ' nhóm<br>3. Phục vụ: ..........</div>' +
+      '<div style="text-align:center"><b>THÔNG TIN NHÂN VIÊN</b><br>Họ và tên: ' + esc(s.nm) + '<br>User: ' + esc(s.id) + '</div>' +
+      '<div><b>ĐÁNH GIÁ KẾT QUẢ</b><br>' + (BL ? 'Đạt ........ / ' + (p ? X.G.filter(g => p.on[g.short]).length : 0) + ' nhóm target tuần<br>NV ký: .....................' : (cnt ? 'Đạt <b class="' + (ok * 2 >= cnt ? 't-ok' : 't-low') + '">' + ok + '/' + cnt + '</b> nhóm target tuần' + (W.t > X.dp ? ' (tuần đang chạy)' : '') : 'Tuần này chưa phân bổ target')) + '<br><span style="color:#64748b">Quản lý nhận xét: ......................</span></div></div></div>';
+  }
+  function tabNk(X) {
+    const wi = S.w, W = X.W[wi];
+    if (W.f > X.dp + 1) return '<div class="nk-card"><div class="nk-empty">Tuần chưa tới.</div></div>';
+    if (!X.staff.length) return '<div class="nk-card"><div class="nk-empty">Khai báo chưa có nhân viên của siêu thị này.</div></div>';
+    const p = getPlan(X, wi), BL = S.mode === 'blank';
+    let j = X.staff.findIndex(x => x.name === S.nv); if (j < 0) j = 0;
+    const bar = '<div class="nk-pills">' + X.staff.map((x, i) => '<button data-nk-nv="' + i + '" class="' + (!S.all && i === j ? 'on' : '') + '">' + esc(shortNm(x).nm) + '</button>').join('') +
+      '<span style="margin-left:auto">Phiếu:</span><button data-nk-mode="blank" class="' + (BL ? 'on' : '') + '">📝 Đầu tuần (NV tự điền)</button><button data-nk-mode="res" class="' + (!BL ? 'on' : '') + '">✅ Kết quả (AutoBI điền)</button>' +
+      '<span style="margin-left:8px">Hiện:</span><button data-nk-unit="sl" class="' + (S.unit === 'sl' ? 'on' : '') + '">Số lượng</button><button data-nk-unit="tr" class="' + (S.unit !== 'sl' ? 'on' : '') + '">Triệu</button><button data-nk-all>👥 Cả ' + X.staff.length + ' NV</button><button data-nk-print>🖨 In phiếu</button></div>';
+    const body = S.all ? X.staff.map((x, i) => phieu(X, i, wi, p)).join('') : phieu(X, j, wi, p);
+    return bar + (p.draft ? '<div class="nk-todo">⚠ Tuần ' + W.k + ' chưa lưu phân bổ — target trên phiếu là số gợi ý. Vào ① Phân bổ bấm Lưu để chốt.</div>' : '') + body +
+      '<div class="nk-note">Số cái làm tròn: lẻ dưới 0,5 bỏ, từ 0,5 tính 1 cái (1 cái = 5 tr: bán 1 tr = 0 cái · 3 tr = 1 cái) · số cái từng ngày = (lũy kế tuần đến ngày đó, làm tròn) − (đến hôm trước, làm tròn) → cộng các ngày luôn bằng Tổng tuần · ↪ = ngày chưa có lịch sử, số gộp vào ngày sau · rê chuột vào số để xem số triệu</div>';
+  }
+
+  /* ---------- ③ Tổng kết ---------- */
+  function tabTk(X) {
+    const wi = S.w, W = X.W[wi];
+    if (W.f > X.dp) return '<div class="nk-card"><div class="nk-empty">Tuần ' + W.k + ' chưa có số. Chọn tuần đã có ngày bán.</div></div>';
+    const p = getPlan(X, wi), on = ordered(X).filter(g => p.on[g.short]), run = W.t > X.dp;
+    const cellOf = (v, tg, g) => { const c = cai(g, v), need = tg * unitV(g), pc = need ? v / need * 100 : null, cl = !tg ? 'none' : c >= tg ? 'ok' : pc >= 80 ? 'mid' : 'low'; return { c, pc, cl, ok: tg && c >= tg }; };
+    const line = (label, sub, list, tgOf, dtTg, strong) => {
+      let ok = 0, cc = 0;
+      const dv = list.reduce((a, x) => a + weekDT(X, W, x).v, 0), dpc = dtTg ? dv / dtTg * 100 : null;
+      const cells = on.map(g => { const v = list.reduce((a, x) => a + weekNV(X, W, x, g).v, 0), tg = tgOf(g), r = cellOf(v, tg, g); if (tg) { cc++; if (r.ok) ok++; } return '<td class="c ' + r.cl + '" title="' + (g.money ? nf(v / 1000, 1) + ' tr' : nf(v)) + '"><b>' + r.c + '/' + (tg || 0) + '</b><div style="font-size:10.5px;font-weight:700">' + (r.pc == null ? '—' : Math.round(r.pc) + '%') + '</div></td>'; }).join('');
+      return '<tr' + (strong ? ' style="font-weight:900;border-top:1.5px solid #0f1b2d"' : '') + '><td class="l"><div class="nk-nm">' + esc(label) + '</div><div class="nk-id">' + esc(sub) + '</div></td><td class="c ' + (dtTg ? (dv >= dtTg ? 'ok' : dpc >= 80 ? 'mid' : 'low') : 'none') + '"><b>' + nf(dv) + '/' + nf(dtTg || 0) + '</b><div style="font-size:10.5px;font-weight:700">' + (dpc == null ? '—' : Math.round(dpc) + '%') + '</div></td>' + cells + '<td><b class="' + (ok * 2 >= cc ? 't-ok' : 't-low') + '">' + ok + '</b>/' + cc + '</td></tr>';
+    };
+    const mx = on.length ? '<table class="nk-tbl nk-mx"><colgroup><col style="width:15%"><col style="width:9%">' + on.map(() => '<col>').join('') + '<col style="width:6%"></colgroup><thead><tr><th class="l">Nhân viên</th><th class="h">💰 DT QĐ<br>(tr)</th>' + on.map(g => '<th class="h" style="color:' + (g.main ? '#0b4fb3' : '#7c3aed') + '">' + esc(g.short) + '</th>').join('') + '<th>Đạt</th></tr></thead><tbody>' +
+      X.staff.map(x => { const s = shortNm(x); return line(s.nm, s.id, [x], g => num(p.a[g.short] && p.a[g.short][x.name]), num(p.dt.a[x.name])); }).join('') + line('Cả siêu thị', 'chốt ST', X.staff, g => num(p.st[g.short]), num(p.dt.st), true) + '</tbody></table>' : '<div class="nk-empty">Tuần này chưa chọn nhóm nào.</div>';
+    const prev = wi > 0 ? X.W[wi - 1] : null, n = Math.min(W.t, X.dp) - W.f + 1;
+    const cmp = (fnA, fnB) => { if (!prev) return null; const a = fnA(), b = fnB(); const nb = run ? n : wlen(prev); return b ? ((a / n) / (b / nb) - 1) * 100 : null; };
+    const arrow = q => q == null ? '<span style="color:#94a3b8">—</span>' : '<b class="' + (q >= 3 ? 't-ok' : q <= -3 ? 't-low' : '') + '">' + (q >= 3 ? '▲' : q <= -3 ? '▼' : '≈') + ' ' + Math.abs(Math.round(q)) + '%</b>';
+    const prevW = prev && run ? { f: prev.f, t: prev.f + n - 1, k: prev.k } : prev;
+    const nvRows = X.staff.map(x => { const s = shortNm(x), a = weekDT(X, W, x).v, b = prevW ? weekDT(X, prevW, x).v : null; return '<tr><td class="l"><div class="nk-nm">' + esc(s.nm) + '</div><div class="nk-id">' + esc(s.id) + '</div></td><td>' + (b == null ? '—' : nf(b)) + '</td><td class="nk-hl">' + nf(a) + '</td><td>' + arrow(cmp(() => a, () => b)) + '</td></tr>'; }).join('');
+    const gRows = (on.length ? on : ordered(X)).map(g => { const a = shopWeek(X, W, g), b = prevW ? shopWeek(X, prevW, g) : null; return '<tr><td class="l">' + esc(g.short) + '</td><td>' + (b == null ? '—' : cai(g, b)) + '</td><td class="nk-hl">' + cai(g, a) + '</td><td>' + arrow(cmp(() => a, () => b)) + '</td></tr>'; }).join('');
+    const miss = on.filter(g => cai(g, shopWeek(X, W, g)) < num(p.st[g.short])).map(g => g.short + ' (còn ' + (num(p.st[g.short]) - cai(g, shopWeek(X, W, g))) + ' cái)');
+    const rank = X.staff.map(x => { let ok = 0, c = 0; on.forEach(g => { const tg = num(p.a[g.short] && p.a[g.short][x.name]); if (!tg) return; c++; if (cai(g, weekNV(X, W, x, g).v) >= tg) ok++; }); return { x, ok, c }; }).sort((a, b) => (b.c ? b.ok / b.c : 0) - (a.c ? a.ok / a.c : 0));
+    const stOk = on.filter(g => cai(g, shopWeek(X, W, g)) >= num(p.st[g.short])).length;
+    const note = rank.length && on.length ? '📣 ST ' + X.sname + ' tuần ' + W.k + (run ? ' (đến ' + X.dp + '/' + X.m + ')' : '') + ': đạt ' + stOk + '/' + on.length + ' nhóm target tuần\n🏆 Tốt nhất: ' + shortNm(rank[0].x).nm + ' (đạt ' + rank[0].ok + '/' + rank[0].c + ' nhóm)\n💪 Cần kèm: ' + shortNm(rank[rank.length - 1].x).nm + ' (đạt ' + rank[rank.length - 1].ok + '/' + rank[rank.length - 1].c + ' nhóm)' + (miss.length ? '\n❌ Nhóm chưa đạt: ' + miss.slice(0, 6).join(' · ') : '') : '';
+    S._note = note;
+    return (p.draft ? '<div class="nk-todo">⚠ Tuần ' + W.k + ' chưa lưu phân bổ — đang chấm theo số gợi ý.</div>' : '') +
+      '<div class="nk-card"><div class="nk-lbl">TỔNG KẾT TUẦN ' + W.k + ' (' + W.f + '–' + W.t + '/' + X.m + '): THỰC HIỆN / TARGET TUẦN<span class="nk-sub">' + (run ? '⏳ tuần đang chạy ' + n + '/' + wlen(W) + ' ngày · ' : '') + 'số cái làm tròn · xanh ≥100% · vàng 80–99% · đỏ &lt;80%</span></div><div class="nk-tblw">' + mx + '</div></div>' +
+      '<div class="nk-row2"><div class="nk-card"><div class="nk-lbl">NHÂN VIÊN: TUẦN NÀY SO TUẦN TRƯỚC<span class="nk-sub">DT QĐ (tr) · ' + (run ? 'so cùng số ngày đầu tuần' : 'so theo bình quân ngày') + '</span></div><table class="nk-tbl"><thead><tr><th class="l">Nhân viên</th><th>' + (prev ? prev.k : '—') + '</th><th class="nk-hl">' + W.k + '</th><th>Thay đổi</th></tr></thead><tbody>' + nvRows + '</tbody></table></div>' +
+      '<div class="nk-card"><div class="nk-lbl">NHÓM HÀNG: TUẦN NÀY SO TUẦN TRƯỚC<span class="nk-sub">số cái · % theo bình quân ngày</span></div><table class="nk-tbl"><thead><tr><th class="l">Nhóm</th><th>' + (prev ? prev.k : '—') + '</th><th class="nk-hl">' + W.k + '</th><th>Thay đổi</th></tr></thead><tbody>' + gRows + '</tbody></table></div></div>' +
+      (note ? '<div class="nk-card" style="margin-top:14px"><div class="nk-lbl">NHẬN XÉT TUẦN ' + W.k + '<span><button class="nk-swap" data-nk-cpnote>📋 Sao chép</button></span></div><pre style="margin:0;font:600 13.5px/1.75 -apple-system,Segoe UI,sans-serif;white-space:pre-wrap">' + esc(note) + '</pre></div>' : '');
+  }
+
+  /* ---------- Vẽ tab ---------- */
+  function render(h, c, groups, cfg, view, useBi, timeArg) {
+    M._args = [h, c, groups, cfg, view, useBi, timeArg];
+    c = c || {}; cfg = cfg || {}; groups = groups || [];
+    const shops = [1, 2, 3, 4, 5].filter(i => (cfg['shop' + i] || '').trim());
+    if (!shops.length) return '<div class="nk-root"><style>' + CSS + '</style><div class="nk-card"><div class="nk-empty">Khai báo chưa có siêu thị.</div></div></div>';
+    if (!S.shop || !shops.includes(S.shop)) S.shop = /^shop\d$/.test(String(view)) && shops.includes(Number(String(view).slice(4))) ? Number(String(view).slice(4)) : shops[0];
+    try { recordSnap(c, cfg, shops.map(i => 'shop' + i)); } catch (_) { }
+    const X = ctx(h, c, groups, cfg, S.shop, useBi, timeArg);
+    if (S.month !== X.ym || S.w == null || S.w >= X.W.length) { S.month = X.ym; const cur = X.W.findIndex(w => X.dp + 1 >= w.f && X.dp + 1 <= w.t); S.w = cur >= 0 ? cur : X.W.length - 1; }
+    if (S.nv == null && X.staff[0]) S.nv = X.staff[0].name;
+    M._X = X; M._h = h;
+    if (S.img) { const p = getPlan(X, S.w); return '<div class="nk-root" style="width:auto;max-width:1240px"><style>' + CSS + '</style><div class="nk-tools nk-noshot" style="margin-bottom:8px"><button data-nk-back>← Quay lại NK Bán hàng</button><span>Bấm nút chụp ảnh / Gửi Line của AutoBI để gửi bảng này</span></div>' + sendTable(X, S.w, p) + '</div>'; }
+    const body = S.tab === 'nk' ? tabNk(X) : S.tab === 'tk' ? tabTk(X) : tabPb(X);
+    return '<div class="nk-root"><style>' + CSS + '</style>' + head(X) + body + '</div>';
+  }
+
+  const M = window.__AutoBINkbh = { render, S, weeksOf, cai, lr, _X: null, _h: null };
+
+  /* ---------- Tương tác: sửa dữ liệu rồi bấm lại tab để vẽ lại ---------- */
+  /* V17.45: vẽ lại TẠI CHỖ chỉ phần NK Bán hàng (dùng lại tham số lần vẽ trước) — không bấm lại tab nên không giật, không nhảy trang.
+     Không vẽ tại chỗ được (chưa có tham số / lỗi) thì mới bấm lại tab như cũ, kèm giữ chỗ cuộn. */
+  const redraw = () => {
+    const root = document.querySelector('.nk-root');
+    if (root && M._args) {
+      try { const html = render.apply(null, M._args); const tmp = document.createElement('div'); tmp.innerHTML = html; const nr = tmp.firstElementChild; if (nr) { root.replaceWith(nr); return; } } catch (_) { }
+    }
+    const keep = [];
+    for (let el = root; el; el = el.parentElement) if (el.scrollTop > 0 || el.scrollLeft > 0) keep.push([el, el.id, el.scrollTop, el.scrollLeft]);
+    const se = document.scrollingElement || document.documentElement; keep.push([se, '', se.scrollTop, se.scrollLeft]);
+    const t = document.querySelector('.rpt-nav-item[data-tab="nkbh"]'); if (t) t.click();
+    const back = () => keep.forEach(([el, id, top, left]) => { const e = el.isConnected ? el : (id && document.getElementById(id)); if (e) { e.scrollTop = top; e.scrollLeft = left; } });
+    [0, 30, 80, 160, 320].forEach(ms => setTimeout(back, ms));
+  };
+  const editPlan = (fn, logMsg) => { const X = M._X; if (!X) return; const p = getPlan(X, S.w); if (p.locked) return; fn(p, X); persist(X, S.w, p, logMsg); redraw(); };
+  const copy = (txt, label) => { try { if (M._h && M._h.UI && M._h.UI.copyToClipboard) return M._h.UI.copyToClipboard(txt, label); } catch (_) { } try { navigator.clipboard.writeText(txt); } catch (_) { } };
+
+  document.addEventListener('click', e => {
+    const t = e.target; if (!t || !t.closest || !t.closest('.nk-root')) return;
+    const b = t.closest('[data-nk-tab],[data-nk-w],[data-nk-shop],[data-nk-nv],[data-nk-mode],[data-nk-unit],[data-nk-all],[data-nk-print],[data-nk-pick],[data-nk-copyprev],[data-nk-regen],[data-nk-copy],[data-nk-fix],[data-nk-save],[data-nk-unlock],[data-nk-swap],[data-nk-cp],[data-nk-cpnote],[data-nk-img],[data-nk-back],[data-nk-go],[data-nk-blank]');
+    if (!b) return;
+    const d = b.dataset, X = M._X;
+    if (d.nkFix != null || b.tagName === 'A') e.preventDefault();
+    e.stopPropagation();
+    if (d.nkTab) { S.tab = d.nkTab; return redraw(); }
+    if (d.nkW != null) { const i = +d.nkW; if (X && X.W[i] && X.W[i].f <= X.dp + 1) { S.w = i; redraw(); } return; }
+    if (d.nkShop) { S.shop = +d.nkShop; S.nv = null; return redraw(); }
+    if (d.nkNv != null) { S.nv = X.staff[+d.nkNv].name; S.all = false; return redraw(); }
+    if (d.nkMode) { S.mode = d.nkMode; return redraw(); }
+    if (d.nkUnit) { S.unit = d.nkUnit; return redraw(); }
+    if (d.nkAll != null) { S.all = !S.all; return redraw(); }
+    if (d.nkGo) { const [tb, w] = d.nkGo.split(':'); S.tab = tb; S.w = +w; if (tb === 'nk') S.mode = 'blank'; return redraw(); }
+    if (d.nkBlank != null) { S.tab = 'nk'; S.mode = 'blank'; S.all = true; return redraw(); }
+    if (d.nkImg != null) { S.img = true; return redraw(); }
+    if (d.nkBack != null) { S.img = false; return redraw(); }
+    if (d.nkSwap != null) { S.vtFirst = !S.vtFirst; return redraw(); }
+    if (d.nkPrint != null) return printPhieu();
+    if (d.nkCp != null) { const p = getPlan(X, S.w); return copy(msgOf(X, S.w, p, +d.nkCp), 'Mục tiêu tuần của ' + shortNm(X.staff[+d.nkCp]).nm); }
+    if (d.nkCpnote != null) return copy(S._note || '', 'Nhận xét tuần');
+    if (d.nkUnlock != null) { const p = getPlan(X, S.w); p.locked = false; persist(X, S.w, p, 'Mở khóa để sửa'); return redraw(); }
+    if (d.nkSave != null) { const p = getPlan(X, S.w); const first = !p.saved; p.saved = true; p.locked = true; p.at = p.at || stamp(); if (first) p.log.push(stamp() + ' · Chốt phân bổ (' + who() + ')'); persist(X, S.w, p, first ? null : 'Lưu lại'); return redraw(); }
+    if (d.nkPick) return editPlan((p, X2) => { const rows = planRows(X2, S.w, p); if (d.nkPick === 'smart') pickSmart(X2, S.w, p, rows); else if (d.nkPick === 'none') X2.G.forEach(g => { p.on[g.short] = false; }); else if (d.nkPick === 'chinh') X2.G.forEach(g => { p.on[g.short] = g.main; }); else if (d.nkPick === 'dk') { X2.G.forEach(g => { p.on[g.short] = false; }); rows.filter(r => r.dk != null && r.dk < 90).sort((a, b2) => a.dk - b2.dk).slice(0, 6).forEach(r => { p.on[r.g.short] = true; }); } else if (d.nkPick === 'prev' && S.w > 0) { const q = store().plans[planKey(X2.ym, X2.shop, S.w - 1)]; if (q) X2.G.forEach(g => { p.on[g.short] = !!(q.on && q.on[g.short]); }); } }, 'Đổi nhóm chạy tuần');
+    if (d.nkCopyprev != null) return editPlan((p, X2) => { const q = S.w > 0 ? store().plans[planKey(X2.ym, X2.shop, S.w - 1)] : null; if (!q) return; const w = WR(X2, p); X2.G.forEach(g => { p.on[g.short] = !!(q.on && q.on[g.short]); p.st[g.short] = num(q.st && q.st[g.short]); p.why[g.short] = (q.why && q.why[g.short]) || ''; const a = lr(p.st[g.short], w, needG(X2, S.w, g)); p.a[g.short] = {}; X2.staff.forEach((x, i) => { p.a[g.short][x.name] = a[i]; }); }); }, 'Chép số tuần trước');
+    if (d.nkRegen != null) return editPlan((p, X2) => { const fresh = draft(X2, S.w, p.k, p.days); X2.G.forEach(g => { if (!p.on[g.short]) return; p.st[g.short] = fresh.st[g.short]; p.a[g.short] = fresh.a[g.short]; }); p.dt = fresh.dt; }, 'Tính lại gợi ý');
+    if (d.nkCopy != null) return editPlan((p, X2) => { const rows = planRows(X2, S.w, p), w = WR(X2, p); rows.forEach(r => { if (!p.on[r.g.short]) return; p.st[r.g.short] = r.sug; const a = lr(r.sug, w, needG(X2, S.w, r.g)); p.a[r.g.short] = {}; X2.staff.forEach((x, i) => { p.a[r.g.short][x.name] = a[i]; }); }); }, 'Lấy gợi ý làm số chốt');
+    if (d.nkFix != null) return editPlan((p, X2) => { const g = X2.G[+d.nkFix], a = lr(num(p.st[g.short]), WR(X2, p), needG(X2, S.w, g)); p.a[g.short] = {}; X2.staff.forEach((x, i) => { p.a[g.short][x.name] = a[i]; }); }, 'Chia lại theo tỉ lệ');
+  }, true);
+
+  document.addEventListener('change', e => {
+    const t = e.target; if (!t || !t.closest || !t.closest('.nk-root')) return;
+    const d = t.dataset, X = M._X; if (!X) return;
+    const v = Math.max(0, Math.round(num(String(t.value).replace(',', '.'))));
+    if (d.nkOnlyon != null) { S.onlyOn = t.checked; return redraw(); }
+    if (d.nkOn != null) { const g = X.G[+d.nkOn]; return editPlan(p => { p.on[g.short] = t.checked; if (t.checked && !p.why[g.short]) p.why[g.short] = 'Tập trung chạy tuần'; }, (t.checked ? 'Thêm nhóm ' : 'Bỏ nhóm ') + g.short); }
+    if (d.nkWhy != null) { const g = X.G[+d.nkWhy]; return editPlan(p => { p.why[g.short] = String(t.value).slice(0, 80); }, null); }
+    if (d.nkSt != null) { const g = X.G[+d.nkSt]; return editPlan((p, X2) => { p.st[g.short] = v; const a = lr(v, WR(X2, p), needG(X2, S.w, g)); p.a[g.short] = {}; X2.staff.forEach((x, i) => { p.a[g.short][x.name] = a[i]; }); }, 'Sửa chốt ' + g.short + ': ' + num(getPlan(X, S.w).st[g.short]) + ' → ' + v + ' cái'); }
+    if (d.nkA != null) { const [gi, j] = d.nkA.split('|').map(Number), g = X.G[gi], x = X.staff[j]; const o = num((getPlan(X, S.w).a[g.short] || {})[x.name]); return editPlan(p => { p.a[g.short] = p.a[g.short] || {}; p.a[g.short][x.name] = v; }, 'Sửa ' + g.short + ': ' + shortNm(x).nm + ' ' + o + ' → ' + v + ' cái'); }
+    if (d.nkU != null) { const g = X.G[+d.nkU], u = Math.max(0.5, num(String(t.value).replace(',', '.')) || g.u); return editPlan(p => { p.u[g.short] = u; }, 'Đổi 1 cái ' + g.short + ' = ' + u + ' tr'); }
+    if (d.nkK != null) { const k = Math.min(300, Math.max(50, v || 100)); return editPlan(p => { p.k = k; }, 'Hệ số đẩy ' + k + '%'); }
+    if (d.nkDays != null) { const x = X.staff[+d.nkDays]; return editPlan((p, X2) => { p.days[x.name] = Math.min(7, v); const w = WR(X2, p); X2.G.forEach(g => { if (!p.on[g.short]) return; const a = lr(num(p.st[g.short]), w, needG(X2, S.w, g)); p.a[g.short] = {}; X2.staff.forEach((y, i) => { p.a[g.short][y.name] = a[i]; }); }); const a2 = lr(num(p.dt.st), w, needDT(X2, S.w)); X2.staff.forEach((y, i) => { p.dt.a[y.name] = a2[i]; }); }, 'Ngày làm ' + shortNm(x).nm + ' → ' + Math.min(7, v)); }
+    if (d.nkDtst != null) return editPlan((p, X2) => { p.dt.st = v; const a = lr(v, WR(X2, p), needDT(X2, S.w)); X2.staff.forEach((y, i) => { p.dt.a[y.name] = a[i]; }); }, 'Sửa DT tuần ST → ' + v + ' tr');
+    if (d.nkDta != null) { const x = X.staff[+d.nkDta]; return editPlan(p => { p.dt.a[x.name] = v; }, 'Sửa DT tuần ' + shortNm(x).nm + ' → ' + v + ' tr'); }
+  }, true);
+
+  /* In phiếu: mở cửa sổ riêng chỉ có phiếu, mỗi NV 1 trang A4 ngang */
+  function printPhieu() {
+    const X = M._X; if (!X) return;
+    const p = getPlan(X, S.w), list = S.all ? X.staff.map((x, i) => i) : [Math.max(0, X.staff.findIndex(x => x.name === S.nv))];
+    /* V17.42: mỗi NV đúng 1 trang A4 ngang — khung trang cố định 297×210mm, tự thu nhỏ phiếu cho vừa (zoom), lề 0 để trình duyệt không in dòng giờ/about:blank */
+    const PCSS = '@page{size:A4 landscape;margin:0}html,body{margin:0;background:#fff}.nk-root{width:auto;background:#fff;padding:0}' +
+      '.pg{width:297mm;height:210mm;padding:7mm;box-sizing:border-box;overflow:hidden;break-after:page;page-break-after:always}.pg:last-child{break-after:auto;page-break-after:auto}' +
+      '.pg .nk-phieu{border:0;padding:0;margin:0!important;border-radius:0}.pg .nk-tblw{overflow:visible}';
+    const fit = 'document.querySelectorAll(".pg").forEach(function(pg){var c=pg.firstElementChild,cs=getComputedStyle(pg),aw=pg.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight),ah=pg.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom);c.style.zoom=1;var s=Math.min(1,ah/c.scrollHeight,aw/c.scrollWidth);c.style.zoom=Math.floor(s*1000)/1000;});';
+    const html = '<!DOCTYPE html><html lang="vi" translate="no"><head><meta charset="utf-8"><title>Phiếu NK bán hàng ' + X.W[S.w].k + '</title><style>' + CSS + PCSS + '</style></head><body><div class="nk-root">' + list.map(j => '<div class="pg">' + phieu(X, j, S.w, p) + '</div>').join('') + '</div><script>' + fit + 'setTimeout(function(){window.print()},400)<\/script></body></html>';
+    const w = window.open('', '_blank'); if (!w) { alert('Trình duyệt chặn cửa sổ in — cho phép cửa sổ bật lên rồi bấm lại.'); return; }
+    w.document.open(); w.document.write(html); w.document.close();
+  }
 })();
