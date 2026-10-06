@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.53
+// @name         AutoBI Core V17.55
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.53
+// @version      17.55
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -2288,6 +2288,7 @@ window.__AutoBIRun67 = (function () {
         } return _0x598ebe; }; const _0x51343a = _0x5066c1(_0x730cdd); const _0x39ae77 = Object.keys(_0x51343a).map(_0x522b26 => ({ name: _0x522b26, value: _0x51343a[_0x522b26] })); const _0x182df8 = new Date(); const _0x4d283c = _0x2a6335 || String(_0x182df8.getDate()).padStart(2, '0') + '/' + String(_0x182df8.getMonth() + 1).padStart(2, '0') + '/' + _0x182df8.getFullYear(); GM_xmlhttpRequest({ method: 'POST', url: CONSTANTS.GSHEET.HISTORY_API, data: JSON.stringify({ date: _0x4d283c, sheetId: _0x3d2635.historySheetId, data: _0x39ae77 }), headers: { 'Content-Type': 'text/plain;charset=utf-8' }, onload: _0x655b2c => { try {
                 const _0x51917f = JSON.parse(_0x655b2c.responseText);
                 if (_0x51917f.status === 'success') {
+                    /* V17.55: lưu xong cập nhật luôn lịch sử trong máy (khỏi tải lại trang) */ try { window.__AutoBINlnvSrc && window.__AutoBINlnvSrc.saved(_0x4d283c, _0x51343a); } catch (_) { }
                     if (_0x1f3482)
                         _0x1f3482(true);
                 }
@@ -4531,10 +4532,10 @@ window.__AutoBIRun67 = (function () {
             }
             else if (_0x450ffb === 'nlnv') {
                 if (_0x37589a === 'daily') {
-                    _0x329bab = UI.HTML.getNLNVDailyReport(window.tgdd_history_cache, _0x37b477, _0x13b9c3, window.tgdd_nlnv_selected_staff, _0x3aa5c8, _0x4df754, _0x19aafa);
+                    _0x329bab = UI.HTML.getNLNVDailyReport(window.__AutoBINlnvSrc ? window.__AutoBINlnvSrc.hist(_0x3aa5c8) : window.tgdd_history_cache, _0x37b477, _0x13b9c3, window.tgdd_nlnv_selected_staff, _0x3aa5c8, _0x4df754, _0x19aafa); /* V17.55 */ if (window.__AutoBINlnvSrc) _0x329bab = window.__AutoBINlnvSrc.note(_0x13b9c3) + _0x329bab;
                 }
                 else if (_0x37589a === 'product_group') {
-                    _0x329bab = UI.HTML.getNLNVProductGroupReport(window.tgdd_history_cache, _0x37b477, _0x13b9c3, _0x3aa5c8, _0x4df754);
+                    _0x329bab = UI.HTML.getNLNVProductGroupReport(window.__AutoBINlnvSrc ? window.__AutoBINlnvSrc.hist(_0x3aa5c8) : window.tgdd_history_cache, _0x37b477, _0x13b9c3, _0x3aa5c8, _0x4df754); /* V17.55 */ if (window.__AutoBINlnvSrc) _0x329bab = window.__AutoBINlnvSrc.note(_0x13b9c3) + _0x329bab;
                 }
                 else {
                     _0x329bab = UI.HTML.getNLNVReport(_0x3aa5c8, _0x37b477, _0x13b9c3, _0x4df754, _0x10626e);
@@ -4918,7 +4919,7 @@ window.__AutoBIRun67 = (function () {
             } }, 100);
         } if (!window.tgdd_history_cache && !_0x19aafa) {
             console.log('[Auto BI] \u0110ang t\u1EA3i ng\u1EA7m d\u1EEF li\u1EC7u l\u1ECBch s\u1EED...');
-            DATA.fetchHistoryFromSheet(_0x13b9c3, _0x5722d5 => { window.tgdd_history_cache = _0x5722d5 || {}; const _0x2c5d1d = new Date(); const _0x260fd8 = String(_0x2c5d1d.getDate()).padStart(2, '0') + '/' + String(_0x2c5d1d.getMonth() + 1).padStart(2, '0') + '/' + _0x2c5d1d.getFullYear(); if (_0x3aa5c8 && !window.tgdd_history_cache[_0x260fd8]) {
+            DATA.fetchHistoryFromSheet(_0x13b9c3, _0x5722d5 => { window.tgdd_history_cache = _0x5722d5 || {}; /* V17.55: lưu bản gọn để lần sau Năng lực NV / NK Bán hàng hiện số ngay; đang mở Năng lực NV thì vẽ lại */ try { window.__AutoBINkbh && window.__AutoBINkbh.histSave(_0x5722d5 || {}); } catch (_) { } setTimeout(() => { try { const __t = document.querySelector('.rpt-nav-item.active[data-tab="nlnv"]'); if (__t) __t.click(); } catch (_) { } }, 50); const _0x2c5d1d = new Date(); const _0x260fd8 = String(_0x2c5d1d.getDate()).padStart(2, '0') + '/' + String(_0x2c5d1d.getMonth() + 1).padStart(2, '0') + '/' + _0x2c5d1d.getFullYear(); if (_0x3aa5c8 && !window.tgdd_history_cache[_0x260fd8]) {
                 const _0x148755 = _0x37ccf8 => { let _0x57a612 = {}; for (let _0x2169be in _0x37ccf8) {
                     if (!_0x37ccf8.hasOwnProperty(_0x2169be))
                         continue;
@@ -6491,7 +6492,7 @@ window.__AutoBIRun67 = (function () {
                     _0x4f4547 = _0x3e13e6 - _0x3145b2;
                     if (_0x4f4547 < 0)
                         _0x4f4547 = 0;
-                } _0x51e3d6.push(_0x4f4547); _0x3145b2 = _0x3e13e6; _0x8d6b2f = _0x3e13e6; });
+                } /* V17.55: ngày thiếu số (0 sau khi đã có lũy kế) → coi như chưa có, gộp sang ngày sau */ const __miss = _0x3e13e6 === 0 && (_0x126bab.isInst || _0x126bab.isHqqd ? _0x8d6b2f !== 0 : _0x3145b2 > 0); if (__miss) _0x4f4547 = 0; _0x51e3d6.push(_0x4f4547); if (!__miss) { _0x3145b2 = _0x3e13e6; _0x8d6b2f = _0x3e13e6; } });
             } let _0xb7b5d2 = '-'; let _0x4b3c03 = '#d63031'; let _0x4d94cb = ''; if (_0x126bab.isInst) {
                 _0xb7b5d2 = _0x49e0ab.length === 0 ? '-' : _0x8d6b2f + '%';
                 _0x4b3c03 = _0x8d6b2f >= _0x126bab.target ? '#00b050' : '#d63031';
@@ -6523,7 +6524,7 @@ window.__AutoBIRun67 = (function () {
             }
             else {
                 _0x51e3d6.forEach(_0x2beb00 => { let _0x456ef4 = _0x2beb00 === 0 ? '-' : _0x126bab.isInst || _0x126bab.isHqqd ? _0x2beb00.toFixed(1) + '%' : UTILS.formatNumber(_0x2beb00); const _0x191be3 = _0x2beb00 === 0 ? 'color: #999;' : 'color: #000000; font-weight:bold;'; _0x2d8734 += '<td class="nlnv-daily-val" style="' + _0x191be3 + '">' + _0x456ef4 + '</td>'; });
-            } _0x2d8734 += '</tr>'; }); _0x2d8734 += '</tbody></table></div>'; return _0x2d8734; }, getNLNVProductGroupReport: (_0x27b034, _0x5493c3, _0x390638, _0x4786ec, _0x5437a9) => { _0x27b034 = window.__AutoBIHistFix ? window.__AutoBIHistFix(_0x27b034) : _0x27b034; const _0x4eee9a = _0x390638.staffList || []; if (_0x4eee9a.length === 0)
+            } _0x2d8734 += '</tr>'; }); _0x2d8734 += '</tbody></table></div>'; return _0x2d8734; }, getNLNVProductGroupReport: (_0x27b034, _0x5493c3, _0x390638, _0x4786ec, _0x5437a9) => { _0x27b034 = window.__AutoBIHistFix ? window.__AutoBIHistFix(_0x27b034) : _0x27b034; /* V17.54: giống tab Hàng ngày — lịch sử chưa có hôm nay thì ghép số lượt chạy hiện tại vào để xem (không lưu). Trước đây thiếu bước này nên lịch sử tháng chưa có ngày nào thì ra cột "Trống", ai cũng 0% */ try { const __now = new Date(), __key = String(__now.getDate()).padStart(2, '0') + '/' + String(__now.getMonth() + 1).padStart(2, '0') + '/' + __now.getFullYear(); if (_0x4786ec && typeof _0x4786ec === 'object' && Object.keys(_0x4786ec).length && !(_0x27b034 && _0x27b034[__key])) { const __flat = (o, out = {}, pre = '') => { for (const k in o) { if (!Object.prototype.hasOwnProperty.call(o, k) || o[k] === undefined) continue; const v = o[k], kk = pre ? pre + '|||' + k : k; if (v && typeof v === 'object' && !Array.isArray(v)) __flat(v, out, kk); else out[kk] = v; } return out; }; _0x27b034 = Object.assign({}, _0x27b034 || {}, { [__key]: __flat(_0x4786ec) }); } } catch (_) { } const _0x4eee9a = _0x390638.staffList || []; if (_0x4eee9a.length === 0)
                 return '<div style="text-align:center; padding: 20px; font-weight:bold; color:red;">Ch\u01B0a khai b\u00E1o nh\u00E2n vi\u00EAn!</div>'; const _0x40987e = UI.HTML.resolveTimeContext(_0x390638); const _0x4f8856 = String(_0x40987e.month).padStart(2, '0'); const _0x4f5006 = String(_0x40987e.year); const _0x1bd340 = _0x40987e.daysPassed; const _0x4549de = _0x40987e.daysInMonth; let _0x1acfe2 = []; if (_0x27b034) {
                 _0x1acfe2 = Object.keys(_0x27b034).filter(_0x5a153d => { const _0x17bb41 = _0x5a153d.split('/'); if (_0x17bb41.length === 3) {
                     const [_0x2d4a51, _0x17f450, _0xedd619] = _0x17bb41;
@@ -6583,7 +6584,7 @@ window.__AutoBIRun67 = (function () {
                     _0x1c63f2 = _0x3b1a1f - _0x573704;
                     if (_0x1c63f2 < 0)
                         _0x1c63f2 = 0;
-                } _0x21e89a.push(_0x1c63f2); _0x5a1b8f[_0x352843] += _0x1c63f2; _0x543aba[_0x352843] += _0x1c63f2; _0x573704 = _0x3b1a1f; _0x232c37 = _0x3b1a1f; });
+                } /* V17.55: ngày thiếu số → gộp sang ngày sau */ const __miss = _0x3b1a1f === 0 && (_0x2b5aa1 ? _0x232c37 !== 0 : _0x573704 > 0); if (__miss) _0x1c63f2 = 0; _0x21e89a.push(_0x1c63f2); _0x5a1b8f[_0x352843] += _0x1c63f2; _0x543aba[_0x352843] += _0x1c63f2; if (!__miss) { _0x573704 = _0x3b1a1f; _0x232c37 = _0x3b1a1f; } });
             } _0x2e3f7a += _0x232c37; let _0x3b2141 = 0; if (_0x2b5aa1) {
                 _0x3b2141 = _0x232c37;
             }
@@ -10169,7 +10170,7 @@ window.__AutoBIBiTarget99 = (function () {
   }
 
   /* V17.48: lưu bản gọn lịch sử Sheet (chỉ khóa tab này cần, ~45 ngày gần nhất) để lần sau mở tab hiện số ngay */
-  const HKEY = /^(link6\|\|\|shop\d\|\|\|competition\|\|\||link6\|\|\|shop\d\|\|\|revenue\|\|\|.*\|\|\|dtqd$|link4_smart\|\|\|.*\|\|\|r$|link2\|\|\|shop\d\|\|\|r$)/;
+  const HKEY = /^(link6\|\|\|shop\d\|\|\|competition\|\|\||link6\|\|\|shop\d\|\|\|revenue\|\|\|.*\|\|\|(dtqd|hqqd)$|link4_smart\|\|\|.*\|\|\|(r|t)$|link2\|\|\|shop\d\|\|\|r$|link7\|\|\|shop\d\|\|\|)/; /* V17.55: giữ thêm hqqd, target nhóm, trả chậm cho Năng lực NV */
   function histSave(hs) {
     try {
       const lim = Date.now() - 45 * 864e5, out = {};
@@ -10294,4 +10295,54 @@ window.__AutoBIBiTarget99 = (function () {
     e.preventDefault(); e.stopImmediatePropagation();
     window.__AutoBIGroupWait().then(() => { const t = (el.id && document.getElementById(el.id)) || el; t.__agPass = true; try { t.click(); } finally { t.__agPass = false; } });
   }, true);
+})();
+
+/* ==== V17.55: Năng lực NV lấy số giống NK Bán hàng (__AutoBINlnvSrc)
+   Nguồn lũy kế theo ngày (khóa dd/mm/yyyy = lũy kế đến hết hôm trước):
+   lịch sử Sheet đã tải (tgdd_history_cache) → chưa tải xong thì bản gọn lưu trên máy (__nkbhHist, GM autobi_nkbh_hist_v1)
+   → bản chụp NK Bán hàng (GM autobi_nkbh_snap_v1) đè lên các khóa nó có. Ngày hôm nay do hàm vẽ tự ghép số trong máy.
+   hist(c): trả bản gộp (không sửa bộ nhớ gốc). note(cfg): dải báo đang dùng bản lưu. saved(key, flat): gọi khi Lưu Sheet thành công. ==== */
+(function () {
+  'use strict';
+  if (location.hostname !== 'baocao.dienmayxanh.com') return;
+  const pad = n => String(n).padStart(2, '0');
+  const load = (k, d) => { try { const v = GM_getValue(k, null); const o = typeof v === 'string' ? JSON.parse(v) : v; return o && typeof o === 'object' ? o : d; } catch (_) { return d; } };
+  const keyOf = ymd => { const y = Math.floor(ymd / 10000), m = Math.floor(ymd / 100) % 100, d = ymd % 100; const t = new Date(y, m - 1, d + 1); return pad(t.getDate()) + '/' + pad(t.getMonth() + 1) + '/' + t.getFullYear(); };
+  const todayKey = () => { const t = new Date(); return pad(t.getDate()) + '/' + pad(t.getMonth() + 1) + '/' + t.getFullYear(); };
+  /* Bản chụp NK (một siêu thị) → khóa phẳng như lịch sử Sheet */
+  function flatSnap(shop, s, out) {
+    if (s.nv) for (const [n, gs] of Object.entries(s.nv)) if (gs && typeof gs === 'object') for (const [g, v] of Object.entries(gs)) if (v == null || typeof v !== 'object') out['link6|||' + shop + '|||competition|||' + n + '|||' + g] = v;
+    if (s.dt) for (const [n, v] of Object.entries(s.dt)) out['link6|||' + shop + '|||revenue|||' + n + '|||dtqd'] = v;
+    if (s.sh) for (const [g, v] of Object.entries(s.sh)) out['link4_smart|||' + g + '|||' + shop + '|||r'] = v;
+    if (s.sdt != null) out['link2|||' + shop + '|||r'] = s.sdt;
+  }
+  function hist(c) {
+    const base = window.tgdd_history_cache || window.__nkbhHist || null;
+    const out = Object.assign({}, base || {});
+    try {
+      const snap = load('autobi_nkbh_snap_v1', null) || {};
+      const tk = todayKey(), live = c && typeof c === 'object' && Object.keys(c).length > 0;
+      for (const [ymd, shops] of Object.entries(snap)) {
+        const n = parseInt(ymd, 10); if (!(n > 20000000) || !shops || typeof shops !== 'object') continue;
+        const k = keyOf(n); if (live && k === tk) continue; /* hôm nay: số trong máy đầy đủ hơn (có trả chậm, HQQĐ) */
+        const f = {}; for (const [shop, s] of Object.entries(shops)) if (/^shop\d$/.test(shop) && s && typeof s === 'object') flatSnap(shop, s, f);
+        if (Object.keys(f).length) out[k] = Object.assign({}, out[k] || {}, f);
+      }
+    } catch (_) { }
+    return Object.keys(out).length ? out : base;
+  }
+  function note(cfg) {
+    if (window.tgdd_history_cache || !(cfg && cfg.historySheetId)) return '';
+    const t = window.__nkbhHistAt, at = t ? (d => pad(d.getHours()) + ':' + pad(d.getMinutes()) + ' ' + pad(d.getDate()) + '/' + pad(d.getMonth() + 1))(new Date(t)) : '';
+    const msg = window.__nkbhHist ? '⏳ Đang tải lịch sử Sheet — tạm dùng bản lưu trên máy lúc ' + at + ', tải xong tự cập nhật' : '⏳ Đang tải lịch sử Sheet — tải xong tự hiện đủ các ngày';
+    return '<div class="nlnv-hist-note" data-html2canvas-ignore="true" style="margin:0 auto 8px;max-width:760px;padding:6px 10px;border-radius:8px;background:#fff7e6;border:1px solid #f5c26b;color:#8a5a00;font-size:12px;font-weight:700;text-align:center;">' + msg + '</div>';
+  }
+  function saved(key, flat) {
+    if (!key || !flat || typeof flat !== 'object') return;
+    if (window.tgdd_history_cache && typeof window.tgdd_history_cache === 'object') window.tgdd_history_cache[key] = flat;
+    const base = window.tgdd_history_cache || window.__nkbhHist || {};
+    try { window.__AutoBINkbh && window.__AutoBINkbh.histSave(Object.assign({}, base, { [key]: flat })); } catch (_) { }
+    try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Lưu Sheet: đã cập nhật lịch sử trong máy dòng ' + key); } catch (_) { }
+  }
+  window.__AutoBINlnvSrc = { hist, note, saved };
 })();
