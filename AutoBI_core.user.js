@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.47
+// @name         AutoBI Core V17.50
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.47
+// @version      17.50
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -2114,39 +2114,34 @@ window.__AutoBIRun67 = (function () {
             catch (_0x31865d) { }
             if (!_0x5f53e4)
                 _0x5f53e4 = _0x218727;
-            const _0x4000ac = 'https://docs.google.com/spreadsheets/d/' + CONSTANTS.GSHEET.DATA.ID + '/export?format=csv&gid=' + CONSTANTS.GSHEET.DATA.GID + '&_t=' + Date.now();
-            /* V16.8.5: danh sách nhóm hàng đã tải trong 30 phút thì dùng lại, không chờ tải Google Sheet mỗi lần bấm chạy */
-            const __cfgList = GM_getValue(CONSTANTS.KEYS.CONFIG_LIST, []);
-            const __cfgFresh = Array.isArray(__cfgList) && __cfgList.length > 0 && Date.now() - (Number(GM_getValue('autobi_cfglist_at', 0)) || 0) < 30 * 60000;
-            /* V17.9: Sheet trả trang web (không phải CSV) thì không ghi đè danh sách; thử lại qua đường gviz trước khi dùng danh sách cũ */
-            const __G = window.__AutoBIGroupList; const __note = t => { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note(t); } catch (_) { } };
+            /* V17.49: tải danh sách nhóm hàng tách thành DATA.loadGroupList — bấm chạy là tải luôn, song song với bước kiểm quyền */
             const __done = () => { GM_setValue('tgdd_active_run_config', _0x5f53e4); console.log('[Auto BI] \u2705 \u0110\u00E3 n\u1EA1p c\u1EA5u h\u00ECnh chu\u1EA9n c\u1EE7a Th\u00E1ng hi\u1EC7n t\u1EA1i (Target: ' + _0x5f53e4.target1 + ')'); _0xb0716(); };
-            const __parse = __txt => { let _0x32ec7c = [];
-                    const _0x43913f = __txt.split('\n');
-                    const __tc = __G.tierCol(UTILS.parseCSVLine((_0x43913f[0] || '').trim())); /* V17.36 */
-                    for (let _0x32f2e7 = 1; _0x32f2e7 < _0x43913f.length; _0x32f2e7++) {
-                        if (_0x43913f[_0x32f2e7].trim()) {
-                            const _0x4d740d = UTILS.parseCSVLine(_0x43913f[_0x32f2e7].trim());
-                            if (_0x4d740d.length >= 3) {
-                                _0x32ec7c.push({ full: _0x4d740d[0], short: _0x4d740d[1], type: UTILS.toUltraSlug(_0x4d740d[2]), color: _0x4d740d[3] ? _0x4d740d[3].trim() : '#FFF2CC', category: _0x4d740d[4] ? _0x4d740d[4].trim() : '', channel: _0x4d740d.length > 5 && _0x4d740d[5] ? _0x4d740d[5].trim().toUpperCase() : 'T', customSlug: _0x4d740d.length > 6 && _0x4d740d[6] ? UTILS.toUltraSlug(_0x4d740d[6]) : '', tier: __G.tier(_0x4d740d[__tc]) });
-                            }
-                        }
-                    }
-                    return __G.clean(_0x32ec7c); };
-            const __get = (url, cb) => GM_xmlhttpRequest({ method: 'GET', url, timeout: 6000, onload: r => { const page = !!r && __G.looksLikePage(r.responseText); cb(r && r.status === 200 && !page ? __parse(r.responseText) : [], r ? ('HTTP ' + r.status + (page ? ', trang web thay cho CSV' : '')) : 'lỗi mạng'); }, onerror: () => cb([], 'lỗi mạng'), ontimeout: () => cb([], 'hết giờ') });
-            const __save = list => { GM_setValue(CONSTANTS.KEYS.CONFIG_LIST, list); GM_setValue('autobi_cfglist_at', Date.now()); try { const n = __G.tierCount(list); __note('Nhóm hàng: ' + list.length + ' nhóm — chính ' + n.chinh + ' · phụ ' + n.phu + (n.none ? ' · chưa phân loại ' + n.none : '')); } catch (_) { } };
+            DATA.loadGroupList(__done);
+        } }, loadGroupList: (cb) => {
+            /* V17.49: danh sách nhóm hàng (Sheet "AutoBi HA" tab ThiDua). Có lượt tải trước (bắt đầu lúc bấm chạy) thì chờ lượt đó. Nhật ký ghi thời gian từng lần tải. */
+            const __fin = () => { if (cb) cb(); };
+            if (window.__AutoBIGroupP) { const p = window.__AutoBIGroupP; window.__AutoBIGroupP = null; p.then(__fin, __fin); return; }
+            const __G = window.__AutoBIGroupList; const __note = t => { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note(t); } catch (_) { } };
+            /* V17.50: mỗi lần đổ số đều tải mới danh sách nhóm hàng (bỏ dùng lại 30 phút) — sửa Sheet là lần đổ sau có hiệu lực; Sheet lỗi thì dùng danh sách đã lưu */
+            const __t0 = Date.now(), __sec = () => ((Date.now() - __t0) / 1000).toFixed(1) + 's';
+            const __parse = __txt => { const out = []; const lines = __txt.split('\n'); const __tc = __G.tierCol(UTILS.parseCSVLine((lines[0] || '').trim()));
+                for (let i = 1; i < lines.length; i++) { if (!lines[i].trim()) continue; const c = UTILS.parseCSVLine(lines[i].trim()); if (c.length < 3) continue;
+                    out.push({ full: c[0], short: c[1], type: UTILS.toUltraSlug(c[2]), color: c[3] ? c[3].trim() : '#FFF2CC', category: c[4] ? c[4].trim() : '', channel: c.length > 5 && c[5] ? c[5].trim().toUpperCase() : 'T', customSlug: c.length > 6 && c[6] ? UTILS.toUltraSlug(c[6]) : '', tier: __G.tier(c[__tc]) }); }
+                return __G.clean(out); };
+            const __get = (url, done) => GM_xmlhttpRequest({ method: 'GET', url, timeout: 6000, onload: r => { const page = !!r && __G.looksLikePage(r.responseText); done(r && r.status === 200 && !page ? __parse(r.responseText) : [], r ? ('HTTP ' + r.status + (page ? ', trang web thay cho CSV' : '')) : 'lỗi mạng'); }, onerror: () => done([], 'lỗi mạng'), ontimeout: () => done([], 'hết giờ') });
+            const __save = (list, via) => { GM_setValue(CONSTANTS.KEYS.CONFIG_LIST, list); GM_setValue('autobi_cfglist_at', Date.now()); try { const n = __G.tierCount(list); __note('Nhóm hàng: ' + list.length + ' nhóm — chính ' + n.chinh + ' · phụ ' + n.phu + (n.none ? ' · chưa phân loại ' + n.none : '') + ' · tải ' + via + ' ' + __sec()); } catch (_) { } };
+            const __csv = 'https://docs.google.com/spreadsheets/d/' + CONSTANTS.GSHEET.DATA.ID + '/export?format=csv&gid=' + CONSTANTS.GSHEET.DATA.GID + '&_t=' + Date.now();
             const __gviz = 'https://docs.google.com/spreadsheets/d/' + CONSTANTS.GSHEET.DATA.ID + '/gviz/tq?tqx=out:csv&gid=' + CONSTANTS.GSHEET.DATA.GID + '&_t=' + Date.now();
-            if (__cfgFresh) setTimeout(__done, 0);
-            else __get(_0x4000ac, (list, why) => {
-                if (list.length) { __save(list); return __done(); }
-                __note('Nhóm hàng: Google Sheet không trả CSV (' + why + ') — thử đường gviz');
+            __get(__csv, (list, why) => {
+                if (list.length) { __save(list, 'Sheet'); return __fin(); }
+                __note('Nhóm hàng: Google Sheet không trả CSV (' + why + ', ' + __sec() + ') — thử đường gviz');
                 __get(__gviz, (list2, why2) => {
-                    if (list2.length) { __save(list2); __note('Nhóm hàng: tải qua gviz được ' + list2.length + ' nhóm'); }
-                    else __note('Nhóm hàng: không tải được Sheet (' + why2 + ') — dùng danh sách đã lưu (' + __G.read().length + ' nhóm)');
-                    __done();
+                    if (list2.length) __save(list2, 'gviz');
+                    else __note('Nhóm hàng: không tải được Sheet (' + why2 + ', ' + __sec() + ') — dùng danh sách đã lưu (' + __G.read().length + ' nhóm)');
+                    __fin();
                 });
             });
-        } },         matchGroupConfigName: (_0x84dcaf, _0xac25f4) => { const _0x56d486 = UTILS.toUltraSlug(_0x84dcaf); for (let _0x5b27e6 of _0xac25f4) {
+        },         matchGroupConfigName: (_0x84dcaf, _0xac25f4) => { const _0x56d486 = UTILS.toUltraSlug(_0x84dcaf); for (let _0x5b27e6 of _0xac25f4) {
             if (UTILS.toUltraSlug(_0x5b27e6.short) === _0x56d486 || UTILS.toUltraSlug(_0x5b27e6.full) === _0x56d486)
                 return _0x5b27e6;
         } for (let _0x1b66f3 of _0xac25f4) {
@@ -4994,7 +4989,7 @@ window.__AutoBIRun67 = (function () {
                 _0x5035f6.forEach(_0x2aa55d => { _0x3779b5 += _0x407611 * (parseFloat(_0x2aa55d.rate) / 100); });
                 const _0x47ce14 = Math.max(0, _0x407611 - _0x3779b5);
                 _0x605fb7 = _0x47ce14 / _0xb50ba8.length;
-            } return UI.HTML.applyTargetRounding(_0x605fb7, _0x4084be); }, getLuyKeNew: (c, groups, cfg, view, useBi, timeArg) => { try { return window.__AutoBIRt2 ? window.__AutoBIRt2.renderLK({ UI, UTILS }, c, groups, cfg, view, useBi, timeArg) : ''; } catch (e) { return '<div style="padding:40px;text-align:center;color:#b42318;font-weight:700;">LK NEW lỗi: ' + String(e && e.message || e) + '</div>'; } }, getNhatKyBH: (c, groups, cfg, view, useBi, timeArg) => { try { if (!window.tgdd_history_cache && cfg && cfg.historySheetId && !window.__nkbhHistLoading) { window.__nkbhHistLoading = true; DATA.fetchHistoryFromSheet(cfg, hs => { window.tgdd_history_cache = hs || {}; const t = document.querySelector('.rpt-nav-item.active[data-tab="nkbh"]'); if (t) t.click(); }); } return window.__AutoBINkbh ? window.__AutoBINkbh.render({ UI, UTILS }, c, groups, cfg, view, useBi, timeArg) : ''; } catch (e) { return '<div style="padding:40px;text-align:center;color:#b42318;font-weight:700;">NK Bán hàng lỗi: ' + String(e && e.message || e) + '</div>'; } }, getRealtimeV2: (c, groups, cfg, view, useBi, timeArg) => { try { return window.__AutoBIRt2 ? window.__AutoBIRt2.render({ UI, UTILS }, c, groups, cfg, view, useBi, timeArg) : ''; } catch (e) { return '<div style="padding:40px;text-align:center;color:#b42318;font-weight:700;">Realtime V2 lỗi: ' + String(e && e.message || e) + '</div>'; } }, getRealtimeV4: (_0x11f2c6, _0x208609, _0xbf3329, _0x99373a, _0x1079b1, _0x1b65a9) => { const _0x2c9196 = UI.HTML.resolveTimeContext(_0xbf3329, _0x1b65a9); const _0x3241b4 = _0x2c9196.daysPassed; const _0x11109e = _0x2c9196.daysInMonth; const _0x457416 = window.tgdd_rt4_mode || 'realtime'; const _0x3c3819 = _0x457416 === 'realtime'; let _0x21a1ca = false; if (_0x99373a === 'total') {
+            } return UI.HTML.applyTargetRounding(_0x605fb7, _0x4084be); }, getLuyKeNew: (c, groups, cfg, view, useBi, timeArg) => { try { return window.__AutoBIRt2 ? window.__AutoBIRt2.renderLK({ UI, UTILS }, c, groups, cfg, view, useBi, timeArg) : ''; } catch (e) { return '<div style="padding:40px;text-align:center;color:#b42318;font-weight:700;">LK NEW lỗi: ' + String(e && e.message || e) + '</div>'; } }, getNhatKyBH: (c, groups, cfg, view, useBi, timeArg) => { try { if (!window.tgdd_history_cache && cfg && cfg.historySheetId && !window.__nkbhHistLoading) { window.__nkbhHistLoading = true; DATA.fetchHistoryFromSheet(cfg, hs => { window.tgdd_history_cache = hs || {}; try { window.__AutoBINkbh && window.__AutoBINkbh.histSave(hs || {}); } catch (_) { } const t = document.querySelector('.rpt-nav-item.active[data-tab="nkbh"]'); if (t) { if (window.__AutoBINkbh && window.__AutoBINkbh.redraw && document.querySelector('.nk-root')) window.__AutoBINkbh.redraw(); else t.click(); } }); } return window.__AutoBINkbh ? window.__AutoBINkbh.render({ UI, UTILS }, c, groups, cfg, view, useBi, timeArg) : ''; } catch (e) { return '<div style="padding:40px;text-align:center;color:#b42318;font-weight:700;">NK Bán hàng lỗi: ' + String(e && e.message || e) + '</div>'; } }, getRealtimeV2: (c, groups, cfg, view, useBi, timeArg) => { try { return window.__AutoBIRt2 ? window.__AutoBIRt2.render({ UI, UTILS }, c, groups, cfg, view, useBi, timeArg) : ''; } catch (e) { return '<div style="padding:40px;text-align:center;color:#b42318;font-weight:700;">Realtime V2 lỗi: ' + String(e && e.message || e) + '</div>'; } }, getRealtimeV4: (_0x11f2c6, _0x208609, _0xbf3329, _0x99373a, _0x1079b1, _0x1b65a9) => { const _0x2c9196 = UI.HTML.resolveTimeContext(_0xbf3329, _0x1b65a9); const _0x3241b4 = _0x2c9196.daysPassed; const _0x11109e = _0x2c9196.daysInMonth; const _0x457416 = window.tgdd_rt4_mode || 'realtime'; const _0x3c3819 = _0x457416 === 'realtime'; let _0x21a1ca = false; if (_0x99373a === 'total') {
                 const _0xc428a = (_0xbf3329.shop1 || '').trim().toUpperCase();
                 const _0x5b5597 = (_0xbf3329.shop2 || '').trim().toUpperCase();
                 const _0x1bab49 = (_0xbf3329.shop3 || '').trim().toUpperCase();
@@ -7264,7 +7259,10 @@ const _0x133c09 = '<div style="font-size:15px; color:#333; line-height:1.6; text
             const _0x3fa3a3 = GM_getValue('tgdd_custom_report_month', 'current');
             /* V16.8.5: quyền đã kiểm tra khi mở trang (≤ 10 phút trước) thì dùng lại, không tải lại Google Sheet lần 2 khi bấm chạy */
             const __authFresh = (() => { try { const c = AuthService.getAuthCache(); return !!(AUTH_STATE && AUTH_STATE.checked && AUTH_STATE.isAuthorized && c && c.isAuthorized && Date.now() - (c.timestamp || 0) < 10 * 60000 && AuthService.extractUserId(c.user) === AuthService.extractUserId(AUTH_STATE.userName)); } catch (_) { return false; } })();
-            (__authFresh ? (cb => cb(AUTH_STATE)) : AuthService.check)(_0x264183 => { if (!window.__AutoBIRun67.active(startRunId67))
+            /* V17.49: tải danh sách nhóm hàng ngay lúc bấm chạy, song song với kiểm quyền; nhật ký ghi thời gian kiểm quyền */
+            if (_0x3fa3a3 === 'current' || !_0x3fa3a3) { try { window.__AutoBIGroupP = null; window.__AutoBIGroupP = new Promise(r => DATA.loadGroupList(r)); } catch (_) { window.__AutoBIGroupP = null; } }
+            const __tAuth = Date.now();
+            (__authFresh ? (cb => cb(AUTH_STATE)) : AuthService.check)(_0x264183 => { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Kiểm quyền: ' + (_0x264183 && _0x264183.isAuthorized ? 'đạt' : 'KHÔNG đạt') + ' · ' + (__authFresh ? 'dùng lại lần kiểm ≤ 10 phút' : ((Date.now() - __tAuth) / 1000).toFixed(1) + 's')); } catch (_) { } if (!window.__AutoBIRun67.active(startRunId67))
                 return; if (_0x264183.isAuthorized) {
                 DATA.loadConfigAndRun(_0x1c190f, _0x3fa3a3);
             }
@@ -8287,6 +8285,13 @@ window.__AutoBIBiTarget99 = (function () {
       cache.link1 = l1; cache.link2 = l2;
       cache.__apiRevenue = { at: Date.now(), shops: keys.length, cumFrom: b.cum.from, cumTo: b.cum.to, rtDay: b.today };
     });
+    /* V17.50: mỗi lần đổ số ghi target DT tháng BI từng siêu thị, so với target ở Khai báo (lệch > 0,5% thì ⚠) */
+    try {
+      const f = v => Math.round(num(v)).toLocaleString('en-US'), cf = b.cfg || {};
+      const parts = keys.map(k => { const i = String(k).replace(/\D/g, ''), bi = num(cum[k] && cum[k].target_kfactor), kb = num(cf['target' + i]), nm = cf[k + 'Short'] || cf[k] || k;
+        return nm + ' ' + f(bi) + (kb > 0 ? (Math.abs(bi - kb) > Math.max(1, kb * 0.005) ? ' ⚠ Khai báo ' + f(kb) : ' ✓') : ' (Khai báo trống)'); });
+      note('Target DT tháng (BI): ' + parts.join(' · '));
+    } catch (_) { }
     return keys.length;
   }
 
@@ -9650,7 +9655,7 @@ window.__AutoBIBiTarget99 = (function () {
 (function () {
   'use strict';
   if (location.hostname !== 'baocao.dienmayxanh.com') return;
-  const KEY = 'autobi_nkbh_v1', SNAP = 'autobi_nkbh_snap_v1';
+  const KEY = 'autobi_nkbh_v1', SNAP = 'autobi_nkbh_snap_v1', HIST = 'autobi_nkbh_hist_v1';
   const DOW = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'];
   const num = v => { const n = typeof v === 'number' ? v : parseFloat(String(v == null ? '' : v).replace(/,/g, '')); return isFinite(n) ? n : 0; };
   const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
@@ -9678,31 +9683,47 @@ window.__AutoBIBiTarget99 = (function () {
   const planKey = (ym, shop, wi) => ym + '|' + shop + '|' + wi;
 
   /* ---------- Bản chụp lũy kế theo ngày ---------- */
+  /* V17.48: ngày lũy kế (yyyymmdd) của số đang nằm trong máy — lấy dấu của lượt đổ số API gần nhất */
+  const liveStamp = c => { for (const o of [c.__apiCompetition, c.__apiStaffComp, c.__apiRevenue, c.__apiStaffRev]) { const v = num(o && o.cumTo); if (v > 20000000) return v; } return 0; };
+  /* Lũy kế của một siêu thị lấy thẳng từ số đang nằm trong máy (cùng dạng bản chụp) */
+  function rowFromCache(c, shop) {
+    const o = {}, l6 = (c.link6 && c.link6[shop]) || {};
+    if (l6.competition && Object.keys(l6.competition).length) o.nv = l6.competition;
+    if (l6.revenue && Object.keys(l6.revenue).length) { o.dt = {}; for (const [n, v] of Object.entries(l6.revenue)) o.dt[n] = num(v && typeof v === 'object' ? v.dtqd : v); }
+    if (c.link4_smart) { const sh = {}; for (const [g, v] of Object.entries(c.link4_smart)) if (v && v[shop]) sh[g] = num(v[shop].r); if (Object.keys(sh).length) o.sh = sh; }
+    if (c.link2 && c.link2[shop]) o.sdt = num(c.link2[shop].r);
+    return o;
+  }
   function recordSnap(c, cfg, shopKeys) {
-    const sc = c.__apiStaffComp, sr = c.__apiStaffRev, ac = c.__apiCompetition, ar = c.__apiRevenue;
-    if (!sc && !sr && !ac && !ar) return;
+    const lv = liveStamp(c), st = o => num(o && o.cumTo) || lv;
+    const sc = st(c.__apiStaffComp), sr = st(c.__apiStaffRev), ac = st(c.__apiCompetition), ar = st(c.__apiRevenue);
+    if (!lv) return;
     const db = load(SNAP, null) || {};
     let changed = false;
     const put = (day, shop, field, val) => { if (!day || val == null) return; const d = db[day] = db[day] || {}; const s = d[shop] = d[shop] || {}; s[field] = val; changed = true; };
     for (const shop of shopKeys) {
-      const l6 = (c.link6 && c.link6[shop]) || {};
-      if (sc && sc.cumTo && l6.competition && Object.keys(l6.competition).length) put(sc.cumTo, shop, 'nv', l6.competition);
-      if (sr && sr.cumTo && l6.revenue && Object.keys(l6.revenue).length) { const dt = {}; for (const [n, v] of Object.entries(l6.revenue)) dt[n] = num(v && typeof v === 'object' ? v.dtqd : v); put(sr.cumTo, shop, 'dt', dt); }
-      if (ac && ac.cumTo && c.link4_smart) { const sh = {}; for (const [g, o] of Object.entries(c.link4_smart)) if (o && o[shop]) sh[g] = num(o[shop].r); if (Object.keys(sh).length) put(ac.cumTo, shop, 'sh', sh); }
-      if (ar && ar.cumTo && c.link2 && c.link2[shop]) put(ar.cumTo, shop, 'sdt', num(c.link2[shop].r));
+      const r = rowFromCache(c, shop);
+      if (r.nv) put(sc, shop, 'nv', r.nv);
+      if (r.dt) put(sr, shop, 'dt', r.dt);
+      if (r.sh) put(ac, shop, 'sh', r.sh);
+      if (r.sdt != null) put(ar, shop, 'sdt', r.sdt);
     }
     if (changed) { const keys = Object.keys(db).sort(); while (keys.length > 75) delete db[keys.shift()]; save(SNAP, db); }
   }
 
   /* Nguồn lũy kế: bản chụp → lịch sử Sheet (khóa ngày D+1) */
-  function makeSource(y, m, dim) {
+  function makeSource(y, m, dim, c) {
     const snap = load(SNAP, null) || {};
-    let hist = window.tgdd_history_cache || null;
+    /* V17.48: lịch sử Sheet chưa tải xong thì dùng bản lưu trên máy (chỉ các khóa tab này cần) cho hiện ngay */
+    const histStored = !window.tgdd_history_cache && !!window.__nkbhHist;
+    let hist = window.tgdd_history_cache || window.__nkbhHist || null;
     try { if (hist && window.__AutoBIHistFix) hist = window.__AutoBIHistFix(hist); } catch (_) { }
     const ymd = d => y * 10000 + m * 100 + d;
     const histKey = d => { const t = new Date(y, m - 1, d + 1); return pad(t.getDate()) + '/' + pad(t.getMonth() + 1) + '/' + t.getFullYear(); };
     const hrow = d => (hist && hist[histKey(d)]) || null;
-    const srow = (d, shop) => (snap[ymd(d)] && snap[ymd(d)][shop]) || null;
+    /* V17.48: ngày của số đang nằm trong máy → đọc thẳng số đó (không chờ bản chụp / lịch sử Sheet) */
+    const lv = c ? liveStamp(c) : 0, liveD = lv && Math.floor(lv / 100) === y * 100 + m ? lv % 100 : 0, liveRow = {};
+    const srow = (d, shop) => { const s0 = (snap[ymd(d)] && snap[ymd(d)][shop]) || null; if (d !== liveD) return s0; const L = liveRow[shop] = liveRow[shop] || rowFromCache(c, shop); return Object.assign({}, s0 || {}, L); };
     const hv = (row, k) => row && row[k] !== undefined ? num(row[k]) : 0;
     const memo = {};
     const scan = (d, pre, suf) => { const k = d + '|' + pre + '|' + (suf || ''); if (k in memo) return memo[k]; const h = hrow(d); return memo[k] = !!(h && Object.keys(h).some(x => x.indexOf(pre) === 0 && (!suf || x.indexOf(suf) > 0))); };
@@ -9714,7 +9735,7 @@ window.__AutoBIBiTarget99 = (function () {
       hasShop(d, shop) { if (d <= 0) return true; const s = srow(d, shop); if (s && s.sh) return true; return scan(d, 'link4_smart|||', '|||' + shop + '|||r'); },
       shop(d, shop, g) { if (d <= 0) return 0; const s = srow(d, shop); if (s && s.sh) return num(s.sh[g]); return hv(hrow(d), 'link4_smart|||' + g + '|||' + shop + '|||r'); },
       sdt(d, shop) { if (d <= 0) return 0; const s = srow(d, shop); if (s && s.sdt != null) return num(s.sdt); return hv(hrow(d), 'link2|||' + shop + '|||r'); },
-      histLoaded: !!hist
+      histLoaded: !!hist, histStored, liveD
     };
   }
 
@@ -9725,7 +9746,7 @@ window.__AutoBIBiTarget99 = (function () {
     const y = num(tc.year), m = num(tc.month), dim = num(tc.daysInMonth) || 30, dp = Math.min(dim, num(tc.daysPassed));
     const ym = y * 100 + m, shop = 'shop' + shopIdx;
     const W = weeksOf(y, m, dim);
-    const src = makeSource(y, m, dim);
+    const src = makeSource(y, m, dim, c);
     const allCh = (cfg[shop] || '').trim().toUpperCase().startsWith('Đ');
     let gl = groups.filter(g => allCh ? true : g.channel === 'T');
     gl = UTILS.filterActiveGroups(gl, cfg);
@@ -9757,7 +9778,7 @@ window.__AutoBIBiTarget99 = (function () {
   /* Mức thiếu của từng NV tới đầu tuần: nhóm = mục tiêu tháng NV − lũy kế NV (quy ra cái); doanh thu = mục tiêu tháng NV − DT QĐ lũy kế */
   const needG = (X, wi, g) => { const d = X.prevNV(X.W[wi].f - 1); return X.staff.map(x => (X.staffT(g, x) - X.src.nv(d, X.shop, x.name, g.short)) / unitV(g)); };
   const needDT = (X, wi) => { const d = X.prevNV(X.W[wi].f - 1); return X.staff.map((x, j) => X.shopMon * (X.baseW[j] || 0) - X.src.dt(d, X.shop, x.name)); };
-  /* V17.47: chia nhóm hàng cho NV — mỗi NV có đi làm (ngày làm > 0) ít nhất 1 cái. NV bị 0 thì lấy bớt 1 cái từ NV đang nhận nhiều nhất (≥ 2);
+  /* V17.48: chia nhóm hàng cho NV — mỗi NV có đi làm (ngày làm > 0) ít nhất 1 cái. NV bị 0 thì lấy bớt 1 cái từ NV đang nhận nhiều nhất (≥ 2);
      không còn ai để lấy (chốt ST < số NV) thì nâng Chốt ST lên = tổng NV để không báo lệch. */
   function allocG(X, wi, p, g, total, w) {
     w = w || WR(X, p); total = Math.max(0, Math.round(num(total)));
@@ -9831,11 +9852,11 @@ window.__AutoBIBiTarget99 = (function () {
     X.G.forEach(g => { p.on[g.short] = false; });
     pick.forEach(r => { p.on[r.g.short] = true; const t = []; if (r.g.main) t.push('Chính'); if (r.dk != null) t.push('DK ' + Math.round(r.dk) + '%'); if (r.ms) t.push('thiếu ' + r.ms + ' cái'); p.why[r.g.short] = t.join(' · ') || 'Tập trung chạy tuần'; });
   }
-  /* V17.47: ngày lũy kế mới nhất có số của siêu thị (công ty đổ số đến hết hôm qua) */
+  /* V17.48: ngày lũy kế mới nhất có số của siêu thị (công ty đổ số đến hết hôm qua) */
   const curSh = X => X.prevSh(X.dp);
   function planRows(X, wi, p) {
     const W = X.W[wi], asOf = X.prevSh(W.f - 1), rem = Math.max(1, X.dim - (W.f - 1)), nd = wlen(W), now = curSh(X);
-    /* V17.47: L = lũy kế đầu tuần (để tính gợi ý tuần); Ln/dk = lũy kế HIỆN TẠI (lần đổ gần nhất) để hiển thị %HT, DK HT và chọn nhóm */
+    /* V17.48: L = lũy kế đầu tuần (để tính gợi ý tuần); Ln/dk = lũy kế HIỆN TẠI (lần đổ gần nhất) để hiển thị %HT, DK HT và chọn nhóm */
     return X.G.map(g => { const T = X.gT(g.short), L = X.src.shop(asOf, X.shop, g.short), Ln = X.src.shop(now, X.shop, g.short); return { g, T, L, Ln, now, dk: now > 0 && T > 0 ? Ln / now * X.dim / T * 100 : null, sug: Math.ceil(Math.max(0, T - L) / rem * nd * num(p.k || 100) / 100 / unitV(g)) }; });
   }
   function persist(X, wi, p, logMsg) {
@@ -9918,7 +9939,7 @@ window.__AutoBIBiTarget99 = (function () {
     const shops = [1, 2, 3, 4, 5].filter(i => (X.cfg['shop' + i] || '').trim());
     const tabs = [['pb', '① Phân bổ mục tiêu tuần'], ['nk', '② Nhật ký NV (phiếu)'], ['tk', '③ Tổng kết & so sánh tuần']];
     return '<div class="nk-hd"><div><div class="nk-kicker">NK BÁN HÀNG · THEO TUẦN</div><div class="nk-title">ST ' + esc(X.sname) + ' · Tuần ' + W.k + ' (' + pad(W.f) + '–' + pad(W.t) + '/' + pad(X.m) + ')</div></div>' +
-      '<div class="nk-time">Lũy kế đến hết ' + pad(X.dp) + '/' + pad(X.m) + '/' + X.y + '<br>' + (n ? 'Lịch sử tuần: <span class="nk-dots">' + days.join('') + '</span> ' + ok + '/' + n : 'Tuần chưa có ngày nào') + (X.src.histLoaded ? '' : '<br><span class="t-mid">chưa tải lịch sử Sheet</span>') + '</div></div>' +
+      '<div class="nk-time">Lũy kế đến hết ' + pad(X.dp) + '/' + pad(X.m) + '/' + X.y + '<br>' + (n ? 'Lịch sử tuần: <span class="nk-dots">' + days.join('') + '</span> ' + ok + '/' + n : 'Tuần chưa có ngày nào') + (X.src.histStored ? '<br><span class="t-mid">⏳ đang tải lịch sử Sheet — tạm dùng bản lưu lúc ' + esc(histAt()) + '</span>' : X.src.histLoaded ? '' : window.__nkbhHistLoading ? '<br><span class="t-mid">⏳ đang tải lịch sử Sheet…</span>' : '<br><span class="t-mid">chưa tải lịch sử Sheet</span>') + '</div></div>' +
       '<div class="nk-pills">' + (shops.length > 1 ? shops.map(i => '<button data-nk-shop="' + i + '" class="' + (i === X.shopIdx ? 'on' : '') + '">' + esc(X.cfg['shop' + i + 'Short'] || X.cfg['shop' + i]) + '</button>').join('') + '<span style="width:10px"></span>' : '') +
       tabs.map(t => '<button data-nk-tab="' + t[0] + '" class="big' + (S.tab === t[0] ? ' on' : '') + '">' + t[1] + '</button>').join('') +
       '<span style="margin-left:auto">Tuần:</span>' + X.W.map((x, i) => { const av = x.f <= X.dp + 1, sp = store().plans[planKey(X.ym, X.shop, i)]; return '<button data-nk-w="' + i + '" class="' + (i === S.w ? 'on' : '') + (av ? '' : ' off') + '">' + x.k + ' <small>' + x.f + '–' + x.t + '</small>' + (sp && sp.saved ? ' ✅' : '') + '</button>'; }).join('') + '</div>' + todo(X);
@@ -10095,7 +10116,24 @@ window.__AutoBIBiTarget99 = (function () {
     return '<div class="nk-root"><style>' + CSS + '</style>' + head(X) + body + '</div>';
   }
 
-  const M = window.__AutoBINkbh = { render, S, weeksOf, cai, lr, _X: null, _h: null };
+  /* V17.48: lưu bản gọn lịch sử Sheet (chỉ khóa tab này cần, ~45 ngày gần nhất) để lần sau mở tab hiện số ngay */
+  const HKEY = /^(link6\|\|\|shop\d\|\|\|competition\|\|\||link6\|\|\|shop\d\|\|\|revenue\|\|\|.*\|\|\|dtqd$|link4_smart\|\|\|.*\|\|\|r$|link2\|\|\|shop\d\|\|\|r$)/;
+  function histSave(hs) {
+    try {
+      const lim = Date.now() - 45 * 864e5, out = {};
+      for (const [k, row] of Object.entries(hs || {})) {
+        const mt = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(k); if (!mt || !row || typeof row !== 'object') continue;
+        if (new Date(+mt[3], +mt[2] - 1, +mt[1]).getTime() < lim) continue;
+        const r = {}; for (const [kk, v] of Object.entries(row)) if (HKEY.test(kk)) r[kk] = v;
+        if (Object.keys(r).length) out[k] = r;
+      }
+      save(HIST, { at: Date.now(), data: out }); window.__nkbhHist = out; window.__nkbhHistAt = Date.now();
+    } catch (_) { }
+  }
+  const histAt = () => { const t = window.__nkbhHistAt; if (!t) return '—'; const d = new Date(t); return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ' ' + pad(d.getDate()) + '/' + pad(d.getMonth() + 1); };
+  try { const h0 = load(HIST, null); if (h0 && h0.data) { window.__nkbhHist = h0.data; window.__nkbhHistAt = h0.at; } } catch (_) { }
+
+  const M = window.__AutoBINkbh = { render, S, weeksOf, cai, lr, histSave, redraw: () => redraw(), _X: null, _h: null };
 
   /* ---------- Tương tác: sửa dữ liệu rồi bấm lại tab để vẽ lại ---------- */
   /* V17.45: vẽ lại TẠI CHỖ chỉ phần NK Bán hàng (dùng lại tham số lần vẽ trước) — không bấm lại tab nên không giật, không nhảy trang.
