@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.46
+// @name         AutoBI Core V17.47
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.46
+// @version      17.47
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -9757,6 +9757,19 @@ window.__AutoBIBiTarget99 = (function () {
   /* Mức thiếu của từng NV tới đầu tuần: nhóm = mục tiêu tháng NV − lũy kế NV (quy ra cái); doanh thu = mục tiêu tháng NV − DT QĐ lũy kế */
   const needG = (X, wi, g) => { const d = X.prevNV(X.W[wi].f - 1); return X.staff.map(x => (X.staffT(g, x) - X.src.nv(d, X.shop, x.name, g.short)) / unitV(g)); };
   const needDT = (X, wi) => { const d = X.prevNV(X.W[wi].f - 1); return X.staff.map((x, j) => X.shopMon * (X.baseW[j] || 0) - X.src.dt(d, X.shop, x.name)); };
+  /* V17.47: chia nhóm hàng cho NV — mỗi NV có đi làm (ngày làm > 0) ít nhất 1 cái. NV bị 0 thì lấy bớt 1 cái từ NV đang nhận nhiều nhất (≥ 2);
+     không còn ai để lấy (chốt ST < số NV) thì nâng Chốt ST lên = tổng NV để không báo lệch. */
+  function allocG(X, wi, p, g, total, w) {
+    w = w || WR(X, p); total = Math.max(0, Math.round(num(total)));
+    const pri = needG(X, wi, g), a = lr(total, w, pri);
+    a.forEach((v, i) => {
+      if (v > 0 || !(w[i] > 0)) return;
+      let k = -1; a.forEach((u, j) => { if (j !== i && u >= 2 && (k < 0 || u > a[k] || (u === a[k] && (pri[j] || 0) < (pri[k] || 0)))) k = j; });
+      if (k >= 0) a[k]--; a[i] = 1;
+    });
+    p.a[g.short] = {}; X.staff.forEach((x, i) => { p.a[g.short][x.name] = a[i]; });
+    p.st[g.short] = Math.max(total, a.reduce((s2, v) => s2 + v, 0));
+  }
   const WR = (X, plan) => X.baseW.map((w, i) => w * (num(plan && plan.days && plan.days[X.staff[i].name] != null ? plan.days[X.staff[i].name] : 7)) / 7);
 
   /* Số tuần của NV (đã làm tròn) và chi tiết từng ngày */
@@ -9796,15 +9809,9 @@ window.__AutoBIBiTarget99 = (function () {
   function draft(X, wi, k, days) {
     const W = X.W[wi], asOf = W.f - 1, rem = Math.max(1, X.dim - asOf), nd = wlen(W);
     const p = { draft: true, k: k || 100, on: {}, st: {}, a: {}, why: {}, u: {}, days: Object.assign({}, days || {}), log: [], dt: { st: 0, a: {} } };
-    const w = WR(X, p), dS = X.prevSh(asOf), lkAsOf = dS;
-    const rows = X.G.map(g => {
-      const T = X.gT(g.short), L = X.src.shop(lkAsOf, X.shop, g.short);
-      const dk = lkAsOf > 0 && T > 0 ? L / lkAsOf * X.dim / T * 100 : null;
-      const sug = Math.ceil(Math.max(0, T - L) / rem * nd * p.k / 100 / unitV(g));
-      p.st[g.short] = sug; p.u[g.short] = g.money ? g.u : 0;
-      const a = lr(sug, w, needG(X, wi, g)); p.a[g.short] = {}; X.staff.forEach((x, i) => { p.a[g.short][x.name] = a[i]; });
-      return { g, T, L, dk, sug };
-    });
+    const w = WR(X, p), lkAsOf = X.prevSh(asOf);
+    const rows = planRows(X, wi, p);
+    rows.forEach(r => { const g = r.g; p.u[g.short] = g.money ? g.u : 0; allocG(X, wi, p, g, r.sug, w); });
     pickSmart(X, wi, p, rows);
     const L = X.src.sdt(lkAsOf, X.shop), dtS = Math.ceil(Math.max(0, X.shopMon - L) / rem * nd * p.k / 100);
     p.dt.st = dtS; const a = lr(dtS, w, needDT(X, wi)); X.staff.forEach((x, i) => { p.dt.a[x.name] = a[i]; });
@@ -9824,9 +9831,12 @@ window.__AutoBIBiTarget99 = (function () {
     X.G.forEach(g => { p.on[g.short] = false; });
     pick.forEach(r => { p.on[r.g.short] = true; const t = []; if (r.g.main) t.push('Chính'); if (r.dk != null) t.push('DK ' + Math.round(r.dk) + '%'); if (r.ms) t.push('thiếu ' + r.ms + ' cái'); p.why[r.g.short] = t.join(' · ') || 'Tập trung chạy tuần'; });
   }
+  /* V17.47: ngày lũy kế mới nhất có số của siêu thị (công ty đổ số đến hết hôm qua) */
+  const curSh = X => X.prevSh(X.dp);
   function planRows(X, wi, p) {
-    const W = X.W[wi], asOf = X.prevSh(W.f - 1), rem = Math.max(1, X.dim - (W.f - 1)), nd = wlen(W);
-    return X.G.map(g => { const T = X.gT(g.short), L = X.src.shop(asOf, X.shop, g.short); return { g, T, L, dk: asOf > 0 && T > 0 ? L / asOf * X.dim / T * 100 : null, sug: Math.ceil(Math.max(0, T - L) / rem * nd * num(p.k || 100) / 100 / unitV(g)) }; });
+    const W = X.W[wi], asOf = X.prevSh(W.f - 1), rem = Math.max(1, X.dim - (W.f - 1)), nd = wlen(W), now = curSh(X);
+    /* V17.47: L = lũy kế đầu tuần (để tính gợi ý tuần); Ln/dk = lũy kế HIỆN TẠI (lần đổ gần nhất) để hiển thị %HT, DK HT và chọn nhóm */
+    return X.G.map(g => { const T = X.gT(g.short), L = X.src.shop(asOf, X.shop, g.short), Ln = X.src.shop(now, X.shop, g.short); return { g, T, L, Ln, now, dk: now > 0 && T > 0 ? Ln / now * X.dim / T * 100 : null, sug: Math.ceil(Math.max(0, T - L) / rem * nd * num(p.k || 100) / 100 / unitV(g)) }; });
   }
   function persist(X, wi, p, logMsg) {
     const st = store(), key = planKey(X.ym, X.shop, wi);
@@ -9932,18 +9942,19 @@ window.__AutoBIBiTarget99 = (function () {
     const dis = RO ? ' disabled' : '', on = X.G.filter(g => p.on[g.short]).length;
     const nvh = X.staff.map((x, i) => { const s = shortNm(x); return '<th class="nvh">' + esc(s.nm) + '<br><span style="font-weight:600">' + esc(s.id) + ' · ' + Math.round(X.baseW[i] * 100) + '%</span></th>'; }).join('');
     const COLS = 10 + X.staff.length;
-    const th = '<tr><th class="l">Nhóm thi đua</th><th>QĐ<br>1 cái =</th><th>Target<br>tháng</th><th>Lũy kế<br>đến ' + (asOf ? pad(asOf) + '/' + pad(X.m) : '—') + '</th><th>%HT</th><th>DK HT</th><th>Chạy<br>tuần</th><th class="l">Lý do</th><th>Gợi ý<br>(cái)</th><th class="nk-hl">Chốt ST<br>(cái)</th>' + nvh + '</tr>';
+    const now = curSh(X);
+    const th = '<tr><th class="l">Nhóm thi đua</th><th>QĐ<br>1 cái =</th><th>Target<br>tháng</th><th>Lũy kế<br>đến ' + (now ? pad(now) + '/' + pad(X.m) : '—') + '</th><th>%HT</th><th>DK HT</th><th>Chạy<br>tuần</th><th class="l">Lý do</th><th>Gợi ý<br>(cái)</th><th class="nk-hl">Chốt ST<br>(cái)</th>' + nvh + '</tr>';
     const daysRow = '<tr class="nk-days"><td class="l" colspan="10"><b>📅 Ngày làm tuần này</b> <span style="font-size:12px;color:#475569">— NV nghỉ phép thì giảm số ngày, target tự chia lại</span></td>' + X.staff.map((x, j) => '<td><input class="nk-in" data-nk-days="' + j + '" value="' + num(p.days[x.name] != null ? p.days[x.name] : 7) + '"' + dis + '><span class="nk-u">ngày</span></td>').join('') + '</tr>';
-    const dL = X.src.sdt(asOf, X.shop), dtDk = asOf > 0 && X.shopMon > 0 ? dL / asOf * X.dim / X.shopMon * 100 : null, dtSug = Math.ceil(Math.max(0, X.shopMon - dL) / rem * nd * num(p.k) / 100);
+    const dL0 = X.src.sdt(asOf, X.shop), dL = X.src.sdt(now, X.shop), dtDk = now > 0 && X.shopMon > 0 ? dL / now * X.dim / X.shopMon * 100 : null, dtSug = Math.ceil(Math.max(0, X.shopMon - dL0) / rem * nd * num(p.k) / 100);
     const dtRow = '<tr class="nk-dt"><td class="l"><b>💰 Doanh thu QĐ</b></td><td>tr</td><td>' + nf(X.shopMon) + '</td><td>' + nf(dL) + '</td><td>' + (X.shopMon ? Math.round(dL / X.shopMon * 100) + '%' : '—') + '</td><td><b class="' + pctCls(dtDk) + '">' + (dtDk == null ? '—' : Math.round(dtDk) + '%') + '</b></td><td>✓</td><td class="l" style="font-size:12px;color:#475569">luôn giao mỗi tuần</td><td style="color:#64748b">' + nf(dtSug) + '</td><td class="nk-hl"><input class="nk-in" style="width:60px" data-nk-dtst value="' + num(p.dt.st) + '"' + dis + '></td>' + X.staff.map((x, j) => '<td><input class="nk-in" style="width:60px" data-nk-dta="' + j + '" value="' + num(p.dt.a[x.name]) + '"' + dis + '></td>').join('') + '</tr>';
     let last = null, first = true;
     const body = ordered(X).map(g => {
       const r = rows.find(z => z.g === g), i = gIdx(X, g), isOn = !!p.on[g.short];
       let s = '';
       if (g.main !== last) { last = g.main; if (X.G.some(z => z.main) && X.G.some(z => !z.main) && (!S.onlyOn || X.G.some(z => z.main === g.main && p.on[z.short]))) { s = sec(g.main, COLS, first ? ' <button class="nk-swap" data-nk-swap>⇅ đổi thứ tự khối</button>' : ''); first = false; } }
-      if (!isOn) return S.onlyOn ? s : s + '<tr class="nk-off"><td class="l">' + esc(g.short) + '</td><td>' + (g.money ? g.u + ' tr' : 'SL') + '</td><td>' + nf(g.money ? r.T / 1000 : r.T, g.money) + '</td><td>' + nf(g.money ? r.L / 1000 : r.L, g.money) + '</td><td>' + (r.T ? Math.round(r.L / r.T * 100) + '%' : '—') + '</td><td><b class="' + pctCls(r.dk) + '">' + (r.dk == null ? '—' : Math.round(r.dk) + '%') + '</b></td><td><input type="checkbox" data-nk-on="' + i + '"' + dis + '></td><td class="l" colspan="' + (3 + X.staff.length) + '" style="font-size:12px">không chạy tuần này · tick để thêm</td></tr>';
+      if (!isOn) return S.onlyOn ? s : s + '<tr class="nk-off"><td class="l">' + esc(g.short) + '</td><td>' + (g.money ? g.u + ' tr' : 'SL') + '</td><td>' + nf(g.money ? r.T / 1000 : r.T, g.money) + '</td><td>' + nf(g.money ? r.Ln / 1000 : r.Ln, g.money) + '</td><td>' + (r.T ? Math.round(r.Ln / r.T * 100) + '%' : '—') + '</td><td><b class="' + pctCls(r.dk) + '">' + (r.dk == null ? '—' : Math.round(r.dk) + '%') + '</b></td><td><input type="checkbox" data-nk-on="' + i + '"' + dis + '></td><td class="l" colspan="' + (3 + X.staff.length) + '" style="font-size:12px">không chạy tuần này · tick để thêm</td></tr>';
       const sumA = X.staff.reduce((a, x) => a + num(p.a[g.short] && p.a[g.short][x.name]), 0), stv = num(p.st[g.short]);
-      return s + '<tr><td class="l"><b>' + esc(g.short) + '</b></td><td>' + (g.money ? '<input class="nk-in" style="width:38px" data-nk-u="' + i + '" value="' + g.u + '"' + dis + '> tr' : 'SL') + '</td><td>' + nf(g.money ? r.T / 1000 : r.T, g.money) + '</td><td>' + nf(g.money ? r.L / 1000 : r.L, g.money) + '</td><td>' + (r.T ? Math.round(r.L / r.T * 100) + '%' : '—') + '</td><td><b class="' + pctCls(r.dk) + '">' + (r.dk == null ? '—' : Math.round(r.dk) + '%') + '</b></td>' +
+      return s + '<tr><td class="l"><b>' + esc(g.short) + '</b></td><td>' + (g.money ? '<input class="nk-in" style="width:38px" data-nk-u="' + i + '" value="' + g.u + '"' + dis + '> tr' : 'SL') + '</td><td>' + nf(g.money ? r.T / 1000 : r.T, g.money) + '</td><td>' + nf(g.money ? r.Ln / 1000 : r.Ln, g.money) + '</td><td>' + (r.T ? Math.round(r.Ln / r.T * 100) + '%' : '—') + '</td><td><b class="' + pctCls(r.dk) + '">' + (r.dk == null ? '—' : Math.round(r.dk) + '%') + '</b></td>' +
         '<td><input type="checkbox" checked data-nk-on="' + i + '"' + dis + '></td><td class="l"><input class="nk-in wide" data-nk-why="' + i + '" value="' + esc(p.why[g.short] || '') + '"' + dis + '></td><td style="color:#64748b">' + r.sug + '</td><td class="nk-hl"><input class="nk-in" data-nk-st="' + i + '" value="' + stv + '"' + dis + '></td>' +
         X.staff.map((x, j) => '<td><input class="nk-in" data-nk-a="' + i + '|' + j + '" value="' + num(p.a[g.short] && p.a[g.short][x.name]) + '"' + dis + '></td>').join('') + '</tr>' +
         (sumA !== stv ? '<tr class="nk-warn"><td colspan="' + COLS + '">⚠ ' + esc(g.short) + ': tổng NV ' + sumA + ' ≠ chốt ST ' + stv + (RO ? '' : ' — <a href="#" data-nk-fix="' + i + '">chia lại theo tỉ lệ</a>') + '</td></tr>' : '');
@@ -9953,7 +9964,7 @@ window.__AutoBIBiTarget99 = (function () {
     return '<div class="nk-card"><div class="nk-lbl">PHÂN BỔ MỤC TIÊU TUẦN ' + W.k + ' (' + W.f + '–' + W.t + '/' + X.m + ') · ST ' + esc(String(X.sname).toUpperCase()) + '<span class="nk-sub">' + (p.saved ? '✅ Đã chốt lúc ' + esc(p.at || '') : '📝 Bản nháp — AutoBI tự gợi ý, sửa rồi bấm Lưu') + '</span></div>' + lock +
       '<div class="nk-tools"><span class="grow">Gợi ý = (Target − Lũy kế) ÷ ' + rem + ' ngày còn lại × ' + nd + ' ngày tuần × hệ số đẩy</span><label>Hệ số đẩy <input class="nk-in" data-nk-k value="' + num(p.k || 100) + '"' + dis + '>%</label>' + (RO ? '' : '<button data-nk-regen>↻ Tính lại gợi ý</button><button data-nk-copy>⇢ Lấy gợi ý làm số chốt</button><button class="pri" data-nk-save>💾 Lưu phân bổ (' + on + ' nhóm)</button>') + '</div>' + pick +
       '<div class="nk-tblw"><table class="nk-tbl nk-pb"><thead>' + th + '</thead><tbody>' + daysRow + dtRow + body + '</tbody></table></div>' +
-      '<div class="nk-note">Chia NV theo tỉ lệ ở Khai báo × số ngày làm, làm tròn sao cho tổng NV = chốt ST; cái dư khi chia bằng nhau giao cho NV đang thiếu nhiều nhất so với mục tiêu tháng · ô nào cũng sửa tay được · nhóm tiền quy ra cái theo "1 cái = ? tr" (mặc định 5 tr, sửa được, lưu theo tháng) · QL và TC đều sửa được, lịch sử ghi tên người sửa · phân bổ lưu trên máy này</div></div>' + sendPanel(X, wi, p);
+      '<div class="nk-note">Chia NV theo tỉ lệ ở Khai báo × số ngày làm, làm tròn sao cho tổng NV = chốt ST; cái dư khi chia bằng nhau giao cho NV đang thiếu nhiều nhất so với mục tiêu tháng · NV có đi làm nhận ít nhất 1 cái mỗi nhóm (chốt ST ít hơn số NV thì tự nâng lên) · ô nào cũng sửa tay được · nhóm tiền quy ra cái theo "1 cái = ? tr" (mặc định 5 tr, sửa được, lưu theo tháng) · QL và TC đều sửa được, lịch sử ghi tên người sửa · phân bổ lưu trên máy này</div></div>' + sendPanel(X, wi, p);
   }
   const logHtml = (p, open) => '<details' + (open ? ' open' : '') + '><summary>Lịch sử sửa (' + p.log.length + ')</summary>' + p.log.map(x => '<div>• ' + esc(x) + '</div>').join('') + '</details>';
 
@@ -10129,10 +10140,10 @@ window.__AutoBIBiTarget99 = (function () {
     if (d.nkUnlock != null) { const p = getPlan(X, S.w); p.locked = false; persist(X, S.w, p, 'Mở khóa để sửa'); return redraw(); }
     if (d.nkSave != null) { const p = getPlan(X, S.w); const first = !p.saved; p.saved = true; p.locked = true; p.at = p.at || stamp(); if (first) p.log.push(stamp() + ' · Chốt phân bổ (' + who() + ')'); persist(X, S.w, p, first ? null : 'Lưu lại'); return redraw(); }
     if (d.nkPick) return editPlan((p, X2) => { const rows = planRows(X2, S.w, p); if (d.nkPick === 'smart') pickSmart(X2, S.w, p, rows); else if (d.nkPick === 'none') X2.G.forEach(g => { p.on[g.short] = false; }); else if (d.nkPick === 'chinh') X2.G.forEach(g => { p.on[g.short] = g.main; }); else if (d.nkPick === 'dk') { X2.G.forEach(g => { p.on[g.short] = false; }); rows.filter(r => r.dk != null && r.dk < 90).sort((a, b2) => a.dk - b2.dk).slice(0, 6).forEach(r => { p.on[r.g.short] = true; }); } else if (d.nkPick === 'prev' && S.w > 0) { const q = store().plans[planKey(X2.ym, X2.shop, S.w - 1)]; if (q) X2.G.forEach(g => { p.on[g.short] = !!(q.on && q.on[g.short]); }); } }, 'Đổi nhóm chạy tuần');
-    if (d.nkCopyprev != null) return editPlan((p, X2) => { const q = S.w > 0 ? store().plans[planKey(X2.ym, X2.shop, S.w - 1)] : null; if (!q) return; const w = WR(X2, p); X2.G.forEach(g => { p.on[g.short] = !!(q.on && q.on[g.short]); p.st[g.short] = num(q.st && q.st[g.short]); p.why[g.short] = (q.why && q.why[g.short]) || ''; const a = lr(p.st[g.short], w, needG(X2, S.w, g)); p.a[g.short] = {}; X2.staff.forEach((x, i) => { p.a[g.short][x.name] = a[i]; }); }); }, 'Chép số tuần trước');
+    if (d.nkCopyprev != null) return editPlan((p, X2) => { const q = S.w > 0 ? store().plans[planKey(X2.ym, X2.shop, S.w - 1)] : null; if (!q) return; const w = WR(X2, p); X2.G.forEach(g => { p.on[g.short] = !!(q.on && q.on[g.short]); p.st[g.short] = num(q.st && q.st[g.short]); p.why[g.short] = (q.why && q.why[g.short]) || ''; allocG(X2, S.w, p, g, p.st[g.short], w); }); }, 'Chép số tuần trước');
     if (d.nkRegen != null) return editPlan((p, X2) => { const fresh = draft(X2, S.w, p.k, p.days); X2.G.forEach(g => { if (!p.on[g.short]) return; p.st[g.short] = fresh.st[g.short]; p.a[g.short] = fresh.a[g.short]; }); p.dt = fresh.dt; }, 'Tính lại gợi ý');
-    if (d.nkCopy != null) return editPlan((p, X2) => { const rows = planRows(X2, S.w, p), w = WR(X2, p); rows.forEach(r => { if (!p.on[r.g.short]) return; p.st[r.g.short] = r.sug; const a = lr(r.sug, w, needG(X2, S.w, r.g)); p.a[r.g.short] = {}; X2.staff.forEach((x, i) => { p.a[r.g.short][x.name] = a[i]; }); }); }, 'Lấy gợi ý làm số chốt');
-    if (d.nkFix != null) return editPlan((p, X2) => { const g = X2.G[+d.nkFix], a = lr(num(p.st[g.short]), WR(X2, p), needG(X2, S.w, g)); p.a[g.short] = {}; X2.staff.forEach((x, i) => { p.a[g.short][x.name] = a[i]; }); }, 'Chia lại theo tỉ lệ');
+    if (d.nkCopy != null) return editPlan((p, X2) => { const rows = planRows(X2, S.w, p), w = WR(X2, p); rows.forEach(r => { if (!p.on[r.g.short]) return; allocG(X2, S.w, p, r.g, r.sug, w); }); }, 'Lấy gợi ý làm số chốt');
+    if (d.nkFix != null) return editPlan((p, X2) => { const g = X2.G[+d.nkFix]; allocG(X2, S.w, p, g, num(p.st[g.short])); }, 'Chia lại theo tỉ lệ');
   }, true);
 
   document.addEventListener('change', e => {
@@ -10142,11 +10153,11 @@ window.__AutoBIBiTarget99 = (function () {
     if (d.nkOnlyon != null) { S.onlyOn = t.checked; return redraw(); }
     if (d.nkOn != null) { const g = X.G[+d.nkOn]; return editPlan(p => { p.on[g.short] = t.checked; if (t.checked && !p.why[g.short]) p.why[g.short] = 'Tập trung chạy tuần'; }, (t.checked ? 'Thêm nhóm ' : 'Bỏ nhóm ') + g.short); }
     if (d.nkWhy != null) { const g = X.G[+d.nkWhy]; return editPlan(p => { p.why[g.short] = String(t.value).slice(0, 80); }, null); }
-    if (d.nkSt != null) { const g = X.G[+d.nkSt]; return editPlan((p, X2) => { p.st[g.short] = v; const a = lr(v, WR(X2, p), needG(X2, S.w, g)); p.a[g.short] = {}; X2.staff.forEach((x, i) => { p.a[g.short][x.name] = a[i]; }); }, 'Sửa chốt ' + g.short + ': ' + num(getPlan(X, S.w).st[g.short]) + ' → ' + v + ' cái'); }
+    if (d.nkSt != null) { const g = X.G[+d.nkSt]; return editPlan((p, X2) => { allocG(X2, S.w, p, g, v); }, 'Sửa chốt ' + g.short + ': ' + num(getPlan(X, S.w).st[g.short]) + ' → ' + v + ' cái'); }
     if (d.nkA != null) { const [gi, j] = d.nkA.split('|').map(Number), g = X.G[gi], x = X.staff[j]; const o = num((getPlan(X, S.w).a[g.short] || {})[x.name]); return editPlan(p => { p.a[g.short] = p.a[g.short] || {}; p.a[g.short][x.name] = v; }, 'Sửa ' + g.short + ': ' + shortNm(x).nm + ' ' + o + ' → ' + v + ' cái'); }
     if (d.nkU != null) { const g = X.G[+d.nkU], u = Math.max(0.5, num(String(t.value).replace(',', '.')) || g.u); return editPlan(p => { p.u[g.short] = u; }, 'Đổi 1 cái ' + g.short + ' = ' + u + ' tr'); }
     if (d.nkK != null) { const k = Math.min(300, Math.max(50, v || 100)); return editPlan(p => { p.k = k; }, 'Hệ số đẩy ' + k + '%'); }
-    if (d.nkDays != null) { const x = X.staff[+d.nkDays]; return editPlan((p, X2) => { p.days[x.name] = Math.min(7, v); const w = WR(X2, p); X2.G.forEach(g => { if (!p.on[g.short]) return; const a = lr(num(p.st[g.short]), w, needG(X2, S.w, g)); p.a[g.short] = {}; X2.staff.forEach((y, i) => { p.a[g.short][y.name] = a[i]; }); }); const a2 = lr(num(p.dt.st), w, needDT(X2, S.w)); X2.staff.forEach((y, i) => { p.dt.a[y.name] = a2[i]; }); }, 'Ngày làm ' + shortNm(x).nm + ' → ' + Math.min(7, v)); }
+    if (d.nkDays != null) { const x = X.staff[+d.nkDays]; return editPlan((p, X2) => { p.days[x.name] = Math.min(7, v); const w = WR(X2, p); X2.G.forEach(g => { if (!p.on[g.short]) return; allocG(X2, S.w, p, g, num(p.st[g.short]), w); }); const a2 = lr(num(p.dt.st), w, needDT(X2, S.w)); X2.staff.forEach((y, i) => { p.dt.a[y.name] = a2[i]; }); }, 'Ngày làm ' + shortNm(x).nm + ' → ' + Math.min(7, v)); }
     if (d.nkDtst != null) return editPlan((p, X2) => { p.dt.st = v; const a = lr(v, WR(X2, p), needDT(X2, S.w)); X2.staff.forEach((y, i) => { p.dt.a[y.name] = a[i]; }); }, 'Sửa DT tuần ST → ' + v + ' tr');
     if (d.nkDta != null) { const x = X.staff[+d.nkDta]; return editPlan(p => { p.dt.a[x.name] = v; }, 'Sửa DT tuần ' + shortNm(x).nm + ' → ' + v + ' tr'); }
   }, true);
