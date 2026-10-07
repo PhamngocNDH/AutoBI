@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.57
+// @name         AutoBI Core V17.58
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.57
+// @version      17.58
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -2122,14 +2122,14 @@ window.__AutoBIRun67 = (function () {
                máy chưa có danh sách (mới cài) → chờ Sheet như trước. */
             const __fin = () => { if (cb) cb(); };
             const saved = GM_getValue(CONSTANTS.KEYS.CONFIG_LIST, []);
-            const st = DATA.groupCheckStart();
+            const st = DATA.groupCheckStart(true); /* V17.58: dùng lại lần kiểm vừa bắt đầu khi bấm chạy (cùng lượt) */
             if (Array.isArray(saved) && saved.length > 0) { setTimeout(__fin, 0); return; }
             st.fetchP.then(__fin, __fin);
-        }, groupCheckStart: () => {
+        }, groupCheckStart: (reuse) => {
             /* V17.53: tải Sheet nhóm hàng, so với danh sách đang dùng. Khác → lưu danh sách mới; nếu lượt đổ số đã dùng danh sách cũ thì chờ lượt đổ xong,
                lấy lại riêng Thi đua + Thi đua NV rồi vẽ lại báo cáo. Trong lúc kiểm: chụp ảnh / Lưu dữ liệu / Comment tự chờ (window.__AutoBIGroupWait). */
             const cur = window.__AutoBIGroupCheck;
-            if (cur && (cur.pending || Date.now() - (cur.t0 || 0) < 60000)) return cur; /* V17.57: vừa kiểm (≤ 60s, vd lúc bấm chạy) thì dùng lại, không tải Sheet lần 2 */
+            if (cur && (cur.pending || (reuse && Date.now() - (cur.t0 || 0) < 60000))) return cur; /* V17.58: chỉ lượt đang chạy (loadGroupList) dùng lại lần kiểm lúc bấm chạy; mỗi lần bấm chạy luôn kiểm mới */
             const __G = window.__AutoBIGroupList; const __note = t => { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note(t); } catch (_) { } };
             const before = GM_getValue(CONSTANTS.KEYS.CONFIG_LIST, []) || [];
             const st = window.__AutoBIGroupCheck = { pending: true, t0: Date.now(), usedOld: Array.isArray(before) && before.length > 0, changed: false, rerun: false };
