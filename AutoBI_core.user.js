@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.59
+// @name         AutoBI Core V17.64
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.59
+// @version      17.64
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -173,6 +173,18 @@ window.__AutoBIGroupList = (function () {
     if (Array.isArray(v)) return v;
     try { const a = JSON.parse(v); return Array.isArray(a) ? a : []; } catch (_) { return []; }
   }
+  /* V17.63: bản dự phòng danh sách nhóm hàng — máy mất danh sách (từng ra "0 nhóm", 07/10) thì khôi phục ngay, không đứng chờ Sheet */
+  const BK = 'autobi_cfglist_backup_v1';
+  function backup(list) { try { const ok = clean(list); if (ok.length) GM_setValue(BK, { at: Date.now(), list: ok }); } catch (_) { } }
+  function restore() {
+    try {
+      if (clean(read()).length) return null;
+      const b = GM_getValue(BK, null), ok = b && clean(b.list);
+      if (!ok || !ok.length) return null;
+      GM_setValue(KEY, ok);
+      return { n: ok.length, at: b.at };
+    } catch (_) { return null; }
+  }
   function heal() {
     const raw = read(), ok = clean(raw), bad = raw.length - ok.length;
     if (!bad) return 0;
@@ -180,7 +192,7 @@ window.__AutoBIGroupList = (function () {
     try { console.warn('[AutoBI] V17.9: bỏ ' + bad + ' nhóm hàng không hợp lệ trong danh sách đã lưu'); } catch (_) { }
     return bad;
   }
-  return { valid, clean, looksLikePage, read, heal, tier, tierCol, tierOf, tierCount };
+  return { backup, restore, valid, clean, looksLikePage, read, heal, tier, tierCol, tierOf, tierCount };
 })();
 try { window.__AutoBIGroupList.heal(); } catch (_) { }
 
@@ -2121,8 +2133,8 @@ window.__AutoBIRun67 = (function () {
             /* V17.53: danh sách nhóm hàng (Sheet "AutoBi HA" tab ThiDua). Máy đã có danh sách → dùng ngay để đổ số, kiểm Sheet chạy ngầm (DATA.groupCheckStart);
                máy chưa có danh sách (mới cài) → chờ Sheet như trước. */
             const __fin = () => { if (cb) cb(); };
-            const saved = GM_getValue(CONSTANTS.KEYS.CONFIG_LIST, []);
-            const st = DATA.groupCheckStart(true); /* V17.58: dùng lại lần kiểm vừa bắt đầu khi bấm chạy (cùng lượt) */
+            const st = DATA.groupCheckStart(true); /* V17.63: groupCheckStart khôi phục bản dự phòng trước khi đọc */
+            const saved = GM_getValue(CONSTANTS.KEYS.CONFIG_LIST, []); /* V17.58: dùng lại lần kiểm vừa bắt đầu khi bấm chạy (cùng lượt) */
             if (Array.isArray(saved) && saved.length > 0) { setTimeout(__fin, 0); return; }
             st.fetchP.then(__fin, __fin);
         }, groupCheckStart: (reuse) => {
@@ -2131,7 +2143,10 @@ window.__AutoBIRun67 = (function () {
             const cur = window.__AutoBIGroupCheck;
             if (cur && (cur.pending || (reuse && Date.now() - (cur.t0 || 0) < 60000))) return cur; /* V17.58: chỉ lượt đang chạy (loadGroupList) dùng lại lần kiểm lúc bấm chạy; mỗi lần bấm chạy luôn kiểm mới */
             const __G = window.__AutoBIGroupList; const __note = t => { try { const L = window.__AutoBILog5; if (L) (L.late || L.note)(t); } catch (_) { } }; /* V17.59: Sheet về sau khi phiên xong vẫn ghi vào nhật ký phiên đó */
+            const __rs = __G.restore && __G.restore(); /* V17.63 */
+            if (__rs) __note('⚠ Nhóm hàng: máy bị mất danh sách — đã khôi phục bản dự phòng (' + __rs.n + ' nhóm, lưu lúc ' + new Date(__rs.at).toLocaleString('vi-VN') + '), Sheet kiểm ngầm như thường');
             const before = GM_getValue(CONSTANTS.KEYS.CONFIG_LIST, []) || [];
+            if (__G.backup && Array.isArray(before) && before.length) __G.backup(before);
             const st = window.__AutoBIGroupCheck = { pending: true, t0: Date.now(), usedOld: Array.isArray(before) && before.length > 0, changed: false, rerun: false };
             const __sec = () => ((Date.now() - st.t0) / 1000).toFixed(1) + 's';
             const __parse = __txt => { const out = []; const lines = __txt.split('\n'); const __tc = __G.tierCol(UTILS.parseCSVLine((lines[0] || '').trim()));
@@ -2147,10 +2162,10 @@ window.__AutoBIRun67 = (function () {
                 B.forEach((g, k) => { const o = A.get(k); if (!o) add++; else if (sig(o) !== sig(g)) { if (o.tier !== g.tier) tier++; else other++; } }); A.forEach((g, k) => { if (!B.has(k)) rem++; });
                 const t = []; if (add) t.push('+' + add + ' nhóm'); if (rem) t.push('−' + rem + ' nhóm'); if (tier) t.push(tier + ' nhóm đổi loại'); if (other) t.push(other + ' nhóm đổi thông tin'); return t.join(', '); };
             const got = (list, via) => {
-                if (!list.length) { __note('Nhóm hàng: không tải được Sheet (' + via + ', ' + __sec() + ') — giữ danh sách đang có (' + __G.read().length + ' nhóm)'); return; }
+                if (!list.length) { const __n = __G.clean(__G.read()).length; __note(__n ? 'Nhóm hàng: không tải được Sheet (' + via + ', ' + __sec() + ') — giữ danh sách đang có (' + __n + ' nhóm)' : '⚠ Nhóm hàng: không tải được Sheet (' + via + ', ' + __sec() + ') và máy CHƯA có danh sách nhóm — số Thi đua có thể thiếu nhóm, bấm chạy lại cho đủ'); return; }
                 const n = __G.tierCount(list), head = 'Nhóm hàng: ' + list.length + ' nhóm — chính ' + n.chinh + ' · phụ ' + n.phu + (n.none ? ' · chưa phân loại ' + n.none : '');
                 const same = st.usedOld && JSON.stringify(before.map(sig).sort()) === JSON.stringify(list.map(sig).sort());
-                GM_setValue(CONSTANTS.KEYS.CONFIG_LIST, list); GM_setValue('autobi_cfglist_at', Date.now());
+                GM_setValue(CONSTANTS.KEYS.CONFIG_LIST, list); GM_setValue('autobi_cfglist_at', Date.now()); if (__G.backup) __G.backup(list); /* V17.63 */
                 if (!st.usedOld) { __note(head + ' · tải ' + via + ' ' + __sec()); return; }
                 if (same) { __note(head + ' · Sheet khớp danh sách đang dùng (' + via + ' ' + __sec() + ')'); return; }
                 st.changed = true; st.diff = diffOf(before, list);
@@ -2696,7 +2711,7 @@ window.__AutoBIRun67 = (function () {
         } const _0x29b045 = new Date(); const _0x564a36 = _0x29b045.getMonth() + 1; const _0x4c4ee8 = _0x29b045.getFullYear(); let _0x441708 = '<option value="current" selected>\u26A1 Th\u00E1ng hi\u1EC7n t\u1EA1i (T\u1EF1 \u0111\u1ED9ng)</option>'; for (let _0x28fecb = _0x564a36 - 1; _0x28fecb >= 1; _0x28fecb--) {
             const _0x3bcd6b = String(_0x28fecb).padStart(2, '0');
             _0x441708 += '<option value="' + _0x3bcd6b + '/' + _0x4c4ee8 + '">\uD83D\uDCC5 Th\u00E1ng ' + _0x3bcd6b + '/' + _0x4c4ee8 + '</option>';
-        } _0x2aa6dd.innerHTML = '\n                <div class="tgdd-select-content" style="padding:0; overflow:hidden;">\n                    <div style="display:flex; background:#f4f6f8; border-bottom:1px solid #e2e8f0;">\n                        <div id="md-tab-auto" style="flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; background:#fff; color:#007bff; border-bottom:3px solid #007bff;">\uD83E\uDD16 CH\u1EA0Y B\u00C1O C\u00C1O</div>\n                        <div id="md-tab-excel" style="flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; color:#64748b; border-bottom:3px solid transparent;">\uD83D\uDCCA NH\u1EACP EXCEL</div>\n                    </div>\n\n                    <!-- M\u1EB6T 1: CH\u1EA0Y B\u00C1O C\u00C1O AUTO -->\n                    <div id="md-view-auto" style="padding:20px; display:block;">\n\n                        <!-- DROPDOWN CH\u1ECCN TH\u00C1NG B\u00C1O C\u00C1O -->\n                        \n\n                        <div class="tgdd-chk-group" id="grp-chk-all" style="background: #e6f2ff; border-color: #b8daff; transition: opacity 0.2s;">\n                            <input type="checkbox" id="chk-all-save">\n                            <label for="chk-all-save" style="color: #0056b3; font-weight: 900;">\uD83D\uDD25 B\u00E1o c\u00E1o ALL & L\u01B0u Data</label>\n                        </div>\n                        <div class="tgdd-chk-group">\n                            <input type="checkbox" id="chk-rev-thidua" checked>\n                            <label for="chk-rev-thidua" style="font-weight:bold; color:#007bff;">\uD83D\uDCC8 B\u00E1o c\u00E1o L\u0169y K\u1EBF</label>\n                        </div>\n                        <div class="tgdd-chk-group" id="grp-chk-fast-realtime" style="background:#fff7ed; border-color:#fdba74;">\n                            <input type="checkbox" id="chk-fast-realtime">\n                            <label for="chk-fast-realtime" style="font-weight:900; color:#ea580c;">\u26A1 B\u00E1o c\u00E1o Realtime</label>\n                        </div>\n                        <div class="tgdd-chk-group">\n                            <input type="checkbox" id="chk-crm">\n                            <label for="chk-crm" style="font-weight:bold;">\uD83C\uDF1F B\u00E1o c\u00E1o Ph\u1EE5c v\u1EE5 (CRM)</label>\n                        </div>\n\n                        <!-- \u26A1 T\u00D9Y CH\u1ECCN M\u1EDAI: XEM B\u00C1O C\u00C1O G\u1EA6N NH\u1EA4T -->\n                        <div class="tgdd-chk-group" id="grp-chk-last-run" style="background: #f0fdf4; border-color: #bbf7d0;">\n                            <input type="checkbox" id="chk-last-run">\n                            <label for="chk-last-run" style="color: #15803d; font-weight: 900;">\u26A1 Xem b\u00E1o c\u00E1o g\u1EA7n nh\u1EA5t</label>\n                        </div>\n\n                        ' + _0x469bec + '\n\n                        <div class="tgdd-select-btn-row">\n                            <button class="tgdd-btn-cancel btn-close-modal">\u0110\u00F3ng</button>\n                            <button class="tgdd-btn-run" id="btn-sel-run">B\u1EAFt \u0110\u1EA7u Ch\u1EA1y</button>\n                        </div>\n                    </div>\n\n                    <!-- M\u1EB6T 2: N\u1EA0P FILE EXCEL -->\n                    <div id="md-view-excel" style="padding:20px; display:none; background:#fafafa;">\n                        <div style="border: 2px dashed #3b82f6; padding: 15px; border-radius: 8px; margin-bottom: 10px; background: #eff6ff; text-align:center; position:relative;">\n                            <input type="file" id="md-file-now" accept=".xlsx, .xls, .csv" style="opacity:0; position:absolute; top:0; left:0; width:100%; height:100%; cursor:pointer;">\n                            <div style="font-size:24px; margin-bottom:5px;">\uD83D\uDCC8</div>\n                            <div style="font-weight:bold; color:#3b82f6; font-size:13px;">File Th\u00E1ng N\u00C0Y</div>\n                            <div id="md-name-now" style="font-size:11px; color:#10b981; margin-top:5px; font-weight:bold;">Ch\u01B0a ch\u1ECDn file</div>\n                        </div>\n\n                        <div style="border: 2px dashed #8b5cf6; padding: 15px; border-radius: 8px; margin-bottom: 15px; background: #f5f3ff; text-align:center; position:relative;">\n                            <input type="file" id="md-file-prev" accept=".xlsx, .xls, .csv" style="opacity:0; position:absolute; top:0; left:0; width:100%; height:100%; cursor:pointer;">\n                            <div style="font-size:24px; margin-bottom:5px;">\uD83D\uDCC9</div>\n                            <div style="font-weight:bold; color:#8b5cf6; font-size:13px;">File Th\u00E1ng TR\u01AF\u1EDAC</div>\n                            <div id="md-name-prev" style="font-size:11px; color:#10b981; margin-top:5px; font-weight:bold;">Ch\u01B0a ch\u1ECDn file</div>\n                        </div>\n\n                        <div class="tgdd-select-btn-row">\n                            <button class="tgdd-btn-cancel btn-close-modal">\u0110\u00F3ng</button>\n                            <button id="btn-fast-process" style="flex:1; padding:10px; border:none; background:linear-gradient(135deg, #10b981, #059669); color:white; font-weight:bold; border-radius:8px; cursor:pointer;">XEM B\u00C1O C\u00C1O</button>\n                        </div>\n                    </div>\n                </div>\n            '; const _0x25cc35 = document.getElementById('md-tab-auto'); const _0x5ed9ef = document.getElementById('md-tab-excel'); const _0x24403d = document.getElementById('md-view-auto'); const _0x17bf9d = document.getElementById('md-view-excel'); _0x25cc35.onclick = () => { _0x25cc35.style.cssText = 'flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; background:#fff; color:#007bff; border-bottom:3px solid #007bff;'; _0x5ed9ef.style.cssText = 'flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; color:#64748b; border-bottom:3px solid transparent;'; _0x24403d.style.display = 'block'; _0x17bf9d.style.display = 'none'; }; _0x5ed9ef.onclick = () => { _0x5ed9ef.style.cssText = 'flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; background:#fff; color:#007bff; border-bottom:3px solid #007bff;'; _0x25cc35.style.cssText = 'flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; color:#64748b; border-bottom:3px solid transparent;'; _0x17bf9d.style.display = 'block'; _0x24403d.style.display = 'none'; }; const _0x30405e = document.getElementById('chk-all-save'); const _0x124e5b = document.getElementById('grp-chk-all'); const _0xa371d7 = document.getElementById('chk-rev-thidua'); const _0x5d0357 = document.getElementById('chk-crm'); const _0x30f0b0 = document.getElementById('chk-last-run'); const _0xfast43 = document.getElementById('chk-fast-realtime'); const _0x863a4 = document.getElementById('chk-test'); const _0x43d320 = document.getElementById('sel-report-month'); if (_0x43d320) {
+        } _0x2aa6dd.innerHTML = '\n                <div class="tgdd-select-content" style="padding:0; overflow:hidden;">\n                    <div style="display:none; background:#f4f6f8; border-bottom:1px solid #e2e8f0;"><!-- V17.61: bỏ thẻ NHẬP EXCEL (So sánh RP CK) — So sánh BI CK lấy thẳng BI -->\n                        <div id="md-tab-auto" style="flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; background:#fff; color:#007bff; border-bottom:3px solid #007bff;">\uD83E\uDD16 CH\u1EA0Y B\u00C1O C\u00C1O</div>\n                        <div id="md-tab-excel" style="flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; color:#64748b; border-bottom:3px solid transparent;">\uD83D\uDCCA NH\u1EACP EXCEL</div>\n                    </div>\n\n                    <!-- M\u1EB6T 1: CH\u1EA0Y B\u00C1O C\u00C1O AUTO -->\n                    <div id="md-view-auto" style="padding:20px; display:block;">\n\n                        <!-- DROPDOWN CH\u1ECCN TH\u00C1NG B\u00C1O C\u00C1O -->\n                        \n\n                        <div class="tgdd-chk-group" id="grp-chk-all" style="background: #e6f2ff; border-color: #b8daff; transition: opacity 0.2s;">\n                            <input type="checkbox" id="chk-all-save">\n                            <label for="chk-all-save" style="color: #0056b3; font-weight: 900;">\uD83D\uDD25 B\u00E1o c\u00E1o ALL & L\u01B0u Data</label>\n                        </div>\n                        <div class="tgdd-chk-group">\n                            <input type="checkbox" id="chk-rev-thidua" checked>\n                            <label for="chk-rev-thidua" style="font-weight:bold; color:#007bff;">\uD83D\uDCC8 B\u00E1o c\u00E1o L\u0169y K\u1EBF</label>\n                        </div>\n                        <div class="tgdd-chk-group" id="grp-chk-fast-realtime" style="background:#fff7ed; border-color:#fdba74;">\n                            <input type="checkbox" id="chk-fast-realtime">\n                            <label for="chk-fast-realtime" style="font-weight:900; color:#ea580c;">\u26A1 B\u00E1o c\u00E1o Realtime</label>\n                        </div>\n                        <div class="tgdd-chk-group">\n                            <input type="checkbox" id="chk-crm">\n                            <label for="chk-crm" style="font-weight:bold;">\uD83C\uDF1F B\u00E1o c\u00E1o Ph\u1EE5c v\u1EE5 (CRM)</label>\n                        </div>\n\n                        <!-- \u26A1 T\u00D9Y CH\u1ECCN M\u1EDAI: XEM B\u00C1O C\u00C1O G\u1EA6N NH\u1EA4T -->\n                        <div class="tgdd-chk-group" id="grp-chk-last-run" style="background: #f0fdf4; border-color: #bbf7d0;">\n                            <input type="checkbox" id="chk-last-run">\n                            <label for="chk-last-run" style="color: #15803d; font-weight: 900;">\u26A1 Xem b\u00E1o c\u00E1o g\u1EA7n nh\u1EA5t</label>\n                        </div>\n\n                        ' + _0x469bec + '\n\n                        <div class="tgdd-select-btn-row">\n                            <button class="tgdd-btn-cancel btn-close-modal">\u0110\u00F3ng</button>\n                            <button class="tgdd-btn-run" id="btn-sel-run">B\u1EAFt \u0110\u1EA7u Ch\u1EA1y</button>\n                        </div>\n                    </div>\n\n                    <!-- M\u1EB6T 2: N\u1EA0P FILE EXCEL -->\n                    <div id="md-view-excel" style="padding:20px; display:none; background:#fafafa;">\n                        <div style="border: 2px dashed #3b82f6; padding: 15px; border-radius: 8px; margin-bottom: 10px; background: #eff6ff; text-align:center; position:relative;">\n                            <input type="file" id="md-file-now" accept=".xlsx, .xls, .csv" style="opacity:0; position:absolute; top:0; left:0; width:100%; height:100%; cursor:pointer;">\n                            <div style="font-size:24px; margin-bottom:5px;">\uD83D\uDCC8</div>\n                            <div style="font-weight:bold; color:#3b82f6; font-size:13px;">File Th\u00E1ng N\u00C0Y</div>\n                            <div id="md-name-now" style="font-size:11px; color:#10b981; margin-top:5px; font-weight:bold;">Ch\u01B0a ch\u1ECDn file</div>\n                        </div>\n\n                        <div style="border: 2px dashed #8b5cf6; padding: 15px; border-radius: 8px; margin-bottom: 15px; background: #f5f3ff; text-align:center; position:relative;">\n                            <input type="file" id="md-file-prev" accept=".xlsx, .xls, .csv" style="opacity:0; position:absolute; top:0; left:0; width:100%; height:100%; cursor:pointer;">\n                            <div style="font-size:24px; margin-bottom:5px;">\uD83D\uDCC9</div>\n                            <div style="font-weight:bold; color:#8b5cf6; font-size:13px;">File Th\u00E1ng TR\u01AF\u1EDAC</div>\n                            <div id="md-name-prev" style="font-size:11px; color:#10b981; margin-top:5px; font-weight:bold;">Ch\u01B0a ch\u1ECDn file</div>\n                        </div>\n\n                        <div class="tgdd-select-btn-row">\n                            <button class="tgdd-btn-cancel btn-close-modal">\u0110\u00F3ng</button>\n                            <button id="btn-fast-process" style="flex:1; padding:10px; border:none; background:linear-gradient(135deg, #10b981, #059669); color:white; font-weight:bold; border-radius:8px; cursor:pointer;">XEM B\u00C1O C\u00C1O</button>\n                        </div>\n                    </div>\n                </div>\n            '; const _0x25cc35 = document.getElementById('md-tab-auto'); const _0x5ed9ef = document.getElementById('md-tab-excel'); const _0x24403d = document.getElementById('md-view-auto'); const _0x17bf9d = document.getElementById('md-view-excel'); _0x25cc35.onclick = () => { _0x25cc35.style.cssText = 'flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; background:#fff; color:#007bff; border-bottom:3px solid #007bff;'; _0x5ed9ef.style.cssText = 'flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; color:#64748b; border-bottom:3px solid transparent;'; _0x24403d.style.display = 'block'; _0x17bf9d.style.display = 'none'; }; _0x5ed9ef.onclick = () => { _0x5ed9ef.style.cssText = 'flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; background:#fff; color:#007bff; border-bottom:3px solid #007bff;'; _0x25cc35.style.cssText = 'flex:1; padding:15px 0; text-align:center; font-weight:900; font-size:14px; cursor:pointer; color:#64748b; border-bottom:3px solid transparent;'; _0x17bf9d.style.display = 'block'; _0x24403d.style.display = 'none'; }; const _0x30405e = document.getElementById('chk-all-save'); const _0x124e5b = document.getElementById('grp-chk-all'); const _0xa371d7 = document.getElementById('chk-rev-thidua'); const _0x5d0357 = document.getElementById('chk-crm'); const _0x30f0b0 = document.getElementById('chk-last-run'); const _0xfast43 = document.getElementById('chk-fast-realtime'); const _0x863a4 = document.getElementById('chk-test'); const _0x43d320 = document.getElementById('sel-report-month'); if (_0x43d320) {
             _0x43d320.onchange = _0x35e4fb => { const _0x1a178a = _0x35e4fb.target.value !== 'current'; if (_0x1a178a) {
                 _0x30405e.checked = false;
                 _0x30405e.disabled = true;
@@ -2803,7 +2818,7 @@ window.__AutoBIRun67 = (function () {
             UI.showToast('\uD83D\uDEE0 \u0110ang t\u1EA3i c\u1EA5u h\u00ECnh v\u00E0 kh\u1EDFi t\u1EA1o B\u00E1o c\u00E1o Test (Admin)...', 0);
             DATA.fetchConfigForModal(_0x5c6b90 => { UI.enterFocusMode(true); UI.showSuccessTick(() => { UI.hideToast(); UI.renderReport({}, _0x5c6b90, _0x91df0); }); });
             return;
-        } APP.startAutoProcess('one', _0x165e53, true); }; }, applyStaffTableVisibility: () => { const _0x486ceb = window.tgdd_staff_hidden_tables || []; const _0x286f79 = document.getElementById(CONSTANTS.DOM_IDS.CAPTURE_AREA); if (!_0x286f79)
+        } APP.startAutoProcess('one', _0x165e53, true); }; try { window.__AutoBIRunPick && window.__AutoBIRunPick.mount(_0x2aa6dd); } catch (_e64) { console.warn('[AutoBI] V17.64 khung chạy mới lỗi, dùng khung cũ', _e64); } /* V17.64: khung Chạy báo cáo kiểu mới (phương án A) — ô tick cũ ẩn đi, vẫn là nơi giữ lựa chọn */ }, applyStaffTableVisibility: () => { const _0x486ceb = window.tgdd_staff_hidden_tables || []; const _0x286f79 = document.getElementById(CONSTANTS.DOM_IDS.CAPTURE_AREA); if (!_0x286f79)
             return; const _0x121d7e = document.getElementById('tgdd-flex-wrapper'); const _0xc72e19 = document.getElementById('tgdd-podium-container'); const _0x4c409d = document.getElementById('tgdd-table-1'); const _0x27aa29 = document.getElementById('tgdd-table1-wrapper'); const _0x5d6cc2 = _0x486ceb.includes('1A'); const _0x31e31f = _0x486ceb.includes('1B'); const _0x312130 = false; /* V17.12: không còn bục (1C) */ if (_0x121d7e) {
             if (_0x5d6cc2) {
                 _0x121d7e.style.display = 'none';
@@ -4184,7 +4199,7 @@ window.__AutoBIRun67 = (function () {
         } let _0x592670 = ''; _0x133240.forEach(_0x31e83a => { _0x592670 += '<option value="' + _0x31e83a + '">' + _0x31e83a + '</option>'; }); const _0x339938 = window.tgdd_nlnv_date_range ? window.tgdd_nlnv_date_range.from : _0x133240[0]; const _0x137556 = window.tgdd_nlnv_date_range ? window.tgdd_nlnv_date_range.to : _0x133240[_0x133240.length - 1]; let _0x426169 = '\n                    <div style="text-align:left; font-weight:bold; color:#333; margin-bottom:15px;">\n                        <label>T\u1EEB ng\u00E0y:</label>\n                        <select id="sel-date-from" style="width:100%; padding:8px; border-radius:5px; border:1px solid #ccc; margin-top:5px; margin-bottom:10px;">\n                            ' + _0x592670 + '\n                        </select>\n                        <label>\u0110\u1EBFn ng\u00E0y:</label>\n                        <select id="sel-date-to" style="width:100%; padding:8px; border-radius:5px; border:1px solid #ccc; margin-top:5px;">\n                            ' + _0x592670 + '\n                        </select>\n                        <button id="btn-clear-time-filter" style="margin-top:15px; width:100%; padding:8px; background:#f8f9fa; border:1px solid #ccc; border-radius:5px; cursor:pointer; font-weight:bold; color:#d63031;">Hi\u1EC3n th\u1ECB To\u00E0n b\u1ED9 th\u00E1ng</button>\n                        <button id="btn-save-time-filter" class="tgdd-msg-btn" style="margin-top:10px; width:100%; background:#007bff;">\u00C1p d\u1EE5ng b\u1ED9 l\u1ECDc</button>\n                    </div>\n                '; _0x426169 += '<style>#tgdd-modal-btn-close { display: none !important; }</style>'; UI.showMsg('L\u1ECCC TH\u1EDCI GIAN', _0x426169, 'info'); setTimeout(() => { document.getElementById('sel-date-from').value = _0x339938; document.getElementById('sel-date-to').value = _0x137556; document.getElementById('btn-clear-time-filter').onclick = () => { window.tgdd_nlnv_date_range = null; document.getElementById(CONSTANTS.DOM_IDS.MSG_MODAL).style.display = 'none'; document.body.classList.remove('tgdd-body-lock'); _0x5d2d05(); }; document.getElementById('btn-save-time-filter').onclick = () => { const _0x1fcd1e = document.getElementById('sel-date-from').value; const _0x46f277 = document.getElementById('sel-date-to').value; const _0xd02de3 = parseInt(_0x1fcd1e.split('/')[0]); const _0x4fad06 = parseInt(_0x46f277.split('/')[0]); if (_0xd02de3 > _0x4fad06) {
             alert('L\u1ED7i: \'T\u1EEB ng\u00E0y\' kh\u00F4ng \u0111\u01B0\u1EE3c l\u1EDBn h\u01A1n \'\u0110\u1EBFn ng\u00E0y\'!');
             return;
-        } window.tgdd_nlnv_date_range = { from: _0x1fcd1e, to: _0x46f277 }; document.getElementById(CONSTANTS.DOM_IDS.MSG_MODAL).style.display = 'none'; document.body.classList.remove('tgdd-body-lock'); _0x5d2d05(); }; }, 200); }; const _0x598bb9 = document.createElement('div'); _0x598bb9.id = CONSTANTS.DOM_IDS.SCROLL_WRAPPER; const _0x2ad4ca = document.createElement('div'); _0x2ad4ca.id = CONSTANTS.DOM_IDS.CAPTURE_AREA; _0x598bb9.appendChild(_0x2ad4ca); document.body.appendChild(_0x598bb9); const _0x119aa7 = document.createElement('div'); _0x119aa7.id = CONSTANTS.DOM_IDS.REPORT_NAV; _0x119aa7.className = 'slide-hidden'; const _0x5aef00 = typeof GM_info !== 'undefined' && GM_info.script ? GM_info.script.name : 'Auto BI'; const _0x2e44ea = document.createElement('div'); _0x2e44ea.id = 'tgdd-sidebar-menu'; const _0x33f6de = '<svg viewBox="0 0 24 24"><path d="M12 3v9.28a4.39 4.39 0 0 0-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/></svg>'; const _0x1852d1 = '<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>'; _0x2e44ea.innerHTML = '\n                <div class="sidebar-header">\n                    <div class="sidebar-title">\uD83E\uDD16 ' + _0x5aef00 + '</div>\n                    <button class="sidebar-close" id="btn-close-sidebar">\u2715</button>\n                </div>\n\n                <div class="sidebar-view-wrapper">\n                    <!-- PANEL 1: MENU G\u1ED0C -->\n                    <div id="panel-menu" class="sidebar-panel">\n                        <div class="sidebar-content">\n                            <div class="tgdd-menu-item" id="btn-menu-comment">' + _0x5bfe13.comment + ' Auto Comment</div>\n                            <div class="tgdd-menu-item" id="btn-menu-deploy">' + _0x5bfe13.line + ' G\u1EEDi Line</div>\n                            <div class="tgdd-menu-item" id="btn-menu-cam">' + _0x5bfe13.cam + ' Ch\u1EE5p \u1EA3nh</div>\n                            <div class="tgdd-menu-item" id="btn-menu-tools">' + _0x5bfe13.tools + ' Ti\u1EC7n \u00EDch</div>\n                            <div class="tgdd-menu-item" id="btn-menu-plan" style="color:#e84393; font-weight:900;">' + _0x5bfe13.plan + ' K\u1EBF ho\u1EA1ch truy\u1EC1n th\u00F4ng</div>\n                                                        <div class="tgdd-menu-item" id="btn-menu-history" style="color:#e67e22;">' + _0x5bfe13.history + ' Xem l\u1EA1i l\u1ECBch s\u1EED</div>\n                            <div class="tgdd-menu-item" id="btn-menu-save-data" style="color:#007bff;">' + _0x5bfe13.save + ' L\u01B0u b\u00E1o c\u00E1o</div>\n                        </div>\n\n                        <div class="sidebar-footer">\n                            <div class="tgdd-menu-item" id="btn-menu-rerun" style="color: #d63031; font-weight:900;">' + _0x5bfe13.rerun + ' Ch\u1EA1y l\u1EA1i b\u00E1o c\u00E1o</div>\n                        </div>\n                    </div>\n                </div>\n            '; const _0x6bfd3c = document.createElement('div'); _0x6bfd3c.id = 'tgdd-sidebar-overlay'; document.body.appendChild(_0x6bfd3c); document.body.appendChild(_0x2e44ea); _0x119aa7.innerHTML = '\n                <!-- N\u00FAt Menu C\u1ED1 \u0110\u1ECBnh -->\n                <div id="btn-menu">\n                    ' + _0x5bfe13.menu + '<span>Menu</span>\n                </div>\n\n                <!-- V\u00F9ng Tr\u01B0\u1EE3t Ngang Ch\u1EE9a C\u00E1c Tab -->\n                <div class="rpt-nav-scroll-area">\n                    <div class="rpt-nav-item" data-tab="dashboard">' + _0x5bfe13.dashboard + '<span>Dashboard</span></div>\n                    <div class="rpt-nav-item active" data-tab="health">' + (_0x5bfe13.health || '\u2764\uFE0F') + '<span>S\u1EE9c kh\u1ECFe ST</span></div>\n                    <div class="rpt-nav-item active" data-tab="oneshop">' + _0x5bfe13.one + '<span>Realtime V1</span></div>\n                    <div class="rpt-nav-item" data-tab="rt2">' + _0x5bfe13.rt3 + '<span>Realtime V2</span></div>\n                    <div class="rpt-nav-item" data-tab="rt4">' + _0x5bfe13.rt4 + '<span>Realtime V3</span></div>\n                    <div class="rpt-nav-item" data-tab="lknew">' + _0x5bfe13.plan + '<span>LK NEW</span></div>\n                    <div class="rpt-nav-item" data-tab="multirt">' + _0x5bfe13.rt + '<span>Multi RT</span></div>\n                    <div class="rpt-nav-item" data-tab="multilk">' + _0x5bfe13.lk + '<span>Multi LK</span></div>\n                    <div class="rpt-nav-item" data-tab="bcstaff">' + _0x5bfe13.staff + '<span>Chi ti\u1EBFt NV</span></div>\n                    <div class="rpt-nav-item" data-tab="nlnv">' + _0x5bfe13.person + '<span>N\u0103ng l\u1EF1c NV</span></div>\n                    <div class="rpt-nav-item" data-tab="nkbh">' + _0x5bfe13.list + '<span>NK B\u00E1n h\u00E0ng</span></div>\n                    <div class="rpt-nav-item" data-tab="compare_week">' + (_0x5bfe13.compare || '\uD83D\uDCC8') + '<span>So s\u00E1nh tu\u1EA7n</span></div>\n                    <div class="rpt-nav-item" data-tab="compare">' + (_0x5bfe13.compare || '\uD83D\uDCC8') + '<span>So s\u00E1nh BI CK</span></div>\n                    <div class="rpt-nav-item" data-tab="comparerp">' + _0x5bfe13.comparerp + '<span>So s\u00E1nh RP CK</span></div>\n                    <div class="rpt-nav-item" data-tab="revenue">' + _0x5bfe13.chart + '<span>Chart Doanh thu</span></div>\n                    <div class="rpt-nav-item" data-tab="service">' + _0x5bfe13.donate + '<span>Chart Ph\u1EE5c v\u1EE5</span></div>\n                </div>\n            '; document.body.appendChild(_0x119aa7); if (!document.getElementById('btn-toggle-report-nav')) {
+        } window.tgdd_nlnv_date_range = { from: _0x1fcd1e, to: _0x46f277 }; document.getElementById(CONSTANTS.DOM_IDS.MSG_MODAL).style.display = 'none'; document.body.classList.remove('tgdd-body-lock'); _0x5d2d05(); }; }, 200); }; const _0x598bb9 = document.createElement('div'); _0x598bb9.id = CONSTANTS.DOM_IDS.SCROLL_WRAPPER; const _0x2ad4ca = document.createElement('div'); _0x2ad4ca.id = CONSTANTS.DOM_IDS.CAPTURE_AREA; _0x598bb9.appendChild(_0x2ad4ca); document.body.appendChild(_0x598bb9); const _0x119aa7 = document.createElement('div'); _0x119aa7.id = CONSTANTS.DOM_IDS.REPORT_NAV; _0x119aa7.className = 'slide-hidden'; const _0x5aef00 = typeof GM_info !== 'undefined' && GM_info.script ? GM_info.script.name : 'Auto BI'; const _0x2e44ea = document.createElement('div'); _0x2e44ea.id = 'tgdd-sidebar-menu'; const _0x33f6de = '<svg viewBox="0 0 24 24"><path d="M12 3v9.28a4.39 4.39 0 0 0-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/></svg>'; const _0x1852d1 = '<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>'; _0x2e44ea.innerHTML = '\n                <div class="sidebar-header">\n                    <div class="sidebar-title">\uD83E\uDD16 ' + _0x5aef00 + '</div>\n                    <button class="sidebar-close" id="btn-close-sidebar">\u2715</button>\n                </div>\n\n                <div class="sidebar-view-wrapper">\n                    <!-- PANEL 1: MENU G\u1ED0C -->\n                    <div id="panel-menu" class="sidebar-panel">\n                        <div class="sidebar-content">\n                            <div class="tgdd-menu-item" id="btn-menu-comment">' + _0x5bfe13.comment + ' Auto Comment</div>\n                            <div class="tgdd-menu-item" id="btn-menu-deploy">' + _0x5bfe13.line + ' G\u1EEDi Line</div>\n                            <div class="tgdd-menu-item" id="btn-menu-cam">' + _0x5bfe13.cam + ' Ch\u1EE5p \u1EA3nh</div>\n                            <div class="tgdd-menu-item" id="btn-menu-tools">' + _0x5bfe13.tools + ' Ti\u1EC7n \u00EDch</div>\n                            <div class="tgdd-menu-item" id="btn-menu-plan" style="color:#e84393; font-weight:900;">' + _0x5bfe13.plan + ' K\u1EBF ho\u1EA1ch truy\u1EC1n th\u00F4ng</div>\n                                                        <div class="tgdd-menu-item" id="btn-menu-history" style="color:#e67e22;">' + _0x5bfe13.history + ' Xem l\u1EA1i l\u1ECBch s\u1EED</div>\n                            <div class="tgdd-menu-item" id="btn-menu-save-data" style="color:#007bff;">' + _0x5bfe13.save + ' L\u01B0u b\u00E1o c\u00E1o</div>\n                        </div>\n\n                        <div class="sidebar-footer">\n                            <div class="tgdd-menu-item" id="btn-menu-rerun" style="color: #d63031; font-weight:900;">' + _0x5bfe13.rerun + ' Ch\u1EA1y l\u1EA1i b\u00E1o c\u00E1o</div>\n                        </div>\n                    </div>\n                </div>\n            '; const _0x6bfd3c = document.createElement('div'); _0x6bfd3c.id = 'tgdd-sidebar-overlay'; document.body.appendChild(_0x6bfd3c); document.body.appendChild(_0x2e44ea); _0x119aa7.innerHTML = '\n                <!-- N\u00FAt Menu C\u1ED1 \u0110\u1ECBnh -->\n                <div id="btn-menu">\n                    ' + _0x5bfe13.menu + '<span>Menu</span>\n                </div>\n\n                <!-- V\u00F9ng Tr\u01B0\u1EE3t Ngang Ch\u1EE9a C\u00E1c Tab -->\n                <div class="rpt-nav-scroll-area">\n                    <div class="rpt-nav-item" data-tab="dashboard">' + _0x5bfe13.dashboard + '<span>Dashboard</span></div>\n                    <div class="rpt-nav-item active" data-tab="health">' + (_0x5bfe13.health || '\u2764\uFE0F') + '<span>S\u1EE9c kh\u1ECFe ST</span></div>\n                    <div class="rpt-nav-item active" data-tab="oneshop">' + _0x5bfe13.one + '<span>Realtime V1</span></div>\n                    <div class="rpt-nav-item" data-tab="rt2">' + _0x5bfe13.rt3 + '<span>Realtime V2</span></div>\n                    <div class="rpt-nav-item" data-tab="rt4">' + _0x5bfe13.rt4 + '<span>Realtime V3</span></div>\n                    <div class="rpt-nav-item" data-tab="lknew">' + _0x5bfe13.plan + '<span>LK NEW</span></div>\n                    <div class="rpt-nav-item" data-tab="multirt">' + _0x5bfe13.rt + '<span>Multi RT</span></div>\n                    <div class="rpt-nav-item" data-tab="multilk">' + _0x5bfe13.lk + '<span>Multi LK</span></div>\n                    <div class="rpt-nav-item" data-tab="bcstaff">' + _0x5bfe13.staff + '<span>Chi ti\u1EBFt NV</span></div>\n                    <div class="rpt-nav-item" data-tab="nlnv">' + _0x5bfe13.person + '<span>N\u0103ng l\u1EF1c NV</span></div>\n                    <div class="rpt-nav-item" data-tab="nkbh">' + _0x5bfe13.list + '<span>NK B\u00E1n h\u00E0ng</span></div>\n                    <div class="rpt-nav-item" data-tab="compare_week">' + (_0x5bfe13.compare || '\uD83D\uDCC8') + '<span>So s\u00E1nh tu\u1EA7n</span></div>\n                    <div class="rpt-nav-item" data-tab="compare">' + (_0x5bfe13.compare || '\uD83D\uDCC8') + '<span>So s\u00E1nh BI CK</span></div>\n                    <div class="rpt-nav-item" data-tab="revenue">' + _0x5bfe13.chart + '<span>Chart Doanh thu</span></div>\n                    <div class="rpt-nav-item" data-tab="service">' + _0x5bfe13.donate + '<span>Chart Ph\u1EE5c v\u1EE5</span></div>\n                </div>\n            '; document.body.appendChild(_0x119aa7); if (!document.getElementById('btn-toggle-report-nav')) {
             const _0x57e656 = document.createElement('div');
             _0x57e656.className = 'nav-toggle-btn';
             _0x57e656.id = 'btn-toggle-report-nav';
@@ -4383,7 +4398,7 @@ window.__AutoBIRun67 = (function () {
         } const _0x3d2df6 = document.getElementById('tgdd-cb-remaining'); if (_0x3d2df6) {
             _0x3d2df6.checked = !!window.tgdd_show_remaining_cols;
             _0x3d2df6.onchange = _0x41574b => { window.tgdd_show_remaining_cols = _0x41574b.target.checked; _0x5d2d05(); };
-        } if (['compare_week', 'compare', 'revenue', 'service'].includes(_0x450ffb)) {
+        } if (['compare_week', 'revenue', 'service'].includes(_0x450ffb)) { /* V17.60: So sánh BI CK lấy thẳng BI, không chờ Sheet */
             if (!window.tgdd_history_cache) {
                 _0x2ad4ca.innerHTML = '\n                            <div style="text-align:center; padding:50px; font-weight:bold; color:#007bff; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:15px; min-height:250px;">\n                                <div class="neon-loader-container" style="position:relative; height:50px; width:50px;">\n                                    <div class="neon-ring" style="width:40px; height:40px; border-top-color:#007bff;"></div>\n                                </div>\n                                <div style="font-size: 14px; font-weight: 800; letter-spacing: 0.5px;">\uD83D\uDE80 \u0110ang k\u1EBFt n\u1ED1i v\u00E0 t\u1EA3i d\u1EEF li\u1EC7u l\u1ECBch s\u1EED t\u1EEB Cloud...</div>\n                            </div>';
                 DATA.fetchHistoryFromSheet(_0x13b9c3, _0x134061 => { window.tgdd_history_cache = _0x134061 || {}; _0x5d2d05(); });
@@ -4511,24 +4526,8 @@ window.__AutoBIRun67 = (function () {
                 _0x329bab = UI.HTML.getEmployeeReport(_0x3aa5c8, _0x37b477, _0x13b9c3, _0x37589a, _0x4df754, _0x19aafa);
             }
             else if (_0x450ffb === 'compare') {
-                if (window.tgdd_history_cache) {
-                    const _0x57e8f2 = new Date();
-                    const _0x20b4bc = String(_0x57e8f2.getMonth() + 1).padStart(2, '0');
-                    const _0x14e14f = String(_0x57e8f2.getFullYear());
-                    const _0x44b00b = Object.keys(window.tgdd_history_cache || {}).filter(_0x319985 => _0x319985.endsWith('/' + _0x20b4bc + '/' + _0x14e14f)).sort((_0x2b6b1a, _0xd21b1b) => parseInt(_0x2b6b1a.split('/')[0]) - parseInt(_0xd21b1b.split('/')[0]));
-                    if (_0x44b00b.length > 0) {
-                        if (!window.tgdd_compare_selected_date)
-                            window.tgdd_compare_selected_date = _0x44b00b[_0x44b00b.length - 1];
-                        let _0x7a4196 = '';
-                        _0x44b00b.forEach(_0x404ead => { _0x7a4196 += '<option value="' + _0x404ead + '" ' + (_0x404ead === window.tgdd_compare_selected_date ? 'selected' : '') + '>Ng\u00E0y: ' + _0x404ead + '</option>'; });
-                        _0x4e8dc7.innerHTML = _0x7a4196;
-                        _0x4e8dc7.onchange = _0x5266a2 => { window.tgdd_compare_selected_date = _0x5266a2.target.value; _0x5d2d05(); };
-                        _0x329bab = UI.HTML.getCompareReport(window.tgdd_history_cache, _0x13b9c3, _0x37589a, window.tgdd_compare_selected_date);
-                    }
-                    else {
-                        _0x329bab = '<div style="text-align:center; padding: 50px; font-weight:bold; color:red;">Ch\u01B0a c\u00F3 d\u1EEF li\u1EC7u l\u1ECBch s\u1EED trong th\u00E1ng!</div>';
-                    }
-                }
+                /* V17.60: So sánh BI CK theo cây Ngành hàng BI mới, gọi thẳng BI 2 kỳ (module __AutoBICmpBI cuối file) — không dùng Sheet */
+                _0x329bab = window.__AutoBICmpBI ? window.__AutoBICmpBI.html(_0x13b9c3, _0x37589a, _0x4e8dc7, _0x5d2d05) : '<div style="padding:30px;color:red;font-weight:bold;text-align:center">Thiếu module So sánh BI CK</div>';
             }
             else if (_0x450ffb === 'nlnv') {
                 if (_0x37589a === 'daily') {
@@ -5525,7 +5524,7 @@ window.__AutoBIRun67 = (function () {
                     window.rpck_year_prev = _0x26937e.year;
                     const _0x218f50 = Math.max(_0x4e6c28.maxDay, _0x26937e.maxDay);
                     window.rpck_current_selected_day = _0x218f50;
-                    document.querySelector('.rpt-nav-item[data-tab="comparerp"]').click();
+                    (document.querySelector('.rpt-nav-item[data-tab="comparerp"]') || { click() { } }).click();
                     UI.showToast('\u2705 X\u1EED l\u00FD d\u1EEF li\u1EC7u th\u00E0nh c\u00F4ng!');
                     if (!UTILS.isMobile())
                         UI.autoFitContent();
@@ -8578,21 +8577,41 @@ window.__AutoBIBiTarget99 = (function () {
     const data = b.matched.map((s, i) => [s.key, healthFrom(lists[i])]).filter(x => x[1]);
     if (!data.length) throw new Error('API không trả Ngành hàng BI');
     const total = healthFrom(sumHealthRows(lists));
-    /* V17.16: cùng kỳ tháng trước (từ ngày 1 đến cùng ngày của tháng trước) cho mục So sánh BI CK khi lịch sử Sheet không có bản lưu tháng trước */
-    let prev = null;
-    try {
-      const to = b.cum.to, y = Math.floor(to / 10000), m = Math.floor(to / 100) % 100, d = to % 100;
-      const py = m === 1 ? y - 1 : y, pm = m === 1 ? 12 : m - 1, pd = Math.min(d, new Date(Date.UTC(py, pm, 0)).getUTCDate());
-      const pFrom = py * 10000 + pm * 100 + 1, pTo = py * 10000 + pm * 100 + pd;
-      const pLists = await pall(b.matched, s => api('reports/revenue-consolidated-get', revBody(pFrom, pTo, 'STORE', s.storeId, 'BICAT')));
-      const pData = {}; b.matched.forEach((s, i) => { const v = healthFrom(pLists[i]); if (v) pData[s.key] = v; });
-      const pTotal = healthFrom(sumHealthRows(pLists)); if (pTotal) pData.total = pTotal;
-      const td = b.today % 100, tm = Math.floor(b.today / 100) % 100, ty = Math.floor(b.today / 10000);
-      const ppm = tm === 1 ? 12 : tm - 1, ppy = tm === 1 ? ty - 1 : ty;
-      if (Object.keys(pData).length) prev = { data: pData, key: String(td).padStart(2, '0') + '/' + String(ppm).padStart(2, '0') + '/' + ppy, from: pFrom, to: pTo };
-    } catch (e) { note('Ngành hàng BI tháng trước: ' + (e && e.message || e)); }
+    /* V17.60: bỏ lấy kèm cùng kỳ tháng trước lúc đổ số — tab So sánh BI CK tự gọi BI khi mở (compareHealth), đổ số bớt 1 lượt gọi mỗi shop */
+    const prev = null;
     writeCache(cache => { cache.link8_health = cache.link8_health || {}; data.forEach(([k, v]) => { cache.link8_health[k] = v; }); if (total) cache.link8_health.total = total; if (prev) { cache.link8_health_prev = prev.data; cache.__healthPrev = { key: prev.key, from: prev.from, to: prev.to }; } });
     return data.length;
+  }
+
+  /* V17.62: So sánh BI CK — Ngành hàng BI gọi thẳng BI. Đã thử trên BI thật (07/10/2026): BI chỉ trả số cho
+     (a) lũy kế tháng này 01 → ngày đã đổ số, (b) CẢ các tháng đã qua, (c) realtime 1 ngày hôm qua/hôm nay.
+     Khoảng lẻ (01→06/09, từng ngày cũ, 01→03/10) BI trả 0 dòng → tháng trước lấy CẢ THÁNG rồi ước cùng kỳ = cả tháng × số ngày lũy kế ÷ số ngày tháng trước.
+     Trả số gốc từng shop (dòng API), không ghi cache đổ số. Nhớ trong trang 30 phút. */
+  const cmpMemo = new Map();
+  const daysIn = (y, m) => new Date(Date.UTC(y, m, 0)).getUTCDate();
+  function prevPeriod(ymd) {
+    const y = Math.floor(ymd / 10000), m = Math.floor(ymd / 100) % 100, d = ymd % 100;
+    const py = m === 1 ? y - 1 : y, pm = m === 1 ? 12 : m - 1, last = daysIn(py, pm), dd = Math.min(d, last);
+    return { from: py * 10000 + pm * 100 + 1, to: py * 10000 + pm * 100 + dd, full: py * 10000 + pm * 100 + last, days: last, k: dd / last };
+  }
+  async function compareHealth(cfgIn, force) {
+    const b = await baseData(cfgIn);
+    const to = b.cum.to, key = to + '|' + b.storeIds;
+    const hit = cmpMemo.get(key);
+    if (!force && hit && Date.now() - hit.at < 30 * 60e3) return hit.promise;
+    const promise = (async () => {
+      const t0 = Date.now(), p = prevPeriod(to), from = monthStart(to);
+      const [cur, prev] = await Promise.all([
+        pall(b.matched, s => api('reports/revenue-consolidated-get', revBody(from, to, 'STORE', s.storeId, 'BICAT'))),
+        pall(b.matched, s => api('reports/revenue-consolidated-get', revBody(p.from, p.full, 'STORE', s.storeId, 'BICAT')))
+      ]);
+      const shops = b.matched.map((s, i) => ({ key: s.key, short: s.short, name: s.name, cur: cur[i] || [], prev: prev[i] || [] }));
+      note('So sánh BI CK: ' + shops.length + ' shop · ' + from + '→' + to + ' / cả tháng ' + p.from + '→' + p.full + ' × ' + (p.to % 100) + '/' + p.days + ' · ' + ((Date.now() - t0) / 1000).toFixed(1) + 's');
+      return { cumTo: to, cur: { from, to }, prev: p, shops, at: Date.now() };
+    })();
+    cmpMemo.set(key, { at: Date.now(), promise });
+    promise.catch(() => { if (cmpMemo.get(key) && cmpMemo.get(key).promise === promise) cmpMemo.delete(key); });
+    return promise;
   }
 
   /* link6[shop].competition[tên NV][nhóm] = số đạt (nhóm tiền ×1000, số chính xác, giữ số âm) */
@@ -8908,7 +8927,7 @@ window.__AutoBIBiTarget99 = (function () {
   try {
   } catch (_) { }
 
-  window.__AutoBIApi = { api,   discoverStores, vnDay, applyRevenue, applyCompetition, timekeepingRows, applyStaffRevenue, applyStaffToday, applyHealth, applyStaffCompetition, applyInstallment, healthFrom, staffRevenueMap, fastRun, fastOn, applyCrmStore, applyCrmStaff, applyReward };
+  window.__AutoBIApi = { api,   discoverStores, vnDay, applyRevenue, applyCompetition, timekeepingRows, applyStaffRevenue, applyStaffToday, applyHealth, compareHealth, applyStaffCompetition, applyInstallment, healthFrom, staffRevenueMap, fastRun, fastOn, applyCrmStore, applyCrmStaff, applyReward };
 })();
 
 /* ==== V17.17: Realtime V2 (__AutoBIRt2) — DT + mục tiêu ngày/tháng, nhóm hàng thi đua, DT nhân viên. Dữ liệu chỉ đọc từ cache (link1, link2, link3_smart, link4_smart, link6, link6rt). Dùng chủ đạo trên máy tính. ==== */
@@ -10361,4 +10380,284 @@ window.__AutoBIBiTarget99 = (function () {
     try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Lưu Sheet: đã cập nhật lịch sử trong máy dòng ' + key); } catch (_) { }
   }
   window.__AutoBINlnvSrc = { hist, note, saved };
+})();
+
+/* ======================================================================
+   V17.62 — SO SÁNH BI CK theo cây Ngành hàng BI mới (tab `compare`) — từ V17.60, sửa lại ở V17.62
+   Số lấy thẳng BI qua __AutoBIApi.compareHealth: tháng này = lũy kế 01 → ngày BI đã đổ số;
+   tháng trước = ƯỚC CÙNG KỲ = cả tháng trước × số ngày lũy kế ÷ số ngày tháng trước (BI không trả số cùng kỳ theo ngày).
+   Không dùng Sheet. Ô Ngày chỉ có ngày lũy kế mới nhất (BI không trả lũy kế các ngày cũ).
+   ====================================================================== */
+window.__AutoBICmpBI = (() => {
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', '\'': '&#39;' }[c]));
+  const num = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+  const pad = n => String(n).padStart(2, '0');
+  const dmy = ymd => pad(ymd % 100) + '/' + pad(Math.floor(ymd / 100) % 100) + '/' + Math.floor(ymd / 10000);
+  const dm = ymd => pad(ymd % 100) + '/' + pad(Math.floor(ymd / 100) % 100);
+  const vnDay = (off = 0) => { const d = new Date(Date.now() + 7 * 3600e3 + off * 86400e3); return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate(); };
+  const guessCum = () => { try { const c = GM_getValue('autobi_api_cumto_v1', null); if (c && c.day === vnDay() && c.cumTo) return c.cumTo; } catch (_) { } return vnDay(-1); };
+  const W = 1120;
+  let last = null, seq = 0, rerenderRef = null;
+
+  /* Gộp dòng API (nhiều shop) theo khóa cấp:mã:mã cha; k = hệ số nhân (ước cùng kỳ) */
+  function agg(lists, k = 1) {
+    const m = new Map();
+    let order = 0;
+    for (const list of lists) for (const r of (list || [])) {
+      const lv = String(r.rowlevel || ''), level = lv === 'BICAT' ? 0 : lv.startsWith('BISUB') ? 1 : 2; /* BISUB_UNC = nhóm con của −1 Chưa phân loại */
+      const key = lv + ':' + r.rowid + ':' + (level ? r.parentid : '');
+      const cur = m.get(key);
+      if (cur) { cur.sl += num(r.quantity) * k; cur.dt += num(r.revenue_kfactor) * k; continue; }
+      m.set(key, { k: key, level, rowid: String(r.rowid), parentid: String(r.parentid ?? ''), code: String(r.rowcode ?? r.rowid ?? ''), label: String(r.rowname || ''), sl: num(r.quantity) * k, dt: num(r.revenue_kfactor) * k, order: order++ });
+    }
+    return m;
+  }
+  const rank = c => String(c) === '-1' ? Infinity : /^\d+$/.test(String(c)) ? Number(c) : Number.MAX_SAFE_INTEGER;
+
+  function build(curLists, prevLists, k = 1) {
+    const cm = agg(curLists), pm = agg(prevLists, k), nodes = new Map();
+    for (const [key, v] of cm) nodes.set(key, { ...v, psl: 0, pdt: 0 });
+    let extra = 1e6;
+    for (const [key, v] of pm) {
+      const n = nodes.get(key);
+      if (n) { n.psl = v.sl; n.pdt = v.dt; }
+      else nodes.set(key, { ...v, sl: 0, dt: 0, psl: v.sl, pdt: v.dt, order: extra++ });
+    }
+    const byLevelId = new Map();
+    for (const n of nodes.values()) byLevelId.set(n.level + ':' + n.rowid, n);
+    const kids = new Map(), roots = [];
+    for (const n of nodes.values()) {
+      if (!n.level) { roots.push(n); continue; }
+      const p = byLevelId.get((n.level - 1) + ':' + n.parentid);
+      if (!p) continue;
+      (kids.get(p.k) || kids.set(p.k, []).get(p.k)).push(n);
+    }
+    roots.sort((a, b) => { const x = rank(a.code), y = rank(b.code); return x === y ? a.order - b.order : x < y ? -1 : 1; });
+    for (const l of kids.values()) l.sort((a, b) => a.order - b.order);
+    const out = [];
+    const walk = n => { out.push(n); for (const c of (kids.get(n.k) || [])) walk(c); };
+    roots.forEach(walk);
+    const total = roots.reduce((t, r) => ({ sl: t.sl + r.sl, dt: t.dt + r.dt, psl: t.psl + r.psl, pdt: t.pdt + r.pdt }), { sl: 0, dt: 0, psl: 0, pdt: 0 });
+    return { rows: out, total };
+  }
+
+  const fmt = v => { if (!v) return '-'; return Math.round(v).toLocaleString('en-US'); };
+  /* V17.63: số lượng ước (tháng trước) dưới 1 cái hiện 1 số lẻ (0.2) thay vì 0 — tránh "0 cái mà có DT" */
+  const fmtEst = v => (v && Math.abs(v) < 0.95) ? v.toFixed(1) : fmt(v);
+  const delta = v => {
+    const r = Math.round(v);
+    if (!v || (!r && Math.abs(v) < 0.5)) return '<span style="color:#999">-</span>';
+    return '<span style="color:' + (v > 0 ? '#00A040' : '#E00000') + ';font-weight:700">' + (v > 0 ? '▲' : '▼') + Math.abs(r).toLocaleString('en-US') + '</span>';
+  };
+  const pctCell = (now, prev) => {
+    if (prev > 0) { const p = (now / prev - 1) * 100; return '<span style="color:' + (p >= 0 ? '#00A040' : '#E00000') + ';font-weight:700">' + (p >= 0 ? '+' : '') + p.toFixed(1) + '%</span>'; }
+    if (now > 0) return '<span style="color:#00A040;font-weight:700">Mới</span>';
+    return '<span style="color:#999">-</span>';
+  };
+  /* Đơn giá = DT QĐ ÷ SL (triệu/cái), 1 số lẻ */
+  const dg = (dt, sl) => sl > 0 && dt ? dt / sl : null;
+  const dgFmt = v => v === null ? '-' : v.toFixed(1);
+  const dgDelta = (a, b) => {
+    if (a === null || b === null) return '<span style="color:#999">-</span>';
+    const d = a - b;
+    if (Math.abs(d) < 0.05) return '<span style="color:#999">0.0</span>';
+    return '<span style="color:' + (d > 0 ? '#00A040' : '#E00000') + ';font-weight:700">' + (d > 0 ? '▲' : '▼') + Math.abs(d).toFixed(1) + '</span>';
+  };
+
+  function table(res, cfg, shopKey) {
+    const shops = res.shops || [];
+    const one = shopKey && shopKey !== 'total' ? shops.find(s => s.key === shopKey) : null;
+    if (shopKey && shopKey !== 'total' && !one) return '<div style="padding:30px;text-align:center;color:#c00;font-weight:bold">Shop này chưa khớp được siêu thị BI (kiểm mã kho ở Khai báo).</div>';
+    const name = one ? (cfg && (cfg[shopKey + 'Short'] || cfg[shopKey]) || one.short) : 'Tổng Cụm';
+    const p = res.prev, nd = p.to % 100, monthPrev = pad(Math.floor(p.from / 100) % 100);
+    const t = build(one ? [one.cur] : shops.map(s => s.cur), one ? [one.prev] : shops.map(s => s.prev), p.k);
+    const at = new Date(res.at || Date.now());
+    const row = (n, isTotal) => {
+      const lvl = isTotal ? -1 : n.level;
+      const bg = isTotal ? 'background:#FFF2CC;' : lvl === 0 ? 'background:#ECE6FA;' : '';
+      const fw = lvl <= 0 ? 'font-weight:700;' : '';
+      const label = isTotal ? 'Tổng' : esc(n.code ? n.code + ' - ' + n.label : n.label);
+      const dgNow = isTotal ? null : dg(n.dt, n.sl), dgPrev = isTotal ? null : dg(n.pdt, n.psl); /* Tổng gộp mọi ngành → đơn giá để "-" như bảng cũ */
+      return '<tr style="' + bg + fw + '"><td style="text-align:left;padding-left:' + (8 + Math.max(0, lvl) * 18) + 'px;white-space:normal" title="' + label + '">' + label + '</td>'
+        + '<td>' + fmt(n.sl) + '</td><td style="font-weight:700">' + fmt(n.dt) + '</td><td>' + dgFmt(dgNow) + '</td>'
+        + '<td>' + fmtEst(n.psl) + '</td><td>' + fmt(n.pdt) + '</td><td>' + dgFmt(dgPrev) + '</td>'
+        + '<td>' + delta(n.sl - n.psl) + '</td><td>' + delta(n.dt - n.pdt) + '</td><td>' + dgDelta(dgNow, dgPrev) + '</td><td>' + pctCell(n.dt, n.pdt) + '</td></tr>';
+    };
+    const body = row(t.total, true) + t.rows.map(n => row(n, false)).join('');
+    const th = 'border:1px solid #000;padding:5px 4px;color:#fff;font-weight:700;';
+    const sub = 'font-size:11px;font-weight:400';
+    return '<div style="width:' + W + 'px;background:#fff;font-family:Arial,sans-serif;font-size:13px;color:#000;padding:10px;box-sizing:border-box">'
+      + '<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin-bottom:6px">'
+      + '<div><div style="font-size:17px;font-weight:800;color:#4b1d8f">SO SÁNH CÙNG KỲ · NGÀNH HÀNG BI — ' + esc(name) + '</div>'
+      + '<div style="font-size:12px;color:#333;margin-top:2px">Tháng này: lũy kế <b>' + dm(res.cur.from) + ' → ' + dmy(res.cur.to) + '</b> &nbsp;·&nbsp; Tháng trước: <b>ước cùng kỳ ' + dm(p.from) + ' → ' + dm(p.to) + '</b> = cả tháng ' + monthPrev + ' × ' + nd + '/' + p.days + ' ngày</div></div>'
+      + '<div style="font-size:11px;color:#666;text-align:right">Đơn vị: SL cái · DT QĐ, Đơn giá triệu đồng<br>Nguồn BI (API) · lấy lúc ' + pad(at.getHours()) + ':' + pad(at.getMinutes()) + '</div></div>'
+      + '<style>.acb-t td{border:1px solid #000;padding:4px;text-align:center;height:24px}</style>'
+      + '<table class="acb-t" style="width:100%;border-collapse:collapse;table-layout:fixed">'
+      + '<colgroup><col style="width:23%"><col span="10" style="width:7.7%"></colgroup>'
+      + '<thead><tr><th rowspan="2" style="' + th + 'background:#7030A0">Ngành hàng BI / Nhóm hàng BI</th>'
+      + '<th colspan="3" style="' + th + 'background:#0070C0">Tháng này <span style="' + sub + '">(' + dm(res.cur.from) + '–' + dm(res.cur.to) + ')</span></th>'
+      + '<th colspan="3" style="' + th + 'background:#8E5CC6" title="BI không trả số cùng kỳ theo ngày — ước = cả tháng ' + monthPrev + ' × ' + nd + '/' + p.days + '">Tháng trước <span style="' + sub + '">(ước ' + dm(p.from) + '–' + dm(p.to) + ')</span></th>'
+      + '<th colspan="4" style="' + th + 'background:#ED7D31">Tăng / Giảm</th></tr>'
+      + '<tr>' + ['Số lượng', 'DT QĐ', 'Đơn giá'].map(x => '<th style="' + th + 'background:#2E8BD8;font-size:12px">' + x + '</th>').join('')
+      + ['Số lượng', 'DT QĐ', 'Đơn giá'].map(x => '<th style="' + th + 'background:#A57FD4;font-size:12px">' + x + '</th>').join('')
+      + ['Số lượng', 'DT QĐ', 'Đơn giá', '% DT QĐ'].map(x => '<th style="border:1px solid #000;padding:5px 4px;font-weight:700;background:#FCE4D6;color:#C65911;font-size:12px">' + x + '</th>').join('') + '</tr></thead>'
+      + '<tbody>' + body + '</tbody></table>'
+      + '<div style="font-size:11px;color:#666;margin-top:6px">BI chỉ lưu lũy kế tháng hiện tại và số cả tháng của các tháng trước, không lưu theo từng ngày → cột Tháng trước là ước tính chia đều theo ngày.</div></div>';
+  }
+  function errorBox(e) {
+    const auth = e && e.code === 'AUTH';
+    const msg = auth ? 'Phiên BI hết hạn — đăng nhập lại BI rồi mở lại tab này.' : 'Không lấy được số từ BI: ' + esc(e && e.message || e);
+    return '<div style="width:' + W + 'px;padding:30px;text-align:center;background:#fff">'
+      + '<div style="color:#c00;font-weight:800;margin-bottom:12px">' + msg + '</div>'
+      + '<button onclick="window.__AutoBICmpBI.retry()" style="padding:8px 18px;border-radius:8px;border:0;background:#0070C0;color:#fff;font-weight:700;font-size:14px">Thử lại</button></div>';
+  }
+  const loading = day => '<div style="width:' + W + 'px;padding:60px 0;text-align:center;background:#fff;color:#0070C0;font-weight:800">⏳ Đang lấy Ngành hàng BI lũy kế đến ' + dmy(day) + ' và cả tháng trước…</div>';
+  function setSel(sel, cumTo) {
+    if (!sel) return;
+    sel.innerHTML = '<option value="' + cumTo + '" selected>LK đến ' + dm(cumTo) + '</option>';
+    sel.value = String(cumTo);
+    sel.onchange = null;
+  }
+
+  function html(cfg, shopKey, sel, rerender) {
+    rerenderRef = rerender || rerenderRef;
+    if (last && Date.now() - last.at < 30 * 60e3) { setSel(sel, last.cumTo); return table(last, cfg, shopKey); }
+    setSel(sel, (last && last.cumTo) || guessCum());
+    const A = window.__AutoBIApi;
+    if (!A || !A.compareHealth) return errorBox(new Error('thiếu module API'));
+    const id = 'acb-host-' + (++seq), day = (last && last.cumTo) || guessCum();
+    const put = (fn, tries) => { const el = document.getElementById(id); if (el) el.innerHTML = fn(); else if (tries > 0) setTimeout(() => put(fn, tries - 1), 100); };
+    A.compareHealth(cfg).then(res => {
+      last = res;
+      setSel(sel, res.cumTo);
+      put(() => table(res, cfg, shopKey), 20);
+    }).catch(e => {
+      try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('So sánh BI CK lỗi: ' + (e && e.message || e)); } catch (_) { }
+      put(() => errorBox(e), 20);
+    });
+    return '<div id="' + id + '">' + loading(day) + '</div>';
+  }
+  function retry() { last = null; if (rerenderRef) rerenderRef(); }
+  return { html, retry, build };
+})();
+
+/* ======================================================================
+   V17.64 — KHUNG "CHẠY BÁO CÁO" KIỂU MỚI (user chọn phương án A, 07/10/2026)
+   Chọn 1 chế độ (thẻ lớn) → bấm nút Chạy. Ô tick cũ vẫn nằm trong khung (ẩn) và vẫn là đầu vào của nút #btn-sel-run:
+   khi bấm Chạy, module đặt lại các ô tick theo chế độ rồi bấm #btn-sel-run → luồng chạy cũ giữ nguyên 100%.
+   Giờ công là 1 chế độ riêng (chốt: chỉ chạy khi chọn riêng hoặc khi chạy Tất cả). CRM: lấy thêm cho Lũy kế / Realtime.
+   Nhớ lựa chọn lần trước: GM autobi_runpick_v1 {mode, crm}. Lỗi khi dựng → giữ khung cũ.
+   ====================================================================== */
+window.__AutoBIRunPick = (() => {
+  const KEY = 'autobi_runpick_v1';
+  const pad = n => String(n).padStart(2, '0');
+  const ico = {
+    lk: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><rect x="5" y="11" width="3" height="7"/><rect x="10.5" y="6" width="3" height="12"/><rect x="16" y="9" width="3" height="9"/></svg>',
+    rt: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3L5 14h6l-1 7 8-11h-6z"/></svg>',
+    wt: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    all: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/></svg>',
+    play: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M7 4l13 8-13 8z"/></svg>',
+    x: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+    ok: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>'
+  };
+  const MODES = [
+    { id: 'lk', name: 'Lũy kế', sub: 'DT, thi đua, NV, ngành hàng', run: 'Chạy lũy kế', c: '#0b63ce', bg: '#e8f1fd' },
+    { id: 'rt', name: 'Realtime', sub: 'Số hôm nay', run: 'Chạy realtime', c: '#c2410c', bg: '#fff1e6' },
+    { id: 'wt', name: 'Giờ công', sub: 'Giờ công & năng suất NV', run: 'Chạy giờ công', c: '#087f8c', bg: '#e3f6f7' },
+    { id: 'all', name: 'Tất cả và lưu Sheet', sub: 'Cuối ngày, 1 lần', run: 'Chạy tất cả và lưu', c: '#15803d', bg: '#e7f6ec' }
+  ];
+  const IDS = ['chk-all-save', 'chk-rev-thidua', 'chk-fast-realtime', 'chk-crm', 'chk-last-run', 'chk-test', 'chk-worktime73'];
+  const load = () => { try { const v = GM_getValue(KEY, null); return v && typeof v === 'object' ? v : {}; } catch (_) { return {}; } };
+  const save = v => { try { GM_setValue(KEY, v); } catch (_) { } };
+  function status() {
+    const out = [];
+    try { const c = GM_getValue('autobi_api_cumto_v1', null); if (c && c.cumTo) out.push('BI đến hết ' + pad(c.cumTo % 100) + '/' + pad(Math.floor(c.cumTo / 100) % 100)); } catch (_) { }
+    try {
+      const L = GM_getValue('autobi_run_log_fix5', null);
+      if (L && L.startedAt) {
+        const d = new Date(L.startedAt), today = new Date().toDateString() === d.toDateString();
+        const sec = L.endedAt ? Math.max(1, Math.round((L.endedAt - L.startedAt) / 1000)) + 's' : '';
+        const bad = L.errors ? ' · ' + L.errors + ' lỗi' : '';
+        out.push('lần trước ' + (today ? '' : pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + ' ') + pad(d.getHours()) + ':' + pad(d.getMinutes()) + (sec ? ' (' + sec + bad + ')' : ''));
+      }
+    } catch (_) { }
+    return out.join(' · ');
+  }
+  const CSS = '#md-view-auto>.tgdd-chk-group,#md-view-auto>.tgdd-select-btn-row{display:none!important}' /* ô Giờ công do module Giờ công gắn sau cũng ẩn */
+    + '.arp{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:#1f2328;padding:18px 18px 16px}'
+    + '.arp-h{display:flex;justify-content:space-between;align-items:center}.arp-t{font-size:20px;font-weight:700}'
+    + '.arp-x{border:0;background:transparent;color:#57606a;padding:6px;margin:-6px;cursor:pointer;line-height:0}'
+    + '.arp-s{font-size:12.5px;color:#57606a;margin:4px 0 14px;line-height:1.4}'
+    + '.arp-m{display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;text-align:left;border:1.5px solid #e1e4e8;background:#fff;border-radius:14px;padding:11px 14px;margin:0 0 9px;cursor:pointer;font:inherit;color:inherit;-webkit-tap-highlight-color:transparent}'
+    + '.arp-m .i{flex:0 0 auto;line-height:0}.arp-m .n{font-size:16px;font-weight:700;line-height:1.25}.arp-m .d{font-size:12.5px;color:#57606a;line-height:1.3}'
+    + '.arp-m .r{margin-left:auto;width:20px;height:20px;border-radius:50%;border:2px solid #c9ced4;box-sizing:border-box;display:flex;align-items:center;justify-content:center;color:#fff;flex:0 0 auto}'
+    + '.arp-l{font-size:12.5px;color:#57606a;margin:6px 0 7px}.arp-cs{display:flex;gap:8px;flex-wrap:wrap;min-height:34px;align-items:center}'
+    + '.arp-c{display:inline-flex;align-items:center;gap:6px;border:1.5px solid #d0d7de;background:#fff;border-radius:999px;padding:7px 14px;font:inherit;font-size:14px;font-weight:600;color:#1f2328;cursor:pointer}'
+    + '.arp-c.on{background:#e8f1fd;border-color:#9cc3f5;color:#0b63ce}.arp-note{font-size:12.5px;color:#57606a}'
+    + '.arp-f{display:flex;gap:10px;margin-top:16px}.arp-b{border-radius:12px;padding:13px 10px;font:inherit;font-size:16px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px}'
+    + '.arp-b2{flex:1;background:#fff;border:1.5px solid #c9ced4;color:#1f2328}.arp-b1{flex:2;border:0;color:#fff}'
+    + '.arp-adm{display:block;margin:12px auto 0;border:0;background:transparent;color:#d63031;font:inherit;font-size:12.5px;text-decoration:underline;cursor:pointer}';
+
+  function mount(modal) {
+    const view = modal && modal.querySelector('#md-view-auto');
+    const runBtn = modal && modal.querySelector('#btn-sel-run');
+    if (!view || !runBtn) return;
+    const st = load();
+    let mode = MODES.some(m => m.id === st.mode) ? st.mode : 'lk', crm = !!st.crm;
+    const hasTest = !!modal.querySelector('#chk-test');
+    const box = document.createElement('div');
+    box.className = 'arp';
+    box.innerHTML = '<style>' + CSS + '</style>'
+      + '<div class="arp-h"><div class="arp-t">Chạy báo cáo</div><button type="button" class="arp-x" aria-label="Đóng">' + ico.x + '</button></div>'
+      + '<div class="arp-s">' + ['Tổng cụm', status()].filter(Boolean).join(' · ') + '</div>'
+      + '<div class="arp-ms">' + MODES.map(m => '<button type="button" class="arp-m" data-m="' + m.id + '"><span class="i" style="color:' + m.c + '">' + ico[m.id] + '</span><span><div class="n">' + m.name + '</div><div class="d">' + m.sub + '</div></span><span class="r"></span></button>').join('') + '</div>'
+      + '<div class="arp-l">Lấy thêm</div><div class="arp-cs"></div>'
+      + '<div class="arp-f"><button type="button" class="arp-b arp-b2" data-a="last">Xem lại</button><button type="button" class="arp-b arp-b1" data-a="run"></button></div>'
+      + (hasTest ? '<button type="button" class="arp-adm" data-a="test">Báo cáo Test (Admin)</button>' : '');
+    /* ẩn phần cũ, giữ trong DOM */
+    [...view.children].forEach(el => { el.style.display = 'none'; el.setAttribute('data-arp-old', '1'); });
+    view.style.padding = '0';
+    view.prepend(box);
+    const chips = box.querySelector('.arp-cs'), run = box.querySelector('[data-a="run"]');
+    function paint() {
+      const m = MODES.find(x => x.id === mode);
+      box.querySelectorAll('.arp-m').forEach(b => {
+        const on = b.dataset.m === mode, mm = MODES.find(x => x.id === b.dataset.m);
+        b.style.borderColor = on ? mm.c : '#e1e4e8';
+        b.style.background = on ? mm.bg : '#fff';
+        b.querySelector('.n').style.color = on ? mm.c : '';
+        const r = b.querySelector('.r');
+        r.style.borderColor = on ? mm.c : '#c9ced4'; r.style.background = on ? mm.c : 'transparent'; r.innerHTML = on ? ico.ok : '';
+      });
+      if (mode === 'lk' || mode === 'rt') chips.innerHTML = '<button type="button" class="arp-c' + (crm ? ' on' : '') + '" data-c="crm">' + (crm ? ico.ok : '+') + ' Phục vụ CRM</button>';
+      else if (mode === 'all') chips.innerHTML = '<span class="arp-note">Gồm lũy kế, giờ công và lưu Sheet lịch sử; CRM khi chạy trước 8h hoặc sau 18h</span>';
+      else chips.innerHTML = '<span class="arp-note">Chạy riêng giờ công, không lấy doanh thu</span>';
+      run.style.background = m.c;
+      run.innerHTML = ico.play + ' ' + m.run;
+    }
+    function setChecks(a) {
+      for (const id of IDS) { const c = modal.querySelector('#' + id) || document.getElementById(id); if (c) c.checked = false; }
+      const on = id => { const c = modal.querySelector('#' + id) || document.getElementById(id); if (c) { c.disabled = false; c.checked = true; return true; } return false; };
+      if (a === 'last') return on('chk-last-run');
+      if (a === 'test') return on('chk-test');
+      if (mode === 'lk') { on('chk-rev-thidua'); if (crm) on('chk-crm'); return true; }
+      if (mode === 'rt') { on('chk-fast-realtime'); if (crm) on('chk-crm'); return true; }
+      if (mode === 'wt') return on('chk-worktime73');
+      if (mode === 'all') return on('chk-all-save');
+      return false;
+    }
+    box.addEventListener('click', e => {
+      const t = e.target.closest('button');
+      if (!t || !box.contains(t)) return;
+      if (t.classList.contains('arp-x')) { const c = modal.querySelector('.btn-close-modal'); if (c) c.click(); return; }
+      if (t.dataset.m) { mode = t.dataset.m; save({ mode, crm }); paint(); return; }
+      if (t.dataset.c === 'crm') { crm = !crm; save({ mode, crm }); paint(); return; }
+      const a = t.dataset.a;
+      if (!a) return;
+      if (!setChecks(a)) { const sEl = box.querySelector('.arp-s'); sEl.style.color = '#c00'; sEl.textContent = 'Không tìm thấy lựa chọn này trong khung chạy — tải lại trang rồi thử lại'; return; }
+      runBtn.click();
+    });
+    paint();
+  }
+  return { mount };
 })();
