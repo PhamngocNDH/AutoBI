@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.55
+// @name         AutoBI Core V17.57
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.55
+// @version      17.57
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -1676,7 +1676,7 @@ window.__AutoBIRun67 = (function () {
         } const _0x384f20 = AuthService.getAuthCache(); const _0x3ec7ee = AuthService.extractUserId(_0x2f2421); const _0x5b5606 = _0x384f20 ? AuthService.extractUserId(_0x384f20.user) : ''; if (_0x3ec7ee && _0x5b5606 && _0x3ec7ee !== _0x5b5606 && _0x3ec7ee !== '---') {
             console.log('[Auto BI] \uD83D\uDD04 Ph\u00E1t hi\u1EC7n \u0111\u1ED5i User t\u1EEB [' + _0x5b5606 + '] sang [' + _0x3ec7ee + ']. \u0110ang l\u00E0m s\u1EA1ch b\u1ED9 nh\u1EDB t\u1EA1m...');
             window.tgdd_active_user_config = null;
-        } const _0x9a8b7e = UTILS.isHomePage(); const _0x5f0ed2 = GM_getValue(CONSTANTS.KEYS.AUTO_STATE, -1); const _0x5e1b7e = _0x5f0ed2 >= 0 && _0x5f0ed2 < 99; let _0x3b0b6d = _0x9a8b7e && !_0x5e1b7e && _0x2f2421 !== '---'; const _0x7d9042 = _0x384f20 ? Date.now() - (_0x384f20.timestamp || 0) : 999999999; const _0xa41eba = _0x384f20 && _0x5b5606 === _0x3ec7ee && _0x7d9042 < 3 * 24 * 60 * 60 * 1000; if (!_0x3b0b6d && _0xa41eba) {
+        } const _0x9a8b7e = UTILS.isHomePage(); const _0x5f0ed2 = GM_getValue(CONSTANTS.KEYS.AUTO_STATE, -1); const _0x5e1b7e = _0x5f0ed2 >= 0 && _0x5f0ed2 < 99; let _0x3b0b6d = _0x9a8b7e && !_0x5e1b7e && _0x2f2421 !== '---'; const _0x7d9042 = _0x384f20 ? Date.now() - (_0x384f20.timestamp || 0) : 999999999; const _0xa41eba = _0x384f20 && _0x5b5606 === _0x3ec7ee && _0x7d9042 < 3 * 24 * 60 * 60 * 1000; /* V17.56: đã kiểm đạt trong hôm nay (cùng mã NV) thì dùng lại, không tải Sheet Auth — 1 ngày kiểm 1 lần */ const __authToday = !!(_0x384f20 && _0x384f20.isAuthorized && _0x3ec7ee && _0x5b5606 === _0x3ec7ee && new Date(_0x384f20.timestamp || 0).toDateString() === new Date().toDateString()); if ((!_0x3b0b6d || __authToday) && _0xa41eba) {
             AUTH_STATE = { checked: true, isAuthorized: _0x384f20.isAuthorized, userName: _0x384f20.user, expireDays: _0x384f20.expireDays };
             UI.updateNavName();
             if (_0x155884)
@@ -2129,7 +2129,7 @@ window.__AutoBIRun67 = (function () {
             /* V17.53: tải Sheet nhóm hàng, so với danh sách đang dùng. Khác → lưu danh sách mới; nếu lượt đổ số đã dùng danh sách cũ thì chờ lượt đổ xong,
                lấy lại riêng Thi đua + Thi đua NV rồi vẽ lại báo cáo. Trong lúc kiểm: chụp ảnh / Lưu dữ liệu / Comment tự chờ (window.__AutoBIGroupWait). */
             const cur = window.__AutoBIGroupCheck;
-            if (cur && cur.pending) return cur;
+            if (cur && (cur.pending || Date.now() - (cur.t0 || 0) < 60000)) return cur; /* V17.57: vừa kiểm (≤ 60s, vd lúc bấm chạy) thì dùng lại, không tải Sheet lần 2 */
             const __G = window.__AutoBIGroupList; const __note = t => { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note(t); } catch (_) { } };
             const before = GM_getValue(CONSTANTS.KEYS.CONFIG_LIST, []) || [];
             const st = window.__AutoBIGroupCheck = { pending: true, t0: Date.now(), usedOld: Array.isArray(before) && before.length > 0, changed: false, rerun: false };
@@ -7291,12 +7291,12 @@ const _0x133c09 = '<div style="font-size:15px; color:#333; line-height:1.6; text
             GM_setValue('tgdd_auto_start_time', Date.now());
             GM_setValue('tgdd_total_auto_seconds', _0x176fe2);
             const _0x3fa3a3 = GM_getValue('tgdd_custom_report_month', 'current');
-            /* V16.8.5: quyền đã kiểm tra khi mở trang (≤ 10 phút trước) thì dùng lại, không tải lại Google Sheet lần 2 khi bấm chạy */
-            const __authFresh = (() => { try { const c = AuthService.getAuthCache(); return !!(AUTH_STATE && AUTH_STATE.checked && AUTH_STATE.isAuthorized && c && c.isAuthorized && Date.now() - (c.timestamp || 0) < 10 * 60000 && AuthService.extractUserId(c.user) === AuthService.extractUserId(AUTH_STATE.userName)); } catch (_) { return false; } })();
+            /* V16.8.5 → V17.56: quyền đã kiểm đạt trong hôm nay thì dùng lại, không tải lại Google Sheet lần 2 khi bấm chạy */
+            const __authFresh = (() => { try { const c = AuthService.getAuthCache(); return !!(AUTH_STATE && AUTH_STATE.checked && AUTH_STATE.isAuthorized && c && c.isAuthorized && new Date(c.timestamp || 0).toDateString() === new Date().toDateString() && AuthService.extractUserId(c.user) === AuthService.extractUserId(AUTH_STATE.userName)); } catch (_) { return false; } })();
             /* V17.49: nhật ký ghi thời gian kiểm quyền */
             if (_0x3fa3a3 === 'current' || !_0x3fa3a3) { try { DATA.groupCheckStart(); } catch (_) { } } /* V17.53: kiểm Sheet nhóm hàng chạy ngầm ngay khi bấm chạy */
             const __tAuth = Date.now();
-            (__authFresh ? (cb => cb(AUTH_STATE)) : AuthService.check)(_0x264183 => { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Kiểm quyền: ' + (_0x264183 && _0x264183.isAuthorized ? 'đạt' : 'KHÔNG đạt') + ' · ' + (__authFresh ? 'dùng lại lần kiểm ≤ 10 phút' : ((Date.now() - __tAuth) / 1000).toFixed(1) + 's')); } catch (_) { } if (!window.__AutoBIRun67.active(startRunId67))
+            (__authFresh ? (cb => cb(AUTH_STATE)) : AuthService.check)(_0x264183 => { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Kiểm quyền: ' + (_0x264183 && _0x264183.isAuthorized ? 'đạt' : 'KHÔNG đạt') + ' · ' + (__authFresh ? 'dùng lại lần kiểm hôm nay lúc ' + (() => { try { const t = new Date((AuthService.getAuthCache() || {}).timestamp || 0); return ('0' + t.getHours()).slice(-2) + ':' + ('0' + t.getMinutes()).slice(-2); } catch (_) { return '?'; } })() : ((Date.now() - __tAuth) / 1000).toFixed(1) + 's')); } catch (_) { } if (!window.__AutoBIRun67.active(startRunId67))
                 return; if (_0x264183.isAuthorized) {
                 DATA.loadConfigAndRun(_0x1c190f, _0x3fa3a3);
             }
@@ -8283,9 +8283,16 @@ window.__AutoBIBiTarget99 = (function () {
       const today = vnDay();
       const matched = matchStores(shops, cfg, await storesToday(today));
       if (!matched.length) throw new Error('Không khớp được shop Khai báo với siêu thị BI');
-      const first = (await api('reports/revenue-consolidated-get', revBody(today, today, 'STORE', matched[0].storeId, 'LEVEL')))[0] || {};
-      const k = String(first.cum_as_of_date_key || '');
-      const cumTo = /^\d{8}$/.test(k) ? Number(k) : vnDay(-1);
+      /* V17.57: BI đã đổ lũy kế tới hết hôm qua thì nhớ trong ngày — các lần chạy sau bỏ 1 lượt gọi BI (mọi phần đều chờ bước này) */
+      const CUM_KEY = 'autobi_api_cumto_v1', sid = String(matched[0].storeId);
+      let cumTo = 0;
+      try { const c = GM_getValue(CUM_KEY, null); if (c && c.day === today && c.sid === sid && c.cumTo === vnDay(-1)) cumTo = c.cumTo; } catch (_) { }
+      if (!cumTo) {
+        const first = (await api('reports/revenue-consolidated-get', revBody(today, today, 'STORE', matched[0].storeId, 'LEVEL')))[0] || {};
+        const k = String(first.cum_as_of_date_key || '');
+        cumTo = /^\d{8}$/.test(k) ? Number(k) : vnDay(-1);
+        if (/^\d{8}$/.test(k)) { try { GM_setValue(CUM_KEY, { day: today, sid, cumTo }); } catch (_) { } }
+      }
       return { cfg, today, matched, storeIds: matched.map(x => x.storeId).join(','), cum: { from: monthStart(cumTo), to: cumTo } };
     })();
     baseMemo = { at: now, key: JSON.stringify(shopsOf(cfgIn && shopsOf(cfgIn).length ? cfgIn : readConfig())), promise };
@@ -8604,12 +8611,21 @@ window.__AutoBIBiTarget99 = (function () {
     const b = await baseData(cfgIn), month = monthKey(b.today);
     const staffList = Array.isArray(b.cfg.staffList) ? b.cfg.staffList : [];
     if (!staffList.length) throw new Error('Khai báo chưa có danh sách nhân viên');
-    const shopRows = (await api('reports/competition-bymsg-get', compBody(month, 2, b.storeIds))).filter(r => String(r.columnname || '').toUpperCase() === 'STOREID');
-    const ids = {};
-    for (const r of shopRows) { const shop = shopOf(b.matched, b.cfg, r.salegroupname, r.salegroupid); if (shop && r.salegroupid != null) (ids[shop.key] = ids[shop.key] || new Set()).add(String(r.salegroupid)); }
-    const jobs = [];
-    for (const s of b.matched) for (const id of (ids[s.key] || [])) jobs.push({ s, id });
-    const results = await pall(jobs, j => api('reports/competition-bymsg-get', compBody(month, 2, b.storeIds, 'STORE', j.id)));
+    /* V17.57: mã Thi đua từng shop lưu theo tháng — lần sau gọi thẳng Thi đua NV từng shop, bỏ 1 lượt gọi BI. Mã lưu không ra dòng nào → hỏi lại mã như cũ */
+    const IDS_KEY = 'autobi_api_compids_v1';
+    const freshIds = async () => {
+      const shopRows = (await api('reports/competition-bymsg-get', compBody(month, 2, b.storeIds))).filter(r => String(r.columnname || '').toUpperCase() === 'STOREID');
+      const o = {};
+      for (const r of shopRows) { const shop = shopOf(b.matched, b.cfg, r.salegroupname, r.salegroupid); if (shop && r.salegroupid != null) (o[shop.key] = o[shop.key] || new Set()).add(String(r.salegroupid)); }
+      try { const save = {}; for (const [k, v] of Object.entries(o)) save[k] = [...v]; if (Object.keys(save).length) GM_setValue(IDS_KEY, { month, storeIds: b.storeIds, ids: save }); } catch (_) { }
+      return o;
+    };
+    const savedIds = () => { try { const c = GM_getValue(IDS_KEY, null); if (!c || c.month !== month || c.storeIds !== b.storeIds || !c.ids) return null; const o = {}; for (const s of b.matched) if (Array.isArray(c.ids[s.key]) && c.ids[s.key].length) o[s.key] = new Set(c.ids[s.key].map(String)); return Object.keys(o).length === b.matched.length ? o : null; } catch (_) { return null; } };
+    const fetchJobs = async o => { const js = []; for (const s of b.matched) for (const id of (o[s.key] || [])) js.push({ s, id }); return { jobs: js, results: await pall(js, j => api('reports/competition-bymsg-get', compBody(month, 2, b.storeIds, 'STORE', j.id))) }; };
+    let ids = savedIds(), fromSaved = !!ids;
+    if (!ids) ids = await freshIds();
+    let { jobs, results } = await fetchJobs(ids);
+    if (fromSaved && !results.some(r => r && r.length)) { ids = await freshIds(); ({ jobs, results } = await fetchJobs(ids)); fromSaved = false; }
     const outs = {}, missing = b.matched.filter(s => !ids[s.key]).map(s => s.short);
     let n = 0;
     jobs.forEach((j, i) => {
