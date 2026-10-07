@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AutoBI - Kho & Xuất Bán
 // @namespace    https://github.com/PhamngocNDH/AutoBI/kho-xuatban-test
-// @version      1.7.0
+// @version      1.7.2
 // @description  Đổ tồn kho (BI 4286) và xuất bán (BI 77) theo cụm siêu thị cho máy tính: lấy thẳng dữ liệu BI có điều tốc, sổ ngày, bộ chọn tồn kho, Excel.
 // @author       AutoBI / 38967 - Mr Phạm
 // @homepageURL  https://github.com/PhamngocNDH/AutoBI
@@ -36,7 +36,7 @@
  */
 (function () {
     'use strict';
-    const VERSION = '1.7.0';
+    const VERSION = '1.7.2';
     const UPDATE_URL = 'https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_Kho_XuatBan.user.js';
     const SALES_SCHEMA = 4;                             // 4 = tất cả ngành + Loại hàng + Kho xuất (MASIEUTHIXUAT); ngày lưu bằng bản cũ sẽ được lấy lại
     const PREFIX = 'autobi_kxb_test_v1_';               // giữ khóa cũ để không mất khai báo shop
@@ -736,7 +736,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const session = { id: uuid(), mode, started: Date.now(), status: 'running', controller: new AbortController() };
         running = session; ui.classList.add('busy');
         const timer = setInterval(() => { ui.querySelector('[data-timer]').textContent = clockText(session.started); }, 250);
-        log(`Bắt đầu ${({ sales: 'đổ xuất bán', balance: 'đổ cân hàng', auto: 'tự đổ xuất bán hôm qua', prev: 'đổ xuất bán cùng kỳ tháng trước' })[mode] || 'đổ tồn kho'}`); status('Đang kiểm tra quyền…'); progress(0, 1);
+        log(`Bắt đầu ${({ sales: 'đổ xuất bán', balance: 'đổ cân hàng', prev: 'đổ xuất bán cùng kỳ tháng trước' })[mode] || 'đổ tồn kho'}`); status('Đang kiểm tra quyền…'); progress(0, 1);
         try {
             await authCheck(session); check(session); log(`Quyền hợp lệ: ${auth.user} — ${auth.name}`);
             const msg = await job(session); check(session);
@@ -749,21 +749,6 @@ tr{break-inside:avoid;page-break-inside:avoid}
         }
         return session.status;
     }
-    // Lần mở BI đầu tiên trong ngày: tự lấy xuất bán hôm qua (chạy nền, 1 lượt gọi BI)
-    async function autoYesterday() {
-        if (config.autoDaily === false || !config.shops.length || running) return;
-        const today = isoDate(new Date()), y = addDays(today, -1);
-        if (load('autoDay', '') === today) return;
-        try { detectUser(); } catch { return; }                // chưa đăng nhập BI → để lần sau
-        const range = { from: y, to: y };
-        if (!daysToFetch(loadBook(range).book, range, shopsKey(), today, false, config.returnDays, SALES_SCHEMA, Date.now(), config.freshHours ?? 2).includes(y)) { save('autoDay', today); return; }
-        const launch = document.getElementById('kxb-launch'), label = launch?.textContent;
-        if (launch) launch.textContent = '⏳ AutoBI đang lấy xuất bán hôm qua…';
-        const t0 = Date.now(), st = await withSession('auto', s => runSales(s, false, range));
-        if (launch) launch.textContent = label;
-        if (st === 'completed' && (loadBook(range).book[y]?.atMs || 0) >= t0) save('autoDay', today);
-        renderUpdate();
-    }
     function selectedRange() { return validateRange(ui.querySelector('[data-from]').value, ui.querySelector('[data-to]').value); }
 
     // fetchRange: kỳ cần lấy (mặc định kỳ đang chọn); màn hình vẫn hiện kỳ đang chọn
@@ -771,7 +756,9 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const range = fetchRange || selectedRange(), today = isoDate(new Date());
         const shown = () => { try { return selectedRange(); } catch { return range; } };
         const fh = config.freshHours ?? 2;
-        const need = daysToFetch(loadBook(range).book, range, shopsKey(), today, refetchAll, config.returnDays, SALES_SCHEMA, Date.now(), fh);
+        // Tự đổ hôm qua / Đổ cùng kỳ: CHỈ lấy đúng các ngày trong kỳ đó, không kéo theo ngày còn treo ở kỳ khác
+        const need = daysToFetch(loadBook(range).book, range, shopsKey(), today, refetchAll, config.returnDays, SALES_SCHEMA, Date.now(), fh)
+            .filter(d => !fetchRange || (d >= range.from && d <= range.to));
         const skipped = daysIn(range).filter(d => d <= today && !need.includes(d)).length;
         log(`Kỳ ${toBI(range.from)}–${toBI(range.to)}: cần lấy ${need.length} ngày, bỏ qua ${skipped} ngày (đã chốt${fh ? ` hoặc vừa lấy dưới ${fh} giờ` : ''})`);
         const done = [], failed = [];
@@ -1401,7 +1388,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const bt = Math.round(Number(v('balTarget')));
         invariant(bt >= 3 && bt <= 60, 'Số ngày giữ đủ bán (Cân hàng) phải từ 3 đến 60');
         config = { ...config, shops, selectors: config.selectors || {}, basis: v('basis') === 'shipped' ? 'shipped' : 'created', returnDays: rd, balTarget: bt,
-            freshHours: fh, autoDaily: ui.querySelector('[data-cfg="autoDaily"]').checked, targetCat: v('targetCat') === '*' ? '' : v('targetCat') };
+            freshHours: fh, targetCat: v('targetCat') === '*' ? '' : v('targetCat') };
         save('config', config);
         const codes = new Set(shops.map(s => keyCode(s.code)));
         view.invShops = new Set([...view.invShops].filter(c => codes.has(c))); if (!view.invShops.size) view.invShops = new Set(codes);
@@ -1543,8 +1530,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
               <label>Kiểm tra lại nhập trả (ngày gần nhất)<input type="number" min="2" max="35" data-cfg="returnDays" style="width:120px"></label>
               <label>Cân hàng: giữ đủ bán (ngày)<input type="number" min="3" max="60" data-cfg="balTarget" style="width:120px"></label>
               <label>Không lấy lại ngày vừa lấy dưới (giờ)<input type="number" min="0" max="24" data-cfg="freshHours" style="width:120px"></label>
-              <label>Mục tiêu DT áp cho ngành<select data-cfg="targetCat"><option value="Điện thoại">Điện thoại</option><option value="*">Tất cả ngành</option></select></label>
-              <label style="flex-direction:row;align-items:center;gap:6px;font-size:13px"><input type="checkbox" data-cfg="autoDaily" style="min-height:auto">Mở BI lần đầu trong ngày: tự lấy xuất bán hôm qua</label></div>
+              <label>Mục tiêu DT áp cho ngành<select data-cfg="targetCat"><option value="Điện thoại">Điện thoại</option><option value="*">Tất cả ngành</option></select></label></div>
             <div class="kxb-muted" data-storage style="margin-bottom:8px"></div>
             <button type="button" class="primary" data-save>Lưu cài đặt</button> <button type="button" data-check-update>🔄 Kiểm tra bản mới</button></details>
           <div data-status class="kxb-status">Sẵn sàng.</div><div class="prog"><div data-bar></div></div>
@@ -1576,7 +1562,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const today = isoDate(new Date());
         ui.querySelector('[data-from]').value = today.slice(0, 8) + '01'; ui.querySelector('[data-to]').value = today;
         ui.querySelector('[data-cfg="basis"]').value = config.basis || 'created'; ui.querySelector('[data-cfg="returnDays"]').value = config.returnDays || 7; ui.querySelector('[data-cfg="balTarget"]').value = config.balTarget || 14;
-        ui.querySelector('[data-cfg="freshHours"]').value = config.freshHours ?? 2; ui.querySelector('[data-cfg="autoDaily"]').checked = config.autoDaily !== false;
+        ui.querySelector('[data-cfg="freshHours"]').value = config.freshHours ?? 2;
         ui.querySelector('[data-cfg="targetCat"]').value = (config.targetCat ?? 'Điện thoại') || '*';
         ui.querySelector('[data-settings]').addEventListener('toggle', e => { if (e.target.open) renderStorage(); });
         (config.shops.length ? config.shops : [{ code: '', name: '' }]).forEach(shopEditor);
@@ -1625,7 +1611,6 @@ tr{break-inside:avoid;page-break-inside:avoid}
         ui.querySelector('[data-check-update]').onclick = safely(() => checkUpdate(true));
         renderUpdate();
         setTimeout(() => checkUpdate(false), 3000);
-        setTimeout(() => { autoYesterday().catch(e => log('Tự đổ hôm qua: ' + e.message, 'error')); }, 6000);
         log(`Mở AutoBI Kho & Xuất Bán V${VERSION}.`);
     }
     window.addEventListener('pagehide', () => { if (running) stop(); });
