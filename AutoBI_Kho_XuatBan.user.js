@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AutoBI - Kho & Xuất Bán
 // @namespace    https://github.com/PhamngocNDH/AutoBI/kho-xuatban-test
-// @version      1.6.3
+// @version      1.7.0
 // @description  Đổ tồn kho (BI 4286) và xuất bán (BI 77) theo cụm siêu thị cho máy tính: lấy thẳng dữ liệu BI có điều tốc, sổ ngày, bộ chọn tồn kho, Excel.
 // @author       AutoBI / 38967 - Mr Phạm
 // @homepageURL  https://github.com/PhamngocNDH/AutoBI
@@ -13,6 +13,7 @@
 // @require      https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js
 // @grant        GM_getValue
 // @grant        GM_setValue
+// @grant        GM_listValues
 // @grant        GM_xmlhttpRequest
 // @grant        unsafeWindow
 // @connect      docs.google.com
@@ -35,7 +36,7 @@
  */
 (function () {
     'use strict';
-    const VERSION = '1.6.3';
+    const VERSION = '1.7.0';
     const UPDATE_URL = 'https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_Kho_XuatBan.user.js';
     const SALES_SCHEMA = 4;                             // 4 = tất cả ngành + Loại hàng + Kho xuất (MASIEUTHIXUAT); ngày lưu bằng bản cũ sẽ được lấy lại
     const PREFIX = 'autobi_kxb_test_v1_';               // giữ khóa cũ để không mất khai báo shop
@@ -248,15 +249,22 @@
         if (pendingCount > 0) return 'Còn treo';
         return iso <= addDays(today, -Math.max(2, returnDays)) ? 'Đã chốt' : 'Chưa chốt';
     }
-    function daysToFetch(book, range, shopsKey, today, refetchAll, returnDays = 7, schema = 0) {
+    // Ngày vừa lấy chưa quá freshHours giờ (cùng schema, cùng bộ siêu thị) thì không lấy lại — trừ hôm nay (số còn chạy)
+    function isFresh(r, d, today, shopsKey, schema, nowMs, freshHours) {
+        return !!(freshHours > 0 && nowMs && r && r.atMs && d !== today && r.shops === shopsKey && (!schema || r.schema === schema)
+            && nowMs - r.atMs >= 0 && nowMs - r.atMs < freshHours * 3600 * 1000);
+    }
+    function daysToFetch(book, range, shopsKey, today, refetchAll, returnDays = 7, schema = 0, nowMs = 0, freshHours = 0) {
         const need = new Set();
         const end = range.to < today ? range.to : today;
         const recheckFrom = addDays(today, -Math.max(2, returnDays) + 1);   // các ngày gần đây: lấy lại để bắt đơn khách nhập trả
         for (let d = range.from; d <= end; d = addDays(d, 1)) {
             const r = book[d];
-            if (refetchAll || !r || r.status !== 'Đã chốt' || (schema && r.schema !== schema) || r.shops !== shopsKey || d >= recheckFrom) need.add(d);
+            if (refetchAll || !r || (schema && r.schema !== schema) || r.shops !== shopsKey) { need.add(d); continue; }
+            if ((r.status !== 'Đã chốt' || d >= recheckFrom) && !isFresh(r, d, today, shopsKey, schema, nowMs, freshHours)) need.add(d);
         }
-        for (const [d, r] of Object.entries(book)) if (r.status === 'Còn treo' && d >= addDays(today, -RECHECK_DAYS) && d <= today) need.add(d);
+        if (!refetchAll) for (const [d, r] of Object.entries(book))
+            if (r.status === 'Còn treo' && d >= addDays(today, -RECHECK_DAYS) && d <= today && !isFresh(r, d, today, shopsKey, schema, nowMs, freshHours)) need.add(d);
         return [...need].sort();
     }
 
@@ -440,11 +448,64 @@ tr{break-inside:avoid;page-break-inside:avoid}
         return v ? { version: v[1] } : null;
     }
 
+    /* ================= SO CÙNG KỲ · BÁN KÈM · ĐƠN TREO · DỰ KIẾN ================= */
+    const lastDayOf = (y, m) => new Date(y, m, 0).getDate();            // m: 1–12
+    // Cùng kỳ tháng trước: 01–07/10 → 01–07/09; 31/10 → 30/09
+    function shiftMonth(iso, k) {
+        const [y, m, d] = iso.split('-').map(Number), t = new Date(y, m - 1 + k, 1);
+        return isoDate(new Date(t.getFullYear(), t.getMonth(), Math.min(d, lastDayOf(t.getFullYear(), t.getMonth() + 1))));
+    }
+    const prevMonthRange = range => ({ from: shiftMonth(range.from, -1), to: shiftMonth(range.to, -1) });
+    // Bán kèm: đơn có dòng điện thoại; "có kèm" = cùng mã đơn có dòng thuộc nhóm tính kèm. Nhân viên = người tạo dòng điện thoại.
+    function attachStats(lines, isPhone, isAttach) {
+        const orders = new Map();
+        for (const l of lines) {
+            let o = orders.get(l.order);
+            if (!o) orders.set(l.order, o = { shop: l.shop, creator: '', phoneQty: 0, phoneRev: 0, attachQty: 0, attachRev: 0, groups: new Map() });
+            if (isPhone(l)) { o.phoneQty += l.qty; o.phoneRev += l.qty * l.price; if (!o.creator) o.creator = l.creator; }
+            else if (isAttach(l)) { o.attachQty += l.qty; o.attachRev += l.qty * l.price; const g = o.groups.get(l.group) || { qty: 0, rev: 0 }; g.qty += l.qty; g.rev += l.qty * l.price; o.groups.set(l.group, g); }
+        }
+        const staff = new Map(), groups = new Map(), total = { phoneOrders: 0, attached: 0, phoneQty: 0, attachQty: 0, attachRev: 0 };
+        for (const o of orders.values()) {
+            if (!o.phoneQty) continue;
+            const key = o.shop + '|' + o.creator;
+            const s = staff.get(key) || { shop: o.shop, label: o.creator, phoneOrders: 0, attached: 0, phoneQty: 0, phoneRev: 0, attachQty: 0, attachRev: 0 };
+            const has = o.attachQty > 0 ? 1 : 0;
+            for (const x of [s, total]) { x.phoneOrders++; x.attached += has; x.phoneQty += o.phoneQty; x.attachQty += o.attachQty; x.attachRev += o.attachRev; }
+            s.phoneRev += o.phoneRev; staff.set(key, s);
+            for (const [g, v] of o.groups) { const e = groups.get(g) || { group: g, orders: 0, qty: 0, rev: 0 }; e.orders++; e.qty += v.qty; e.rev += v.rev; groups.set(g, e); }
+        }
+        const rate = x => ({ ...x, rate: x.phoneOrders ? x.attached / x.phoneOrders * 100 : 0 });
+        return { total: rate(total), staff: [...staff.values()].map(rate).sort((a, b) => b.phoneOrders - a.phoneOrders || b.rate - a.rate),
+            groups: [...groups.values()].sort((a, b) => b.orders - a.orders || b.rev - a.rev) };
+    }
+    const daysBetween = (a, b) => { const [y1, m1, d1] = a.split('-').map(Number), [y2, m2, d2] = b.split('-').map(Number); return Math.round((Date.UTC(y2, m2 - 1, d2) - Date.UTC(y1, m1 - 1, d1)) / 864e5); };
+    // Đơn treo gom theo mã đơn, tính số ngày treo (từ ngày tạo đến hôm nay), cũ nhất lên đầu
+    function pendingOrders(lines, today) {
+        const m = new Map();
+        for (const l of lines) {
+            const o = m.get(l.order) || { order: l.order, created: l.created, time: l.time, shop: l.shop, creator: l.creator, items: [], qty: 0, value: 0, notExported: false };
+            if (l.created < o.created) o.created = l.created;
+            o.items.push(l.productName); o.qty += l.qty; o.value += l.qty * l.price;
+            if (!same(l.exported, 'Đã xuất')) o.notExported = true;
+            m.set(l.order, o);
+        }
+        return [...m.values()].map(o => ({ ...o, age: Math.max(0, daysBetween(o.created, today)), state: o.notExported ? 'Chưa xuất' : 'Chưa giao' }))
+            .sort((a, b) => b.age - a.age || a.shop.localeCompare(b.shop) || a.order.localeCompare(b.order));
+    }
+    // Dự kiến cuối tháng = DT các ngày đã trọn (1 → hôm qua) ÷ số ngày đó × số ngày của tháng
+    function projectMonth(revToYesterday, range, today) {
+        const first = range.from.slice(0, 8) + '01', y = addDays(today, -1);
+        if (range.from !== first || range.to.slice(0, 7) !== first.slice(0, 7) || range.to < y || y.slice(0, 7) !== first.slice(0, 7)) return null;
+        const elapsed = daysBetween(first, y) + 1, [yy, mm] = first.split('-').map(Number), dim = lastDayOf(yy, mm);
+        return { elapsed, dim, until: y, value: revToYesterday / elapsed * dim };
+    }
+
     // Hàm thuần cho kiểm thử offline; không cài global trên website thật.
     if (typeof module === 'object' && module.exports) {
         module.exports = { clean, norm, hasCode, day, toBI, addDays, validateRange, daysIn, apiNumber, parseDelimited,
             lineFromApi, reasons, pending, validateSalesLines, splitSales, summarizeSales, inPeriod, dayStatus, daysToFetch,
-            parseRateLimit, waitBeforeCall, inventoryRecordFromApi, summarizeInventory, filterInventory, inventoryOptions, inventoryViews, validateShops, authorizeSheetRows, escHtml, inventoryChecklist, inventoryPrintHtml, conditionKey, conditionText, newerVersion, parseRemoteScript, outStoreKey, balanceRows };
+            parseRateLimit, waitBeforeCall, inventoryRecordFromApi, summarizeInventory, filterInventory, inventoryOptions, inventoryViews, validateShops, authorizeSheetRows, escHtml, inventoryChecklist, inventoryPrintHtml, conditionKey, conditionText, newerVersion, parseRemoteScript, outStoreKey, balanceRows, isFresh, shiftMonth, prevMonthRange, attachStats, pendingOrders, projectMonth, daysBetween };
         return;
     }
 
@@ -612,7 +673,8 @@ tr{break-inside:avoid;page-break-inside:avoid}
     }
     function storeDay(r) {
         const month = monthOf(r.day), d = loadMonth(month);
-        d.lines = d.lines.filter(l => l.created !== r.day).concat(r.lines);
+        // Dòng bán đã lưu luôn là Đã xuất – Đã giao – Chưa hủy – Chưa trả → bỏ các trường trạng thái cho nhẹ bộ nhớ
+        d.lines = d.lines.filter(l => l.created !== r.day).concat(r.lines.map(({ exportType, exported, delivered, cancelled, returned, ...x }) => x));
         d.book[r.day] = r.record;
         d.lines.sort((a, b) => a.created.localeCompare(b.created) || a.shop.localeCompare(b.shop) || a.time.localeCompare(b.time));
         saveMonth(month, d);
@@ -636,7 +698,8 @@ tr{break-inside:avoid;page-break-inside:avoid}
     async function salesDay(iso, session, onWait) {
         const rows = await runReport(REPORT.sales, {
             V_FROMDATE: toBI(iso), V_TODATE: toBI(iso), V_OUTPUTTYPEIDLIST: SALES_FILTER.exportType, V_STORESEARCHTYPE: SALES_FILTER.warehouseMode,
-            V_STOREIDLIST: shopsKey(), V_MAINGROUPIDLIST: SALES_FILTER.category,   // '' = tất cả ngành V_SALEORDERTYPEIDLIST: '', V_PRODUCTIDLIST: '',
+            V_STOREIDLIST: shopsKey(), V_MAINGROUPIDLIST: SALES_FILTER.category,   // '' = tất cả ngành
+            V_SALEORDERTYPEIDLIST: '', V_PRODUCTIDLIST: '',
             V_DELIVERYTYPEIDLIST: '', V_COMPANYID: '1', V_LANGUAGEID: '2', V_USERNAME: ''
         }, session, 180000, onWait);
         check(session);
@@ -655,7 +718,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         validateSalesLines(lines, config.shops, iso);
         const s = splitSales(lines), now = new Date();
         const record = { schema: SALES_SCHEMA, shops: shopsKey(), status: dayStatus(iso, s.pending, isoDate(now), config.returnDays), pending: s.pending, pendingLines: s.pendingLines, returned: s.returned, returnedLines: s.returnedLines, rows: rows.length, valid: s.valid.length,
-            quantity: s.valid.reduce((a, l) => a + l.qty, 0), revenue: s.valid.reduce((a, l) => a + l.qty * l.price, 0), excluded: s.excluded, at: stamp(now) };
+            quantity: s.valid.reduce((a, l) => a + l.qty, 0), revenue: s.valid.reduce((a, l) => a + l.qty * l.price, 0), excluded: s.excluded, at: stamp(now), atMs: now.getTime() };
         return { day: iso, record, lines: s.valid };
     }
 
@@ -673,7 +736,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const session = { id: uuid(), mode, started: Date.now(), status: 'running', controller: new AbortController() };
         running = session; ui.classList.add('busy');
         const timer = setInterval(() => { ui.querySelector('[data-timer]').textContent = clockText(session.started); }, 250);
-        log(`Bắt đầu ${mode === 'sales' ? 'đổ xuất bán' : mode === 'balance' ? 'đổ cân hàng' : 'đổ tồn kho'}`); status('Đang kiểm tra quyền…'); progress(0, 1);
+        log(`Bắt đầu ${({ sales: 'đổ xuất bán', balance: 'đổ cân hàng', auto: 'tự đổ xuất bán hôm qua', prev: 'đổ xuất bán cùng kỳ tháng trước' })[mode] || 'đổ tồn kho'}`); status('Đang kiểm tra quyền…'); progress(0, 1);
         try {
             await authCheck(session); check(session); log(`Quyền hợp lệ: ${auth.user} — ${auth.name}`);
             const msg = await job(session); check(session);
@@ -684,14 +747,33 @@ tr{break-inside:avoid;page-break-inside:avoid}
             clearInterval(timer); ui.querySelector('[data-timer]').textContent = clockText(session.started);
             running = null; ui.classList.remove('busy');
         }
+        return session.status;
+    }
+    // Lần mở BI đầu tiên trong ngày: tự lấy xuất bán hôm qua (chạy nền, 1 lượt gọi BI)
+    async function autoYesterday() {
+        if (config.autoDaily === false || !config.shops.length || running) return;
+        const today = isoDate(new Date()), y = addDays(today, -1);
+        if (load('autoDay', '') === today) return;
+        try { detectUser(); } catch { return; }                // chưa đăng nhập BI → để lần sau
+        const range = { from: y, to: y };
+        if (!daysToFetch(loadBook(range).book, range, shopsKey(), today, false, config.returnDays, SALES_SCHEMA, Date.now(), config.freshHours ?? 2).includes(y)) { save('autoDay', today); return; }
+        const launch = document.getElementById('kxb-launch'), label = launch?.textContent;
+        if (launch) launch.textContent = '⏳ AutoBI đang lấy xuất bán hôm qua…';
+        const t0 = Date.now(), st = await withSession('auto', s => runSales(s, false, range));
+        if (launch) launch.textContent = label;
+        if (st === 'completed' && (loadBook(range).book[y]?.atMs || 0) >= t0) save('autoDay', today);
+        renderUpdate();
     }
     function selectedRange() { return validateRange(ui.querySelector('[data-from]').value, ui.querySelector('[data-to]').value); }
 
-    async function runSales(session, refetchAll) {
-        const range = selectedRange(), today = isoDate(new Date());
-        const need = daysToFetch(loadBook(range).book, range, shopsKey(), today, refetchAll, config.returnDays, SALES_SCHEMA);
+    // fetchRange: kỳ cần lấy (mặc định kỳ đang chọn); màn hình vẫn hiện kỳ đang chọn
+    async function runSales(session, refetchAll, fetchRange) {
+        const range = fetchRange || selectedRange(), today = isoDate(new Date());
+        const shown = () => { try { return selectedRange(); } catch { return range; } };
+        const fh = config.freshHours ?? 2;
+        const need = daysToFetch(loadBook(range).book, range, shopsKey(), today, refetchAll, config.returnDays, SALES_SCHEMA, Date.now(), fh);
         const skipped = daysIn(range).filter(d => d <= today && !need.includes(d)).length;
-        log(`Kỳ ${toBI(range.from)}–${toBI(range.to)}: cần lấy ${need.length} ngày, bỏ qua ${skipped} ngày đã chốt`);
+        log(`Kỳ ${toBI(range.from)}–${toBI(range.to)}: cần lấy ${need.length} ngày, bỏ qua ${skipped} ngày (đã chốt${fh ? ` hoặc vừa lấy dưới ${fh} giờ` : ''})`);
         const done = [], failed = [];
         for (let i = 0; i < need.length; i++) {
             check(session); invariant(detectUser() === auth.user, 'Tài khoản đã thay đổi');
@@ -707,10 +789,10 @@ tr{break-inside:avoid;page-break-inside:avoid}
                 failed.push(need[i]); log(`${toBI(need[i])}: ${e.message} — lần sau tự lấy lại`, 'error');
                 if (e.code !== 'TIMEOUT' && /ngoài cấu hình|ngoài kỳ|định nghĩa|tham số/.test(e.message)) throw e;
             }
-            view.sales = salesView(range); renderSales(); renderBalance();
+            view.sales = salesView(shown()); renderSales(); renderBalance();
         }
-        view.sales = salesView(range); renderSales(); renderBalance();
-        return failed.length ? `Xong ${done.length} ngày, ${failed.length} ngày lỗi: ${failed.map(toBI).join(', ')} — bấm "Đổ xuất bán" lần nữa sẽ tự lấy lại` : `Hoàn tất: lấy ${done.length} ngày, bỏ qua ${skipped} ngày đã chốt`;
+        view.sales = salesView(shown()); renderSales(); renderBalance();
+        return failed.length ? `Xong ${done.length} ngày, ${failed.length} ngày lỗi: ${failed.map(toBI).join(', ')} — bấm "Đổ xuất bán" lần nữa sẽ tự lấy lại` : `Hoàn tất: lấy ${done.length} ngày, bỏ qua ${skipped} ngày đã chốt / vừa lấy`;
     }
     async function runInventory(session) {
         const shops = config.shops.filter(s => view.invShops.has(keyCode(s.code)));
@@ -740,7 +822,11 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const days = daysIn(range).filter(d => d <= today).map(d => ({ day: d, ...(book[d] || { status: 'Chưa lấy' }) }));
         const pend = days.flatMap(d => (d.pendingLines || [])), ret = days.flatMap(d => (d.returnedLines || []));
         const oldSchema = days.filter(d => d.status !== 'Chưa lấy' && d.schema !== SALES_SCHEMA).length;
-        return { range, basis: config.basis, days, missing: days.filter(d => d.status === 'Chưa lấy').length, oldSchema, allLines: period, pendingLines: pend, returnedLines: ret };
+        // Cùng kỳ tháng trước (chỉ đọc số đã lưu, không gọi BI)
+        const prevRange = prevMonthRange(range), pb = loadBook(prevRange);
+        const prevMissing = daysIn(prevRange).filter(d => d <= today && (!pb.book[d] || pb.book[d].schema !== SALES_SCHEMA)).length;
+        return { range, basis: config.basis, days, missing: days.filter(d => d.status === 'Chưa lấy').length, oldSchema, allLines: period, pendingLines: pend, returnedLines: ret,
+            prevRange, prevMissing, prevAllLines: inPeriod(pb.lines, prevRange, config.basis) };
     }
 
     /* ---------- Định dạng & bảng ---------- */
@@ -749,7 +835,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
     const mil = v => fmt(Math.round(v / 1e4) / 100) + ' tr';
     const shopName = code => config.shops.find(s => keyCode(s.code) === keyCode(code))?.name || code;
     function el(tag, text, parent, cls) { const e = document.createElement(tag); if (text !== undefined && text !== null) e.textContent = text; if (cls) e.className = cls; if (parent) parent.append(e); return e; }
-    function table(parent, headers, rows, { pageSize = 200, num = [], total = false } = {}) {
+    function table(parent, headers, rows, { pageSize = 200, num = [], total = false, rowClass = null } = {}) {
         const box = el('div', undefined, parent, 'kxb-table');
         const t = el('table', undefined, box), tr = el('tr', undefined, el('thead', undefined, t));
         headers.forEach((h, i) => el('th', h, tr, num.includes(i) ? 'n' : ''));
@@ -757,7 +843,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const pager = rows.length > pageSize ? el('div', undefined, parent, 'kxb-pager') : null;
         const draw = () => {
             body.replaceChildren();
-            rows.slice(page * pageSize, (page + 1) * pageSize).forEach((row, ri, arr) => { const line = el('tr', undefined, body, total && ri === arr.length - 1 && (page + 1) * pageSize >= rows.length ? 'tot' : ''); row.forEach((c, i) => el('td', String(c ?? ''), line, num.includes(i) ? 'n' : '')); });
+            rows.slice(page * pageSize, (page + 1) * pageSize).forEach((row, ri, arr) => { const line = el('tr', undefined, body, total && ri === arr.length - 1 && (page + 1) * pageSize >= rows.length ? 'tot' : (rowClass ? rowClass(page * pageSize + ri) || '' : '')); row.forEach((c, i) => el('td', String(c ?? ''), line, num.includes(i) ? 'n' : '')); });
             if (pager) {
                 pager.replaceChildren();
                 const prev = el('button', '← Trước', pager); prev.disabled = page === 0; prev.onclick = () => { page--; draw(); };
@@ -768,7 +854,20 @@ tr{break-inside:avoid;page-break-inside:avoid}
         draw();
         if (!rows.length) el('div', 'Không có dòng nào', box, 'kxb-empty');
     }
-    function kpis(parent, items) { const box = el('div', undefined, parent, 'kxb-kpis'); items.forEach(([l, v, s], i) => { const k = el('div', undefined, box, i ? '' : 'main'); el('small', l, k); el('b', v, k); if (s) el('span', s, k); }); }
+    function kpis(parent, items) { const box = el('div', undefined, parent, 'kxb-kpis'); items.forEach(([l, v, s, d], i) => { const k = el('div', undefined, box, i ? '' : 'main'); el('small', l, k); el('b', v, k); if (s) el('span', s, k); if (d && d.text) el('span', d.text, k, 'dl ' + (d.cls || '')); }); }
+    // ▲▼ so cùng kỳ: chỉ hiện khi số cùng kỳ đã đủ ngày
+    function delta(cur, prev, r) {
+        if (!r || r.prevMissing) return null;
+        if (!prev) return cur ? { text: `mới so ${toBI(r.prevRange.from).slice(0, 5)}–${toBI(r.prevRange.to).slice(0, 5)}`, cls: 'up' } : null;
+        const p = (cur - prev) / prev * 100;
+        return { text: `${p >= 0 ? '▲' : '▼'} ${fmt(Math.abs(Math.round(p)))}% so ${toBI(r.prevRange.from).slice(0, 5)}–${toBI(r.prevRange.to).slice(0, 5)}`, cls: p >= 0 ? 'up' : 'down' };
+    }
+    const isPhoneLine = l => categoryText(l.category) === BAL_CATEGORY;
+    const attachKey = l => categoryText(l.category) + ' · ' + (l.group || '(không rõ nhóm)');
+    function attachData(lines) {
+        const set = new Set(config.attachGroups || []);
+        return attachStats(lines, isPhoneLine, l => !set.size || set.has(attachKey(l)));
+    }
     function subtabs(parent, list, current, onPick) {
         const bar = el('div', undefined, parent, 'kxb-subtabs');
         list.forEach(([k, l]) => { const b = el('button', l, bar); b.type = 'button'; b.classList.toggle('on', k === current); b.onclick = () => onPick(k); });
@@ -807,8 +906,8 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const r = view.sales; if (!r) return null;
         const shops = view.salesShops, conds = view.salesConds, cat = view.salesCat;
         const keep = l => shops.has(l.shop) && (!conds.size || conds.has(conditionText(l.condition))) && (!cat || categoryText(l.category) === cat) && (!view.salesBrands.size || view.salesBrands.has(brandKey(l.brand)));
-        const lines = r.allLines.filter(keep);
-        return { ...r, lines, summary: summarizeSales(lines, r.basis), pendingLines: r.pendingLines.filter(keep), returnedLines: (r.returnedLines || []).filter(keep) };
+        const lines = r.allLines.filter(keep), prevLines = (r.prevAllLines || []).filter(keep);
+        return { ...r, lines, summary: summarizeSales(lines, r.basis), prevLines, prevSummary: summarizeSales(prevLines, r.basis), pendingLines: r.pendingLines.filter(keep), returnedLines: (r.returnedLines || []).filter(keep) };
     }
     function staffMatrix(s) {
         const brands = s.brands.map(b => b.label);
@@ -850,7 +949,11 @@ tr{break-inside:avoid;page-break-inside:avoid}
         [...byCat.entries()].sort((a, b) => b[1].r - a[1].r || b[1].q - a[1].q || a[0].localeCompare(b[0], 'vi')).forEach(([k, v]) => { const o = el('option', `${k} · SL ${fmt(v.q)}`, catSel); o.value = k; });
         catSel.value = view.salesCat;
         catSel.classList.toggle('on', !!view.salesCat);
-        catSel.onchange = () => { view.salesCat = catSel.value; renderSales(); };
+        const setCat = v => { view.salesCat = v; try { save('salesCat', v); } catch { /* bỏ qua */ } renderSales(); };
+        catSel.onchange = () => setCat(catSel.value);
+        const phoneBtn = ui.querySelector('[data-phone-only]'), phoneOn = view.salesCat === BAL_CATEGORY;
+        phoneBtn.classList.toggle('on', phoneOn); phoneBtn.setAttribute('aria-pressed', phoneOn);
+        phoneBtn.onclick = () => setCat(phoneOn ? '' : BAL_CATEGORY);
         // Hãng: chọn nhiều, hãng doanh thu cao lên đầu (theo ngành + loại hàng đang chọn)
         const byBrand = new Map();
         shopLines.filter(l => (!view.salesCat || categoryText(l.category) === view.salesCat) && (!view.salesConds.size || view.salesConds.has(conditionText(l.condition))))
@@ -868,12 +971,30 @@ tr{break-inside:avoid;page-break-inside:avoid}
         if (view.salesCat) el('div', `Đang lọc ngành: ${view.salesCat} — chọn "Tất cả ngành" để bỏ lọc.`, area, 'kxb-warn');
         if (view.salesBrands.size) el('div', `Đang lọc hãng: ${[...byBrand.values()].filter(b => view.salesBrands.has(b.key)).map(b => b.name).join(', ')} — tích "Tất cả hãng" để bỏ lọc.`, area, 'kxb-warn');
         if (view.salesConds.size) el('div', `Đang lọc loại hàng: ${[...view.salesConds].join(', ')} — bấm "Tất cả" để bỏ lọc.`, area, 'kxb-warn');
-        const pendOrders = new Set(r.pendingLines.map(l => l.order)).size, retOrders = new Set(r.returnedLines.map(l => l.order)).size;
-        kpis(area, [['Đã bán', `SL ${fmt(s.quantity)}`, mil(s.revenue)],
-            ...codes.map(c => { const x = s.shops.find(z => z.code === c) || { quantity: 0, revenue: 0 }; return [shopName(c), `SL ${fmt(x.quantity)}`, mil(x.revenue)]; }),
-            ['Đơn treo', fmt(pendOrders), 'chưa xuất / chưa giao'], ['Khách nhập trả', fmt(retOrders), `đã bỏ SL ${fmt(r.returnedLines.reduce((a, l) => a + l.qty, 0))} · ${mil(r.returnedLines.reduce((a, l) => a + l.qty * l.price, 0))}`]]);
+        const today = isoDate(new Date()), pOrders = pendingOrders(r.pendingLines, today), pendOrders = pOrders.length, oldPend = pOrders.filter(o => o.age >= 2).length;
+        const retOrders = new Set(r.returnedLines.map(l => l.order)).size, ps = r.prevSummary;
+        if (r.prevMissing) {
+            const w = el('div', `Cùng kỳ tháng trước (${toBI(r.prevRange.from)}–${toBI(r.prevRange.to)}) còn ${r.prevMissing} ngày chưa lấy — chưa so được ▲▼. `, area, 'kxb-warn');
+            const b = el('button', 'Đổ cùng kỳ tháng trước', w, 'idle-only'); b.type = 'button';
+            b.onclick = safely(() => { validateShops(config.shops); return withSession('prev', ss => runSales(ss, false, r.prevRange)); });
+        }
+        // Bán kèm & dự kiến: tính trên các siêu thị đang chọn (không theo bộ lọc ngành/hãng/loại hàng)
+        const shopAll = r.allLines.filter(l => view.salesShops.has(l.shop)), att = attachData(shopAll);
+        const attPrev = r.prevMissing ? null : attachData((r.prevAllLines || []).filter(l => view.salesShops.has(l.shop)));
+        const proj = projectMonth(r.lines.filter(l => (r.basis === 'shipped' && l.shipped ? l.shipped : l.created) < today).reduce((a, l) => a + l.qty * l.price, 0), r.range, today);
+        const tCat = config.targetCat ?? BAL_CATEGORY, tShops = config.shops.filter(x => view.salesShops.has(keyCode(x.code)));
+        const target = tShops.reduce((a, x) => a + (Number(x.target) || 0), 0) * 1e6, tMatch = view.salesCat === tCat && !view.salesBrands.size && !view.salesConds.size;
+        const projItem = proj ? ['Dự kiến cuối tháng', mil(proj.value), !target ? 'chưa đặt mục tiêu (Cài đặt)' : tMatch ? `mục tiêu ${mil(target)} · ${pct(proj.value / target * 100)}` : `chọn ngành ${tCat || 'tất cả'} để so mục tiêu`,
+            target && tMatch ? { text: proj.value >= target ? 'đạt mục tiêu' : `thiếu ${mil(target - proj.value)}`, cls: proj.value >= target ? 'up' : 'down' } : null] : null;
+        kpis(area, [['Đã bán', `SL ${fmt(s.quantity)}`, mil(s.revenue), delta(s.revenue, ps.revenue, r)],
+            ...codes.map(c => { const x = s.shops.find(z => z.code === c) || { quantity: 0, revenue: 0 }, y = ps.shops.find(z => z.code === c) || { revenue: 0 }; return [shopName(c), `SL ${fmt(x.quantity)}`, mil(x.revenue), delta(x.revenue, y.revenue, r)]; }),
+            ['Tỷ lệ bán kèm ĐT', pct(att.total.rate), `${fmt(att.total.attached)}/${fmt(att.total.phoneOrders)} đơn điện thoại`,
+                attPrev && attPrev.total.phoneOrders ? { text: `${att.total.rate >= attPrev.total.rate ? '▲' : '▼'} ${fmt(Math.abs(Math.round(att.total.rate - attPrev.total.rate)))} điểm so cùng kỳ`, cls: att.total.rate >= attPrev.total.rate ? 'up' : 'down' } : null],
+            ...(projItem ? [projItem] : []),
+            ['Đơn treo', fmt(pendOrders), 'chưa xuất / chưa giao', oldPend ? { text: `${fmt(oldPend)} đơn treo từ 2 ngày`, cls: 'down' } : null],
+            ['Khách nhập trả', fmt(retOrders), `đã bỏ SL ${fmt(r.returnedLines.reduce((a, l) => a + l.qty, 0))} · ${mil(r.returnedLines.reduce((a, l) => a + l.qty * l.price, 0))}`]]);
         el('div', `Kỳ ${toBI(r.range.from)}–${toBI(r.range.to)} · Kho tạo · ngành: ${view.salesCat || 'tất cả'} · tính theo ${r.basis === 'shipped' ? 'ngày xuất' : 'ngày tạo'} · dòng Đã xuất – Đã giao – Chưa hủy · loại hàng: ${view.salesConds.size ? [...view.salesConds].join(', ') : 'tất cả'} · bỏ cả đơn khách nhập trả (kiểm tra lại ${config.returnDays} ngày gần nhất) · doanh thu = Giá bán × SL (gồm VAT)`, area, 'kxb-muted');
-        subtabs(area, [['category', 'Theo ngành hàng'], ['brand', 'Theo hãng'], ['staff', 'Nhân viên × hãng'], ['staffProduct', 'Nhân viên × sản phẩm'], ['product', 'Sản phẩm'], ['daily', 'Theo ngày'], ['pending', `Đơn treo (${pendOrders})`], ['returned', `Nhập trả (${retOrders})`], ['detail', 'Chi tiết']], view.salesTab, k => { view.salesTab = k; renderSales(); });
+        subtabs(area, [['category', 'Theo ngành hàng'], ['brand', 'Theo hãng'], ['staff', 'Nhân viên × hãng'], ['attach', 'Bán kèm'], ['staffProduct', 'Nhân viên × sản phẩm'], ['product', 'Sản phẩm'], ['daily', 'Theo ngày'], ['pending', `Đơn treo (${pendOrders})`], ['returned', `Nhập trả (${retOrders})`], ['detail', 'Chi tiết']], view.salesTab, k => { view.salesTab = k; renderSales(); });
         const pane = el('div', undefined, area);
         const n = (from, count) => Array.from({ length: count }, (_, i) => from + i);
         if (view.salesTab === 'category') {
@@ -891,17 +1012,40 @@ tr{break-inside:avoid;page-break-inside:avoid}
                 [...m.rows.map(x => [shopName(x.staff.shop), x.staff.label, ...x.cells.map(v => v ? fmt(v) : ''), fmt(x.staff.quantity), pct(x.staff.pctShop), mil(x.staff.revenue)]),
                  ['Tổng', '', ...s.brands.map(b => fmt(b.quantity)), fmt(s.quantity), '', mil(s.revenue)]], { num: n(2, m.brands.length + 3), total: true });
         }
+        if (view.salesTab === 'attach') {
+            // Chọn nhóm hàng tính là "kèm" (để trống = mọi dòng không phải điện thoại trong cùng đơn)
+            const gq = new Map(); shopAll.filter(l => !isPhoneLine(l)).forEach(l => gq.set(attachKey(l), (gq.get(attachKey(l)) || 0) + l.qty));
+            const aset = new Set(config.attachGroups || []);
+            const pickBox = el('div', undefined, pane, 'group'); el('b', 'Tính là kèm', pickBox); const dropBox = el('span', undefined, pickBox);
+            multiDrop(dropBox, 'attach-groups', [...new Set([...gq.keys(), ...aset])].sort((a, b) => (gq.get(b) || 0) - (gq.get(a) || 0) || a.localeCompare(b, 'vi')).map(k => ({ key: k, name: k, label: `${k} · SL ${fmt(gq.get(k) || 0)}` })),
+                aset, 'Mọi nhóm không phải điện thoại', () => { config.attachGroups = [...aset]; save('config', config); renderSales(); });
+            el('div', `Đơn có điện thoại · "có kèm" = cùng mã đơn có thêm ${aset.size ? 'nhóm đã chọn' : 'hàng ngoài ngành điện thoại'} · nhân viên = người tạo dòng điện thoại · theo các siêu thị đang chọn, không theo bộ lọc ngành / hãng / loại hàng · lựa chọn được lưu.`, pane, 'kxb-muted');
+            const prevMap = new Map((attPrev?.staff || []).map(x => [x.shop + '|' + x.label, x]));
+            const dd = d => d > 0 ? `▲ ${fmt(d)}` : d < 0 ? `▼ ${fmt(-d)}` : '=';
+            const dq = (cur, x) => attPrev ? dd(cur - (prevMap.get(x.shop + '|' + x.label)?.phoneQty || 0)) : '';
+            table(pane, ['Siêu thị', 'Nhân viên', 'Đơn ĐT', 'SL ĐT', 'Có kèm', 'Tỷ lệ kèm', 'SL kèm', 'DT kèm', 'SL ĐT so cùng kỳ'],
+                [...att.staff.map(x => [shopName(x.shop), x.label, fmt(x.phoneOrders), fmt(x.phoneQty), fmt(x.attached), pct(x.rate), fmt(x.attachQty), mil(x.attachRev), dq(x.phoneQty, x)]),
+                 ['Tổng', '', fmt(att.total.phoneOrders), fmt(att.total.phoneQty), fmt(att.total.attached), pct(att.total.rate), fmt(att.total.attachQty), mil(att.total.attachRev), attPrev ? dd(att.total.phoneQty - attPrev.total.phoneQty) : '']],
+                { num: [2, 3, 4, 5, 6, 7, 8], total: true, rowClass: i => i < att.staff.length && att.staff[i].phoneOrders >= 3 && att.staff[i].rate < att.total.rate / 2 ? 'low' : '' });
+            if (!attPrev) el('div', 'Cột "so cùng kỳ" trống vì cùng kỳ tháng trước chưa đủ ngày — bấm "Đổ cùng kỳ tháng trước" ở trên.', pane, 'kxb-muted');
+            el('div', 'Nhóm hàng đi kèm (số đơn điện thoại có nhóm này)', pane, 'kxb-muted').style.marginTop = '10px';
+            table(pane, ['Nhóm hàng', 'Số đơn', '% đơn ĐT', 'SL', 'Doanh thu'], att.groups.map(g => [g.group || '(không rõ)', fmt(g.orders), pct(att.total.phoneOrders ? g.orders / att.total.phoneOrders * 100 : 0), fmt(g.qty), mil(g.rev)]), { num: [1, 2, 3, 4] });
+        }
         if (view.salesTab === 'staffProduct') {
             el('div', 'Bấm vào tên nhân viên để mở / đóng danh sách sản phẩm.', pane, 'kxb-muted');
+            const imeis = new Map(); r.lines.forEach(l => { if (!l.imei) return; const k = l.creator + '|' + l.product; (imeis.get(k) || imeis.set(k, []).get(k)).push(l.imei); });
             for (const st of s.staff) {
                 const box = el('details', undefined, pane, 'kxb-staff'); box.open = view.openStaff.has(st.label);
                 box.ontoggle = () => { box.open ? view.openStaff.add(st.label) : view.openStaff.delete(st.label); };
                 el('summary', `${shopName(st.shop)} · ${st.label} — SL ${fmt(st.quantity)} · ${mil(st.revenue)} · ${st.brands.map(b => `${b.label} ${fmt(b.quantity)}`).join(', ')}`, box);
-                table(box, ['Sản phẩm', 'Hãng', 'Mã SP', 'SL', '% của NV', 'Doanh thu', 'IMEI'], st.products.map(v => [v.label, v.brand, v.product, fmt(v.quantity), pct(v.pctQty), mil(v.revenue), r.lines.filter(l => l.creator === st.label && l.product === v.product && l.imei).map(l => l.imei).join(', ')]), { num: [3, 4, 5] });
+                table(box, ['Sản phẩm', 'Hãng', 'Mã SP', 'SL', '% của NV', 'Doanh thu', 'IMEI'], st.products.map(v => [v.label, v.brand, v.product, fmt(v.quantity), pct(v.pctQty), mil(v.revenue), (imeis.get(st.label + '|' + v.product) || []).join(', ')]), { num: [3, 4, 5] });
             }
         }
-        if (view.salesTab === 'product') table(pane, ['Sản phẩm', 'Hãng', 'Nhóm', 'Mã SP', ...codes.map(shopName), 'SL', '% SL', 'Doanh thu'],
-            s.products.map(p => [p.name, p.brand, p.group, p.product, ...codes.map(c => fmt(r.lines.filter(l => l.product === p.product && l.shop === c).reduce((a, l) => a + l.qty, 0))), fmt(p.quantity), pct(p.pctQty), mil(p.revenue)]), { num: n(4, codes.length + 3) });
+        if (view.salesTab === 'product') {
+            const ps2 = new Map(); r.lines.forEach(l => { const k = l.product + '|' + l.shop; ps2.set(k, (ps2.get(k) || 0) + l.qty); });
+            table(pane, ['Sản phẩm', 'Hãng', 'Nhóm', 'Mã SP', ...codes.map(shopName), 'SL', '% SL', 'Doanh thu'],
+                s.products.map(p => [p.name, p.brand, p.group, p.product, ...codes.map(c => fmt(ps2.get(p.product + '|' + c) || 0)), fmt(p.quantity), pct(p.pctQty), mil(p.revenue)]), { num: n(4, codes.length + 3) });
+        }
         if (view.salesTab === 'daily') {
             const by = new Map(); r.lines.forEach(l => { const d = r.basis === 'shipped' && l.shipped ? l.shipped : l.created; const e = by.get(d) || {}; e[l.shop] = (e[l.shop] || 0) + l.qty; e.q = (e.q || 0) + l.qty; e.r = (e.r || 0) + l.qty * l.price; by.set(d, e); });
             table(pane, ['Ngày', 'Sổ', ...codes.map(shopName), 'SL', 'Doanh thu', 'Đơn treo', 'Dòng BI / tính', 'Dòng bị loại', 'Lấy lúc'],
@@ -909,7 +1053,14 @@ tr{break-inside:avoid;page-break-inside:avoid}
                 { num: n(2, codes.length + 3) });
         }
         if (view.salesTab === 'pending') {
-            el('div', 'Đơn chưa hủy nhưng chưa xuất hoặc chưa giao, theo lần lấy gần nhất của từng ngày. Ngày có đơn treo sẽ được lấy lại ở lần đổ sau.', pane, 'kxb-muted');
+            const bar = el('div', undefined, pane, 'bar');
+            el('span', 'Đơn chưa hủy nhưng chưa xuất hoặc chưa giao, gom theo mã đơn, treo lâu nhất lên đầu (đỏ: từ 3 ngày · vàng: 2 ngày). Ngày có đơn treo được lấy lại ở lần đổ sau.', bar, 'kxb-muted');
+            const cp = el('button', '📋 Sao chép để nhắc nhóm', bar); cp.type = 'button';
+            cp.onclick = safely(() => copyText(pendingMessage(pOrders, today), `Đã sao chép tin nhắc ${fmt(pOrders.filter(o => o.age >= 2).length || pOrders.length)} đơn treo`));
+            table(pane, ['Treo', 'Ngày tạo', 'Siêu thị', 'Mã đơn', 'Nhân viên', 'Sản phẩm', 'SL', 'Giá trị', 'Trạng thái'],
+                pOrders.map(o => [o.age ? `${o.age} ngày` : 'hôm nay', toBI(o.created) + ' ' + (o.time || ''), shopName(o.shop), o.order, o.creator, o.items.join(' + '), fmt(o.qty), mil(o.value), o.state]),
+                { num: [6, 7], rowClass: i => pOrders[i].age >= 3 ? 'old' : pOrders[i].age === 2 ? 'mid' : '' });
+            el('div', 'Chi tiết từng dòng', pane, 'kxb-muted').style.marginTop = '10px';
             table(pane, ['Ngày tạo', 'Giờ', 'Siêu thị', 'Mã đơn', 'Loại YCX', 'Nhân viên', 'Hãng', 'Sản phẩm', 'IMEI', 'Loại hàng', 'SL', 'Giá bán', 'Xuất', 'Giao'],
                 r.pendingLines.map(l => [toBI(l.created), l.time, shopName(l.shop), l.order, l.orderType, l.creator, l.brand, l.productName, l.imei || '', conditionText(l.condition), l.qty, fmt(l.price), l.exported, l.delivered]), { num: [10, 11] });
         }
@@ -1074,6 +1225,69 @@ tr{break-inside:avoid;page-break-inside:avoid}
         status(`Đã mở hộp thoại in phiếu kiểm (${fmt(recs.length)} dòng). Chọn khổ A4, hướng dọc.`, 'ok');
     }
 
+    /* ---------- Ảnh báo cáo gửi Zalo (vẽ canvas, theo bộ lọc đang chọn) ---------- */
+    async function salesImage() {
+        const r = salesData(); invariant(r && r.lines.length, 'Chưa có số xuất bán trong kỳ — bấm "Đổ xuất bán" hoặc "Xem số đã lưu"');
+        const s = r.summary, ps = r.prevSummary, codes = config.shops.map(x => keyCode(x.code)).filter(c => view.salesShops.has(c));
+        const att = attachData(r.allLines.filter(l => view.salesShops.has(l.shop))), attMap = new Map(att.staff.map(x => [x.shop + '|' + x.label, x]));
+        const pOrders = pendingOrders(r.pendingLines, isoDate(new Date()));
+        const brands = s.brands.slice(0, 8), staff = s.staff.slice(0, 12);
+        const IW = 1000, P = 28, DPR = 2, rowH = 30;
+        const H = 120 + 112 + 20 + 36 + rowH * (brands.length + 1) + 30 + 36 + rowH * (staff.length + 1) + 50;
+        const cv = document.createElement('canvas'); cv.width = IW * DPR; cv.height = H * DPR;
+        const g = cv.getContext('2d'); g.scale(DPR, DPR);
+        const F = (w, px) => `${w} ${px}px Arial, "Segoe UI", sans-serif`;
+        const text = (t, x, y, { font = F(400, 15), color = '#172a3a', align = 'left', max = 0 } = {}) => {
+            g.font = font; g.fillStyle = color; g.textAlign = align; t = String(t ?? '');
+            if (max) while (t.length > 1 && g.measureText(t).width > max) t = t.slice(0, -2) + '…';
+            g.fillText(t, x, y);
+        };
+        const box = (x, y, w, h, fill, rad = 10) => { g.fillStyle = fill; g.beginPath(); g.roundRect ? g.roundRect(x, y, w, h, rad) : g.rect(x, y, w, h); g.fill(); };
+        g.fillStyle = '#fff'; g.fillRect(0, 0, IW, H);
+        box(0, 0, IW, 96, '#087f8c', 0);
+        text(`XUẤT BÁN · ${toBI(r.range.from)} – ${toBI(r.range.to)}`, P, 42, { font: F(700, 26), color: '#fff' });
+        const filt = [`Ngành: ${view.salesCat || 'tất cả'}`, view.salesBrands.size ? 'Hãng: ' + [...new Set(r.lines.map(l => l.brand))].join(', ') : '', view.salesConds.size ? 'Loại hàng: ' + [...view.salesConds].join(', ') : '', 'Kho tạo · Đã xuất – Đã giao · bỏ đơn nhập trả'].filter(Boolean).join(' · ');
+        text(filt, P, 72, { font: F(400, 14), color: '#e0f2f3', max: IW - 2 * P });
+        // Thẻ chỉ số
+        const d = (c, p) => { const x = delta(c, p, r); return x ? x.text : ''; };
+        const cards = [['Cụm', s.quantity, s.revenue, d(s.revenue, ps.revenue), true],
+            ...codes.map(c => { const x = s.shops.find(z => z.code === c) || { quantity: 0, revenue: 0 }, y = ps.shops.find(z => z.code === c) || { revenue: 0 }; return [shopName(c), x.quantity, x.revenue, d(x.revenue, y.revenue)]; })];
+        const extra = [['Bán kèm ĐT', pct(att.total.rate), `${fmt(att.total.attached)}/${fmt(att.total.phoneOrders)} đơn`], ['Đơn treo', fmt(pOrders.length), `${fmt(pOrders.filter(o => o.age >= 2).length)} đơn từ 2 ngày`]];
+        const all = [...cards.map(c => ({ t: c[0], v: `SL ${fmt(c[1])}`, s: mil(c[2]), d: c[3], main: c[4] })), ...extra.map(c => ({ t: c[0], v: c[1], s: c[2] }))];
+        const cw = (IW - 2 * P - 10 * (all.length - 1)) / all.length;
+        all.forEach((c, i) => {
+            const x = P + i * (cw + 10), y = 116;
+            box(x, y, cw, 96, c.main ? '#087f8c' : '#f2f6f7');
+            const col = c.main ? '#fff' : '#172a3a';
+            text(c.t, x + 12, y + 22, { font: F(400, 13), color: c.main ? '#e0f2f3' : '#4a5a66', max: cw - 20 });
+            text(c.v, x + 12, y + 50, { font: F(700, 22), color: col, max: cw - 20 });
+            text(c.s, x + 12, y + 70, { font: F(400, 13), color: col, max: cw - 20 });
+            if (c.d) text(c.d, x + 12, y + 88, { font: F(700, 12), color: c.main ? '#fff' : c.d.startsWith('▼') ? '#b91c1c' : '#15803d', max: cw - 20 });
+        });
+        // Bảng
+        const tableAt = (y, title, cols, rows) => {
+            text(title, P, y, { font: F(700, 17) });
+            y += 14; box(P, y, IW - 2 * P, rowH, '#edf5f7', 6);
+            const draw = (cells, yy, bold) => cols.forEach(([, x, w, al], i) => text(cells[i], al === 'right' ? x + w : x, yy + 20, { font: F(bold ? 700 : 400, 14), align: al || 'left', max: w }));
+            draw(cols.map(c => c[0]), y, true);
+            rows.forEach((row, i) => { const yy = y + rowH * (i + 1); if (i % 2) box(P, yy, IW - 2 * P, rowH, '#f8fafb', 0); draw(row, yy, false); });
+            return y + rowH * (rows.length + 1);
+        };
+        let y = tableAt(252, 'Theo hãng', [['Hãng', P + 10, 280], ['SL', P + 300, 90, 'right'], ['% SL', P + 400, 90, 'right'], ['Doanh thu', P + 500, 150, 'right'], ['% DT', P + 660, 90, 'right'], ['Giá TB', P + 760, 170, 'right']],
+            brands.map(b => [b.label, fmt(b.quantity), pct(b.pctQty), mil(b.revenue), pct(b.pctRev), mil(b.quantity ? b.revenue / b.quantity : 0)]));
+        y = tableAt(y + 36, `Nhân viên${s.staff.length > staff.length ? ` (top ${staff.length}/${s.staff.length})` : ''}`, [['Nhân viên', P + 10, 330], ['Siêu thị', P + 350, 150], ['SL', P + 510, 80, 'right'], ['Doanh thu', P + 600, 140, 'right'], ['Kèm ĐT', P + 750, 180, 'right']],
+            staff.map(st => { const a = attMap.get(st.shop + '|' + st.label); return [st.label, shopName(st.shop), fmt(st.quantity), mil(st.revenue), a ? `${fmt(a.attached)}/${fmt(a.phoneOrders)} · ${pct(a.rate)}` : '—']; }));
+        text(`AutoBI Kho & Xuất Bán V${VERSION} · lấy lúc ${stamp(new Date())}${r.missing ? ` · CHƯA ĐỦ: còn ${r.missing} ngày chưa lấy` : ''}`, P, y + 30, { font: F(400, 12), color: r.missing ? '#b91c1c' : '#5b6b76' });
+        const blob = await new Promise(res => cv.toBlob(res, 'image/png'));
+        invariant(blob, 'Không tạo được ảnh');
+        const name = `AutoBI_XuatBan_${r.range.from.replace(/-/g, '')}-${r.range.to.replace(/-/g, '')}.png`;
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+        let copied = false;
+        try { if (window.ClipboardItem) { await navigator.clipboard.write([new (window.ClipboardItem)({ 'image/png': blob })]); copied = true; } } catch { /* trình duyệt chặn → chỉ tải file */ }
+        status(copied ? `Đã chép ảnh báo cáo — mở Zalo bấm Ctrl+V để dán (cũng đã tải ${name})` : `Đã tải ảnh ${name}`, 'ok');
+        log(`Ảnh báo cáo xuất bán: ${toBI(r.range.from)}–${toBI(r.range.to)}`);
+    }
+
     /* ---------- Excel ---------- */
     function exportExcel() {
         const X = XL(); invariant(X, 'Chưa tải được thư viện Excel (SheetJS)');
@@ -1093,6 +1307,10 @@ tr{break-inside:avoid;page-break-inside:avoid}
             sheet('NhanVien_x_Hang', [['Nhân viên × hãng (SL) · ' + title], [], ['Siêu thị', 'Nhân viên (người tạo)', ...m.brands, 'Tổng SL', '% shop', 'Doanh thu (đ)'],
                 ...m.rows.map(x => [shopName(x.staff.shop), x.staff.label, ...x.cells, x.staff.quantity, x.staff.pctShop / 100, x.staff.revenue]),
                 ['Tổng', '', ...s.brands.map(b => b.quantity), s.quantity, '', s.revenue]], [14, 28, ...m.brands.map(() => 9), 8, 8, 15]);
+            const att = attachData(r.allLines.filter(l => view.salesShops.has(l.shop)));
+            sheet('BanKem', [['Bán kèm theo nhân viên (đơn có điện thoại; kèm = ' + ((config.attachGroups || []).length ? config.attachGroups.join(', ') : 'mọi nhóm không phải điện thoại') + ') · ' + title], [], ['Siêu thị', 'Nhân viên', 'Đơn ĐT', 'SL ĐT', 'Có kèm', 'Tỷ lệ kèm', 'SL kèm', 'DT kèm (đ)'],
+                ...att.staff.map(x => [shopName(x.shop), x.label, x.phoneOrders, x.phoneQty, x.attached, x.rate / 100, x.attachQty, x.attachRev]),
+                ['Tổng', '', att.total.phoneOrders, att.total.phoneQty, att.total.attached, att.total.rate / 100, att.total.attachQty, att.total.attachRev]], [14, 28, 8, 8, 8, 9, 8, 15]);
             sheet('NhanVien_SP', [['Nhân viên bán sản phẩm gì · ' + title], [], ['Siêu thị', 'Nhân viên', 'Hãng', 'Mã SP', 'Tên sản phẩm', 'SL', 'Doanh thu (đ)'],
                 ...s.staff.flatMap(st => st.products.map(p => [shopName(st.shop), st.label, p.brand, p.product, p.label, p.quantity, p.revenue]))], [14, 28, 12, 16, 44, 6, 15]);
             sheet('SanPham', [['Sản phẩm · ' + title], [], ['Mã SP', 'Tên sản phẩm', 'Hãng', 'Nhóm', 'SL', '% SL', 'Doanh thu (đ)'], ...s.products.map(p => [p.product, p.name, p.brand, p.group, p.quantity, p.pctQty / 100, p.revenue])], [16, 44, 12, 22, 6, 7, 15]);
@@ -1129,16 +1347,40 @@ tr{break-inside:avoid;page-break-inside:avoid}
     }
 
     /* ---------- Cài đặt ---------- */
-    async function copyLog() {
-        const text = journal.slice(-300).reverse().map(x => `${new Date(x.time).toLocaleString('vi-VN')} ${x.kind === 'error' ? '✖' : '•'} ${x.message}`).join('\n');
+    async function copyText(text, done) {
         try { await navigator.clipboard.writeText(text); }
         catch { const t = el('textarea', undefined, document.body); t.value = text; t.dataset.kxbUi = ''; t.select(); document.execCommand('copy'); t.remove(); }
-        status('Đã sao chép nhật ký', 'ok');
+        status(done, 'ok');
+    }
+    async function copyLog() {
+        await copyText(journal.slice(-300).reverse().map(x => `${new Date(x.time).toLocaleString('vi-VN')} ${x.kind === 'error' ? '✖' : '•'} ${x.message}`).join('\n'), 'Đã sao chép nhật ký');
+    }
+    // Tin nhắc đơn treo gửi nhóm: ưu tiên đơn treo từ 2 ngày, gom theo siêu thị
+    function pendingMessage(orders, today) {
+        invariant(orders.length, 'Không có đơn treo trong kỳ đang xem');
+        const list = orders.some(o => o.age >= 2) ? orders.filter(o => o.age >= 2) : orders;
+        const head = orders.some(o => o.age >= 2) ? `⚠️ ĐƠN TREO TỪ 2 NGÀY (tính đến ${toBI(today)})` : `⏳ ĐƠN CHƯA XUẤT / CHƯA GIAO (${toBI(today)})`;
+        const byShop = new Map(); list.forEach(o => { (byShop.get(o.shop) || byShop.set(o.shop, []).get(o.shop)).push(o); });
+        return [head, ...[...byShop.entries()].flatMap(([shop, os]) => [`\n${shopName(shop)} — ${os.length} đơn:`,
+            ...os.map(o => `• ${o.creator.replace(/^\d+\s*[-–]\s*/, '')} · ${o.items.join(' + ')} · ${o.age} ngày · ${o.state.toLowerCase()} · đơn ${o.order}`)]),
+            '\nAnh em kiểm tra, xuất / giao hoặc hủy đơn giúp nhé.'].join('\n');
+    }
+    function renderStorage() {
+        const box = ui.querySelector('[data-storage]'); if (!box) return;
+        try {
+            const keys = (typeof GM_listValues === 'function' ? GM_listValues() : []).filter(k => k.startsWith(PREFIX + 'month_')).sort();
+            let bytes = 0, lines = 0; keys.forEach(k => { const v = load(k.slice(PREFIX.length), null); if (v) { bytes += JSON.stringify(v).length; lines += (v.lines || []).length; } });
+            const mb = bytes / 1048576, inv = JSON.stringify(load('lastInventory', null) || '').length / 1048576;
+            box.textContent = `Bộ nhớ trên máy: xuất bán ${keys.length} tháng (${keys.map(k => k.slice(-7).split('-').reverse().join('/')).join(', ') || '—'}) · ${fmt(lines)} dòng · ${fmt(Math.round(mb * 10) / 10)} MB · tồn kho ${fmt(Math.round(inv * 10) / 10)} MB`
+                + (mb + inv > 40 ? ' — khá lớn, Tampermonkey có thể chậm khi lưu.' : '');
+            box.style.color = mb + inv > 40 ? '#8a1c1c' : '';
+        } catch (e) { box.textContent = 'Không đọc được dung lượng: ' + e.message; }
     }
     function shopEditor(shop = { code: '', name: '' }) {
         const row = el('div', undefined, ui.querySelector('[data-shops]'), 'kxb-shop');
-        for (const [key, label] of [['code', 'Mã ST'], ['name', 'Tên hiển thị']]) {
+        for (const [key, label] of [['code', 'Mã ST'], ['name', 'Tên hiển thị'], ['target', 'Mục tiêu DT tháng (triệu)']]) {
             const l = el('label', label, row), input = el('input', undefined, l); input.dataset.shopField = key; input.value = shop[key] || '';
+            if (key === 'target') { input.inputMode = 'numeric'; input.placeholder = 'vd 1700'; input.style.width = '150px'; }
         }
         const del = el('button', 'Xóa', row); del.type = 'button'; del.onclick = () => { invariant(!running, 'Không đổi cấu hình khi đang chạy'); row.remove(); };
     }
@@ -1146,12 +1388,20 @@ tr{break-inside:avoid;page-break-inside:avoid}
         invariant(!running, 'Không đổi cấu hình khi đang chạy');
         const shops = [...ui.querySelectorAll('.kxb-shop')].map(row => Object.fromEntries([...row.querySelectorAll('input')].map(input => [input.dataset.shopField, clean(input.value)])));
         validateShops(shops);
+        shops.forEach(sh => {
+            const t = clean(sh.target).replace(/[.,\s]/g, '');
+            invariant(!t || /^\d{1,7}$/.test(t), `Mục tiêu của ${sh.name} phải là số triệu đồng (vd 1700)`);
+            if (t) sh.target = Number(t); else delete sh.target;
+        });
         const v = k => clean(ui.querySelector(`[data-cfg="${k}"]`).value);
+        const fh = Math.round(Number(v('freshHours')));
+        invariant(fh >= 0 && fh <= 24, 'Số giờ "vừa lấy" phải từ 0 đến 24');
         const rd = Math.round(Number(v('returnDays')));
         invariant(rd >= 2 && rd <= 35, 'Số ngày kiểm tra lại nhập trả phải từ 2 đến 35');
         const bt = Math.round(Number(v('balTarget')));
         invariant(bt >= 3 && bt <= 60, 'Số ngày giữ đủ bán (Cân hàng) phải từ 3 đến 60');
-        config = { shops, selectors: config.selectors || {}, basis: v('basis') === 'shipped' ? 'shipped' : 'created', returnDays: rd, balTarget: bt };
+        config = { ...config, shops, selectors: config.selectors || {}, basis: v('basis') === 'shipped' ? 'shipped' : 'created', returnDays: rd, balTarget: bt,
+            freshHours: fh, autoDaily: ui.querySelector('[data-cfg="autoDaily"]').checked, targetCat: v('targetCat') === '*' ? '' : v('targetCat') };
         save('config', config);
         const codes = new Set(shops.map(s => keyCode(s.code)));
         view.invShops = new Set([...view.invShops].filter(c => codes.has(c))); if (!view.invShops.size) view.invShops = new Set(codes);
@@ -1246,6 +1496,12 @@ tr{break-inside:avoid;page-break-inside:avoid}
         #kxb-panel .kxb-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:10px 0}
         #kxb-panel .kxb-kpis>div{background:#f2f6f7;border-radius:10px;padding:10px 14px;display:flex;flex-direction:column}
         #kxb-panel .kxb-kpis>div.main{background:#087f8c;color:#fff}#kxb-panel .kxb-kpis b{font-size:22px}#kxb-panel .kxb-kpis small,#kxb-panel .kxb-kpis span{font-size:12px}
+        #kxb-panel .kxb-kpis span.dl{font-weight:600;margin-top:2px}#kxb-panel .kxb-kpis span.dl.up{color:#15803d}#kxb-panel .kxb-kpis span.dl.down{color:#b91c1c}
+        #kxb-panel .kxb-kpis>div.main span.dl.up,#kxb-panel .kxb-kpis>div.main span.dl.down{color:#fff}
+        #kxb-panel .kxb-warn button{margin-left:8px;min-height:30px;padding:4px 12px}
+        #kxb-panel tr.old td{background:#fdecea}#kxb-panel tr.old td:first-child{color:#b91c1c;font-weight:700}
+        #kxb-panel tr.mid td{background:#fff7e0}#kxb-panel tr.mid td:first-child{color:#8a5a00;font-weight:700}
+        #kxb-panel tr.low td{color:#b91c1c}
         #kxb-panel .kxb-subtabs{display:flex;gap:2px;border-bottom:1px solid #dae3e8;margin:6px 0 10px}
         #kxb-panel .kxb-subtabs button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;color:#4a5a66}
         #kxb-panel .kxb-subtabs button.on{border-bottom-color:#087f8c;color:#087f8c;font-weight:700}
@@ -1285,7 +1541,11 @@ tr{break-inside:avoid;page-break-inside:avoid}
             <div data-shops></div><button type="button" data-add>+ Thêm siêu thị</button>
             <div class="bar" style="margin-top:10px"><label>Tính doanh số theo<select data-cfg="basis"><option value="created">Ngày tạo đơn</option><option value="shipped">Ngày xuất hàng</option></select></label>
               <label>Kiểm tra lại nhập trả (ngày gần nhất)<input type="number" min="2" max="35" data-cfg="returnDays" style="width:120px"></label>
-              <label>Cân hàng: giữ đủ bán (ngày)<input type="number" min="3" max="60" data-cfg="balTarget" style="width:120px"></label></div>
+              <label>Cân hàng: giữ đủ bán (ngày)<input type="number" min="3" max="60" data-cfg="balTarget" style="width:120px"></label>
+              <label>Không lấy lại ngày vừa lấy dưới (giờ)<input type="number" min="0" max="24" data-cfg="freshHours" style="width:120px"></label>
+              <label>Mục tiêu DT áp cho ngành<select data-cfg="targetCat"><option value="Điện thoại">Điện thoại</option><option value="*">Tất cả ngành</option></select></label>
+              <label style="flex-direction:row;align-items:center;gap:6px;font-size:13px"><input type="checkbox" data-cfg="autoDaily" style="min-height:auto">Mở BI lần đầu trong ngày: tự lấy xuất bán hôm qua</label></div>
+            <div class="kxb-muted" data-storage style="margin-bottom:8px"></div>
             <button type="button" class="primary" data-save>Lưu cài đặt</button> <button type="button" data-check-update>🔄 Kiểm tra bản mới</button></details>
           <div data-status class="kxb-status">Sẵn sàng.</div><div class="prog"><div data-bar></div></div>
           <div data-pane="sales">
@@ -1293,9 +1553,9 @@ tr{break-inside:avoid;page-break-inside:avoid}
               <div class="group"><b>Kỳ</b><span class="group" data-presets></span></div>
               <div class="bar" style="margin:0"><label>Từ ngày<input type="date" data-from></label><label>Đến ngày<input type="date" data-to></label>
                 <label style="flex-direction:row;align-items:center;gap:6px;font-size:13px"><input type="checkbox" data-refetch style="min-height:auto">Lấy lại cả ngày đã chốt</label>
-                <span style="flex:1"></span><button type="button" class="idle-only" data-view>Xem số đã lưu</button><button type="button" class="primary idle-only" data-run-sales>Đổ xuất bán</button></div>
+                <span style="flex:1"></span><button type="button" data-img title="Tạo ảnh báo cáo theo bộ lọc đang chọn: chép vào bộ nhớ để dán Zalo, đồng thời tải file PNG">🖼 Ảnh báo cáo</button><button type="button" class="idle-only" data-view>Xem số đã lưu</button><button type="button" class="primary idle-only" data-run-sales>Đổ xuất bán</button></div>
               <div class="group"><b>Siêu thị</b><span class="group" data-sales-shops></span></div>
-              <div class="group"><b>Ngành hàng</b><select data-sales-cat style="min-width:320px"></select><b style="margin-left:12px">Hãng</b><span data-sales-brands></span></div>
+              <div class="group"><b>Ngành hàng</b><select data-sales-cat style="min-width:320px"></select><button type="button" class="chip" data-phone-only>📱 Chỉ điện thoại</button><b style="margin-left:12px">Hãng</b><span data-sales-brands></span></div>
               <div class="group"><b>Loại hàng</b><span class="group" data-sales-conds></span></div></div>
             <div data-sales-result></div></div>
           <div data-pane="inventory" hidden>
@@ -1316,11 +1576,15 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const today = isoDate(new Date());
         ui.querySelector('[data-from]').value = today.slice(0, 8) + '01'; ui.querySelector('[data-to]').value = today;
         ui.querySelector('[data-cfg="basis"]').value = config.basis || 'created'; ui.querySelector('[data-cfg="returnDays"]').value = config.returnDays || 7; ui.querySelector('[data-cfg="balTarget"]').value = config.balTarget || 14;
+        ui.querySelector('[data-cfg="freshHours"]').value = config.freshHours ?? 2; ui.querySelector('[data-cfg="autoDaily"]').checked = config.autoDaily !== false;
+        ui.querySelector('[data-cfg="targetCat"]').value = (config.targetCat ?? 'Điện thoại') || '*';
+        ui.querySelector('[data-settings]').addEventListener('toggle', e => { if (e.target.open) renderStorage(); });
         (config.shops.length ? config.shops : [{ code: '', name: '' }]).forEach(shopEditor);
         if (!config.shops.length) ui.querySelector('[data-settings]').open = true;
         const savedShops = load('invShops', null);
         const codes = config.shops.map(s => keyCode(s.code));
         view.salesShops = new Set(codes); view.balShops = new Set(codes);
+        view.salesCat = String(load('salesCat', BAL_CATEGORY) ?? '');         // lần đầu: chọn sẵn ngành Điện thoại
         view.balDays = [7, 10, 14, 30].includes(load('balDays', 10)) ? load('balDays', 10) : 10;
         view.invShops = new Set(Array.isArray(savedShops) && savedShops.some(c => codes.includes(c)) ? savedShops.filter(c => codes.includes(c)) : codes);
         // Nút chọn nhanh kỳ
@@ -1349,6 +1613,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         ui.querySelector('[data-clear-log]').onclick = e => { e.preventDefault(); e.stopPropagation(); journal.length = 0; try { save('journal', journal); } catch { /* bỏ qua */ } log('Đã xóa nhật ký cũ'); };
         if (config.shops.length) view.sales = salesView(selectedRange());
         ui.querySelector('[data-run-sales]').onclick = safely(() => { validateShops(config.shops); selectedRange(); return withSession('sales', s => runSales(s, ui.querySelector('[data-refetch]').checked)); });
+        ui.querySelector('[data-img]').onclick = safely(salesImage);
         ui.querySelector('[data-view]').onclick = safely(() => { validateShops(config.shops); view.sales = salesView(selectedRange()); renderSales(); status(view.sales.missing ? `Còn ${view.sales.missing} ngày chưa lấy trong kỳ` : 'Số đã lưu trên máy này', view.sales.missing ? 'warn' : 'ok'); });
         ui.querySelector('[data-print-inv]').onclick = safely(printInventory);
         ui.addEventListener('mousedown', e => { if (!e.target.closest('.kxb-drop')) { view.openDrop = ''; ui.querySelectorAll('.kxb-drop[open]').forEach(d => d.open = false); } });
@@ -1360,6 +1625,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         ui.querySelector('[data-check-update]').onclick = safely(() => checkUpdate(true));
         renderUpdate();
         setTimeout(() => checkUpdate(false), 3000);
+        setTimeout(() => { autoYesterday().catch(e => log('Tự đổ hôm qua: ' + e.message, 'error')); }, 6000);
         log(`Mở AutoBI Kho & Xuất Bán V${VERSION}.`);
     }
     window.addEventListener('pagehide', () => { if (running) stop(); });
