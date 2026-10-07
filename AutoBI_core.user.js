@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.58
+// @name         AutoBI Core V17.59
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.58
+// @version      17.59
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -1165,7 +1165,7 @@ window.__AutoBILog5 = (() => {
         }
     }
     setInterval(safe(render), 1000);
-    return { loading: safe((detail, ctx) => record('loading', detail, ctx)), check: safe((detail, ctx) => { record('check', detail, ctx); if (running() && state && state.wait === String(detail)) { state.wait = '\u2713 ' + String(detail).replace(/^(Ch\u01B0a |Kh\u00F4ng )/, '') + ' \u2014 \u0111ang l\u00E0m b\u01B0\u1EDBc ti\u1EBFp'; state.stageAt = Date.now(); save(); } }), warning: safe(detail => record('warning', detail)), showHistory: safe(showHistory), mountHistoryButton: safe(mountHistoryButton), begin: safe(begin), finish: safe(finish), stage: safe(stage), wait: safe(wait), error: safe(error), ok: safe(detail => record('ok', detail)), retry: safe((attempt, reason) => record('retry', 'Th\u1EED l\u1EA1i l\u1EA7n ' + attempt + (reason ? ' \u2014 ' + reason : ''))), note: safe(detail => record('note', detail)), toast: safe(toast), text: safe(exportText), snapshot: safe(() => JSON.parse(JSON.stringify(state))) };
+    return { loading: safe((detail, ctx) => record('loading', detail, ctx)), check: safe((detail, ctx) => { record('check', detail, ctx); if (running() && state && state.wait === String(detail)) { state.wait = '\u2713 ' + String(detail).replace(/^(Ch\u01B0a |Kh\u00F4ng )/, '') + ' \u2014 \u0111ang l\u00E0m b\u01B0\u1EDBc ti\u1EBFp'; state.stageAt = Date.now(); save(); } }), warning: safe(detail => record('warning', detail)), showHistory: safe(showHistory), mountHistoryButton: safe(mountHistoryButton), begin: safe(begin), finish: safe(finish), stage: safe(stage), wait: safe(wait), error: safe(error), ok: safe(detail => record('ok', detail)), retry: safe((attempt, reason) => record('retry', 'Th\u1EED l\u1EA1i l\u1EA7n ' + attempt + (reason ? ' \u2014 ' + reason : ''))), note: safe(detail => record('note', detail)), late: safe(detail => { /* V17.59: ghi được cả khi phiên vừa xong (≤ 3 phút) — vd kiểm Sheet nhóm hàng về sau khi đổ số đã xong */ if (running()) return record('note', detail); if (!state || !state.endedAt || Date.now() - state.endedAt > 180000) return; state.entries.push({ at: Date.now(), level: 'note', shop: 'Tổng cụm', step: 'Sau phiên', detail: String(detail || '').slice(0, 1200), page: location.pathname }); save(); }), toast: safe(toast), text: safe(exportText), snapshot: safe(() => JSON.parse(JSON.stringify(state))) };
 })();
 /* ==========================================================
    AutoBI 16.1.1.15 - ẨN GIAO DIỆN AN TOÀN
@@ -2130,7 +2130,7 @@ window.__AutoBIRun67 = (function () {
                lấy lại riêng Thi đua + Thi đua NV rồi vẽ lại báo cáo. Trong lúc kiểm: chụp ảnh / Lưu dữ liệu / Comment tự chờ (window.__AutoBIGroupWait). */
             const cur = window.__AutoBIGroupCheck;
             if (cur && (cur.pending || (reuse && Date.now() - (cur.t0 || 0) < 60000))) return cur; /* V17.58: chỉ lượt đang chạy (loadGroupList) dùng lại lần kiểm lúc bấm chạy; mỗi lần bấm chạy luôn kiểm mới */
-            const __G = window.__AutoBIGroupList; const __note = t => { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note(t); } catch (_) { } };
+            const __G = window.__AutoBIGroupList; const __note = t => { try { const L = window.__AutoBILog5; if (L) (L.late || L.note)(t); } catch (_) { } }; /* V17.59: Sheet về sau khi phiên xong vẫn ghi vào nhật ký phiên đó */
             const before = GM_getValue(CONSTANTS.KEYS.CONFIG_LIST, []) || [];
             const st = window.__AutoBIGroupCheck = { pending: true, t0: Date.now(), usedOld: Array.isArray(before) && before.length > 0, changed: false, rerun: false };
             const __sec = () => ((Date.now() - st.t0) / 1000).toFixed(1) + 's';
@@ -8433,7 +8433,7 @@ window.__AutoBIBiTarget99 = (function () {
       else if (seen[st.name] === 1) n++;
     }
     if (!n) throw new Error('API không trả nhân viên nào khớp danh sách Khai báo');
-    if (split.length) note('Doanh thu NV: ' + split.length + ' NV có số ở nhiều siêu thị → đã cộng dồn (' + split.slice(0, 5).map(x => String(x).split(' - ').pop()).join(', ') + (split.length > 5 ? ', +' + (split.length - 5) : '') + ')');
+    if (split.length) note('Doanh thu NV: ' + split.length + ' NV có số ở nhiều siêu thị → đã cộng dồn (' + split.map(x => String(x).split(' - ').pop()).sort().slice(0, 5).join(', ') + (split.length > 5 ? ', +' + (split.length - 5) : '') + ')');
     return map;
   }
   async function applyStaffRevenue(cfgIn) {
