@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AutoBI - Kho & Xuất Bán
 // @namespace    https://github.com/PhamngocNDH/AutoBI/kho-xuatban-test
-// @version      2.5.0
+// @version      2.5.1
 // @description  Đổ tồn kho (BI 4286) và xuất bán (BI 77) theo cụm siêu thị cho máy tính: lấy thẳng dữ liệu BI có điều tốc, sổ ngày, bộ chọn tồn kho, Excel.
 // @author       AutoBI / 38967 - Mr Phạm
 // @homepageURL  https://github.com/PhamngocNDH/AutoBI
@@ -38,7 +38,7 @@
  */
 (function () {
     'use strict';
-    const VERSION = '2.5.0';
+    const VERSION = '2.5.1';
     const UPDATE_URL = 'https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_Kho_XuatBan.user.js';
     const SALES_SCHEMA = 4;                             // 4 = tất cả ngành + Loại hàng + Kho xuất (MASIEUTHIXUAT); ngày lưu bằng bản cũ sẽ được lấy lại
     const PREFIX = 'autobi_kxb_test_v1_';               // giữ khóa cũ để không mất khai báo shop
@@ -812,6 +812,8 @@ tr{break-inside:avoid;page-break-inside:avoid}
 
 
     /* ================= TRÌNH DUYỆT ================= */
+    // V2.5.1: mỗi bản đang cài ghi phiên bản của mình lên trang → phát hiện máy cài trùng 2 bản (cùng tên, 2 dòng trong Tampermonkey)
+    try { const de = document.documentElement; de.dataset.kxbVersions = [de.dataset.kxbVersions, VERSION].filter(Boolean).join(','); } catch { /* bỏ qua */ }
     const W = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
     const XL = () => (typeof XLSX !== 'undefined' ? XLSX : W.XLSX);
     const defaults = { shops: [], selectors: {}, basis: 'created', returnDays: 7 };
@@ -2703,8 +2705,32 @@ tr{break-inside:avoid;page-break-inside:avoid}
     }
 
     /* ---------- Giao diện: khung lớn giữa màn hình (máy tính) ---------- */
+    /* ---------- V2.5.1: cảnh báo cài trùng ----------
+     * Lỗi đã gặp 08/10/2026: 2 dòng "AutoBI - Kho & Xuất Bán" trong Tampermonkey (1 dòng cài từ link, 1 dòng tạo bằng "+" rồi dán code).
+     * Bản nào chạy trước chiếm nút; "Cập nhật ngay" chỉ đè vào dòng cài từ link → dải vàng báo bản mới mãi không hết. */
+    function dupWarning(versions, running) {
+        const list = versions.filter(Boolean), old = list.filter(v => v !== running);
+        if (list.length < 2) return;
+        const text = `⚠️ Máy đang cài ${list.length} bản AutoBI Kho & Xuất Bán (${list.map(v => 'V' + v).join(' và ')}) — đang chạy V${running}.`;
+        const how = `Cách sửa: mở nút đang chạy → ⚙️ Cài đặt → 💾 Sao lưu dữ liệu · bấm biểu tượng Tampermonkey → Bảng điều khiển → bấm 🗑 ở dòng AutoBI - Kho & Xuất Bán có phiên bản ${old.length ? 'cũ (V' + [...new Set(old)].join(', V') + ')' : 'trùng'}, giữ 1 dòng bản mới nhất → tải lại trang (F5). Cài đặt thiếu thì 📂 Khôi phục từ file.`;
+        log(text + ' ' + how, 'error');
+        if (document.getElementById('kxb-dup-bar') || !document.body) return;
+        const bar = document.createElement('div'); bar.id = 'kxb-dup-bar'; bar.dataset.kxbUi = ''; bar.setAttribute('data-html2canvas-ignore', 'true');
+        bar.style.cssText = 'position:fixed;left:16px;bottom:16px;max-width:min(720px,calc(100vw - 32px));z-index:2147483646;background:#fdecea;border:1px solid #e08a80;color:#8a1c1c;font:13px/1.45 Arial,"Segoe UI",sans-serif;padding:10px 40px 10px 14px;border-radius:10px;box-shadow:0 6px 20px #0003';
+        const b = document.createElement('div'); b.style.fontWeight = '700'; b.textContent = text; bar.append(b);
+        const h = document.createElement('div'); h.textContent = how; bar.append(h);
+        const x = document.createElement('button'); x.type = 'button'; x.textContent = '✕'; x.setAttribute('aria-label', 'Đóng');
+        x.style.cssText = 'position:absolute;right:6px;top:6px;border:0;background:none;color:#8a1c1c;font-weight:700;cursor:pointer;font-size:14px';
+        x.onclick = () => bar.remove(); bar.append(x);
+        document.body.append(bar);
+    }
     function mount() {
-        if (document.querySelector('[data-kxb-ui]')) return;
+        if (document.querySelector('[data-kxb-ui]')) {
+            // Một bản khác đã chiếm nút → bản này không mở giao diện, chỉ báo trùng (đọc phiên bản đang chạy từ khung của nó)
+            const other = (clean(document.querySelector('#kxb-panel .top .kxb-muted')?.textContent).match(/V?([\d.]+)/) || [])[1] || '?';
+            setTimeout(() => dupWarning([other, VERSION], other), 1500);
+            return;
+        }
         const style = el('style', `
         #kxb-launch{position:fixed;right:20px;bottom:20px;z-index:2147483645;background:#087f8c;color:#fff;padding:12px 20px;border:0;border-radius:24px;cursor:pointer;font:600 14px Arial,sans-serif;box-shadow:0 4px 14px #0003}
         #kxb-launch[hidden],#kxb-back[hidden]{display:none}
@@ -2959,6 +2985,8 @@ tr{break-inside:avoid;page-break-inside:avoid}
         setTimeout(() => checkUpdate(false), 4000);
         setInterval(() => checkUpdate(false), UPDATE_EVERY);
         log(`Mở AutoBI Kho & Xuất Bán V${VERSION}.`);
+        // V2.5.1: bản này chiếm nút, bản khác (từ 2.5.1) cũng đang cài → báo trùng
+        setTimeout(() => { try { const v = String(document.documentElement.dataset.kxbVersions || '').split(','); if (v.filter(Boolean).length > 1) dupWarning(v, VERSION); } catch { /* bỏ qua */ } }, 2000);
     }
     window.addEventListener('pagehide', () => { if (running) stop(); });
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, { once: true }); else mount();
