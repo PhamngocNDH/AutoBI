@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AutoBI - Kho & Xuất Bán
 // @namespace    https://github.com/PhamngocNDH/AutoBI/kho-xuatban-test
-// @version      2.5.3
+// @version      2.5.4
 // @description  Đổ tồn kho (BI 4286) và xuất bán (BI 77) theo cụm siêu thị cho máy tính: lấy thẳng dữ liệu BI có điều tốc, sổ ngày, bộ chọn tồn kho, Excel.
 // @author       AutoBI / 38967 - Mr Phạm
 // @homepageURL  https://github.com/PhamngocNDH/AutoBI
@@ -38,14 +38,15 @@
  */
 (function () {
     'use strict';
-    const VERSION = '2.5.3';
+    const VERSION = '2.5.4';
     const UPDATE_URL = 'https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_Kho_XuatBan.user.js';
     const SALES_SCHEMA = 4;                             // 4 = tất cả ngành + Loại hàng + Kho xuất (MASIEUTHIXUAT); ngày lưu bằng bản cũ sẽ được lấy lại
     const PREFIX = 'autobi_kxb_test_v1_';               // giữ khóa cũ để không mất khai báo shop
     const AUTH_SHEET = Object.freeze({ id: '17PxnghjkKIP36fWoSd656wo3DhlOmMiTiyjlf1g23UU', gid: '1237161146' });
     const REPORT = Object.freeze({ inventory: 4286, sales: 77 });
     const SALES_FILTER = Object.freeze({ exportType: '3', warehouseMode: '2', category: '' });   // '' = tất cả ngành hàng
-    const RECHECK_DAYS = 60;                            // ngày còn treo: xem lại tối đa 60 ngày
+    const RECHECK_DAYS = 60;
+    const COMPARE = false;                              // V2.5.4: anh Ngọc bỏ "So với" (tháng trước / 7 ngày trước) ở Xuất bán — đặt true để bật lại                            // ngày còn treo: xem lại tối đa 60 ngày
 
     /* ================= TIỆN ÍCH CHUNG (thuần, test được bằng node) ================= */
     const clean = v => String(v ?? '').replace(/ /g, ' ').trim();
@@ -390,7 +391,7 @@
 <div class="meta"><div>Tồn lúc: <b>${escHtml((m.times || {})[s.shop] || m.capturedAt || '')}</b></div><div>Lọc: ${escHtml(m.filter || 'Không lọc')}</div><div>Tổng: <b>${num(s.lines)}</b> dòng · SL <b>${num(s.quantity)}</b> · ${num(s.groups.length)} nhóm hàng</div></div></div>
 <table><colgroup><col style="width:10mm"><col style="width:27mm"><col><col style="width:37mm"><col style="width:20mm"><col style="width:10mm"><col style="width:13mm"></colgroup>
 <thead><tr><th>STT</th><th>Mã SP</th><th>Tên sản phẩm</th><th>IMEI / Serial</th><th>Trạng thái</th><th>SL</th><th>KIỂM</th></tr></thead>${body}</table>
-<div class="sign"><div>Người kiểm<br><span>(ký, ghi rõ họ tên)</span></div><div>Ngày kiểm: ....../....../........<br>Số dòng lệch: ............</div><div>Quản lý siêu thị<br><span>(ký, ghi rõ họ tên)</span></div></div>
+<div class="sign"><div>Người kiểm<br><span>(ký, ghi rõ họ tên)</span></div><div>Quản lý siêu thị<br><span>(ký, ghi rõ họ tên)</span></div></div>
 <div class="note">Ghi chú chênh lệch: ..........................................................................................................................................................................................<br>................................................................................................................................................................................................................................</div>
 </section>`;
         }).join('');
@@ -1265,10 +1266,10 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const pend = days.flatMap(d => (d.pendingLines || [])), ret = days.flatMap(d => (d.returnedLines || []));
         const oldSchema = days.filter(d => d.status !== 'Chưa lấy' && d.schema !== SALES_SCHEMA).length;
         // Cùng kỳ tháng trước (chỉ đọc số đã lưu, không gọi BI)
-        const prevRange = compareRange(range, config.compareMode), pb = loadBook(prevRange);
-        const prevMissing = daysIn(prevRange).filter(d => d <= today && (!pb.book[d] || pb.book[d].schema !== SALES_SCHEMA)).length;
+        const prevRange = compareRange(range, config.compareMode), pb = COMPARE ? loadBook(prevRange) : { book: {}, lines: [] };
+        const prevMissing = COMPARE ? daysIn(prevRange).filter(d => d <= today && (!pb.book[d] || pb.book[d].schema !== SALES_SCHEMA)).length : 0;
         return { range, compareMode: config.compareMode === 'week' ? 'week' : 'month', basis: config.basis, days, missing: days.filter(d => d.status === 'Chưa lấy').length, oldSchema, allLines: period, pendingLines: pend, returnedLines: ret,
-            prevRange, prevMissing, prevAllLines: inPeriod(pb.lines, prevRange, config.basis) };
+            prevRange, prevMissing, noCompare: !COMPARE, prevAllLines: inPeriod(pb.lines, prevRange, config.basis) };
     }
 
     /* ---------- Định dạng & bảng ---------- */
@@ -1335,8 +1336,9 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const by = new Map(), pv = new Map(), dayOf = l => (r.basis === 'shipped' && l.shipped ? l.shipped : l.created);
         r.lines.forEach(l => by.set(dayOf(l), (by.get(dayOf(l)) || 0) + l.qty * l.price));
         const prevDays = daysIn(r.prevRange);
-        if (!r.prevMissing) (r.prevLines || []).forEach(l => pv.set(dayOf(l), (pv.get(dayOf(l)) || 0) + l.qty * l.price));
-        const vals = days.map(d => by.get(d) || 0), pvals = r.prevMissing ? [] : days.map((_, i) => prevDays[i] ? pv.get(prevDays[i]) || 0 : null);
+        const noPrev = r.prevMissing || r.noCompare;
+        if (!noPrev) (r.prevLines || []).forEach(l => pv.set(dayOf(l), (pv.get(dayOf(l)) || 0) + l.qty * l.price));
+        const vals = days.map(d => by.get(d) || 0), pvals = noPrev ? [] : days.map((_, i) => prevDays[i] ? pv.get(prevDays[i]) || 0 : null);
         const max = Math.max(1, ...vals, ...pvals.filter(v => v != null)), W = 1000, H = 150, P = 22, bw = (W - P * 2) / days.length;
         const NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg');
         svg.setAttribute('viewBox', `0 0 ${W} ${H + 20}`); svg.setAttribute('class', 'kxb-chart'); svg.setAttribute('preserveAspectRatio', 'none');
@@ -1352,13 +1354,13 @@ tr{break-inside:avoid;page-break-inside:avoid}
         add('line', { x1: P, x2: W - P, y1: ya, y2: ya, class: 'avg' });
         add('text', { x: W - P, y: ya - 4, 'text-anchor': 'end', class: 'lb' }, `TB ${mil(avg)}/ngày`);
         const box = el('div', undefined, parent, 'kxb-chartbox');
-        el('div', `Doanh thu theo ngày · cột cam = T7/CN${r.prevMissing ? '' : ' · chấm = ' + (r.compareMode === 'week' ? '7 ngày trước' : 'cùng kỳ tháng trước')} · rê chuột vào cột để xem số`, box, 'kxb-muted');
+        el('div', `Doanh thu theo ngày · cột cam = T7/CN${noPrev ? '' : ' · chấm = ' + (r.compareMode === 'week' ? '7 ngày trước' : 'cùng kỳ tháng trước')} · rê chuột vào cột để xem số`, box, 'kxb-muted');
         box.append(svg);
     }
     function kpis(parent, items) { const box = el('div', undefined, parent, 'kxb-kpis'); items.forEach(([l, v, s, d], i) => { const k = el('div', undefined, box, i ? '' : 'main'); el('small', l, k); el('b', v, k); if (s) el('span', s, k); if (d && d.text) el('span', d.text, k, 'dl ' + (d.cls || '')); }); }
     // ▲▼ so cùng kỳ: chỉ hiện khi số cùng kỳ đã đủ ngày
     function delta(cur, prev, r) {
-        if (!r || r.prevMissing) return null;
+        if (!r || r.prevMissing || r.noCompare) return null;
         if (!prev) return cur ? { text: `mới so ${toBI(r.prevRange.from).slice(0, 5)}–${toBI(r.prevRange.to).slice(0, 5)}`, cls: 'up' } : null;
         const p = (cur - prev) / prev * 100;
         return { text: `${p >= 0 ? '▲' : '▼'} ${fmt(Math.abs(Math.round(p)))}% so ${toBI(r.prevRange.from).slice(0, 5)}–${toBI(r.prevRange.to).slice(0, 5)}`, cls: p >= 0 ? 'up' : 'down' };
@@ -1448,7 +1450,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
             ['Xếp hạng tại siêu thị', rank ? `#${rank}/${shopSum.staff.length}` : '—', `${pct(shopRev ? sumAll.revenue / shopRev * 100 : 0)} doanh thu siêu thị`],
             ['Số đơn', fmt(orders), `giá trị TB ${mil(orders ? sumAll.revenue / orders : 0)}/đơn`],
             ['Bán kèm ĐT', pct(att.rate), `${fmt(att.attached)}/${fmt(att.phoneOrders)} đơn · TB siêu thị ${pct(shopAtt.rate)}`, att.phoneOrders >= 3 && Math.abs(att.rate - shopAtt.rate) >= 0.5 ? { text: att.rate > shopAtt.rate ? 'cao hơn TB siêu thị' : 'thấp hơn TB siêu thị', cls: att.rate > shopAtt.rate ? 'up' : 'down' } : null],
-            ['Kỳ so sánh', r.prevMissing ? 'chưa đủ số' : mil(ps.revenue), r.compareMode === 'week' ? '7 ngày trước' : 'cùng kỳ tháng trước']]);
+            ...(r.noCompare ? [] : [['Kỳ so sánh', r.prevMissing ? 'chưa đủ số' : mil(ps.revenue), r.compareMode === 'week' ? '7 ngày trước' : 'cùng kỳ tháng trước']])]);
         dailyChart(body, { ...r, lines, prevLines });
         const grid = el('div', undefined, body, 'kxb-grid2');
         const left = el('div', undefined, grid), right = el('div', undefined, grid);
@@ -1460,7 +1462,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const peak = [...hrs.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([h, n]) => `${pad(h)}h (${n} đơn)`);
         el('div', `Giờ bán nhiều nhất: ${peak.join(' · ') || '—'}`, body, 'kxb-muted');
         cp.onclick = safely(() => copyText([`👤 ${creator.replace(/^\d+\s*[-–]\s*/, '')} — ${shopName(shop)} · ${toBI(r.range.from)}–${toBI(r.range.to)}`,
-            `• Doanh thu ${mil(s.revenue)} (SL ${fmt(s.quantity)})${r.prevMissing ? '' : `, ${ps.revenue ? (s.revenue >= ps.revenue ? '▲ ' : '▼ ') + fmt(Math.abs(Math.round((s.revenue - ps.revenue) / ps.revenue * 100))) + '% so kỳ trước' : 'kỳ trước chưa bán'}`}`,
+            `• Doanh thu ${mil(s.revenue)} (SL ${fmt(s.quantity)})${r.prevMissing || r.noCompare ? '' : `, ${ps.revenue ? (s.revenue >= ps.revenue ? '▲ ' : '▼ ') + fmt(Math.abs(Math.round((s.revenue - ps.revenue) / ps.revenue * 100))) + '% so kỳ trước' : 'kỳ trước chưa bán'}`}`,
             `• Xếp hạng #${rank || '—'}/${shopSum.staff.length} tại siêu thị · ${fmt(orders)} đơn, TB ${mil(orders ? sumAll.revenue / orders : 0)}/đơn`,
             `• Bán kèm điện thoại ${pct(att.rate)} (${att.attached}/${att.phoneOrders} đơn) — TB siêu thị ${pct(shopAtt.rate)}`,
             `• Hãng bán nhiều: ${s.brands.slice(0, 3).map(b => `${b.label} ${fmt(b.quantity)}`).join(', ') || '—'}`,
@@ -1530,7 +1532,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         }
         // Bán kèm & dự kiến: tính trên các siêu thị đang chọn (không theo bộ lọc ngành/hãng/loại hàng)
         const shopAll = r.allLines.filter(l => view.salesShops.has(l.shop)), att = attachData(shopAll);
-        const attPrev = r.prevMissing ? null : attachData((r.prevAllLines || []).filter(l => view.salesShops.has(l.shop)));
+        const attPrev = r.prevMissing || r.noCompare ? null : attachData((r.prevAllLines || []).filter(l => view.salesShops.has(l.shop)));
         const proj = projectMonth(r.lines.filter(l => (r.basis === 'shipped' && l.shipped ? l.shipped : l.created) < today).reduce((a, l) => a + l.qty * l.price, 0), r.range, today);
         const projItem = proj ? ['Dự kiến cuối tháng', mil(proj.value), `theo TB ${proj.elapsed} ngày đã qua × ${proj.dim} ngày`] : null;
         kpis(area, [['Đã bán', `SL ${fmt(s.quantity)}`, mil(s.revenue), delta(s.revenue, ps.revenue, r)],
@@ -1609,11 +1611,12 @@ tr{break-inside:avoid;page-break-inside:avoid}
             const prevMap = new Map((attPrev?.staff || []).map(x => [x.shop + '|' + x.label, x]));
             const dd = d => d > 0 ? `▲ ${fmt(d)}` : d < 0 ? `▼ ${fmt(-d)}` : '=';
             const dq = (cur, x) => attPrev ? dd(cur - (prevMap.get(x.shop + '|' + x.label)?.phoneQty || 0)) : '';
-            table(pane, ['Siêu thị', 'Nhân viên', 'Đơn ĐT', 'SL ĐT', 'Có kèm', 'Tỷ lệ kèm', 'SL kèm', 'DT kèm', 'SL ĐT so cùng kỳ'],
-                [...att.staff.map(x => [shopName(x.shop), x.label, fmt(x.phoneOrders), fmt(x.phoneQty), fmt(x.attached), pct(x.rate), fmt(x.attachQty), mil(x.attachRev), dq(x.phoneQty, x)]),
-                 ['Tổng', '', fmt(att.total.phoneOrders), fmt(att.total.phoneQty), fmt(att.total.attached), pct(att.total.rate), fmt(att.total.attachQty), mil(att.total.attachRev), attPrev ? dd(att.total.phoneQty - attPrev.total.phoneQty) : '']],
+            const cut = a => r.noCompare ? a.slice(0, -1) : a;   // V2.5.4: bỏ cột so cùng kỳ khi tắt so sánh
+            table(pane, cut(['Siêu thị', 'Nhân viên', 'Đơn ĐT', 'SL ĐT', 'Có kèm', 'Tỷ lệ kèm', 'SL kèm', 'DT kèm', 'SL ĐT so cùng kỳ']),
+                [...att.staff.map(x => cut([shopName(x.shop), x.label, fmt(x.phoneOrders), fmt(x.phoneQty), fmt(x.attached), pct(x.rate), fmt(x.attachQty), mil(x.attachRev), dq(x.phoneQty, x)])),
+                 cut(['Tổng', '', fmt(att.total.phoneOrders), fmt(att.total.phoneQty), fmt(att.total.attached), pct(att.total.rate), fmt(att.total.attachQty), mil(att.total.attachRev), attPrev ? dd(att.total.phoneQty - attPrev.total.phoneQty) : ''])],
                 { num: [2, 3, 4, 5, 6, 7, 8], total: true, rowClass: i => i < att.staff.length && att.staff[i].phoneOrders >= 3 && att.staff[i].rate < att.total.rate / 2 ? 'low' : '', onRow: i => openStaffCard(att.staff[i].shop, att.staff[i].label) });
-            if (!attPrev) el('div', 'Cột "so cùng kỳ" trống vì kỳ so sánh chưa đủ ngày — bấm "Đổ kỳ so sánh" ở trên.', pane, 'kxb-muted');
+            if (!attPrev && !r.noCompare) el('div', 'Cột "so cùng kỳ" trống vì kỳ so sánh chưa đủ ngày — bấm "Đổ kỳ so sánh" ở trên.', pane, 'kxb-muted');
             el('div', 'Nhóm hàng đi kèm (số đơn điện thoại có nhóm này)', pane, 'kxb-muted').style.marginTop = '10px';
             table(pane, ['Nhóm hàng', 'Số đơn', '% đơn ĐT', 'SL', 'Doanh thu'], att.groups.map(g => [g.group || '(không rõ)', fmt(g.orders), pct(att.total.phoneOrders ? g.orders / att.total.phoneOrders * 100 : 0), fmt(g.qty), mil(g.rev)]), { num: [1, 2, 3, 4] });
         }
@@ -2888,7 +2891,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
           <div data-status class="kxb-status">Sẵn sàng.</div><div class="prog"><div data-bar></div></div>
           <div data-pane="sales">
             <div class="filters">
-              <div class="group"><b>Kỳ</b><span class="group" data-presets></span><span style="flex:1"></span><b style="min-width:0">So với</b><span class="group" data-compare></span></div>
+              <div class="group"><b>Kỳ</b><span class="group" data-presets></span></div>
               <div class="bar" style="margin:0"><label>Từ ngày<input type="date" data-from></label><label>Đến ngày<input type="date" data-to></label>
                 <label style="flex-direction:row;align-items:center;gap:6px;font-size:13px"><input type="checkbox" data-refetch style="min-height:auto">Lấy lại cả ngày đã chốt</label>
                 <span style="flex:1"></span><button type="button" data-img title="Tạo ảnh báo cáo theo bộ lọc đang chọn: chép vào bộ nhớ để dán Zalo, đồng thời tải file PNG">🖼 Ảnh báo cáo</button><button type="button" class="idle-only" data-view>Xem số đã lưu</button><button type="button" class="primary idle-only" data-run-sales>Đổ xuất bán</button></div>
@@ -2948,9 +2951,9 @@ tr{break-inside:avoid;page-break-inside:avoid}
         trBox.onchange = () => { config.invTransit = trBox.checked; save('config', config); };
         // So với: cùng kỳ tháng trước / 7 ngày trước (chỉ đọc số đã lưu)
         const cmpBox = ui.querySelector('[data-compare]');
-        const drawCompare = () => { cmpBox.replaceChildren(); [['month', 'Tháng trước'], ['week', '7 ngày trước']].forEach(([k, l]) => { const b = el('button', l, cmpBox, 'chip'); b.type = 'button'; b.classList.toggle('on', (config.compareMode === 'week' ? 'week' : 'month') === k);
+        const drawCompare = () => { if (!cmpBox) return; cmpBox.replaceChildren(); [['month', 'Tháng trước'], ['week', '7 ngày trước']].forEach(([k, l]) => { const b = el('button', l, cmpBox, 'chip'); b.type = 'button'; b.classList.toggle('on', (config.compareMode === 'week' ? 'week' : 'month') === k);
             b.onclick = safely(() => { config.compareMode = k; save('config', config); drawCompare(); if (config.shops.length) { view.sales = salesView(selectedRange()); renderSales(); } }); }); };
-        drawCompare();
+        if (COMPARE) drawCompare(); else cmpBox?.remove();
         // Nút chọn nhanh kỳ
         const presets = ui.querySelector('[data-presets]');
         const setRange = (f, t) => { ui.querySelector('[data-from]').value = f; ui.querySelector('[data-to]').value = t; };
