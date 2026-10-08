@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AutoBI - Kho & Xuất Bán
 // @namespace    https://github.com/PhamngocNDH/AutoBI/kho-xuatban-test
-// @version      2.5.4
+// @version      2.5.5
 // @description  Đổ tồn kho (BI 4286) và xuất bán (BI 77) theo cụm siêu thị cho máy tính: lấy thẳng dữ liệu BI có điều tốc, sổ ngày, bộ chọn tồn kho, Excel.
 // @author       AutoBI / 38967 - Mr Phạm
 // @homepageURL  https://github.com/PhamngocNDH/AutoBI
@@ -38,7 +38,7 @@
  */
 (function () {
     'use strict';
-    const VERSION = '2.5.4';
+    const VERSION = '2.5.5';
     const UPDATE_URL = 'https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_Kho_XuatBan.user.js';
     const SALES_SCHEMA = 4;                             // 4 = tất cả ngành + Loại hàng + Kho xuất (MASIEUTHIXUAT); ngày lưu bằng bản cũ sẽ được lấy lại
     const PREFIX = 'autobi_kxb_test_v1_';               // giữ khóa cũ để không mất khai báo shop
@@ -2692,7 +2692,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const info = load('update', null), launch = document.getElementById('kxb-launch');
         const hasNew = info && newerVersion(info.version, VERSION);
         if (launch) { launch.textContent = 'AutoBI · Kho & Xuất Bán' + (hasNew ? ' 🔔' : ''); launch.classList.toggle('new', !!hasNew); launch.title = hasNew ? `Có bản mới V${info.version}` : ''; }
-        if (hasNew) {
+        if (hasNew && updateClosedFor === info.version) {   // V2.5.5: dải vàng đầu trang đang hiện thì không lặp thông báo trong khung
             const b = el('div', undefined, box, 'kxb-update');
             el('b', `🔔 Có bản mới V${info.version} (đang dùng V${VERSION})`, b);
             const row = el('div', undefined, b, 'bar');
@@ -2704,7 +2704,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
     // Dải vàng trên đầu trang BI (cùng kiểu với AutoBI Core): hiện cả khi chưa mở khung; ✕ thì ẩn tới lần tải trang sau
     function updateBar(remote) {
         const old = document.getElementById('kxb-update-bar');
-        const hide = () => { document.getElementById('kxb-update-bar')?.remove(); if (document.body) document.body.style.paddingTop = ''; };
+        const hide = () => { document.getElementById('kxb-update-bar')?.remove(); if (document.body) document.body.style.paddingTop = ''; document.documentElement.style.removeProperty('--kxb-top'); };
         if (!remote || updateClosedFor === remote) { if (old) hide(); return; }
         if (old && old.dataset.v === remote) return;
         if (old) hide();
@@ -2720,9 +2720,10 @@ tr{break-inside:avoid;page-break-inside:avoid}
         go.onclick = () => window.open(UPDATE_URL + '?v=' + encodeURIComponent(remote), '_blank');
         const x = el('button', '✕', bar); x.type = 'button'; x.setAttribute('aria-label', 'Đóng');
         x.style.cssText = 'min-height:36px;min-width:36px;border-radius:8px;border:1px solid #e9c46a;background:transparent;color:#7a4b00;font-weight:800;cursor:pointer';
-        x.onclick = () => { updateClosedFor = remote; hide(); };
+        x.onclick = () => { updateClosedFor = remote; hide(); renderUpdate(); };
         document.body.appendChild(bar);
         document.body.style.paddingTop = bar.offsetHeight + 'px';
+        document.documentElement.style.setProperty('--kxb-top', bar.offsetHeight + 'px');   // V2.5.5: khung AutoBI nằm dưới dải vàng, không bị che
     }
 
     /* ---------- Giao diện: khung lớn giữa màn hình (máy tính) ---------- */
@@ -2755,8 +2756,8 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const style = el('style', `
         #kxb-launch{position:fixed;right:20px;bottom:20px;z-index:2147483645;background:#087f8c;color:#fff;padding:12px 20px;border:0;border-radius:24px;cursor:pointer;font:600 14px Arial,sans-serif;box-shadow:0 4px 14px #0003}
         #kxb-launch[hidden],#kxb-back[hidden]{display:none}
-        #kxb-back{position:fixed;inset:0;z-index:2147483643;background:#0f172a66;display:flex;align-items:center;justify-content:center}
-        #kxb-panel{box-sizing:border-box;margin:0;width:min(1480px,96vw);max-width:96vw;height:92vh;display:flex;flex-direction:column;background:#fff;color:#172a3a;border-radius:14px;box-shadow:0 20px 60px #0005;font:14px/1.45 Arial,sans-serif;overflow:clip;position:relative}
+        #kxb-back{position:fixed;inset:0;top:var(--kxb-top,0px);z-index:2147483643;background:#0f172a66;display:flex;align-items:center;justify-content:center}
+        #kxb-panel{box-sizing:border-box;margin:0;width:min(1480px,96vw);max-width:96vw;height:calc(92vh - var(--kxb-top,0px));display:flex;flex-direction:column;background:#fff;color:#172a3a;border-radius:14px;box-shadow:0 20px 60px #0005;font:14px/1.45 Arial,sans-serif;overflow:clip;position:relative}
         #kxb-panel *{box-sizing:border-box}
         #kxb-panel .top{display:flex;align-items:center;gap:12px;padding:14px 22px;border-bottom:1px solid #e3e9ed}
         #kxb-panel .top strong{font-size:17px}#kxb-panel .top .sp{flex:1}
@@ -2853,7 +2854,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         #kxb-panel .kxb-suggest button.primary{background:#087f8c;color:#fff;border-color:#087f8c}
         #kxb-panel .kxb-reqhead{margin:14px 0 2px;font-size:15px}#kxb-panel .kxb-reqsub{margin:8px 0 2px;font-weight:700;color:#4a5a66}#kxb-panel .kxb-reqhead b{color:#087f8c}
         #kxb-panel tr.fav td{background:#fff7e0}#kxb-panel tr.near td{background:#eef8f0}
-        @media (max-width:1400px){#kxb-panel{font-size:13px;height:94vh;width:98vw;max-width:98vw}#kxb-panel .body{padding:12px 14px}#kxb-panel .top{padding:10px 14px}
+        @media (max-width:1400px){#kxb-panel{font-size:13px;height:calc(94vh - var(--kxb-top,0px));width:98vw;max-width:98vw}#kxb-panel .body{padding:12px 14px}#kxb-panel .top{padding:10px 14px}
           #kxb-panel .tabs button{padding:8px 12px;font-size:14px}#kxb-panel .kxb-kpis{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}#kxb-panel .kxb-kpis b{font-size:19px}
           #kxb-panel th,#kxb-panel td{padding:6px 8px;font-size:12.5px}#kxb-panel .kxb-drop>summary{min-width:240px}}
         `, document.head || document.documentElement); style.dataset.kxbUi = '';
