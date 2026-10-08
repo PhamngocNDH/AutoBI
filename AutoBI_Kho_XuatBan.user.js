@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AutoBI - Kho & Xuất Bán
 // @namespace    https://github.com/PhamngocNDH/AutoBI/kho-xuatban-test
-// @version      2.5.6
+// @version      2.6.0
 // @description  Đổ tồn kho (BI 4286) và xuất bán (BI 77) theo cụm siêu thị cho máy tính: lấy thẳng dữ liệu BI có điều tốc, sổ ngày, bộ chọn tồn kho, Excel.
 // @author       AutoBI / 38967 - Mr Phạm
 // @homepageURL  https://github.com/PhamngocNDH/AutoBI
@@ -22,6 +22,8 @@
 // @connect      *.googleusercontent.com
 // @connect      raw.githubusercontent.com
 // @connect      crm.thegioididong.com
+// @connect      www.dienmayxanh.com
+// @connect      dienmayxanh.com
 // ==/UserScript==
 
 /*
@@ -38,15 +40,15 @@
  */
 (function () {
     'use strict';
-    const VERSION = '2.5.6';
+    const VERSION = '2.6.0';
     const UPDATE_URL = 'https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_Kho_XuatBan.user.js';
     const SALES_SCHEMA = 4;                             // 4 = tất cả ngành + Loại hàng + Kho xuất (MASIEUTHIXUAT); ngày lưu bằng bản cũ sẽ được lấy lại
     const PREFIX = 'autobi_kxb_test_v1_';               // giữ khóa cũ để không mất khai báo shop
     const AUTH_SHEET = Object.freeze({ id: '17PxnghjkKIP36fWoSd656wo3DhlOmMiTiyjlf1g23UU', gid: '1237161146' });
     const REPORT = Object.freeze({ inventory: 4286, sales: 77 });
     const SALES_FILTER = Object.freeze({ exportType: '3', warehouseMode: '2', category: '' });   // '' = tất cả ngành hàng
-    const RECHECK_DAYS = 60;
-    const COMPARE = false;                              // V2.5.4: anh Ngọc bỏ "So với" (tháng trước / 7 ngày trước) ở Xuất bán — đặt true để bật lại                            // ngày còn treo: xem lại tối đa 60 ngày
+    const RECHECK_DAYS = 60;                            // ngày còn treo: xem lại tối đa 60 ngày
+    const COMPARE = false;                              // V2.5.4: anh Ngọc bỏ "So với" (tháng trước / 7 ngày trước) ở Xuất bán — đặt true để bật lại
 
     /* ================= TIỆN ÍCH CHUNG (thuần, test được bằng node) ================= */
     const clean = v => String(v ?? '').replace(/ /g, ' ').trim();
@@ -639,14 +641,48 @@ tr{break-inside:avoid;page-break-inside:avoid}
     }
     const areaText = a => a && a.dist ? `${AREA_NAMES[a.dist] || a.dist}${PROV_NAMES[a.prov] ? ' (' + PROV_NAMES[a.prov] + ')' : ''}` : '';
     // Xếp nơi xin hàng cho 1 siêu thị: ⭐ ưu tiên → cùng huyện → cùng tỉnh cũ → còn lại; trong nhóm: tồn bán được nhiều trước
+    // V2.6: có tọa độ shop (g = { pts: {mã: [vĩ độ, kinh độ]}, radius }) thì xếp theo KM THẬT (đường chim bay):
+    //   ⭐ → trong bán kính (gần trước) → ngoài bán kính (tier 3, out = không đề xuất). Shop thiếu tọa độ: xếp theo huyện như cũ.
     const TIERS = ['⭐ Ưu tiên', 'Cùng huyện', 'Cùng tỉnh cũ', 'Xa hơn'];
-    function rankSources(prods, stores, me, favs, exclude) {
+    function haversineKm(a, b) {
+        const r = x => x * Math.PI / 180, dl = r(b[0] - a[0]), dg = r(b[1] - a[1]);
+        const h = Math.sin(dl / 2) ** 2 + Math.cos(r(a[0])) * Math.cos(r(b[0])) * Math.sin(dg / 2) ** 2;
+        return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(h)));
+    }
+    const kmText = km => km == null ? '' : String(km).replace('.', ',') + ' km';
+    // Khoảng cách + mức gần của 1 nơi cho so với siêu thị cần hàng (dùng chung trong tỉnh và tỉnh lân cận)
+    function geoOf(code, me, g) {
+        const pts = (g && g.pts) || {}, R = g && g.radius > 0 ? g.radius : 0, a = pts[keyCode(me)], b = pts[keyCode(code)];
+        const km = a && b ? Math.round(haversineKm(a, b) * 10) / 10 : null;
+        return { km, R, meKnown: !!a, inR: km != null && (!R || km <= R) };
+    }
+    function rankSources(prods, stores, me, favs, exclude, g) {
         const info = new Map([].concat(stores || []).map(s => [s.code, s])), my = storeArea(info.get(keyCode(me))?.full || me?.full || ''), fav = new Set((favs || []).map(keyCode));
         return crmSources(prods, stores, [me, ...(exclude || [])]).map(x => {
-            const a = storeArea(info.get(x.code)?.full);
-            const tier = fav.has(x.code) ? 0 : a.dist && a.dist === my.dist && a.prov === my.prov ? 1 : a.prov && a.prov === my.prov ? 2 : 3;
-            return { ...x, area: a, tier, tierName: TIERS[tier] };
-        }).sort((a, b) => a.tier - b.tier || b.free - a.free || vcmp(a.name, b.name));
+            const a = storeArea(info.get(x.code)?.full), d = geoOf(x.code, me, g);
+            const areaTier = a.dist && a.dist === my.dist && a.prov === my.prov ? 1 : a.prov && a.prov === my.prov ? 2 : 3;
+            const tier = fav.has(x.code) ? 0 : d.km != null ? (d.inR ? 1 : 3) : areaTier;
+            // không đề xuất: quá bán kính; hoặc thiếu tọa độ mà ở "xa hơn" (khác tỉnh cũ) trong khi đã đo được vị trí siêu thị mình
+            const out = tier !== 0 && !!d.R && (d.km != null ? !d.inR : d.meKnown && areaTier >= 3);
+            const band = d.km != null ? Math.floor(d.km / 5) : tier === 1 ? 0 : tier === 2 ? 3 : 20;   // 5 km / bậc: cùng bậc thì nơi tồn nhiều cho nhiều
+            const tierName = tier === 0 ? TIERS[0] : d.km != null ? kmText(d.km) + (out ? ' (ngoài ' + d.R + ' km)' : '') : TIERS[tier];
+            return { ...x, area: a, tier, tierName, km: d.km, band, out };
+        }).sort((a, b) => a.tier - b.tier || (a.km ?? 1e9) - (b.km ?? 1e9) || b.free - a.free || vcmp(a.name, b.name));
+    }
+    // Web dienmayxanh.com (công khai): POST /Store/SuggestSearch trả HTML <li data-id="mã ST"> … <a href="/trang-shop-id-…">; mã trùng mã CRM/BI
+    function parseGeoList(html) {
+        const out = [], re = /<li[^>]*data-id="(\d+)"[^>]*>([\s\S]*?)<\/li>/gi; let m;
+        while ((m = re.exec(String(html || '')))) { const h = (m[2].match(/href="([^"]+)"/) || [])[1]; if (h) out.push({ code: keyCode(m[1]), href: h.replace(/&amp;/g, '&') }); }
+        return out;
+    }
+    // Trang chi tiết shop có "Lat = '20.43…'" / "latitude":20.43… — chỉ nhận tọa độ nằm trong Việt Nam
+    function parseGeoPoint(html) {
+        const t = String(html || '');
+        const la = t.match(/\bLat\s*=\s*['"](-?\d{1,2}\.\d+)/) || t.match(/["']?latitude["']?\s*[:=]\s*["']?(-?\d{1,2}\.\d+)/i);
+        const lo = t.match(/\bLng\s*=\s*['"](-?\d{1,3}\.\d+)/) || t.match(/["']?longitude["']?\s*[:=]\s*["']?(-?\d{1,3}\.\d+)/i);
+        if (!la || !lo) return null;
+        const p = [Math.round(Number(la[1]) * 1e6) / 1e6, Math.round(Number(lo[1]) * 1e6) / 1e6];
+        return p[0] >= 8 && p[0] <= 24 && p[1] >= 102 && p[1] <= 110 ? p : null;
     }
     const crmStoreList = text => [...new Set(String(text || '').split(/[^\d]+/).map(keyCode).filter(Boolean))];
     function crmCell(text) {
@@ -721,22 +757,26 @@ tr{break-inside:avoid;page-break-inside:avoid}
         return clean(m && m[1].length >= 3 ? m[1] : modelOf(s)).replace(/[\s(/,-]+$/, '');
     }
     // Hàng thay thế: các mã cùng gốc model (khác màu / dung lượng), chỉ hàng Mới, còn tồn bán được trong tỉnh; gần nhiều trước
-    function altOptions(p, prods, stores, me, favs) {
+    function altOptions(p, prods, stores, me, favs, g) {
         const base = norm(variantBase(p.name));
         return [].concat(prods || []).filter(x => crmUsable(x) && x.code !== p.code && norm(variantBase(x.name)) === base).map(x => {
-            const list = rankSources(x, stores, me, favs), near = list.filter(s => s.tier <= 2);
+            const list = rankSources(x, stores, me, favs, undefined, g), near = list.filter(s => s.tier <= 2);
             return { p: x, list, near, nearQty: near.reduce((a, s) => a + s.free, 0), allQty: list.reduce((a, s) => a + s.free, 0) };
         }).filter(a => a.list.length).sort((a, b) => b.nearQty - a.nearQty || b.allQty - a.allQty || vcmp(a.p.name, b.p.name));
     }
     // Nguồn ở tỉnh lân cận. nb = [{ prov, name, res }] theo thứ tự gần trước; trong 1 tỉnh: tồn nhiều trước
-    function nearbySources(p, nb, me) {
+    function nearbySources(p, nb, me, g) {
         const out = [];
         [].concat(nb || []).forEach((d, i) => {
             const x = d.res?.products?.find(q => q.code === p.code); if (!x) return;
             const info = new Map(d.res.stores.map(t => [t.code, t]));
-            crmSources(x, d.res.stores, [me]).forEach(s => out.push({ ...s, provId: d.prov, provName: d.name, order: i, area: storeArea(info.get(s.code)?.full), tier: 4, tierName: 'Tỉnh lân cận' }));
+            crmSources(x, d.res.stores, [me]).forEach(s => {
+                const gd = geoOf(s.code, me, g), out1 = gd.km != null && !!gd.R && !gd.inR;   // tỉnh lân cận thiếu tọa độ: vẫn hiện như cũ
+                out.push({ ...s, provId: d.prov, provName: d.name, order: i, area: storeArea(info.get(s.code)?.full), tier: 4, km: gd.km, band: gd.km != null ? Math.floor(gd.km / 5) : 20, out: out1,
+                    tierName: 'Tỉnh lân cận' + (gd.km != null ? ' · ' + kmText(gd.km) : '') });
+            });
         });
-        return out.sort((a, b) => a.order - b.order || b.free - a.free || vcmp(a.name, b.name));
+        return out.sort((a, b) => (a.km ?? 1e9) - (b.km ?? 1e9) || a.order - b.order || b.free - a.free || vcmp(a.name, b.name));
     }
     // Gộp 2 kết quả CRM (tra theo từng nhóm siêu thị) thành 1
     function mergeCrm(a, b) {
@@ -765,17 +805,19 @@ tr{break-inside:avoid;page-break-inside:avoid}
     function allocateAsk(need, sources, keep = 1, used, pkey = '', noLast = false) {
         keep = Math.max(0, Math.round(Number(keep) || 0));
         const k = c => c + '|' + pkey;
-        const s = [].concat(sources || []).filter(x => x && x.free > 0).map((x, i) => {
+        const s = [].concat(sources || []).filter(x => x && x.free > 0 && !x.out).map((x, i) => {
             const free = Math.max(0, x.free - (used?.get(k(x.code)) || 0));
             return { x, i, free, cap: Math.max(0, free - keep), extra: Math.min(free, keep), take: 0, last: 0 };
         });
         let left = Math.max(0, Math.round(Number(need) || 0));
-        const pick = key => { let b = null; for (const y of s) if (y[key] > 0 && (!b || y.x.tier < b.x.tier || (y.x.tier === b.x.tier && (y[key] > b[key] || (y[key] === b[key] && y.i < b.i))))) b = y; return b; };
+        // V2.6: tier → bậc 5 km (band) → nơi còn dư nhiều → thứ tự
+        const before = (y, b, key) => (y.x.tier - b.x.tier) || ((y.x.band ?? 0) - (b.x.band ?? 0)) || (b[key] - y[key]) || (y.i - b.i);
+        const pick = key => { let b = null; for (const y of s) if (y[key] > 0 && (!b || before(y, b, key) < 0)) b = y; return b; };
         // Lấy gọn: mỗi lượt chọn nơi tốt nhất rồi lấy tối đa có thể ở nơi đó → ít lượt chuyển nhất
         for (const key of noLast ? ['cap'] : ['cap', 'extra']) while (left > 0) { const y = pick(key); if (!y) break; const q = Math.min(y[key], left); y[key] -= q; y.take += q; if (key === 'extra') y.last += q; left -= q; }
-        const plan = s.filter(y => y.take).sort((a, b) => a.x.tier - b.x.tier || b.take - a.take || a.i - b.i).map(y => {
+        const plan = s.filter(y => y.take).sort((a, b) => a.x.tier - b.x.tier || (a.x.km ?? 1e9) - (b.x.km ?? 1e9) || b.take - a.take || a.i - b.i).map(y => {
             if (used) used.set(k(y.x.code), (used.get(k(y.x.code)) || 0) + y.take);
-            return { code: y.x.code, name: y.x.name, tier: y.x.tier, tierName: y.x.tierName, area: y.x.area, provName: y.x.provName, free: y.free, qty: y.take, last: y.last, left: y.free - y.take };
+            return { code: y.x.code, name: y.x.name, tier: y.x.tier, tierName: y.x.tierName, area: y.x.area, provName: y.x.provName, km: y.x.km ?? null, free: y.free, qty: y.take, last: y.last, left: y.free - y.take };
         });
         return { need: Math.max(0, Math.round(Number(need) || 0)), plan, got: plan.reduce((a, p) => a + p.qty, 0), short: left };
     }
@@ -790,16 +832,16 @@ tr{break-inside:avoid;page-break-inside:avoid}
                 const a = acc.get(it.key), left = a.need - a.got; if (left <= 0) continue;
                 merge(a, allocateAsk(left, [].concat(it.sources || []).filter(x => x.tier <= lim), keep, used, it.pkey || '', noLast));
             }
-        for (const a of acc.values()) { a.short = a.need - a.got; a.plan.sort((x, y) => x.tier - y.tier || y.qty - x.qty); }
+        for (const a of acc.values()) { a.short = a.need - a.got; a.plan.sort((x, y) => x.tier - y.tier || (x.km ?? 1e9) - (y.km ?? 1e9) || y.qty - x.qty); }
         return acc;
     }
-    const planText = a => !a ? '' : (a.plan.map(p => `${p.tier === 0 ? '⭐' : ''}${p.name}${p.provName ? ` (${p.provName})` : ''} ×${p.qty}${p.last ? ' (máy cuối)' : ''}`).join(' · ') || 'không nơi nào cho được') + (a.short && a.plan.length ? ` · thiếu ${a.short}` : '');
+    const planText = a => !a ? '' : (a.plan.map(p => `${p.tier === 0 ? '⭐' : ''}${p.name}${p.provName || p.km != null ? ` (${[p.provName, kmText(p.km)].filter(Boolean).join(', ')})` : ''} ×${p.qty}${p.last ? ' (máy cuối)' : ''}`).join(' · ') || 'không nơi nào cho được') + (a.short && a.plan.length ? ` · thiếu ${a.short}` : '');
     // Gom các đề xuất theo nơi cho → "phiếu" gửi từng siêu thị. items: [{ to, product, name, alloc }]
     function groupBySource(items) {
         const m = new Map();
         for (const it of items) for (const p of (it.alloc?.plan || [])) {
             const g = m.get(p.code) || { code: p.code, name: p.name, tier: p.tier, area: p.area, provName: p.provName, qty: 0, lines: [] };
-            g.qty += p.qty; g.lines.push({ to: it.to, product: it.product, name: it.name, qty: p.qty, left: p.left, last: p.last }); m.set(p.code, g);
+            g.qty += p.qty; g.lines.push({ to: it.to, product: it.product, name: it.name, qty: p.qty, left: p.left, last: p.last, km: p.km ?? null }); m.set(p.code, g);
         }
         return [...m.values()].sort((a, b) => a.tier - b.tier || b.qty - a.qty || vcmp(String(a.name), String(b.name)));
     }
@@ -810,7 +852,8 @@ tr{break-inside:avoid;page-break-inside:avoid}
             lineFromApi, reasons, pending, validateSalesLines, splitSales, summarizeSales, inPeriod, dayStatus, daysToFetch,
             parseRateLimit, waitBeforeCall, inventoryRecordFromApi, summarizeInventory, filterInventory, inventoryOptions, inventoryViews, validateShops, authorizeSheetRows, escHtml, inventoryChecklist, inventoryPrintHtml, conditionKey, conditionText, newerVersion, parseRemoteScript, outStoreKey, balanceRows, isFresh, shiftMonth, prevMonthRange, attachStats, pendingOrders, projectMonth, daysBetween,
             modelOf, transferPlan, ageDays, ageBucket, AGE_BUCKETS, transitDiff, hourMatrix, weekdayOf, compareRange, cellNumber, toTsv, requestMessage, mergeMonth, crmCell, parseCrmDoc, crmSources, crmStoreList, CRM_DEFAULT_STORES, CRM_PROVINCES, parseStoreOptions, storeArea, rankSources, areaText, isNotNewName, isServiceName, crmUsable,
-            NEAR_PROVS, nearProvsOf, provShort, variantBase, altOptions, nearbySources, mergeCrm, allocateAsk, allocateMany, planText, groupBySource };
+            NEAR_PROVS, nearProvsOf, provShort, variantBase, altOptions, nearbySources, mergeCrm, allocateAsk, allocateMany, planText, groupBySource,
+            haversineKm, kmText, geoOf, parseGeoList, parseGeoPoint };
         return;
     }
 
@@ -945,6 +988,65 @@ tr{break-inside:avoid;page-break-inside:avoid}
         invariant(list.length, 'CRM không trả siêu thị nào cho tỉnh đã chọn');
         config.crmStoreCache = { key, at: Date.now(), stores: list }; save('config', config);
         log(`Danh sách siêu thị tra tồn CRM: ${crmProvs().map(id => CRM_PROVINCES.find(p => p[0] === id)?.[1] || id).join(', ')} — ${list.filter(x => !x.kho).length} siêu thị (bỏ ${list.filter(x => x.kho).length} kho chi nhánh)`);
+        renderCrmSetting();
+    }
+    /* ---------- V2.6: tọa độ thật từng siêu thị (web dienmayxanh.com, công khai, không cần đăng nhập) ----------
+     * Danh sách theo tỉnh: POST /Store/SuggestSearch (provinceId = mã tỉnh CRM, pageIndex 0,1,2… mỗi trang 10 shop).
+     * Tọa độ: trang chi tiết từng shop (Lat / latitude). Lưu GM 'geo' = { provs: {tỉnh: {at, count, ok}}, pts: {mã: [lat, lng]} }, 30 ngày lấy lại danh sách. */
+    const GEO_URL = 'https://www.dienmayxanh.com', GEO_DAYS = 30;
+    let geo = (() => { const g = load('geo', null); return g && typeof g === 'object' && g.pts ? g : { provs: {}, pts: {} }; })();
+    const srcRadius = () => { const r = Number(config.srcRadius ?? 15); return Number.isFinite(r) && r >= 0 ? r : 15; };
+    const geoOpt = () => ({ pts: geo.pts, radius: srcRadius() });
+    const geoReady = shop => !!geo.pts[keyCode(shop)];
+    function gmReq(method, url, data, session) {
+        return new Promise((resolve, reject) => {
+            if (session) check(session);
+            let req;
+            const stop = () => { req?.abort?.(); reject(Object.assign(new Error('Người dùng đã dừng'), { code: 'CANCELLED' })); };
+            session?.controller.signal.addEventListener('abort', stop, { once: true });
+            const done = fn => (...a) => { session?.controller.signal.removeEventListener('abort', stop); fn(...a); };
+            req = GM_xmlhttpRequest({ method, url, data, timeout: 30000, anonymous: true,
+                headers: data ? { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'X-Requested-With': 'XMLHttpRequest' } : {},
+                onload: done(r => r.status === 200 ? resolve(String(r.responseText || '')) : reject(new Error(`Web Điện Máy Xanh trả HTTP ${r.status}`))),
+                onerror: done(() => reject(new Error('Lỗi mạng khi đọc web Điện Máy Xanh'))), ontimeout: done(() => reject(new Error('Web Điện Máy Xanh phản hồi quá 30 giây'))) });
+        });
+    }
+    async function geoProvince(id, session, force) {
+        const st = geo.provs[id];
+        if (!force && st && st.ok && Date.now() - (st.at || 0) < GEO_DAYS * 864e5) return { id, skipped: true };
+        const list = new Map();
+        for (let i = 0; i < 80; i++) {
+            status(`📍 Danh sách shop ${provShort(id)}: trang ${i + 1}…`);
+            const body = new URLSearchParams({ provinceId: id, districtId: '', keyword: '', pageIndex: String(i), pageSize: '10', loadAll: 'true', className: '', type: '-1' }).toString();
+            const items = parseGeoList(await gmReq('POST', GEO_URL + '/Store/SuggestSearch', body, session));
+            let added = 0; items.forEach(x => { if (!list.has(x.code)) { list.set(x.code, x); added++; } });
+            if (!added) break;
+            await pause(120, session);
+        }
+        invariant(list.size, `Web Điện Máy Xanh không trả siêu thị nào cho ${provShort(id)}`);
+        let ok = 0, n = 0, miss = [];
+        for (const x of list.values()) {
+            n++; progress(n - 1, list.size);
+            if (!force && geo.pts[x.code]) { ok++; continue; }
+            status(`📍 Tọa độ shop ${provShort(id)} ${n}/${list.size}`);
+            try { const pt = parseGeoPoint(await gmReq('GET', GEO_URL + (x.href.startsWith('/') ? x.href : '/' + x.href), null, session)); if (pt) { geo.pts[x.code] = pt; ok++; } else miss.push(x.code); }
+            catch (e) { if (e.code === 'CANCELLED') throw e; miss.push(x.code); }
+            await pause(120, session);
+        }
+        geo.provs[id] = { at: Date.now(), count: list.size, ok };
+        try { save('geo', geo); } catch { /* bỏ qua */ }
+        log(`📍 Tọa độ ${provShort(id)}: ${ok}/${list.size} shop${miss.length ? ` · thiếu ${miss.length} (${miss.slice(0, 8).join(', ')}${miss.length > 8 ? '…' : ''})` : ''}`);
+        return { id, count: list.size, ok };
+    }
+    // Lấy tọa độ khi cần (tự gọi trước khi tra CRM). Lỗi thì ghi nhật ký và chạy tiếp theo cách cũ (xếp theo huyện).
+    async function ensureGeo(ids, session, force) {
+        for (const id of [...new Set(ids.map(String))]) {
+            try { await geoProvince(id, session, force); }
+            catch (e) { if (e.code === 'CANCELLED') throw e; log(`📍 Không lấy được tọa độ ${provShort(id)}: ${e.message} — tạm xếp theo huyện như cũ`, 'error'); if (force) throw e; }
+            check(session);
+        }
+        const miss = config.shops.filter(sh => !geoReady(sh.code)).map(sh => sh.name);
+        if (miss.length && Object.keys(geo.pts).length) log(`📍 Chưa có tọa độ siêu thị ${miss.join(', ')} — kiểm tra tỉnh ở ⚙️ Cài đặt → Tra tồn CRM; các siêu thị này tạm xếp theo huyện`, 'error');
         renderCrmSetting();
     }
     const definitions = {};
@@ -1189,7 +1291,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const session = { id: uuid(), mode, started: Date.now(), status: 'running', controller: new AbortController() };
         running = session; ui.classList.add('busy');
         const timer = setInterval(() => { ui.querySelector('[data-timer]').textContent = clockText(session.started); }, 250);
-        log(`Bắt đầu ${({ sales: 'đổ xuất bán', balance: 'đổ cân hàng', prev: 'đổ xuất bán kỳ so sánh', crm: 'tra tồn CRM', crmBal: 'tìm nguồn hàng CRM', crmStores: 'lấy danh sách siêu thị CRM', crmReq: 'check xin hàng', crmNear: 'tìm tỉnh lân cận', crmAlt: 'tìm màu / dung lượng khác' })[mode] || 'đổ tồn kho'}`); status('Đang kiểm tra quyền…'); progress(0, 1);
+        log(`Bắt đầu ${({ sales: 'đổ xuất bán', balance: 'đổ cân hàng', prev: 'đổ xuất bán kỳ so sánh', crm: 'tra tồn CRM', crmBal: 'tìm nguồn hàng CRM', crmStores: 'lấy danh sách siêu thị CRM', crmReq: 'check xin hàng', crmNear: 'tìm tỉnh lân cận', crmAlt: 'tìm màu / dung lượng khác', geo: 'lấy tọa độ shop' })[mode] || 'đổ tồn kho'}`); status('Đang kiểm tra quyền…'); progress(0, 1);
         try {
             await authCheck(session); check(session); log(`Quyền hợp lệ: ${auth.user} — ${auth.name}`);
             const msg = await job(session); check(session);
@@ -1858,6 +1960,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
     async function runCrmBalance(session, codes) {
         const out = {}, failed = [];
         status('Đang lấy danh sách siêu thị theo tỉnh…'); await ensureCrmStores(); check(session);
+        await ensureGeo(crmProvs(), session);
         for (let i = 0; i < codes.length; i++) {
             check(session); status(`Tìm nguồn hàng CRM ${i + 1}/${codes.length}: ${codes[i]}`); progress(i, codes.length);
             try {
@@ -1876,9 +1979,9 @@ tr{break-inside:avoid;page-break-inside:avoid}
         if (!got.length) return null;
         const hits = got.filter(Boolean);
         // V2.3: xếp gần trước (⭐ ưu tiên → cùng huyện → cùng tỉnh cũ → xa hơn) theo siêu thị cần hàng
-        return rankSources(hits.map(x => x.p), [...(config.crmStoreCache?.stores || []), ...hits.flatMap(x => x.stores)], r.shop, reqFavs(r.shop), config.shops.map(s => s.code));
+        return rankSources(hits.map(x => x.p), [...(config.crmStoreCache?.stores || []), ...hits.flatMap(x => x.stores)], r.shop, reqFavs(r.shop), config.shops.map(s => s.code), geoOpt());
     }
-    const srcText = (list, n = 3) => list && list.length ? list.slice(0, n).map(x => `${x.tier === 0 ? '⭐' : ''}${x.name} ${fmt(x.free)}${x.tier === 3 ? ' (xa)' : ''}`).join(' · ') + (list.length > n ? ` · +${list.length - n} nơi` : '') : (list ? 'không nơi nào xin được' : '');
+    const srcText = (list, n = 3) => list && list.length ? list.slice(0, n).map(x => `${x.tier === 0 ? '⭐' : ''}${x.name}${x.km != null ? ` (${kmText(x.km)})` : ''} ${fmt(x.free)}${x.tier === 3 && x.km == null ? ' (xa)' : ''}`).join(' · ') + (list.length > n ? ` · +${list.length - n} nơi` : '') : (list ? 'không nơi nào xin được' : '');
     // V2.5: đề xuất xin từ đâu (cần đã "Tìm nguồn hàng (CRM)"). Chia theo thứ tự dòng (hết hàng / sắp cạn trước), 2 siêu thị trong cụm không xin trùng 1 máy.
     const srcKeep = () => config.srcKeep ?? 1;
     function balancePlans(rows) {
@@ -1897,7 +2000,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         for (const g of groups) {
             const place = srcPlace(g);
             lines.push(`\n🏬 ${g.code} · ${g.name}${place ? ' · ' + place : ''} — ${g.qty} máy:`);
-            g.lines.forEach(l => lines.push(`  • ${l.name}${l.product ? ` (${l.product})` : ''} · ${l.qty} máy → ${shopName(l.to)}${l.last ? ' (máy cuối của nơi cho)' : ''}`));
+            g.lines.forEach(l => lines.push(`  • ${l.name}${l.product ? ` (${l.product})` : ''} · ${l.qty} máy → ${shopName(l.to)}${l.km != null ? ` (${kmText(l.km)})` : ''}${l.last ? ' (máy cuối của nơi cho)' : ''}`));
         }
         const short = items.filter(i => i.alloc.short);
         if (short.length) { lines.push('\n⚠️ Còn thiếu, chưa có nơi cho (xin kho tổng / tỉnh lân cận):'); short.forEach(i => lines.push(`  • ${shopName(i.to)}: ${i.name}${i.product ? ` (${i.product})` : ''} · thiếu ${i.alloc.short}`)); }
@@ -1958,7 +2061,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
             const b2 = el('button', '📋 Tin chuyển nội cụm', tools); b2.type = 'button';
             b2.onclick = safely(() => copyText(['🔁 ĐỀ XUẤT CHUYỂN HÀNG NỘI CỤM · ' + toBI(isoDate(new Date())), ...d.moves.map(m => `• ${m.name} (${m.product}): ${shopName(m.from)} → ${shopName(m.to)} · ${m.qty} máy`)].join('\n'), 'Đã chép tin chuyển nội cụm'));
         }
-        if (view.crmBal) el('div', `Nguồn CRM tra lúc ${stamp(new Date(view.crmBal.at))} · "Có tại (CRM)" = siêu thị có tồn bán được > 0 (không tính kho chi nhánh, siêu thị trong cụm) · "Xin từ (đề xuất)" = chia số Xin kho cho nơi gần trước, cùng mức gần thì nơi tồn nhiều cho nhiều, nơi cho giữ lại ${srcKeep()} máy (đổi trong ⚙️ Cài đặt).`, area, 'kxb-muted');
+        if (view.crmBal) el('div', `Nguồn CRM tra lúc ${stamp(new Date(view.crmBal.at))} · "Có tại (CRM)" = siêu thị có tồn bán được > 0 (không tính kho chi nhánh, siêu thị trong cụm) · "Xin từ (đề xuất)" = chia số Xin kho cho nơi gần trước (${Object.keys(geo.pts).length ? `km thật${srcRadius() ? `, chỉ trong ${srcRadius()} km` : ''}` : 'theo huyện'}), cùng mức gần thì nơi tồn nhiều cho nhiều, nơi cho giữ lại ${srcKeep()} máy (đổi trong ⚙️ Cài đặt).`, area, 'kxb-muted');
         else if (d.rows.some(r => r.ask > 0)) el('div', 'Bấm "🔎 Tìm nguồn hàng (CRM)" (hoặc "🖼 Ảnh cân hàng" — tự tra) để có đề xuất xin từ siêu thị nào, bao nhiêu máy.', area, 'kxb-muted');
         subtabs(area, [['list', 'Bảng cân hàng'], ['transfer', `Chuyển nội cụm (${d.moves.length})`], ['source', 'Nguồn hàng (CRM)'], ['brand', 'Theo hãng']], view.balTab || 'list', k => { view.balTab = k; renderBalance(); });
         const pane = el('div', undefined, area);
@@ -1973,16 +2076,16 @@ tr{break-inside:avoid;page-break-inside:avoid}
             if (!view.crmBal) { el('div', 'Bấm "🔎 Tìm nguồn hàng (CRM)" để tra các mã cần xin đang có tồn bán được ở siêu thị nào quanh đây.', pane, 'kxb-empty'); return; }
             const list = d.rows.filter(r => r.ask > 0 || r.need > 0);
             el('div', 'Chỉ tính siêu thị có TỒN BÁN ĐƯỢC > 0 trên CRM (ô "-" hoặc 0 là không xin được) · không tính kho chi nhánh và siêu thị trong cụm · dòng đỏ = không nơi nào xin được.', pane, 'kxb-muted');
-            table(pane, ['Siêu thị cần', 'Sản phẩm', view.balModel ? 'Model' : 'Mã SP', 'Xin', 'Xin từ (đề xuất)', 'Gần nhất (⭐ / cùng huyện / cùng tỉnh cũ)', 'Số nơi gần', 'Bán được gần', 'Nơi xa'],
+            table(pane, ['Siêu thị cần', 'Sản phẩm', view.balModel ? 'Model' : 'Mã SP', 'Xin', 'Xin từ (đề xuất)', 'Gần nhất', 'Số nơi gần', 'Bán được gần', 'Nơi xa'],
                 list.map(r => { const src = crmSrc(r); if (!src) return [shopName(r.shop), r.name, view.balModel ? `${r.codeCount} mã` : r.product, fmt(r.ask), '', 'chưa tra', '', '', ''];
                     const near = src.filter(x => x.tier <= 2), far = src.filter(x => x.tier > 2);
-                    return [shopName(r.shop), r.name, view.balModel ? `${r.codeCount} mã` : r.product, fmt(r.ask), r.ask ? planText(planOf(plans, r)) : '', near.length ? srcText(near, 5) : (far.length ? 'gần không còn' : 'không nơi nào xin được'), fmt(near.length), fmt(near.reduce((a, x) => a + x.free, 0)), far.length ? `${fmt(far.length)} nơi · ${fmt(far.reduce((a, x) => a + x.free, 0))} máy` : '']; }),
+                    return [shopName(r.shop), r.name, view.balModel ? `${r.codeCount} mã` : r.product, fmt(r.ask), r.ask ? planText(planOf(plans, r)) : '', near.length ? srcText(near, 5) : (far.length ? (geoReady(r.shop) && srcRadius() ? `trong ${srcRadius()} km không còn` : 'gần không còn') : 'không nơi nào xin được'), fmt(near.length), fmt(near.reduce((a, x) => a + x.free, 0)), far.length ? `${fmt(far.length)} nơi · ${fmt(far.reduce((a, x) => a + x.free, 0))} máy` : '']; }),
                 { num: [3, 6, 7], rowClass: i => { const src = crmSrc(list[i]); return src && !src.length ? 'old' : src && !src.some(x => x.tier <= 2) ? 'mid' : ''; } });
             const groups = groupBySource(planItems(d.rows, plans));
             if (groups.length) {
                 el('div', 'Phiếu xin theo nơi cho (gửi từng siêu thị)', pane, 'kxb-reqsub');
                 table(pane, ['Nơi cho', 'Khu vực', 'Sản phẩm', 'Mã SP', 'Xin', 'Nơi cho còn lại', 'Về siêu thị'],
-                    groups.flatMap(g => g.lines.map((l, i) => [i ? '' : `${g.code} · ${g.name} (${g.qty} máy)`, i ? '' : srcPlace(g), l.name, l.product, fmt(l.qty), fmt(l.left) + (l.last ? ' (máy cuối)' : ''), shopName(l.to)])), { num: [4, 5] });
+                    groups.flatMap(g => g.lines.map((l, i) => [i ? '' : `${g.code} · ${g.name} (${g.qty} máy)`, i ? '' : srcPlace(g), l.name, l.product, fmt(l.qty), fmt(l.left) + (l.last ? ' (máy cuối)' : ''), shopName(l.to) + (l.km != null ? ` (${kmText(l.km)})` : '')])), { num: [4, 5] });
             }
             el('div', 'Muốn xem đủ danh sách / đánh dấu ⭐ siêu thị hay xin: dùng tab "🔁 Check xin hàng".', pane, 'kxb-muted');
             return;
@@ -2089,6 +2192,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const R = reqState(), keys = reqKeys(R.q);
         invariant(keys.length, 'Gõ mã sản phẩm (13 số) hoặc tên sản phẩm cần xin');
         status('Đang lấy danh sách siêu thị theo tỉnh…'); await ensureCrmStores(); check(session);
+        await ensureGeo(crmProvs(), session);
         const results = [];
         for (let i = 0; i < keys.length; i++) {
             status(`Check xin hàng ${i + 1}/${keys.length}: ${keys[i]}`); progress(i, keys.length);
@@ -2142,6 +2246,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const ids = nearIds(); invariant(ids.length, 'Chưa có tỉnh lân cận — chọn trong ⚙️ Cài đặt → Tra tồn CRM → Tỉnh lân cận');
         const provs = [];
         for (const id of ids) { status(`Lấy danh sách siêu thị ${provShort(id)}…`); provs.push({ id, name: provShort(id), stores: await nearStores(id) }); check(session); }
+        await ensureGeo(ids, session);
         const keys = R.results.map(r => r.key), data = {}, total = keys.length * provs.length; let n = 0;
         for (const k of keys) {
             data[k] = {};
@@ -2161,7 +2266,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const lines = [`🙏 ${shopName(shop)} xin hỗ trợ hàng (${stamp(new Date(R.at))}):`];
         for (const blk of reqBlocks(R, shop)) {
             const near = blk.list.filter(x => x.tier <= 2), pick = (near.length ? near : blk.list).slice(0, 5);
-            let t = blk.alloc.plan.length ? `xin ${blk.alloc.need} máy: ${planText(blk.alloc)}` : pick.length ? pick.map(x => `${x.name} ${x.free}`).join(' · ') : blk.nb?.length ? 'trong tỉnh hết · tỉnh lân cận: ' + blk.nb.slice(0, 5).map(x => `${x.name} (${x.provName}) ${x.free}`).join(' · ') : 'trong tỉnh không nơi nào còn';
+            let t = blk.alloc.plan.length ? `xin ${blk.alloc.need} máy: ${planText(blk.alloc)}` : pick.length ? pick.map(x => `${x.name}${x.km != null ? ` (${kmText(x.km)})` : ''} ${x.free}`).join(' · ') : blk.nb?.length ? 'trong tỉnh hết · tỉnh lân cận: ' + blk.nb.slice(0, 5).map(x => `${x.name} (${x.provName}) ${x.free}`).join(' · ') : 'trong tỉnh không nơi nào còn';
             if (!near.length && blk.alts?.length) t += ` · có thể thay: ${blk.alts.slice(0, 2).map(a => `${a.p.name} (${a.p.code}) — ${(a.near.length ? a.near : a.list).slice(0, 2).map(x => `${x.name} ${x.free}`).join(', ')}`).join(' / ')}`;
             lines.push(`• ${blk.p.name} (${blk.p.code}): ${t}`);
         }
@@ -2172,11 +2277,11 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const cache = config.crmStoreCache?.stores || [], blocks = [];
         for (const r of R.results) for (const p of r.res.products.filter(crmUsable).slice(0, 15)) {
             const stores = [...cache, ...r.res.stores], alt = R.alt?.[norm(variantBase(p.name))];
-            const list = rankSources(p, stores, shop, reqFavs(shop));
-            const nb = R.nb ? nearbySources(p, R.nb.provs.map(pv => ({ prov: pv.id, name: pv.name, res: R.nb.data[r.key]?.[pv.id] })), shop) : null;
+            const g = geoOpt(), list = rankSources(p, stores, shop, reqFavs(shop), undefined, g);
+            const nb = R.nb ? nearbySources(p, R.nb.provs.map(pv => ({ prov: pv.id, name: pv.name, res: R.nb.data[r.key]?.[pv.id] })), shop, g) : null;
             blocks.push({ key: r.key, p, list, alloc: allocateAsk(R.qty || 1, [...list, ...(nb || [])], srcKeep()), sys: (r.total?.products || []).find(x => x.code === p.code)?.total || null, mine: p.byStore[keyCode(shop)] || null,
                 nb,
-                alts: alt ? altOptions(p, alt.products, [...cache, ...alt.stores], shop, reqFavs(shop)) : null });
+                alts: alt ? altOptions(p, alt.products, [...cache, ...alt.stores], shop, reqFavs(shop), g) : null });
         }
         return blocks;
     }
@@ -2207,7 +2312,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
             return;
         }
         const my = config.crmStoreCache?.stores?.find(x => x.code === R.shop);
-        el('div', `Check lúc ${stamp(new Date(R.at))} · xin cho ${shopName(R.shop)}${my ? ' — ' + areaText(storeArea(my.full)) : ''} · số thời gian thực trên CRM · bấm vào một dòng để ⭐ đánh dấu / bỏ siêu thị ưu tiên (nhớ cho lần sau)`, area, 'kxb-muted');
+        el('div', `Check lúc ${stamp(new Date(R.at))} · xin cho ${shopName(R.shop)}${my ? ' — ' + areaText(storeArea(my.full)) : ''} · ${geoReady(R.shop) ? `xếp theo km thật (đường chim bay)${srcRadius() ? `, chỉ đề xuất trong ${srcRadius()} km` : ''}` : 'chưa có tọa độ — xếp theo huyện'} · số thời gian thực trên CRM · bấm vào một dòng để ⭐ đánh dấu / bỏ siêu thị ưu tiên (nhớ cho lần sau)`, area, 'kxb-muted');
         const bar = el('div', undefined, area, 'bar');
         const cp = el('button', '📋 Tin xin hàng', bar); cp.type = 'button'; cp.title = 'Chép tin nhắn xin hàng: mỗi sản phẩm 5 nơi gần nhất có tồn bán được';
         cp.onclick = safely(() => copyText(reqMessage(R, R.shop), 'Đã chép tin xin hàng — dán vào Zalo / LINE'));
@@ -2223,7 +2328,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
             const near = blk.list.filter(x => x.tier <= 2);
             const head = el('div', undefined, area, 'kxb-reqhead');
             el('b', `${blk.p.name} · ${blk.p.code}`, head);
-            el('span', ` — tại ${shopName(R.shop)}: ${blk.mine ? fmt(blk.mine.qty) : 0} bán được · gần (cùng tỉnh cũ): ${fmt(near.length)} nơi, ${fmt(near.reduce((a, x) => a + x.free, 0))} máy · cả tỉnh: ${fmt(blk.list.length)} nơi${blk.sys ? ` · toàn hệ thống ${fmt(blk.sys.qty)}` : ''}`, head, 'kxb-muted');
+            el('span', ` — tại ${shopName(R.shop)}: ${blk.mine ? fmt(blk.mine.qty) : 0} bán được · gần (${geoReady(R.shop) && srcRadius() ? 'trong ' + srcRadius() + ' km' : 'cùng tỉnh cũ'}): ${fmt(near.length)} nơi, ${fmt(near.reduce((a, x) => a + x.free, 0))} máy · cả tỉnh: ${fmt(blk.list.length)} nơi${blk.sys ? ` · toàn hệ thống ${fmt(blk.sys.qty)}` : ''}`, head, 'kxb-muted');
             const al = blk.alloc, mine = new Map(al.plan.map(x => [x.code, x]));
             const pl = el('div', al.plan.length ? `👉 Đề xuất xin ${fmt(al.need)} máy: ${planText(al)}` : `👉 Cần ${fmt(al.need)} máy — chưa có nơi nào cho được${R.nb ? '' : ' (thử "🔎 Tỉnh lân cận")'}`, area, 'kxb-reqsub');
             pl.style.color = al.short ? '#b91c1c' : '#0b6b4f';
@@ -2232,9 +2337,9 @@ tr{break-inside:avoid;page-break-inside:avoid}
                 if (!blk.list.length && !R.nb && nbNames) { const b = el('button', `🔎 Tìm thêm ở ${nbNames}`, w, 'mini idle-only'); b.type = 'button'; b.style.marginLeft = '8px'; b.onclick = safely(() => withSession('crmNear', runNearby)); }
             } else {
                 const fav = new Set(reqFavs(R.shop));
-                table(area, ['', 'Ưu tiên', 'Siêu thị', 'Khu vực', 'Tồn bán được', 'Đang khóa', 'Đề xuất xin'],
-                    list.map(x => [fav.has(x.code) ? '⭐' : '☆', x.tierName, `${x.code} · ${x.name}`, areaText(x.area), fmt(x.free), x.lock ? fmt(x.lock) : '', mine.get(x.code) ? fmt(mine.get(x.code).qty) + (mine.get(x.code).last ? ' (máy cuối)' : '') : '']),
-                    { num: [4, 5, 6], rowTitle: 'Bấm để ⭐ đánh dấu / bỏ ưu tiên siêu thị này', rowClass: i => list[i].tier === 0 ? 'fav' : list[i].tier === 1 ? 'near' : '', onRow: i => {
+                table(area, ['', 'Ưu tiên', 'Siêu thị', 'Khu vực', 'Km', 'Tồn bán được', 'Đang khóa', 'Đề xuất xin'],
+                    list.map(x => [fav.has(x.code) ? '⭐' : '☆', x.tierName, `${x.code} · ${x.name}`, areaText(x.area), x.km != null ? fmt(x.km) : '', fmt(x.free), x.lock ? fmt(x.lock) : '', mine.get(x.code) ? fmt(mine.get(x.code).qty) + (mine.get(x.code).last ? ' (máy cuối)' : '') : '']),
+                    { num: [4, 5, 6, 7], rowTitle: 'Bấm để ⭐ đánh dấu / bỏ ưu tiên siêu thị này', rowClass: i => list[i].tier === 0 ? 'fav' : list[i].out ? 'low' : list[i].tier === 1 ? 'near' : '', onRow: i => {
                         const all = config.reqFavs || (config.reqFavs = {}), cur = new Set(all[R.shop] || []), c = list[i].code;
                         cur.has(c) ? cur.delete(c) : cur.add(c); all[R.shop] = [...cur]; save('config', config); renderRequest();
                     } });
@@ -2243,8 +2348,8 @@ tr{break-inside:avoid;page-break-inside:avoid}
             if (blk.nb) {
                 if (blk.nb.length) {
                     el('div', `📍 Tỉnh lân cận: ${fmt(blk.nb.length)} nơi, ${fmt(blk.nb.reduce((a, x) => a + x.free, 0))} máy bán được`, area, 'kxb-reqsub');
-                    table(area, ['Tỉnh', 'Siêu thị', 'Khu vực (mã)', 'Tồn bán được', 'Đang khóa', 'Đề xuất xin'],
-                        blk.nb.map(x => [x.provName, `${x.code} · ${x.name}`, [x.area?.prov, x.area?.dist].filter(Boolean).join('_'), fmt(x.free), x.lock ? fmt(x.lock) : '', mine.get(x.code) ? fmt(mine.get(x.code).qty) : '']), { num: [3, 4, 5] });
+                    table(area, ['Tỉnh', 'Siêu thị', 'Khu vực (mã)', 'Km', 'Tồn bán được', 'Đang khóa', 'Đề xuất xin'],
+                        blk.nb.map(x => [x.provName, `${x.code} · ${x.name}`, [x.area?.prov, x.area?.dist].filter(Boolean).join('_'), x.km != null ? fmt(x.km) + (x.out ? ' (xa)' : '') : '', fmt(x.free), x.lock ? fmt(x.lock) : '', mine.get(x.code) ? fmt(mine.get(x.code).qty) : '']), { num: [3, 4, 5, 6], rowClass: i => blk.nb[i].out ? 'low' : '' });
                 } else el('div', `📍 Tỉnh lân cận (${R.nb.provs.map(p => p.name).join(', ')}) cũng không nơi nào còn tồn bán được.`, area, 'kxb-muted');
             }
             // V2.4: hàng thay thế (khác màu / dung lượng, cùng model) khi gần không còn
@@ -2389,7 +2494,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         groups.slice(0, 15).forEach(g => {
             const place = srcPlace(g);
             slipRows.push([`${g.code} · ${g.name}${place ? ' · ' + place : ''} — ${g.qty} máy`, '', '', '']); slipKind.push('h');
-            g.lines.forEach(l => { slipRows.push([`   → ${shopName(l.to)}`, l.name + (l.product ? ` (${l.product})` : ''), fmt(l.qty), fmt(l.left) + (l.last ? ' (máy cuối)' : '')]); slipKind.push(''); });
+            g.lines.forEach(l => { slipRows.push([`   → ${shopName(l.to)}${l.km != null ? ` (${kmText(l.km)})` : ''}`, l.name + (l.product ? ` (${l.product})` : ''), fmt(l.qty), fmt(l.left) + (l.last ? ' (máy cuối)' : '')]); slipKind.push(''); });
         });
         const list = d.rows.filter(r => r.ask > 0 || r.moveIn > 0).sort((a, b) => vcmp(a.shop, b.shop) || b.ask - a.ask || (a.cover ?? 0) - (b.cover ?? 0));
         const counts = {}; d.rows.forEach(r => { counts[r.status] = (counts[r.status] || 0) + 1; });
@@ -2410,7 +2515,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
                 hasPlan && slipRows.length ? { title: `Phiếu xin theo nơi cho (gửi từng siêu thị)${groups.length > 15 ? ` · 15/${groups.length} nơi` : ''}`, cols: [['Nơi cho → về siêu thị', 3.2], ['Sản phẩm', 5.2], ['Xin', 0.8, 'right'], ['Nơi cho còn', 1.6, 'right']],
                     rows: slipRows, spanFirst: true, rowBold: i => slipKind[i] === 'h', rowColor: i => slipKind[i] === 'h' ? '#e6f4ea' : '' } : null,
                 multi && d.moves.length ? { title: 'Chuyển nội cụm', cols: [['Sản phẩm', 5], ['Từ', 1.8], ['Đến', 1.8], ['SL', 0.8, 'right']], rows: d.moves.slice(0, 20).map(m => [m.name, shopName(m.from), shopName(m.to), fmt(m.qty)]) } : null],
-            footer: `AutoBI Kho & Xuất Bán V${VERSION} · tồn lúc ${stamp(new Date(view.inv.capturedAt))}${hasPlan ? ` · nguồn CRM lúc ${stamp(new Date(view.crmBal.at))}, nơi cho giữ lại ${srcKeep()} máy` : ''}${d.missing ? ` · CHƯA ĐỦ: còn ${d.missing} ngày chưa đổ xuất bán` : ''}`, warn: !!d.missing,
+            footer: `AutoBI Kho & Xuất Bán V${VERSION} · tồn lúc ${stamp(new Date(view.inv.capturedAt))}${hasPlan ? ` · nguồn CRM lúc ${stamp(new Date(view.crmBal.at))}, nơi cho giữ lại ${srcKeep()} máy${Object.keys(geo.pts).length && srcRadius() ? `, chỉ đề xuất trong ${srcRadius()} km (đường chim bay)` : ''}` : ''}${d.missing ? ` · CHƯA ĐỦ: còn ${d.missing} ngày chưa đổ xuất bán` : ''}`, warn: !!d.missing,
             width: hasPlan ? 1240 : 1000,
             name: `AutoBI_CanHang_${isoDate(new Date()).replace(/-/g, '')}.png`
         });
@@ -2488,9 +2593,9 @@ tr{break-inside:avoid;page-break-inside:avoid}
             X.writeFile(wb, `AutoBI_XuatBan_${r.range.from.replace(/-/g, '')}-${r.range.to.replace(/-/g, '')}.xlsx`);
         } else if (view.tab === 'request') {
             const R = reqState(); invariant(R.results.length, 'Chưa có kết quả Check xin hàng');
-            sheet('CheckXinHang', [[`Check xin hàng cho ${shopName(R.shop)} · ${stamp(new Date(R.at))} · tồn bán được trên CRM, không tính kho chi nhánh`], [], ['Mã SP', 'Sản phẩm', 'Ưu tiên', 'Mã ST', 'Siêu thị', 'Khu vực', 'Tồn bán được', 'Đang khóa', 'Đề xuất xin'],
-                ...reqBlocks(R, R.shop).flatMap(b => { const q = c => b.alloc.plan.find(x => x.code === c)?.qty || ''; return b.list.map(x => [b.p.code, b.p.name, x.tierName, x.code, x.name, areaText(x.area), x.free, x.lock, q(x.code)])
-                    .concat((b.nb || []).map(x => [b.p.code, b.p.name, 'Tỉnh lân cận', x.code, x.name, x.provName, x.free, x.lock, q(x.code)])); })], [16, 40, 14, 8, 30, 22, 12, 10, 11]);
+            sheet('CheckXinHang', [[`Check xin hàng cho ${shopName(R.shop)} · ${stamp(new Date(R.at))} · tồn bán được trên CRM, không tính kho chi nhánh`], [], ['Mã SP', 'Sản phẩm', 'Ưu tiên', 'Mã ST', 'Siêu thị', 'Khu vực', 'Km', 'Tồn bán được', 'Đang khóa', 'Đề xuất xin'],
+                ...reqBlocks(R, R.shop).flatMap(b => { const q = c => b.alloc.plan.find(x => x.code === c)?.qty || ''; return b.list.map(x => [b.p.code, b.p.name, x.tierName, x.code, x.name, areaText(x.area), x.km ?? '', x.free, x.lock, q(x.code)])
+                    .concat((b.nb || []).map(x => [b.p.code, b.p.name, 'Tỉnh lân cận', x.code, x.name, x.provName, x.km ?? '', x.free, x.lock, q(x.code)])); })], [16, 40, 14, 8, 30, 22, 7, 12, 10, 11]);
             const alts = reqBlocks(R, R.shop).filter(b => b.alts?.length && !b.list.some(x => x.tier <= 2));
             if (alts.length) sheet('HangThayThe', [['Hàng thay thế (cùng model, khác màu / dung lượng) còn tồn bán được trong tỉnh'], [], ['Mã SP hết', 'Sản phẩm hết', 'Mã thay thế', 'Sản phẩm thay thế', 'Gần: số nơi', 'Gần: số máy', 'Cả tỉnh: số nơi', 'Cả tỉnh: số máy', 'Nơi gần nhất'],
                 ...alts.flatMap(b => b.alts.map(a => [b.p.code, b.p.name, a.p.code, a.p.name, a.near.length, a.nearQty, a.list.length, a.allQty, a.list.slice(0, 3).map(x => `${x.name} ${x.free}`).join(', ')]))], [16, 36, 16, 36, 10, 10, 12, 12, 40]);
@@ -2503,8 +2608,8 @@ tr{break-inside:avoid;page-break-inside:avoid}
                 ...balStatusRows(d).map(r => [shopName(r.shop), r.brand, view.balModel ? r.codeCount + ' mã' : r.product, r.name, r.stock, r.transit || 0, r.sold, r.perDay, r.cover ?? '', r.want, r.need, r.moveIn, r.moveOut, r.ask, r.status, r.ask ? planText(planOf(xPlans, r)) : '', srcText(crmSrc(r), 5)])], [14, 12, 16, 44, 7, 10, 9, 9, 11, 8, 8, 11, 11, 8, 11, 44, 40]);
             const xGroups = groupBySource(planItems(d.rows, xPlans));
             if (xGroups.length) sheet('XinTheoNoiCho', [[`Đề xuất xin theo nơi cho · nguồn CRM lúc ${stamp(new Date(view.crmBal.at))} · nơi cho giữ lại ${srcKeep()} máy`], [],
-                ['Mã nơi cho', 'Nơi cho', 'Khu vực', 'Mã SP', 'Sản phẩm', 'SL xin', 'Nơi cho còn lại', 'Máy cuối', 'Về siêu thị'],
-                ...xGroups.flatMap(g => g.lines.map(l => [g.code, g.name, srcPlace(g), l.product, l.name, l.qty, l.left, l.last ? 'có' : '', shopName(l.to)]))], [9, 26, 22, 16, 40, 7, 12, 9, 14]);
+                ['Mã nơi cho', 'Nơi cho', 'Khu vực', 'Mã SP', 'Sản phẩm', 'SL xin', 'Nơi cho còn lại', 'Máy cuối', 'Về siêu thị', 'Km'],
+                ...xGroups.flatMap(g => g.lines.map(l => [g.code, g.name, srcPlace(g), l.product, l.name, l.qty, l.left, l.last ? 'có' : '', shopName(l.to), l.km ?? '']))], [9, 26, 22, 16, 40, 7, 12, 9, 14, 7]);
             if (d.moves.length) sheet('ChuyenNoiCum', [['Gợi ý chuyển hàng nội cụm (cùng mã, nơi thừa → nơi thiếu)'], [],
                 ['Mã SP', 'Tên sản phẩm', 'Hãng', 'Từ siêu thị', 'Tồn nơi cho', 'Đủ bán nơi cho (ngày)', 'Đến siêu thị', 'Tồn nơi nhận', 'Đủ bán nơi nhận (ngày)', 'SL chuyển'],
                 ...d.moves.map(m => [m.product, m.name, m.brand, shopName(m.from), m.fromStock, m.fromCover ?? '', shopName(m.to), m.toStock, m.toCover ?? '', m.qty])], [16, 44, 12, 14, 10, 12, 14, 10, 12, 9]);
@@ -2628,13 +2733,15 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const sp = Math.round(Number(v('balSpare')));
         invariant(sp >= 0 && sp <= 5, 'Số máy dự phòng (Cân hàng) phải từ 0 đến 5');
         const sk = Math.round(Number(v('srcKeep')));
+        const sr = Math.round(Number(v('srcRadius')));
+        invariant(sr >= 0 && sr <= 200, 'Bán kính xin hàng phải từ 0 đến 200 km (0 = không giới hạn)');
         invariant(sk >= 0 && sk <= 5, 'Số máy nơi cho giữ lại phải từ 0 đến 5');
         const ag = Math.round(Number(v('ageAlert')));
         invariant(ag >= 15 && ag <= 365, 'Mốc cảnh báo tuổi tồn phải từ 15 đến 365 ngày');
         const top = Math.round(Number(ui.querySelector('[data-img="top"]').value));
         invariant(top >= 5 && top <= 30, 'Số dòng top trong ảnh phải từ 5 đến 30');
         const img = { cats: ui.querySelector('[data-img="cats"]').checked, brands: ui.querySelector('[data-img="brands"]').checked, staff: ui.querySelector('[data-img="staff"]').checked, top };
-        config = { ...config, img, shops, selectors: config.selectors || {}, basis: v('basis') === 'shipped' ? 'shipped' : 'created', returnDays: rd, balTarget: bt, balSpare: sp, ageAlert: ag, srcKeep: sk,
+        config = { ...config, img, shops, selectors: config.selectors || {}, basis: v('basis') === 'shipped' ? 'shipped' : 'created', returnDays: rd, balTarget: bt, balSpare: sp, ageAlert: ag, srcKeep: sk, srcRadius: sr,
             notify: ui.querySelector('[data-cfg="notify"]').checked, balIncoming: ui.querySelector('[data-cfg="balIncoming"]').checked, freshHours: fh };
         save('config', config);
         const codes = new Set(shops.map(s => keyCode(s.code)));
@@ -2657,6 +2764,12 @@ tr{break-inside:avoid;page-break-inside:avoid}
             multiDrop(nbox, 'crm-near', CRM_PROVINCES.filter(([id]) => !set.has(id)).map(([id, n]) => ({ key: id, name: provShort(id), label: n })), nset, 'Chưa chọn', () => {
                 config.crmNearProvinces = [...nset]; if (!nset.size) delete config.crmNearProvinces; save('config', config); renderCrmSetting();
             });
+        }
+        const gi = ui.querySelector('[data-geo-info]');
+        if (gi) {
+            const ps = crmProvs().map(id => geo.provs[id] ? `${provShort(id)} ${geo.provs[id].ok}/${geo.provs[id].count} shop (lấy ${stamp(new Date(geo.provs[id].at)).slice(0, 10)})` : `${provShort(id)} chưa lấy`);
+            const miss = config.shops.filter(sh => !geoReady(sh.code)).map(sh => sh.name);
+            gi.textContent = `Tọa độ: ${ps.join(' · ')}${Object.keys(geo.pts).length && miss.length ? ` · chưa có tọa độ: ${miss.join(', ')}` : ''} · lần tra CRM đầu sẽ tự lấy nếu chưa có`;
         }
         const info = ui.querySelector('[data-crm-info]');
         info.textContent = crmStoreCacheOk() ? `Đang dùng ${crmStores().length} siêu thị (lấy lúc ${stamp(new Date(config.crmStoreCache.at))}, không tính kho chi nhánh)` : 'Chưa lấy danh sách theo tỉnh — lần tra đầu sẽ tự lấy (cần đăng nhập CRM)';
@@ -2891,11 +3004,13 @@ tr{break-inside:avoid;page-break-inside:avoid}
               <label>Cân hàng: máy dự phòng<input type="number" min="0" max="5" data-cfg="balSpare" style="width:120px"></label>
               <label>Cảnh báo tồn lâu từ (ngày)<input type="number" min="15" max="365" data-cfg="ageAlert" style="width:120px"></label>
               <label title="Khi chia số cần xin cho các siêu thị khác: mỗi nơi cho giữ lại bấy nhiêu máy; chỉ khi thiếu mới lấy cả máy giữ lại (ghi “máy cuối”)">Xin hàng: nơi cho giữ lại (máy)<input type="number" min="0" max="5" data-cfg="srcKeep" style="width:120px"></label>
+              <label title="Chỉ đề xuất xin ở siêu thị cách siêu thị cần hàng không quá bấy nhiêu km (đường chim bay, đường thật dài hơn khoảng 1,3 lần). 0 = không giới hạn">Xin hàng: bán kính tối đa (km)<input type="number" min="0" max="200" data-cfg="srcRadius" style="width:120px"></label>
               <span class="group" style="gap:10px"><b style="min-width:0">Ảnh xuất bán gồm</b><label class="chk"><input type="checkbox" data-img="cats">Theo ngành</label><label class="chk"><input type="checkbox" data-img="brands">Theo hãng</label><label class="chk"><input type="checkbox" data-img="staff">Nhân viên</label>
                 <label class="chk">Top<input type="number" min="5" max="30" data-img="top" style="width:64px"></label></span>
               <label class="chk"><input type="checkbox" data-cfg="balIncoming">Cân hàng: trừ hàng đang về vào số xin</label>
               <label class="chk"><input type="checkbox" data-cfg="notify">Kêu "ting" + thông báo khi đổ xong (phiên trên 20 giây)</label></div>
             <div class="group" style="margin:6px 0 10px"><b>Tra tồn CRM</b><span>Tỉnh</span><span data-crm-prov></span><button type="button" data-crm-reload title="Lấy lại danh sách siêu thị của các tỉnh đã chọn từ CRM (cần đăng nhập CRM)">🔄 Lấy lại danh sách siêu thị</button><span class="kxb-muted" data-crm-info></span></div>
+            <div class="group" style="margin:-4px 0 10px"><b></b><button type="button" class="idle-only" data-geo-reload title="Lấy lại tọa độ thật của từng siêu thị (tỉnh đã chọn) từ web Điện Máy Xanh — không cần đăng nhập, khoảng 20–40 giây">📍 Lấy tọa độ shop</button><span class="kxb-muted" data-geo-info></span></div>
             <div class="group" style="margin:-4px 0 10px"><b></b><span>Tỉnh lân cận</span><span data-crm-near></span><span class="kxb-muted">Check xin hàng: khi cả tỉnh hết, bấm "🔎 Tỉnh lân cận" để tìm thêm ở các tỉnh này. Bỏ chọn hết = dùng tỉnh giáp ranh mặc định.</span></div>
             <div class="kxb-muted" data-storage style="margin-bottom:8px"></div>
             <div class="bar" style="align-items:center"><button type="button" class="primary" data-save>Lưu cài đặt</button> <button type="button" data-check-update>🔄 Kiểm tra bản mới</button>
@@ -2938,10 +3053,11 @@ tr{break-inside:avoid;page-break-inside:avoid}
         ui.querySelector('[data-from]').value = today.slice(0, 8) + '01'; ui.querySelector('[data-to]').value = today;
         ui.querySelector('[data-cfg="basis"]').value = config.basis || 'created'; ui.querySelector('[data-cfg="returnDays"]').value = config.returnDays || 7; ui.querySelector('[data-cfg="balTarget"]').value = config.balTarget || 14;
         ui.querySelector('[data-cfg="freshHours"]').value = config.freshHours ?? 2;
-        ui.querySelector('[data-cfg="balSpare"]').value = config.balSpare ?? 1; ui.querySelector('[data-cfg="ageAlert"]').value = config.ageAlert || 60; ui.querySelector('[data-cfg="srcKeep"]').value = config.srcKeep ?? 1;
+        ui.querySelector('[data-cfg="balSpare"]').value = config.balSpare ?? 1; ui.querySelector('[data-cfg="ageAlert"]').value = config.ageAlert || 60; ui.querySelector('[data-cfg="srcKeep"]').value = config.srcKeep ?? 1; ui.querySelector('[data-cfg="srcRadius"]').value = srcRadius();
         ui.querySelector('[data-cfg="notify"]').checked = config.notify !== false;
         ui.querySelector('[data-cfg="balIncoming"]').checked = config.balIncoming !== false;
         renderCrmSetting();
+        ui.querySelector('[data-geo-reload]').onclick = safely(() => withSession('geo', async ss => { await ensureGeo(crmProvs(), ss, true); renderAll(); return `Đã lấy tọa độ: ${crmProvs().map(id => `${provShort(id)} ${geo.provs[id]?.ok || 0}/${geo.provs[id]?.count || 0} shop`).join(', ')}`; }));
         ui.querySelector('[data-crm-reload]').onclick = safely(() => withSession('crmStores', async () => { await ensureCrmStores(true); return `Đã lấy danh sách siêu thị tra tồn: ${crmStores().length} siêu thị`; }));
         { const o = imgOpt(); ['cats', 'brands', 'staff'].forEach(k => { ui.querySelector(`[data-img="${k}"]`).checked = !!o[k]; }); ui.querySelector('[data-img="top"]').value = o.top; }
         ui.querySelector('[data-settings]').addEventListener('toggle', e => { if (e.target.open) renderStorage(); });
