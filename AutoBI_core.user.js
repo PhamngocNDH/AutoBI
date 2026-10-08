@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.64
+// @name         AutoBI Core V17.65
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.64
+// @version      17.65
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -690,7 +690,7 @@ window.__AutoBIWorktime73 = (() => {
             check();
             const dateCoverage = validateDates(rows, job.range);
             progress('\u0110\u00E3 \u0111\u1ED1i chi\u1EBFu c\u1ED9t NG\u00C0Y \u0111\u1EBFn ' + job.range.to.replace(/-/g, '/') + '. \u0110ang c\u1ED9ng Gi\u1EDD c\u00F4ng\u2026');
-            const staff = aggregate(rows);
+            const staff = declaredOnly(aggregate(rows)); /* V17.65: chỉ lấy NV có trong Khai báo (bảo vệ, NV ngoài danh sách không vào bảng, không báo thiếu DT) */
             progress('\u0110ang gh\u00E9p Doanh thu nh\u00E2n vi\u00EAn\u2026');
             const storedRevenue = read(K.revenue), capture = read('autobi_wt73_revenue_context');
             let revenue = job.wantRevenue ? null : storedRevenue?.runId === job.parent && capture?.parent === job.parent && capture.captured === true ? storedRevenue : null;
@@ -842,10 +842,25 @@ window.__AutoBIWorktime73 = (() => {
         return true;
     }
     
+    /* V17.65: Giờ công chỉ giữ NV có trong Khai báo + Trưởng ca/Quản lý. Khai báo chưa có danh sách NV thì giữ nguyên như cũ. */
+    function declaredOnly(list) {
+        const cfg = bridge.UTILS.getPersistentConfig() || {};
+        const ids = new Set((cfg.staffList || []).map(x => (String(x && x.name || '').match(/\d{3,}/) || [''])[0]).filter(Boolean));
+        if (!ids.size)
+            return list;
+        const keep = [], drop = [];
+        for (const r of list)
+            (r.group === 'management' || ids.has(r.employeeId) ? keep : drop).push(r);
+        if (drop.length)
+            safe(() => window.__AutoBILog5?.note('Gi\u1EDD c\u00F4ng: b\u1ECF ' + drop.length + ' ng\u01B0\u1EDDi kh\u00F4ng c\u00F3 trong Khai b\u00E1o (' + drop.map(r => r.employeeId + ' - ' + r.name).slice(0, 5).join(', ') + (drop.length > 5 ? ', +' + (drop.length - 5) : '') + ')'));
+        return keep;
+    }
     function employeeConfig(draft) {
-        // Keep the original employee-to-shop declaration; extend only IDs absent from it.
+        /* V17.65: chỉ dùng danh sách NV trong Khai báo — không tự thêm NV ngoài danh sách nữa */
         const config = clone(bridge.UTILS.getPersistentConfig() || {});
         config.staffList = config.staffList || [];
+        if (config.staffList.length)
+            return config;
         const groups = new Map();
         for (const r of draft.staff) {
             if (!groups.has(r.employeeId))
