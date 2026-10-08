@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AutoBI - Kho & Xuất Bán
 // @namespace    https://github.com/PhamngocNDH/AutoBI/kho-xuatban-test
-// @version      2.5.5
+// @version      2.5.6
 // @description  Đổ tồn kho (BI 4286) và xuất bán (BI 77) theo cụm siêu thị cho máy tính: lấy thẳng dữ liệu BI có điều tốc, sổ ngày, bộ chọn tồn kho, Excel.
 // @author       AutoBI / 38967 - Mr Phạm
 // @homepageURL  https://github.com/PhamngocNDH/AutoBI
@@ -38,7 +38,7 @@
  */
 (function () {
     'use strict';
-    const VERSION = '2.5.5';
+    const VERSION = '2.5.6';
     const UPDATE_URL = 'https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_Kho_XuatBan.user.js';
     const SALES_SCHEMA = 4;                             // 4 = tất cả ngành + Loại hàng + Kho xuất (MASIEUTHIXUAT); ngày lưu bằng bản cũ sẽ được lấy lại
     const PREFIX = 'autobi_kxb_test_v1_';               // giữ khóa cũ để không mất khai báo shop
@@ -59,6 +59,9 @@
     const hasCode = (label, code) => keyCode(clean(label).match(/^(\d+)\s*(?:[-–—]|$)/)?.[1] || '') === keyCode(code);
     const clone = value => JSON.parse(JSON.stringify(value));
     const pad = n => String(n).padStart(2, '0');
+    // V2.5.6: 1 bộ so sánh tiếng Việt dùng chung — localeCompare(…, 'vi', …) tạo lại bộ so sánh mỗi lần gọi, sắp vài nghìn dòng tồn mất cả giây
+    const VCOLL = new Intl.Collator('vi', { numeric: true });
+    const vcmp = (a, b) => VCOLL.compare(String(a ?? ''), String(b ?? ''));
     const uuid = () => (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') ? crypto.randomUUID()
         : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, ch => { const r = Math.random() * 16 | 0; return (ch === 'x' ? r : (r & 3 | 8)).toString(16); });
 
@@ -219,7 +222,7 @@
             quantity, revenue, lineCount: lines.length,
             brands: shares(brands, quantity, revenue), brandShop: Object.fromEntries(brandShop),
             shops: shopList, products: shares(products, quantity, revenue),
-            days: [...days.values()].sort((a, b) => a.day.localeCompare(b.day)),
+            days: [...days.values()].sort((a, b) => vcmp(a.day, b.day)),
             staff: [...staff.values()].map(s => {
                 const sh = shops.get(s.shop);
                 return { ...s, pctShop: sh.quantity > 0 ? s.quantity / sh.quantity * 100 : 0,
@@ -308,7 +311,7 @@
             && (!q || norm(r.serial).includes(q) || norm(r.product).includes(q) || norm(r.productName).includes(q)));
     }
     function inventoryOptions(base, f) {
-        const uniq = a => [...new Set(a.filter(Boolean))].sort((x, y) => x.localeCompare(y, 'vi', { numeric: true }));
+        const uniq = a => [...new Set(a.filter(Boolean))].sort((x, y) => vcmp(x, y));
         const byCat = base.filter(r => !f.category || r.category === f.category);
         const byGroup = byCat.filter(r => !f.group || r.group === f.group);
         return { categories: uniq(base.map(r => r.category)), groups: uniq(byCat.map(r => r.group)), brands: uniq(byGroup.map(r => r.brand)), conditions: uniq(base.map(r => r.condition)) };
@@ -326,9 +329,9 @@
             }
         }
         const fix = e => ({ ...e, quantity: r2(e.quantity), byShop: Object.fromEntries(Object.entries(e.byShop).map(([k, v]) => [k, r2(v)])), byCond: Object.fromEntries(Object.entries(e.byCond).map(([k, v]) => [k, r2(v)])) });
-        return { quantity: r2(quantity), cost, serials: serials.size, conditionList: [...conds].sort((a, b) => a.localeCompare(b, 'vi', { numeric: true })),
-            groups: [...groups.values()].map(fix).sort((a, b) => a.category.localeCompare(b.category, 'vi', { numeric: true }) || b.quantity - a.quantity),
-            products: [...products.values()].map(fix).sort((a, b) => b.quantity - a.quantity || a.name.localeCompare(b.name)) };
+        return { quantity: r2(quantity), cost, serials: serials.size, conditionList: [...conds].sort((a, b) => vcmp(a, b)),
+            groups: [...groups.values()].map(fix).sort((a, b) => vcmp(a.category, b.category) || b.quantity - a.quantity),
+            products: [...products.values()].map(fix).sort((a, b) => b.quantity - a.quantity || vcmp(a.name, b.name)) };
     }
 
     /* ================= SHOP & AUTH ================= */
@@ -358,7 +361,7 @@
     function escHtml(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
     // Gom theo Siêu thị → Nhóm hàng, sắp theo Hãng · Tên SP · IMEI để nhân viên đi theo kệ cho dễ
     function inventoryChecklist(records, shopOrder) {
-        const cmp = (a, b) => String(a || '').localeCompare(String(b || ''), 'vi', { numeric: true });
+        const cmp = (a, b) => vcmp(String(a || ''), String(b || ''));
         const order = new Map((shopOrder || []).map((c, i) => [keyCode(c), i]));
         const shops = new Map();
         for (const r of records) {
@@ -377,7 +380,7 @@
         });
     }
     function inventoryPrintHtml(records, meta) {
-        const m = meta || {}, nameOf = m.nameOf || (c => c), num = v => new Intl.NumberFormat('vi-VN').format(v);
+        const m = meta || {}, nameOf = m.nameOf || (c => c), NF = new Intl.NumberFormat('vi-VN'), num = v => NF.format(v);
         const list = inventoryChecklist(records, m.shopOrder);
         invariant(list.length, 'Không có dòng tồn nào để in (kiểm tra lại siêu thị / bộ lọc)');
         const box = '<span class="box"></span>';
@@ -499,7 +502,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
             m.set(l.order, o);
         }
         return [...m.values()].map(o => ({ ...o, age: Math.max(0, daysBetween(o.created, today)), state: o.notExported ? 'Chưa xuất' : 'Chưa giao' }))
-            .sort((a, b) => b.age - a.age || a.shop.localeCompare(b.shop) || a.order.localeCompare(b.order));
+            .sort((a, b) => b.age - a.age || vcmp(a.shop, b.shop) || vcmp(a.order, b.order));
     }
     // Dự kiến cuối tháng = DT các ngày đã trọn (1 → hôm qua) ÷ số ngày đó × số ngày của tháng
     function projectMonth(revToYesterday, range, today) {
@@ -537,7 +540,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
                 out.push({ product, name: t.r.name, brand: t.r.brand, from: g.r.shop, to: t.r.shop, qty: q, fromStock: g.r.stock, fromCover: g.r.cover, toStock: t.r.stock, toCover: t.r.cover });
             }
         }
-        return out.sort((a, b) => b.qty - a.qty || a.name.localeCompare(b.name, 'vi'));
+        return out.sort((a, b) => b.qty - a.qty || vcmp(a.name, b.name));
     }
     // Tuổi tồn: số ngày từ Ngày nhập ("26/05/2026 12:24") đến hôm nay
     const AGE_BUCKETS = [[0, 30, 'Dưới 30 ngày'], [30, 60, '30–60 ngày'], [60, 90, '60–90 ngày'], [90, 180, '90–180 ngày'], [180, 1e9, 'Trên 180 ngày']];
@@ -643,7 +646,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
             const a = storeArea(info.get(x.code)?.full);
             const tier = fav.has(x.code) ? 0 : a.dist && a.dist === my.dist && a.prov === my.prov ? 1 : a.prov && a.prov === my.prov ? 2 : 3;
             return { ...x, area: a, tier, tierName: TIERS[tier] };
-        }).sort((a, b) => a.tier - b.tier || b.free - a.free || a.name.localeCompare(b.name, 'vi'));
+        }).sort((a, b) => a.tier - b.tier || b.free - a.free || vcmp(a.name, b.name));
     }
     const crmStoreList = text => [...new Set(String(text || '').split(/[^\d]+/).map(keyCode).filter(Boolean))];
     function crmCell(text) {
@@ -690,7 +693,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
             const x = sum.get(code) || { code, name: info.get(code)?.name || code, kho: isWarehouse(info.get(code)?.full), free: 0, lock: 0 };
             x.free += Math.max(0, c.qty); x.lock += c.lock; sum.set(code, x);
         }
-        return [...sum.values()].filter(x => x.free > 0 && !x.kho && !ex.has(x.code)).sort((a, b) => b.free - a.free || a.name.localeCompare(b.name, 'vi'));
+        return [...sum.values()].filter(x => x.free > 0 && !x.kho && !ex.has(x.code)).sort((a, b) => b.free - a.free || vcmp(a.name, b.name));
     }
 
     /* ---------- V2.4: tỉnh lân cận + hàng thay thế (khi cả tỉnh hết) ---------- */
@@ -723,7 +726,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         return [].concat(prods || []).filter(x => crmUsable(x) && x.code !== p.code && norm(variantBase(x.name)) === base).map(x => {
             const list = rankSources(x, stores, me, favs), near = list.filter(s => s.tier <= 2);
             return { p: x, list, near, nearQty: near.reduce((a, s) => a + s.free, 0), allQty: list.reduce((a, s) => a + s.free, 0) };
-        }).filter(a => a.list.length).sort((a, b) => b.nearQty - a.nearQty || b.allQty - a.allQty || a.p.name.localeCompare(b.p.name, 'vi', { numeric: true }));
+        }).filter(a => a.list.length).sort((a, b) => b.nearQty - a.nearQty || b.allQty - a.allQty || vcmp(a.p.name, b.p.name));
     }
     // Nguồn ở tỉnh lân cận. nb = [{ prov, name, res }] theo thứ tự gần trước; trong 1 tỉnh: tồn nhiều trước
     function nearbySources(p, nb, me) {
@@ -733,7 +736,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
             const info = new Map(d.res.stores.map(t => [t.code, t]));
             crmSources(x, d.res.stores, [me]).forEach(s => out.push({ ...s, provId: d.prov, provName: d.name, order: i, area: storeArea(info.get(s.code)?.full), tier: 4, tierName: 'Tỉnh lân cận' }));
         });
-        return out.sort((a, b) => a.order - b.order || b.free - a.free || a.name.localeCompare(b.name, 'vi'));
+        return out.sort((a, b) => a.order - b.order || b.free - a.free || vcmp(a.name, b.name));
     }
     // Gộp 2 kết quả CRM (tra theo từng nhóm siêu thị) thành 1
     function mergeCrm(a, b) {
@@ -750,7 +753,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const book = { ...(cur.book || {}) }, take = new Set();
         for (const [d, rec] of Object.entries(inc?.book || {})) if (!book[d] || (rec?.atMs || 0) > (book[d]?.atMs || 0)) { book[d] = rec; take.add(d); }
         const lines = (cur.lines || []).filter(l => !take.has(l.created)).concat((inc?.lines || []).filter(l => take.has(l.created)));
-        lines.sort((a, b) => a.created.localeCompare(b.created) || String(a.shop).localeCompare(String(b.shop)) || String(a.time).localeCompare(String(b.time)));
+        lines.sort((a, b) => vcmp(a.created, b.created) || vcmp(String(a.shop), String(b.shop)) || vcmp(String(a.time), String(b.time)));
         return { book, lines, taken: take.size };
     }
 
@@ -798,7 +801,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
             const g = m.get(p.code) || { code: p.code, name: p.name, tier: p.tier, area: p.area, provName: p.provName, qty: 0, lines: [] };
             g.qty += p.qty; g.lines.push({ to: it.to, product: it.product, name: it.name, qty: p.qty, left: p.left, last: p.last }); m.set(p.code, g);
         }
-        return [...m.values()].sort((a, b) => a.tier - b.tier || b.qty - a.qty || String(a.name).localeCompare(String(b.name), 'vi'));
+        return [...m.values()].sort((a, b) => a.tier - b.tier || b.qty - a.qty || vcmp(String(a.name), String(b.name)));
     }
 
     // Hàm thuần cho kiểm thử offline; không cài global trên website thật.
@@ -1082,7 +1085,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         // Dòng bán đã lưu luôn là Đã xuất – Đã giao – Chưa hủy – Chưa trả → bỏ các trường trạng thái cho nhẹ bộ nhớ
         d.lines = d.lines.filter(l => l.created !== r.day).concat(r.lines.map(({ exportType, exported, delivered, cancelled, returned, ...x }) => x));
         d.book[r.day] = r.record;
-        d.lines.sort((a, b) => a.created.localeCompare(b.created) || a.shop.localeCompare(b.shop) || a.time.localeCompare(b.time));
+        d.lines.sort((a, b) => vcmp(a.created, b.created) || vcmp(a.shop, b.shop) || vcmp(a.time, b.time));
         saveMonth(month, d);
     }
 
@@ -1273,7 +1276,8 @@ tr{break-inside:avoid;page-break-inside:avoid}
     }
 
     /* ---------- Định dạng & bảng ---------- */
-    const fmt = v => new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 }).format(v);
+    const NUMFMT = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 });   // V2.5.6: dùng chung — trước đây tạo mới mỗi lần gọi, chiếm ~40% thời gian vẽ bảng
+    const fmt = v => NUMFMT.format(v);
     const pct = v => fmt(Math.round(v * 10) / 10) + '%';
     const mil = v => fmt(Math.round(v / 1e4) / 100) + ' tr';
     const shopName = code => config.shops.find(s => keyCode(s.code) === keyCode(code))?.name || code;
@@ -1299,7 +1303,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
                     const isNum = base.some(r => cellNumber(r[i]) !== null);
                     order.sort((a, b) => {
                         if (isNum) { const x = key(a), y = key(b); if (x === null && y === null) return a - b; if (x === null) return 1; if (y === null) return -1; return (x - y) * sortDir || a - b; }
-                        return String(base[a][i] ?? '').localeCompare(String(base[b][i] ?? ''), 'vi', { numeric: true }) * sortDir || a - b;
+                        return vcmp(String(base[a][i] ?? ''), String(base[b][i] ?? '')) * sortDir || a - b;
                     });
                 }
                 ths.forEach((x, k) => x.dataset.dir = k === sortCol ? (sortDir > 0 ? '▲' : '▼') : '');
@@ -1401,7 +1405,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
             byShop[l.shop] = (byShop[l.shop] || 0) + l.qty; qty += l.qty; rev += l.qty * l.price;
         }
         const catRev = new Map(); for (const x of m.values()) catRev.set(x.category, (catRev.get(x.category) || 0) + x.rev);
-        const rows = [...m.values()].sort((a, b) => catRev.get(b.category) - catRev.get(a.category) || a.category.localeCompare(b.category, 'vi') || b.rev - a.rev);   // ngành doanh thu cao lên trên
+        const rows = [...m.values()].sort((a, b) => catRev.get(b.category) - catRev.get(a.category) || vcmp(a.category, b.category) || b.rev - a.rev);   // ngành doanh thu cao lên trên
         return { rows, byShop, qty, rev };
     }
     // Áp bộ chọn siêu thị + tính lại tổng hợp
@@ -1469,6 +1473,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
             `• Giờ bán nhiều: ${peak.join(', ') || '—'}`].join('\n'), 'Đã chép nhận xét nhân viên'));
     }
     function renderSales() {
+        if (view.tab !== 'sales') return;   // V2.5.6: tab đang ẩn thì không vẽ, bấm sang tab đó mới vẽ
         const area = ui.querySelector('[data-sales-result]'); area.replaceChildren();
         const chipBox = ui.querySelector('[data-sales-shops]'); chipBox.replaceChildren();
         config.shops.forEach(sh => {
@@ -1481,7 +1486,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
             box.replaceChildren();
             const by = new Map(); src.forEach(l => { const k = keyOf(l); by.set(k, (by.get(k) || 0) + l.qty); });
             [...set].forEach(k => { if (!by.has(k)) by.set(k, 0); });
-            const list = [...by.keys()].sort((a, b) => (a === sortFirst ? -1 : b === sortFirst ? 1 : a.localeCompare(b, 'vi', { numeric: true })));
+            const list = [...by.keys()].sort((a, b) => (a === sortFirst ? -1 : b === sortFirst ? 1 : vcmp(a, b)));
             const all = el('button', 'Tất cả', box, 'chip'); all.type = 'button'; all.classList.toggle('on', !set.size);
             all.onclick = () => { set.clear(); renderSales(); };
             list.forEach(k => {
@@ -1498,7 +1503,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const tq = [...byCat.values()].reduce((a, v) => a + v.q, 0);
         catSel.replaceChildren();
         const o0 = el('option', byCat.size ? `Tất cả ngành · SL ${fmt(tq)}` : 'Tất cả ngành', catSel); o0.value = '';
-        [...byCat.entries()].sort((a, b) => b[1].r - a[1].r || b[1].q - a[1].q || a[0].localeCompare(b[0], 'vi')).forEach(([k, v]) => { const o = el('option', `${k} · SL ${fmt(v.q)}`, catSel); o.value = k; });
+        [...byCat.entries()].sort((a, b) => b[1].r - a[1].r || b[1].q - a[1].q || vcmp(a[0], b[0])).forEach(([k, v]) => { const o = el('option', `${k} · SL ${fmt(v.q)}`, catSel); o.value = k; });
         catSel.value = view.salesCat;
         catSel.classList.toggle('on', !!view.salesCat);
         const setCat = v => { view.salesCat = v; try { save('salesCat', v); } catch { /* bỏ qua */ } renderSales(); };
@@ -1605,7 +1610,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
             const gq = new Map(); shopAll.filter(l => !isPhoneLine(l)).forEach(l => gq.set(attachKey(l), (gq.get(attachKey(l)) || 0) + l.qty));
             const aset = new Set(config.attachGroups || []);
             const pickBox = el('div', undefined, pane, 'group'); el('b', 'Tính là kèm', pickBox); const dropBox = el('span', undefined, pickBox);
-            multiDrop(dropBox, 'attach-groups', [...new Set([...gq.keys(), ...aset])].sort((a, b) => (gq.get(b) || 0) - (gq.get(a) || 0) || a.localeCompare(b, 'vi')).map(k => ({ key: k, name: k, label: `${k} · SL ${fmt(gq.get(k) || 0)}` })),
+            multiDrop(dropBox, 'attach-groups', [...new Set([...gq.keys(), ...aset])].sort((a, b) => (gq.get(b) || 0) - (gq.get(a) || 0) || vcmp(a, b)).map(k => ({ key: k, name: k, label: `${k} · SL ${fmt(gq.get(k) || 0)}` })),
                 aset, 'Mọi nhóm không phải điện thoại', () => { config.attachGroups = [...aset]; save('config', config); renderSales(); });
             el('div', `Đơn có điện thoại · "có kèm" = cùng mã đơn có thêm ${aset.size ? 'nhóm đã chọn' : 'hàng ngoài ngành điện thoại'} · nhân viên = người tạo dòng điện thoại · theo các siêu thị đang chọn, không theo bộ lọc ngành / hãng / loại hàng · lựa chọn được lưu.`, pane, 'kxb-muted');
             const prevMap = new Map((attPrev?.staff || []).map(x => [x.shop + '|' + x.label, x]));
@@ -1681,6 +1686,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         sel.value = values.includes(current) ? current : '';
     }
     function renderInventoryFilters() {
+        if (view.tab !== 'inventory') return;   // V2.5.6: tab đang ẩn thì không vẽ, bấm sang tab đó mới vẽ
         const box = ui.querySelector('[data-inv-filters]');
         // Siêu thị: dùng cho cả việc chọn shop để đổ và lọc khi xem
         const shopBox = box.querySelector('[data-inv-shops]'); shopBox.replaceChildren();
@@ -1738,6 +1744,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         table(pane, ['Sản phẩm', 'Mã SP', 'Siêu thị', 'Tồn bán được', 'Đang khóa', 'Tổng tồn', 'Toàn hệ thống (bán được)'], rows, { num: [3, 4, 5, 6], title: '🏠 = siêu thị trong cụm · chỉ siêu thị có "Tồn bán được" > 0 mới xin / mượn được' });
     }
     function renderInventory() {
+        if (view.tab !== 'inventory') return;   // V2.5.6: tab đang ẩn thì không vẽ, bấm sang tab đó mới vẽ
         const area = ui.querySelector('[data-inv-result]'); area.replaceChildren();
         if (view.invTab === 'crm' || !view.inv) {
             subtabs(area, [['group', 'Theo nhóm hàng'], ['product', 'Theo sản phẩm'], ['imei', 'Danh sách IMEI'], ['age', 'Tuổi tồn'], ['transit', 'Đang về'], ['crm', '🔎 Tra tồn quanh đây']], view.invTab, k => { view.invTab = k; try { save('invTab', k); } catch { /* bỏ qua */ } renderInventory(); });
@@ -1830,9 +1837,9 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const catRev = new Map();
         inPeriod(lines, range, 'created').filter(l => shops.has(l.shop)).forEach(l => catRev.set(categoryText(l.category), (catRev.get(categoryText(l.category)) || 0) + l.qty * l.price));
         (view.inv?.records || []).forEach(r => { const k = categoryText(r.category); if (!catRev.has(k)) catRev.set(k, 0); });
-        const cats = [...catRev.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'vi')).map(([k]) => k);
+        const cats = [...catRev.entries()].sort((a, b) => b[1] - a[1] || vcmp(a[0], b[0])).map(([k]) => k);
         if (!cats.includes(cat)) cats.unshift(cat);
-        return { range, missing, rows, target, spare, noInv, hasTransit, cat, cats, useIncoming, moves: moves.filter(inBrand), brands: [...brands.values()].map(b => ({ ...b, rev: rev.get(b.key) || 0 })).sort((a, b) => b.rev - a.rev || b.need - a.need || a.label.localeCompare(b.label, 'vi')) };   // hãng bán nhiều tiền nhất lên đầu
+        return { range, missing, rows, target, spare, noInv, hasTransit, cat, cats, useIncoming, moves: moves.filter(inBrand), brands: [...brands.values()].map(b => ({ ...b, rev: rev.get(b.key) || 0 })).sort((a, b) => b.rev - a.rev || b.need - a.need || vcmp(a.label, b.label)) };   // hãng bán nhiều tiền nhất lên đầu
     }
     // Đổ cân hàng = đổ tồn kho các siêu thị đang chọn + xuất bán N ngày còn thiếu, trong một lần bấm
     // V2.0: không đổi kỳ đang xem ở tab Xuất bán
@@ -1899,6 +1906,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
     }
     function balStatusRows(d) { return d.rows.filter(r => !view.balStatus || (view.balStatus === 'need' ? r.need > 0 : r.status === view.balStatus)); }
     function renderBalance() {
+        if (view.tab !== 'balance') return;   // V2.5.6: tab đang ẩn thì không vẽ, bấm sang tab đó mới vẽ
         const area = ui.querySelector('[data-bal-result]'); area.replaceChildren();
         const dBox = ui.querySelector('[data-bal-days]'); dBox.replaceChildren();
         [7, 10, 14, 30].forEach(n => { const b = el('button', `${n} ngày`, dBox, 'chip'); b.type = 'button'; b.classList.toggle('on', view.balDays === n); b.onclick = () => { view.balDays = n; save('balDays', n); renderBalance(); }; });
@@ -2010,7 +2018,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const res = await Promise.all(keys.map(k => crmFetch(k, []).catch(e => { if (e.code === 'CRM_LOGIN') throw e; return { products: [] }; })));
         const map = new Map();
         res.forEach(r => r.products.filter(crmUsable).forEach(p => { if (!map.has(p.code)) map.set(p.code, p); }));
-        const list = [...map.values()].sort((a, b) => (b.total?.qty || 0) - (a.total?.qty || 0) || a.name.localeCompare(b.name, 'vi', { numeric: true })).slice(0, 25);
+        const list = [...map.values()].sort((a, b) => (b.total?.qty || 0) - (a.total?.qty || 0) || vcmp(a.name, b.name)).slice(0, 25);
         sugCache.set(key, list); return list;
     }
     // Gắn ô gợi ý cho 1 ô nhập (input hoặc textarea; textarea: gợi ý theo dòng đang gõ). onPick(code, product, all)
@@ -2173,7 +2181,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         return blocks;
     }
     function renderRequest() {
-        if (!ui) return;
+        if (!ui || view.tab !== 'request') return;
         const R = reqState(), area = ui.querySelector('[data-req-result]'); area.replaceChildren();
         // chọn siêu thị cần hàng
         const sel = ui.querySelector('[data-req-shop]');
@@ -2383,7 +2391,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
             slipRows.push([`${g.code} · ${g.name}${place ? ' · ' + place : ''} — ${g.qty} máy`, '', '', '']); slipKind.push('h');
             g.lines.forEach(l => { slipRows.push([`   → ${shopName(l.to)}`, l.name + (l.product ? ` (${l.product})` : ''), fmt(l.qty), fmt(l.left) + (l.last ? ' (máy cuối)' : '')]); slipKind.push(''); });
         });
-        const list = d.rows.filter(r => r.ask > 0 || r.moveIn > 0).sort((a, b) => a.shop.localeCompare(b.shop) || b.ask - a.ask || (a.cover ?? 0) - (b.cover ?? 0));
+        const list = d.rows.filter(r => r.ask > 0 || r.moveIn > 0).sort((a, b) => vcmp(a.shop, b.shop) || b.ask - a.ask || (a.cover ?? 0) - (b.cover ?? 0));
         const counts = {}; d.rows.forEach(r => { counts[r.status] = (counts[r.status] || 0) + 1; });
         const shown = list.slice(0, Math.max(o.top, 25));
         await reportImage({
@@ -2658,7 +2666,11 @@ tr{break-inside:avoid;page-break-inside:avoid}
     function renderAll() {
         ui.querySelectorAll('[data-pane]').forEach(p => p.hidden = p.dataset.pane !== view.tab);
         ui.querySelectorAll('[data-tab]').forEach(b => { b.classList.toggle('on', b.dataset.tab === view.tab); b.setAttribute('aria-selected', b.dataset.tab === view.tab); });
-        renderSales(); renderInventoryFilters(); renderInventory(); renderBalance(); renderRequest();
+        // V2.5.6: chỉ vẽ tab đang xem (trước đây vẽ cả 4 tab mỗi lần bấm → ~1 giây)
+        if (view.tab === 'sales') renderSales();
+        else if (view.tab === 'inventory') { renderInventoryFilters(); renderInventory(); }
+        else if (view.tab === 'balance') renderBalance();
+        else renderRequest();
     }
 
     /* ---------- Thông báo bản mới ---------- */
