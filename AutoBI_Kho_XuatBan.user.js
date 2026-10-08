@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AutoBI - Kho & Xuất Bán
 // @namespace    https://github.com/PhamngocNDH/AutoBI/kho-xuatban-test
-// @version      2.5.1
+// @version      2.5.2
 // @description  Đổ tồn kho (BI 4286) và xuất bán (BI 77) theo cụm siêu thị cho máy tính: lấy thẳng dữ liệu BI có điều tốc, sổ ngày, bộ chọn tồn kho, Excel.
 // @author       AutoBI / 38967 - Mr Phạm
 // @homepageURL  https://github.com/PhamngocNDH/AutoBI
@@ -38,7 +38,7 @@
  */
 (function () {
     'use strict';
-    const VERSION = '2.5.1';
+    const VERSION = '2.5.2';
     const UPDATE_URL = 'https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_Kho_XuatBan.user.js';
     const SALES_SCHEMA = 4;                             // 4 = tất cả ngành + Loại hàng + Kho xuất (MASIEUTHIXUAT); ngày lưu bằng bản cũ sẽ được lấy lại
     const PREFIX = 'autobi_kxb_test_v1_';               // giữ khóa cũ để không mất khai báo shop
@@ -2644,24 +2644,27 @@ tr{break-inside:avoid;page-break-inside:avoid}
     }
 
     /* ---------- Thông báo bản mới ---------- */
-    // V2.1.1: giống AutoBI Core — tự kiểm GitHub khi mở trang (sau 4 giây) và 30 phút/lần; có bản mới thì hiện dải vàng trên đầu trang
-    const UPDATE_EVERY = 30 * 60 * 1000;
+    // V2.1.1: giống AutoBI Core — dải vàng trên đầu trang khi có bản mới. V2.5.2: kiểm khi mở trang, 2 phút/lần và khi quay lại tab (xem UPDATE_EVERY)
+    // V2.5.2: báo gần như ngay khi up GitHub — mở trang là hỏi luôn, sau đó 2 phút/lần (chỉ khi đang xem tab), quay lại tab BI là hỏi lại.
+    // Mỗi lần chỉ tải ~1,5 KB đầu file (Range) nên rất nhẹ. Hai lần hỏi cách nhau tối thiểu 60 giây (trừ khi bấm "Kiểm tra bản mới").
+    const UPDATE_EVERY = 2 * 60 * 1000, UPDATE_MIN_GAP = 60 * 1000;
     let updateClosedFor = '';
     function fetchRemoteVersion() {
         return new Promise((resolve, reject) => {
-            GM_xmlhttpRequest({ method: 'GET', url: UPDATE_URL + '?t=' + Date.now(), timeout: 15000, headers: { 'Cache-Control': 'no-cache' },
-                onload: r => { const info = r.status === 200 ? parseRemoteScript(String(r.responseText || '')) : null; info ? resolve(info) : reject(new Error(`GitHub trả HTTP ${r.status}`)); },
+            GM_xmlhttpRequest({ method: 'GET', url: UPDATE_URL + '?t=' + Date.now(), timeout: 15000, headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache', Range: 'bytes=0-1499' },
+                onload: r => { const info = r.status === 200 || r.status === 206 ? parseRemoteScript(String(r.responseText || '')) : null; info ? resolve(info) : reject(new Error(`GitHub trả HTTP ${r.status}`)); },
                 onerror: () => reject(new Error('Lỗi mạng khi đọc GitHub')), ontimeout: () => reject(new Error('GitHub phản hồi quá lâu')) });
         });
     }
     async function checkUpdate(force) {
         const cached = load('update', null);
-        if (!force && cached && Date.now() - cached.at < UPDATE_EVERY) { renderUpdate(); return cached; }
+        if (!force && cached && Date.now() - cached.at < UPDATE_MIN_GAP) { renderUpdate(); return cached; }
         try {
             const info = { ...(await fetchRemoteVersion()), at: Date.now() };
+            const isNew = newerVersion(info.version, VERSION) && cached?.version !== info.version;
             save('update', info); renderUpdate();
             if (force) status(newerVersion(info.version, VERSION) ? `Có bản mới V${info.version}` : `Đang dùng bản mới nhất (V${VERSION})`, newerVersion(info.version, VERSION) ? 'warn' : 'ok');
-            if (newerVersion(info.version, VERSION)) log(`Có bản mới V${info.version} trên GitHub (đang dùng V${VERSION})`);
+            if (isNew) log(`Có bản mới V${info.version} trên GitHub (đang dùng V${VERSION})`);
             return info;
         } catch (e) { if (force) status('Không kiểm tra được bản mới: ' + e.message, 'err'); return null; }
     }
@@ -2982,8 +2985,9 @@ tr{break-inside:avoid;page-break-inside:avoid}
         ui.querySelector('[data-clear]').onclick = () => { view.invFilter = { category: '', group: '', brand: '', conditions: [], q: '' }; ui.querySelector('[data-f="q"]').value = ''; renderInventoryFilters(); renderInventory(); };
         ui.querySelector('[data-check-update]').onclick = safely(() => checkUpdate(true));
         renderUpdate();
-        setTimeout(() => checkUpdate(false), 4000);
-        setInterval(() => checkUpdate(false), UPDATE_EVERY);
+        setTimeout(() => checkUpdate(false), 3000);
+        setInterval(() => { if (!document.hidden) checkUpdate(false); }, UPDATE_EVERY);
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(false); });
         log(`Mở AutoBI Kho & Xuất Bán V${VERSION}.`);
         // V2.5.1: bản này chiếm nút, bản khác (từ 2.5.1) cũng đang cài → báo trùng
         setTimeout(() => { try { const v = String(document.documentElement.dataset.kxbVersions || '').split(','); if (v.filter(Boolean).length > 1) dupWarning(v, VERSION); } catch { /* bỏ qua */ } }, 2000);
