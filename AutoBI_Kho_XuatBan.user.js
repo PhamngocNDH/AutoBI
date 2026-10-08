@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AutoBI - Kho & Xuất Bán
 // @namespace    https://github.com/PhamngocNDH/AutoBI/kho-xuatban-test
-// @version      2.5.2
+// @version      2.5.3
 // @description  Đổ tồn kho (BI 4286) và xuất bán (BI 77) theo cụm siêu thị cho máy tính: lấy thẳng dữ liệu BI có điều tốc, sổ ngày, bộ chọn tồn kho, Excel.
 // @author       AutoBI / 38967 - Mr Phạm
 // @homepageURL  https://github.com/PhamngocNDH/AutoBI
@@ -38,7 +38,7 @@
  */
 (function () {
     'use strict';
-    const VERSION = '2.5.2';
+    const VERSION = '2.5.3';
     const UPDATE_URL = 'https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_Kho_XuatBan.user.js';
     const SALES_SCHEMA = 4;                             // 4 = tất cả ngành + Loại hàng + Kho xuất (MASIEUTHIXUAT); ngày lưu bằng bản cũ sẽ được lấy lại
     const PREFIX = 'autobi_kxb_test_v1_';               // giữ khóa cũ để không mất khai báo shop
@@ -2011,7 +2011,8 @@ tr{break-inside:avoid;page-break-inside:avoid}
         sugCache.set(key, list); return list;
     }
     // Gắn ô gợi ý cho 1 ô nhập (input hoặc textarea; textarea: gợi ý theo dòng đang gõ). onPick(code, product, all)
-    function attachSuggest(field, onPick) {
+    // V2.5.3: opt.multi = ô tích từng mã (danh sách vẫn mở) + nút "Chọn N mã đã tích" / "Chọn hết" — dùng ở Check xin hàng
+    function attachSuggest(field, onPick, opt = {}) {
         const box = document.createElement('div'); box.className = 'kxb-suggest'; box.hidden = true; field.parentElement.style.position = 'relative'; field.insertAdjacentElement('afterend', box);
         let timer, seq = 0;
         const curLine = () => field.tagName === 'TEXTAREA' ? field.value.slice(0, field.selectionStart).split('\n').pop() : field.value;
@@ -2024,14 +2025,28 @@ tr{break-inside:avoid;page-break-inside:avoid}
                 const list = await crmSuggest(t); if (my !== seq) return;
                 box.replaceChildren();
                 if (!list.length) { el('div', 'Không thấy sản phẩm Mới nào khớp (đã bỏ DEMO, dịch vụ, PMH)', box, 'kxb-muted'); return; }
-                const head = el('div', undefined, box, 'hd'); el('span', `${list.length} sản phẩm · bấm để chọn`, head);
-                const allBtn = el('button', `➕ Chọn tất cả ${list.length} mã`, head, 'mini'); allBtn.type = 'button';
+                const head = el('div', undefined, box, 'hd'); el('span', opt.multi ? `${list.length} sản phẩm · tích các mã cần lấy` : `${list.length} sản phẩm · bấm để chọn`, head);
+                const btns = el('span', undefined, head, 'bt');
+                const picked = new Set();
+                let pickBtn = null;
+                if (opt.multi) {
+                    pickBtn = el('button', '✔ Chọn 0 mã đã tích', btns, 'mini primary'); pickBtn.type = 'button'; pickBtn.disabled = true;
+                    pickBtn.onmousedown = e => { e.preventDefault(); if (!picked.size) return; onPick(null, null, list.filter(p => picked.has(p.code))); hide(); };
+                }
+                const allBtn = el('button', `➕ Chọn hết ${list.length} mã`, btns, 'mini'); allBtn.type = 'button';
                 allBtn.onmousedown = e => { e.preventDefault(); onPick(null, null, list); hide(); };
                 list.forEach(p => {
                     const it = el('div', undefined, box, 'it');
+                    const ck = opt.multi ? el('span', '☐', it, 'ck') : null;
                     el('span', p.name + (p.status && !/^KD/i.test(p.status) ? ` · ${p.status}` : ''), it, 'nm'); el('span', p.code, it, 'cd');
                     el('span', p.total ? `HT ${fmt(p.total.qty)}` : '', it, 'qt');
-                    it.onmousedown = e => { e.preventDefault(); onPick(p.code, p); hide(); };
+                    it.onmousedown = e => {
+                        e.preventDefault();
+                        if (!opt.multi) { onPick(p.code, p); hide(); return; }
+                        picked.has(p.code) ? picked.delete(p.code) : picked.add(p.code);
+                        const on = picked.has(p.code); ck.textContent = on ? '☑' : '☐'; it.classList.toggle('on', on);
+                        pickBtn.textContent = `✔ Chọn ${picked.size} mã đã tích`; pickBtn.disabled = !picked.size;
+                    };
                 });
             } catch (e) { if (my === seq) { box.replaceChildren(); el('div', e.message, box, 'kxb-warn'); } }
         };
@@ -2830,6 +2845,9 @@ tr{break-inside:avoid;page-break-inside:avoid}
         #kxb-panel .kxb-suggest .it{display:flex;gap:10px;align-items:center;padding:6px 10px;cursor:pointer}#kxb-panel .kxb-suggest .it:hover{background:#e6f4f5}
         #kxb-panel .kxb-suggest .nm{flex:1}#kxb-panel .kxb-suggest .cd{font-family:Consolas,monospace;color:#087f8c}#kxb-panel .kxb-suggest .qt{color:#5b6b76;min-width:70px;text-align:right}
         #kxb-panel .kxb-suggest>div:not(.hd):not(.it){padding:8px 10px}
+        #kxb-panel .kxb-suggest .hd{position:sticky;top:-4px;background:#fff;z-index:1}#kxb-panel .kxb-suggest .bt{display:flex;gap:6px}
+        #kxb-panel .kxb-suggest .ck{font-size:17px;color:#087f8c;width:18px}#kxb-panel .kxb-suggest .it.on{background:#e6f4f5;font-weight:600}
+        #kxb-panel .kxb-suggest button.primary{background:#087f8c;color:#fff;border-color:#087f8c}
         #kxb-panel .kxb-reqhead{margin:14px 0 2px;font-size:15px}#kxb-panel .kxb-reqsub{margin:8px 0 2px;font-weight:700;color:#4a5a66}#kxb-panel .kxb-reqhead b{color:#087f8c}
         #kxb-panel tr.fav td{background:#fff7e0}#kxb-panel tr.near td{background:#eef8f0}
         @media (max-width:1400px){#kxb-panel{font-size:13px;height:94vh;width:98vw;max-width:98vw}#kxb-panel .body{padding:12px 14px}#kxb-panel .top{padding:10px 14px}
@@ -2975,7 +2993,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         ui.querySelector('[data-run-req]').onclick = safely(() => { reqState().q = ui.querySelector('[data-req-q]').value; return withSession('crmReq', runRequest); });
         ui.querySelector('[data-req-q]').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ui.querySelector('[data-run-req]').click(); } });
         ui.querySelector('[data-req-q]').addEventListener('input', e => { reqState().q = e.target.value; });
-        { const f = ui.querySelector('[data-req-q]'); const sg = attachSuggest(f, (code, p, all) => { replaceCurLine(f, all ? all.map(x => x.code).join('\n') : code); });
+        { const f = ui.querySelector('[data-req-q]'); const sg = attachSuggest(f, (code, p, all) => { replaceCurLine(f, all ? all.map(x => x.code).join('\n') : code); }, { multi: true });
           // Enter: nếu đang mở gợi ý thì không chạy Check ngay
           f.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) sg.hide(); }, true); }
         ui.querySelector('[data-run-bal]').onclick = safely(() => { validateShops(config.shops); return withSession('balance', runBalance); });
