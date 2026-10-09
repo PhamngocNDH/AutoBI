@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AutoBI - Kho & Xuất Bán
 // @namespace    https://github.com/PhamngocNDH/AutoBI/kho-xuatban-test
-// @version      2.7.0
+// @version      2.7.1
 // @description  Đổ tồn kho (BI 4286) và xuất bán (BI 77) theo cụm siêu thị cho máy tính: lấy thẳng dữ liệu BI có điều tốc, sổ ngày, bộ chọn tồn kho, Excel.
 // @author       AutoBI / 38967 - Mr Phạm
 // @homepageURL  https://github.com/PhamngocNDH/AutoBI
@@ -42,7 +42,7 @@
  */
 (function () {
     'use strict';
-    const VERSION = '2.7.0';
+    const VERSION = '2.7.1';
     const UPDATE_URL = 'https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_Kho_XuatBan.user.js';
     const SALES_SCHEMA = 4;                             // 4 = tất cả ngành + Loại hàng + Kho xuất (MASIEUTHIXUAT); ngày lưu bằng bản cũ sẽ được lấy lại
     const PREFIX = 'autobi_kxb_test_v1_';               // giữ khóa cũ để không mất khai báo shop
@@ -1106,21 +1106,23 @@ tr{break-inside:avoid;page-break-inside:avoid}
         try {
             setCloudInfo('☁️ Đang lưu cấu hình lên Sheet…');
             const r = await cloudReq('POST', null, { type: 'kho_config', user: cloudUserLabel(id), version: VERSION, config: s });
-            config.cloudAt = r.updatedAt || Date.now(); if (syncStr() === s) config.cloudDirty = false;
+            config.cloudAt = r.updatedAt || Date.now(); if (syncStr() === s) config.cloudDirty = false; if (cloudUserLabel(id) !== id) config.cloudNamed = true;
             try { GM_setValue(PREFIX + 'config', config); } catch { /* bỏ qua */ }
             setCloudInfo(`☁️ Cấu hình đã lưu trên Sheet (tab ConfigKho) lúc ${stamp(new Date(config.cloudAt))}`);
         } catch (e) { setCloudInfo(`☁️ Chưa lưu được lên Sheet (${e.message}) — lần mở sau tự gửi lại`); log(`☁️ Chưa lưu được cấu hình lên Sheet: ${e.message}`, 'error'); }
     }
     // Mở khung lần đầu mỗi lần tải trang: Sheet mới hơn → dùng bản Sheet; máy có thay đổi chưa gửi → gửi lên; người mới → lấy siêu thị từ AutoBI Core
-    async function cloudPull() {
-        if (cloud.pulled || cloud.pulling) return;
+    async function cloudPull(force) {
+        if (cloud.pulling || (cloud.pulled && !force)) return;
         const id = userId(); if (!id) return;
         cloud.pulling = true;
         try {
             const r = await cloudReq('GET', { type: 'kho_config', user: id });
             cloud.pulled = true;
             let remote = null; if (r.data) { try { remote = JSON.parse(r.data); } catch { remote = null; } }
-            if (remote && typeof remote === 'object' && (r.updatedAt || 0) > (config.cloudAt || 0) && !config.cloudDirty) {
+            if (force && !remote) { setCloudInfo('☁️ Trên Sheet chưa có cấu hình của mã ' + id + ' — bấm Lưu cài đặt để tạo'); status('Trên Sheet chưa có cấu hình của bạn', 'warn'); }
+            if (remote && typeof remote === 'object' && (force || ((r.updatedAt || 0) > (config.cloudAt || 0) && !config.cloudDirty))) {
+                if (force) config.cloudDirty = false;
                 for (const k of SYNC_KEYS) { if (remote[k] !== undefined) config[k] = remote[k]; else delete config[k]; }
                 config.cloudAt = r.updatedAt;
                 try { GM_setValue(PREFIX + 'config', config); } catch { /* bỏ qua */ }
@@ -1412,6 +1414,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         log(`Bắt đầu ${({ sales: 'đổ xuất bán', balance: 'đổ cân hàng', prev: 'đổ xuất bán kỳ so sánh', crm: 'tra tồn CRM', crmBal: 'tìm nguồn hàng CRM', crmStores: 'lấy danh sách siêu thị CRM', crmReq: 'check xin hàng', crmNear: 'tìm tỉnh lân cận', crmAlt: 'tìm màu / dung lượng khác', geo: 'lấy tọa độ shop' })[mode] || 'đổ tồn kho'}`); status('Đang kiểm tra quyền…'); progress(0, 1);
         try {
             await authCheck(session); check(session); log(`Quyền hợp lệ: ${auth.user} — ${auth.name}`);
+            if (cloud.ready && !config.cloudNamed && config.shops.length) cloudPush();   // V2.7.1: ghi cột User dạng "mã - tên" như Config của Core
             const msg = await job(session); check(session);
             session.status = 'completed'; progress(1, 1); status(msg || 'Hoàn tất', /lỗi|chưa/.test(msg || '') ? 'warn' : 'ok'); log(msg || 'Hoàn tất');
             doneSignal(true, msg || 'Hoàn tất', Date.now() - session.started);
@@ -2789,7 +2792,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
                 + (!idb && mb + inv > 40 ? ' — khá lớn, Tampermonkey có thể chậm khi lưu: nên sao lưu rồi xóa tháng cũ.' : ''), box).style.color = !idb && mb + inv > 40 ? '#8a1c1c' : '';
             if (legacy.length) {
                 const lb = el('div', `Bản dự phòng cũ trong Tampermonkey: ${legacy.length} tháng (không còn cập nhật, chỉ dùng khi IndexedDB bị xóa). `, box);
-                const bx = el('button', 'Xóa bản dự phòng cũ', lb, 'mini'); bx.type = 'button'; bx.title = 'Giải phóng Tampermonkey — nên Sao lưu dữ liệu trước';
+                const bx = el('button', 'Xóa bản dự phòng cũ', lb, 'mini'); bx.type = 'button'; bx.title = 'Giải phóng Tampermonkey — nên Sao lưu số liệu trước';
                 bx.onclick = safely(() => { invariant(!running, 'Đang đổ số, chờ xong'); if (!window.confirm('Xóa bản dự phòng số xuất bán cũ trong Tampermonkey? Số trong IndexedDB vẫn giữ nguyên.')) return; legacy.forEach(k => GM_deleteValue(k)); log(`Đã xóa ${legacy.length} tháng dự phòng cũ trong Tampermonkey`); renderStorage(); });
             }
             const list = el('div', undefined, box, 'group'); list.style.marginTop = '6px';
@@ -2977,7 +2980,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const list = versions.filter(Boolean), old = list.filter(v => v !== running);
         if (list.length < 2) return;
         const text = `⚠️ Máy đang cài ${list.length} bản AutoBI Kho & Xuất Bán (${list.map(v => 'V' + v).join(' và ')}) — đang chạy V${running}.`;
-        const how = `Cách sửa: mở nút đang chạy → ⚙️ Cài đặt → 💾 Sao lưu dữ liệu · bấm biểu tượng Tampermonkey → Bảng điều khiển → bấm 🗑 ở dòng AutoBI - Kho & Xuất Bán có phiên bản ${old.length ? 'cũ (V' + [...new Set(old)].join(', V') + ')' : 'trùng'}, giữ 1 dòng bản mới nhất → tải lại trang (F5). Cài đặt thiếu thì 📂 Khôi phục từ file.`;
+        const how = `Cách sửa: mở nút đang chạy → ⚙️ Cài đặt → 💾 Sao lưu số liệu · bấm biểu tượng Tampermonkey → Bảng điều khiển → bấm 🗑 ở dòng AutoBI - Kho & Xuất Bán có phiên bản ${old.length ? 'cũ (V' + [...new Set(old)].join(', V') + ')' : 'trùng'}, giữ 1 dòng bản mới nhất → tải lại trang (F5). Cấu hình tự lấy lại từ Sheet; số liệu thiếu thì 📂 Khôi phục số liệu.`;
         log(text + ' ' + how, 'error');
         if (document.getElementById('kxb-dup-bar') || !document.body) return;
         const bar = document.createElement('div'); bar.id = 'kxb-dup-bar'; bar.dataset.kxbUi = ''; bar.setAttribute('data-html2canvas-ignore', 'true');
@@ -3157,8 +3160,9 @@ tr{break-inside:avoid;page-break-inside:avoid}
             <div class="group" style="margin:-4px 0 10px"><b></b><span>Tỉnh lân cận</span><span data-crm-near></span><span class="kxb-muted">Check xin hàng: khi cả tỉnh hết, bấm "🔎 Tỉnh lân cận" để tìm thêm ở các tỉnh này. Bỏ chọn hết = dùng tỉnh giáp ranh mặc định.</span></div>
             <div class="kxb-muted" data-storage style="margin-bottom:8px"></div>
             <div class="bar" style="align-items:center"><button type="button" class="primary" data-save>Lưu cài đặt</button> <button type="button" data-check-update>🔄 Kiểm tra bản mới</button> <span class="kxb-muted" data-cloud-info></span>
-              <span style="flex:1"></span><button type="button" data-backup title="Tải 1 file chứa toàn bộ số đã lưu (xuất bán, tồn kho, cài đặt) để mang sang máy khác">💾 Sao lưu dữ liệu</button>
-              <button type="button" data-restore title="Nhận file sao lưu: ngày nào bản nào mới hơn thì dùng bản đó, không mất số đang có">📂 Khôi phục từ file</button><input type="file" accept=".json,application/json" data-restore-file hidden></div></details>
+              <button type="button" class="idle-only" data-cloud-reload title="Lấy lại cấu hình của bạn đã lưu trên Sheet (tab ConfigKho), thay cho cấu hình đang có trên máy">☁️ Tải lại cấu hình từ Sheet</button>
+              <span style="flex:1"></span><button type="button" data-backup title="Cấu hình đã tự lưu trên Sheet. Nút này tải 1 file chứa SỐ LIỆU đã đổ (xuất bán từng tháng, tồn kho) để mang sang máy khác, khỏi phải đổ lại từ BI">💾 Sao lưu số liệu</button>
+              <button type="button" data-restore title="Nhận file sao lưu số liệu: ngày nào bản nào mới hơn thì dùng bản đó, không mất số đang có">📂 Khôi phục số liệu</button><input type="file" accept=".json,application/json" data-restore-file hidden style="display:none"></div></details>
           <div data-status class="kxb-status">Sẵn sàng.</div><div class="prog"><div data-bar></div></div>
           <div data-pane="sales">
             <div class="filters">
@@ -3242,6 +3246,13 @@ tr{break-inside:avoid;page-break-inside:avoid}
         let td2; const onDate = () => { clearTimeout(td2); td2 = setTimeout(() => { try { if (!config.shops.length) return; presets.querySelectorAll('.chip').forEach(x => x.classList.remove('on')); view.sales = salesView(selectedRange()); renderSales(); } catch (e) { status(e.message, 'err'); } }, 300); };
         ui.querySelector('[data-from]').addEventListener('change', onDate); ui.querySelector('[data-to]').addEventListener('change', onDate);
         ui.querySelector('[data-backup]').onclick = safely(backupData);
+        ui.querySelector('[data-cloud-reload]').onclick = safely(async () => {
+            invariant(!running, 'Đang chạy, chờ xong rồi tải lại cấu hình');
+            invariant(userId(), 'Chưa xác định được mã nhân viên ở vùng tài khoản BI');
+            if (config.cloudDirty && !window.confirm('Máy đang có thay đổi cài đặt chưa lưu lên Sheet. Vẫn lấy bản trên Sheet (bỏ thay đổi trên máy)?')) return;
+            status('Đang tải cấu hình từ Sheet…'); await cloudPull(true);
+            if (!/chưa có/.test(cloud.info)) status(cloud.info || 'Đã tải lại cấu hình từ Sheet', /Không đọc/.test(cloud.info) ? 'err' : 'ok');
+        });
         const rf = ui.querySelector('[data-restore-file]');
         ui.querySelector('[data-restore]').onclick = () => rf.click();
         rf.onchange = safely(async () => { const f = rf.files[0]; rf.value = ''; await restoreData(f); });
