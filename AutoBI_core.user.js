@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.66
+// @name         AutoBI Core V17.67
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.66
+// @version      17.67
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -7873,12 +7873,17 @@ window.__AutoBIRunning88 = function () {
       const st = window.__AutoBILog5 && window.__AutoBILog5.snapshot && window.__AutoBILog5.snapshot();
       if (!st || !st.id || st.status === 'running' || !st.endedAt) return;
       const isError97 = !['completed', 'completed_with_warnings', 'cancelled'].includes(st.status);
-      if (isError97 && GM_getValue('autobi_notice94_shown', '') !== String(st.id)) { try { window.__AutoBIHardStop97 && window.__AutoBIHardStop97(); } catch (_) { } }
+      const shownRaw = GM_getValue('autobi_notice94_shown', '');
+      const shown = Array.isArray(shownRaw) ? shownRaw.map(String) : (shownRaw ? [String(shownRaw)] : []);
+      if (isError97 && !shown.includes(String(st.id))) { try { window.__AutoBIHardStop97 && window.__AutoBIHardStop97(); } catch (_) { } }
       if (!isError97 && window.__AutoBIRunning88 && window.__AutoBIRunning88()) return;
       if (Date.now() - st.endedAt > 30 * 60000) return;
-      if (GM_getValue('autobi_notice94_shown', '') === String(st.id)) return;
+      /* V17.67: mở 2 tab thì 2 tab hiện "Đổ số hoàn tất" liên tục — mỗi tab nhớ phiên riêng (tab cũ còn phiên trước), ô "đã hiện" chỉ giữ 1 mã nên 2 tab ghi đè nhau.
+         Nay: phiên của tab không phải phiên mới nhất thì bỏ qua; ô "đã hiện" giữ 10 mã gần nhất. */
+      try { const g = GM_getValue('autobi_run_log_fix5', null); if (g && g.id && String(g.id) !== String(st.id)) return; } catch (_) { }
+      if (shown.includes(String(st.id))) return;
       if (location.pathname.indexOf('/dashboard') !== 0) return;
-      GM_setValue('autobi_notice94_shown', String(st.id));
+      GM_setValue('autobi_notice94_shown', shown.concat(String(st.id)).slice(-10));
       show(st);
     } catch (_) { }
   }
