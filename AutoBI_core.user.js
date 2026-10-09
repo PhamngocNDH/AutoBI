@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.65
+// @name         AutoBI Core V17.66
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.65
+// @version      17.66
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -8281,8 +8281,24 @@ window.__AutoBIBiTarget99 = (function () {
     return list;
   }
   function matchStores(shops, cfg, stores) {
-    const out = [];
-    for (const shop of shops) { const st = stores.find(x => shopOf([shop], cfg, x.name, x.id)); if (st) out.push({ ...shop, storeId: st.id, storeName: st.name }); }
+    /* V17.66: 2 siêu thị tên gần giống (ĐMX "Phát Diệm" 1709 & TGDĐ "01 Phát Diệm Tây" 362) — trước đây shop TGDĐ khớp nhầm sang siêu thị ĐMX
+       (đuôi tên "phatdiem" nằm trong tên TGDĐ) nên 2 shop ra cùng số. Nay khớp lần lượt: mã kho → tên đúng y hệt → cách cũ; mỗi siêu thị BI chỉ gán cho 1 shop. */
+    const pick = {}, used = new Set(), how = {};
+    const free = () => stores.filter(x => !used.has(String(x.id)));
+    const take = (shop, st, w) => { pick[shop.key] = st; used.add(String(st.id)); how[shop.key] = w; };
+    for (const shop of shops) { if (!shop.code) continue; const st = free().find(x => String(x.id) === shop.code); if (st) take(shop, st, 'mã kho'); }
+    for (const shop of shops) {
+      if (pick[shop.key]) continue;
+      const n = slug(shop.name), sh = slug(shop.short);
+      const st = free().find(x => { const s = slug(x.name), tail = slug(String(x.name || '').split(' - ').pop()); return (n && s === n) || (sh && (s === sh || tail === sh)); });
+      if (st) take(shop, st, 'tên');
+    }
+    for (const shop of shops) { if (pick[shop.key]) continue; const st = free().find(x => shopOf([shop], cfg, x.name, x.id)); if (st) take(shop, st, 'tên gần giống ⚠'); }
+    const out = shops.filter(s => pick[s.key]).map(shop => ({ ...shop, storeId: pick[shop.key].id, storeName: pick[shop.key].name }));
+    try {
+      const miss = shops.filter(s => !pick[s.key]).map(s => s.short + (s.code ? ' (mã kho ' + s.code + ')' : ''));
+      note('Khớp siêu thị BI: ' + out.map(s => s.short + ' → ' + s.storeId + ' ' + s.storeName + ' [' + how[s.key] + ']').join(' · ') + (miss.length ? ' · ⚠ Không khớp: ' + miss.join(', ') : ''));
+    } catch (_) { }
     return out;
   }
   /* V16.8: dùng chung 1 lần tìm shop trong 60 giây cho các phần chạy song song */
