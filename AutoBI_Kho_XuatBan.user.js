@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AutoBI - Kho & Xuất Bán
 // @namespace    https://github.com/PhamngocNDH/AutoBI/kho-xuatban-test
-// @version      2.6.0
+// @version      2.7.0
 // @description  Đổ tồn kho (BI 4286) và xuất bán (BI 77) theo cụm siêu thị cho máy tính: lấy thẳng dữ liệu BI có điều tốc, sổ ngày, bộ chọn tồn kho, Excel.
 // @author       AutoBI / 38967 - Mr Phạm
 // @homepageURL  https://github.com/PhamngocNDH/AutoBI
@@ -24,6 +24,8 @@
 // @connect      crm.thegioididong.com
 // @connect      www.dienmayxanh.com
 // @connect      dienmayxanh.com
+// @connect      script.google.com
+// @connect      script.googleusercontent.com
 // ==/UserScript==
 
 /*
@@ -40,7 +42,7 @@
  */
 (function () {
     'use strict';
-    const VERSION = '2.6.0';
+    const VERSION = '2.7.0';
     const UPDATE_URL = 'https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_Kho_XuatBan.user.js';
     const SALES_SCHEMA = 4;                             // 4 = tất cả ngành + Loại hàng + Kho xuất (MASIEUTHIXUAT); ngày lưu bằng bản cũ sẽ được lấy lại
     const PREFIX = 'autobi_kxb_test_v1_';               // giữ khóa cũ để không mất khai báo shop
@@ -846,6 +848,25 @@ tr{break-inside:avoid;page-break-inside:avoid}
         return [...m.values()].sort((a, b) => a.tier - b.tier || b.qty - a.qty || vcmp(String(a.name), String(b.name)));
     }
 
+    /* ---------- V2.7: cấu hình lưu trên Google Sheet (AutoBi HA, tab ConfigKho) ----------
+     * Chỉ đồng bộ các khóa cài đặt người dùng tự chọn; không đưa bộ nhớ tạm (danh sách siêu thị CRM, tọa độ) và số liệu lên Sheet. */
+    const SYNC_KEYS = ['shops', 'basis', 'returnDays', 'balTarget', 'balSpare', 'ageAlert', 'freshHours', 'notify', 'invTransit', 'balIncoming', 'attachGroups', 'img',
+        'crmProvinces', 'crmNearProvinces', 'reqFavs', 'srcKeep', 'srcRadius', 'compareMode'];
+    function syncPick(cfg) { const o = {}; for (const k of SYNC_KEYS) if (cfg && cfg[k] !== undefined) o[k] = cfg[k]; return o; }
+    // Người mới: lấy danh sách siêu thị từ cấu hình AutoBI Core (shopCode1/makho1 + shop1 "ĐMM_NDI_HHA - Hải Anh" / shop1Short)
+    function coreShops(json) {
+        let c; try { c = typeof json === 'string' ? JSON.parse(json) : json; } catch { return []; }
+        if (!c || typeof c !== 'object') return [];
+        const out = [], seen = new Set();
+        for (let i = 1; i <= 20; i++) {
+            const code = keyCode(String(c['makho' + i] || c['shopCode' + i] || '').replace(/\D/g, ''));
+            if (!code || seen.has(code)) continue; seen.add(code);
+            const full = clean(c['shop' + i]), name = (full.includes(' - ') ? full.split(' - ').slice(1).join(' - ') : '') || clean(c['shop' + i + 'Short']) || full || code;
+            out.push({ code, name: clean(name) });
+        }
+        return out;
+    }
+
     // Hàm thuần cho kiểm thử offline; không cài global trên website thật.
     if (typeof module === 'object' && module.exports) {
         module.exports = { clean, norm, hasCode, day, toBI, addDays, validateRange, daysIn, apiNumber, parseDelimited,
@@ -853,7 +874,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
             parseRateLimit, waitBeforeCall, inventoryRecordFromApi, summarizeInventory, filterInventory, inventoryOptions, inventoryViews, validateShops, authorizeSheetRows, escHtml, inventoryChecklist, inventoryPrintHtml, conditionKey, conditionText, newerVersion, parseRemoteScript, outStoreKey, balanceRows, isFresh, shiftMonth, prevMonthRange, attachStats, pendingOrders, projectMonth, daysBetween,
             modelOf, transferPlan, ageDays, ageBucket, AGE_BUCKETS, transitDiff, hourMatrix, weekdayOf, compareRange, cellNumber, toTsv, requestMessage, mergeMonth, crmCell, parseCrmDoc, crmSources, crmStoreList, CRM_DEFAULT_STORES, CRM_PROVINCES, parseStoreOptions, storeArea, rankSources, areaText, isNotNewName, isServiceName, crmUsable,
             NEAR_PROVS, nearProvsOf, provShort, variantBase, altOptions, nearbySources, mergeCrm, allocateAsk, allocateMany, planText, groupBySource,
-            haversineKm, kmText, geoOf, parseGeoList, parseGeoPoint };
+            haversineKm, kmText, geoOf, parseGeoList, parseGeoPoint, SYNC_KEYS, syncPick, coreShops };
         return;
     }
 
@@ -865,7 +886,10 @@ tr{break-inside:avoid;page-break-inside:avoid}
     const XL = () => (typeof XLSX !== 'undefined' ? XLSX : W.XLSX);
     const defaults = { shops: [], selectors: {}, basis: 'created', returnDays: 7 };
     const load = (key, fallback) => { try { return GM_getValue(PREFIX + key, fallback); } catch { return fallback; } };
-    const save = (key, value) => GM_setValue(PREFIX + key, value);
+    const save = (key, value) => { GM_setValue(PREFIX + key, value); if (key === 'config') cloudMark(); };
+    // V2.7: trạng thái đồng bộ cấu hình với Sheet (ConfigKho) và tọa độ chung (ToaDoShop)
+    const CLOUD_URL = 'https://script.google.com/macros/s/AKfycby77U6sJC83HAZLhmGhzisNUrTEcPAfoCS4f8fK2OJ1RaZFotgphANB1Uf9EiRoTKvf/exec';
+    const cloud = { ready: false, pulling: false, pulled: false, timer: 0, lastSeen: '', geoPulled: false, info: '' };
     let config = { ...defaults, ...load('config', {}) };
     let ui, running = null, auth = null;
     const view = { tab: 'sales', sales: null, salesTab: 'category', salesShops: null, salesConds: new Set(), salesCat: '', salesBrands: new Set(), openDrop: '', salesQuery: '', balDays: 10, balStatus: '', balShops: null, balBrands: new Set(), openStaff: new Set(), inv: null, invTab: 'group', invShops: null, invFilter: { category: '', group: '', brand: '', conditions: [], q: '' } };
@@ -1036,18 +1060,112 @@ tr{break-inside:avoid;page-break-inside:avoid}
         geo.provs[id] = { at: Date.now(), count: list.size, ok };
         try { save('geo', geo); } catch { /* bỏ qua */ }
         log(`📍 Tọa độ ${provShort(id)}: ${ok}/${list.size} shop${miss.length ? ` · thiếu ${miss.length} (${miss.slice(0, 8).join(', ')}${miss.length > 8 ? '…' : ''})` : ''}`);
-        return { id, count: list.size, ok };
+        return { id, count: list.size, ok, codes: [...list.keys()] };
     }
     // Lấy tọa độ khi cần (tự gọi trước khi tra CRM). Lỗi thì ghi nhật ký và chạy tiếp theo cách cũ (xếp theo huyện).
     async function ensureGeo(ids, session, force) {
+        if (!force) await geoFromCloud();
         for (const id of [...new Set(ids.map(String))]) {
-            try { await geoProvince(id, session, force); }
+            try { const res = await geoProvince(id, session, force); if (!res.skipped) await geoToCloud(id, res.codes); }
             catch (e) { if (e.code === 'CANCELLED') throw e; log(`📍 Không lấy được tọa độ ${provShort(id)}: ${e.message} — tạm xếp theo huyện như cũ`, 'error'); if (force) throw e; }
             check(session);
         }
         const miss = config.shops.filter(sh => !geoReady(sh.code)).map(sh => sh.name);
         if (miss.length && Object.keys(geo.pts).length) log(`📍 Chưa có tọa độ siêu thị ${miss.join(', ')} — kiểm tra tỉnh ở ⚙️ Cài đặt → Tra tồn CRM; các siêu thị này tạm xếp theo huyện`, 'error');
         renderCrmSetting();
+    }
+    /* ---------- V2.7: Cloud (Apps Script của AutoBi HA, lần triển khai riêng "AutoBI Kho & Xuất Bán") ----------
+     * GET  ?type=kho_config&user=<mã NV>  → { data: ConfigJSON | null, updatedAt, version, core: ConfigJSON của AutoBI Core (khi chưa có dòng) }
+     * POST { type:'kho_config', user, version, config }  → ghi đè dòng của mình ở tab ConfigKho
+     * GET  ?type=kho_geo → { data: [[mã, vĩ độ, kinh độ, tỉnh, lấy lúc]] }; POST { type:'kho_geo', rows: [[mã, tên, vĩ độ, kinh độ, tỉnh]] } → tab ToaDoShop */
+    function cloudReq(method, params, body) {
+        return new Promise((resolve, reject) => {
+            const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+            GM_xmlhttpRequest({ method, url: CLOUD_URL + qs, data: body ? JSON.stringify(body) : undefined, timeout: 25000,
+                headers: body ? { 'Content-Type': 'text/plain;charset=utf-8' } : {},
+                onload: r => { let j = null; try { j = JSON.parse(String(r.responseText || '')); } catch { /* không phải JSON */ }
+                    if (j && j.status === 'success') resolve(j); else reject(new Error(j?.message || `Sheet trả HTTP ${r.status}`)); },
+                onerror: () => reject(new Error('Lỗi mạng khi gọi Sheet')), ontimeout: () => reject(new Error('Sheet phản hồi quá 25 giây')) });
+        });
+    }
+    const userId = () => { try { return detectUser(); } catch { return ''; } };
+    const cloudUserLabel = id => auth && auth.user === id && auth.name ? `${id} - ${auth.name}` : id;
+    const syncStr = () => JSON.stringify(syncPick(config));
+    function setCloudInfo(t) { cloud.info = t; const e = ui?.querySelector('[data-cloud-info]'); if (e) e.textContent = t; }
+    // Đổi cài đặt (bất kỳ chỗ nào gọi save('config')) → đánh dấu chưa lưu Sheet, 1,5 giây sau gửi lên
+    function cloudMark() {
+        if (!cloud.ready) return;
+        const s = syncStr(); if (s === cloud.lastSeen) return;
+        cloud.lastSeen = s; config.cloudDirty = true;
+        try { GM_setValue(PREFIX + 'config', config); } catch { /* bỏ qua */ }
+        clearTimeout(cloud.timer); cloud.timer = setTimeout(cloudPush, 1500);
+    }
+    async function cloudPush() {
+        const id = userId(); if (!id || !config.shops.length) return;
+        const s = syncStr();
+        try {
+            setCloudInfo('☁️ Đang lưu cấu hình lên Sheet…');
+            const r = await cloudReq('POST', null, { type: 'kho_config', user: cloudUserLabel(id), version: VERSION, config: s });
+            config.cloudAt = r.updatedAt || Date.now(); if (syncStr() === s) config.cloudDirty = false;
+            try { GM_setValue(PREFIX + 'config', config); } catch { /* bỏ qua */ }
+            setCloudInfo(`☁️ Cấu hình đã lưu trên Sheet (tab ConfigKho) lúc ${stamp(new Date(config.cloudAt))}`);
+        } catch (e) { setCloudInfo(`☁️ Chưa lưu được lên Sheet (${e.message}) — lần mở sau tự gửi lại`); log(`☁️ Chưa lưu được cấu hình lên Sheet: ${e.message}`, 'error'); }
+    }
+    // Mở khung lần đầu mỗi lần tải trang: Sheet mới hơn → dùng bản Sheet; máy có thay đổi chưa gửi → gửi lên; người mới → lấy siêu thị từ AutoBI Core
+    async function cloudPull() {
+        if (cloud.pulled || cloud.pulling) return;
+        const id = userId(); if (!id) return;
+        cloud.pulling = true;
+        try {
+            const r = await cloudReq('GET', { type: 'kho_config', user: id });
+            cloud.pulled = true;
+            let remote = null; if (r.data) { try { remote = JSON.parse(r.data); } catch { remote = null; } }
+            if (remote && typeof remote === 'object' && (r.updatedAt || 0) > (config.cloudAt || 0) && !config.cloudDirty) {
+                for (const k of SYNC_KEYS) { if (remote[k] !== undefined) config[k] = remote[k]; else delete config[k]; }
+                config.cloudAt = r.updatedAt;
+                try { GM_setValue(PREFIX + 'config', config); } catch { /* bỏ qua */ }
+                log(`☁️ Đã nhận cấu hình từ Sheet (lưu lúc ${stamp(new Date(r.updatedAt))}${r.version ? ', bản V' + r.version : ''}) — ${config.shops.length} siêu thị`);
+                applyConfigToUi();
+                setCloudInfo(`☁️ Cấu hình lấy từ Sheet (tab ConfigKho), lưu lúc ${stamp(new Date(r.updatedAt))}`);
+            } else if (!remote && !config.shops.length && r.core) {
+                const shops = coreShops(r.core);
+                if (shops.length) {
+                    config.shops = shops; config.cloudDirty = true;
+                    try { GM_setValue(PREFIX + 'config', config); } catch { /* bỏ qua */ }
+                    log(`☁️ Lấy sẵn ${shops.length} siêu thị từ cấu hình AutoBI Core: ${shops.map(x => x.code + ' ' + x.name).join(', ')} — kiểm tra tên rồi bấm Lưu cài đặt nếu cần sửa`);
+                    applyConfigToUi();
+                }
+            } else if (remote) setCloudInfo(`☁️ Cấu hình đã lưu trên Sheet (tab ConfigKho) lúc ${stamp(new Date(r.updatedAt || config.cloudAt || Date.now()))}`);
+            if (!remote && config.shops.length) config.cloudDirty = true;   // chưa có dòng trên Sheet → tạo luôn
+        } catch (e) { setCloudInfo(`☁️ Không đọc được cấu hình trên Sheet (${e.message}) — đang dùng cấu hình trên máy`); log(`☁️ Không đọc được cấu hình trên Sheet: ${e.message}`, 'error'); }
+        finally {
+            cloud.pulling = false; cloud.ready = true; cloud.lastSeen = syncStr();
+            if (config.cloudDirty) { clearTimeout(cloud.timer); cloud.timer = setTimeout(cloudPush, 300); }
+        }
+    }
+    // Tọa độ dùng chung cả cụm (tab ToaDoShop): đọc 1 lần mỗi lần tải trang, trước khi tự lấy từ web
+    async function geoFromCloud() {
+        if (cloud.geoPulled) return; cloud.geoPulled = true;
+        try {
+            const r = await cloudReq('GET', { type: 'kho_geo' }); let n = 0; const byProv = {};
+            for (const [code0, lat, lng, prov, at] of (r.data || [])) {
+                const code = keyCode(String(code0)); if (!code || !(lat >= 8 && lat <= 24) || !(lng >= 102 && lng <= 110)) continue;
+                if (!geo.pts[code]) n++;
+                geo.pts[code] = [lat, lng];
+                const pid = (String(prov || '').match(/^\d+/) || [])[0];
+                if (pid) { const p = byProv[pid] || (byProv[pid] = { at: 0, count: 0, ok: 0 }); p.count++; p.ok++; p.at = Math.max(p.at, at || 0); }
+            }
+            for (const [pid, p] of Object.entries(byProv)) { const cur = geo.provs[pid]; if (!cur || !cur.ok || (cur.at || 0) < p.at) geo.provs[pid] = { ...p, src: 'sheet' }; }
+            try { save('geo', geo); } catch { /* bỏ qua */ }
+            if (n) log(`📍 Nhận ${n} tọa độ shop từ Sheet chung (ToaDoShop)`);
+        } catch (e) { log(`📍 Không đọc được tọa độ chung trên Sheet (${e.message}) — tự lấy từ web Điện Máy Xanh`, 'error'); }
+    }
+    async function geoToCloud(id, codes) {
+        const names = new Map((config.crmStoreCache?.stores || []).map(x => [x.code, x.name]));
+        const rows = [].concat(codes || []).filter(c => geo.pts[c]).map(c => [c, names.get(c) || '', geo.pts[c][0], geo.pts[c][1], `${id} - ${provShort(id)}`]);
+        if (!rows.length) return;
+        try { const r = await cloudReq('POST', null, { type: 'kho_geo', rows }); log(`📍 Đã lưu ${r.saved} tọa độ ${provShort(id)} lên Sheet chung (ToaDoShop) — máy khác trong cụm khỏi phải lấy lại`); }
+        catch (e) { log(`📍 Chưa lưu được tọa độ lên Sheet: ${e.message}`, 'error'); }
     }
     const definitions = {};
     async function definition(id, session) {
@@ -2871,6 +2989,31 @@ tr{break-inside:avoid;page-break-inside:avoid}
         x.onclick = () => bar.remove(); bar.append(x);
         document.body.append(bar);
     }
+    // V2.7: điền ô Cài đặt từ config (dùng khi mở khung và khi nhận cấu hình từ Sheet)
+    function fillSettings() {
+        if (!ui) return;
+        const q = s => ui.querySelector(s);
+        q('[data-cfg="basis"]').value = config.basis || 'created'; q('[data-cfg="returnDays"]').value = config.returnDays || 7; q('[data-cfg="balTarget"]').value = config.balTarget || 14;
+        q('[data-cfg="freshHours"]').value = config.freshHours ?? 2;
+        q('[data-cfg="balSpare"]').value = config.balSpare ?? 1; q('[data-cfg="ageAlert"]').value = config.ageAlert || 60; q('[data-cfg="srcKeep"]').value = config.srcKeep ?? 1; q('[data-cfg="srcRadius"]').value = srcRadius();
+        q('[data-cfg="notify"]').checked = config.notify !== false;
+        q('[data-cfg="balIncoming"]').checked = config.balIncoming !== false;
+        const o = imgOpt(); ['cats', 'brands', 'staff'].forEach(k => { q(`[data-img="${k}"]`).checked = !!o[k]; }); q('[data-img="top"]').value = o.top;
+        const tr = q('[data-inv-transit]'); if (tr) tr.checked = !!config.invTransit;
+        const ci = q('[data-cloud-info]'); if (ci) ci.textContent = cloud.info;
+        renderCrmSetting();
+    }
+    function applyConfigToUi() {
+        if (!ui || running) return;
+        const box = ui.querySelector('[data-shops]'); box.replaceChildren();
+        (config.shops.length ? config.shops : [{ code: '', name: '' }]).forEach(shopEditor);
+        fillSettings();
+        const codes = config.shops.map(x => keyCode(x.code));
+        view.salesShops = new Set(codes); view.balShops = new Set(codes);
+        const keep = [...(view.invShops || [])].filter(c => codes.includes(c)); view.invShops = new Set(keep.length ? keep : codes);
+        if (codes.length) { try { view.sales = salesView(selectedRange()); } catch { /* bỏ qua */ } ui.querySelector('[data-settings]').open = false; }
+        renderAll();
+    }
     function mount() {
         if (document.querySelector('[data-kxb-ui]')) {
             // Một bản khác đã chiếm nút → bản này không mở giao diện, chỉ báo trùng (đọc phiên bản đang chạy từ khung của nó)
@@ -3013,7 +3156,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
             <div class="group" style="margin:-4px 0 10px"><b></b><button type="button" class="idle-only" data-geo-reload title="Lấy lại tọa độ thật của từng siêu thị (tỉnh đã chọn) từ web Điện Máy Xanh — không cần đăng nhập, khoảng 20–40 giây">📍 Lấy tọa độ shop</button><span class="kxb-muted" data-geo-info></span></div>
             <div class="group" style="margin:-4px 0 10px"><b></b><span>Tỉnh lân cận</span><span data-crm-near></span><span class="kxb-muted">Check xin hàng: khi cả tỉnh hết, bấm "🔎 Tỉnh lân cận" để tìm thêm ở các tỉnh này. Bỏ chọn hết = dùng tỉnh giáp ranh mặc định.</span></div>
             <div class="kxb-muted" data-storage style="margin-bottom:8px"></div>
-            <div class="bar" style="align-items:center"><button type="button" class="primary" data-save>Lưu cài đặt</button> <button type="button" data-check-update>🔄 Kiểm tra bản mới</button>
+            <div class="bar" style="align-items:center"><button type="button" class="primary" data-save>Lưu cài đặt</button> <button type="button" data-check-update>🔄 Kiểm tra bản mới</button> <span class="kxb-muted" data-cloud-info></span>
               <span style="flex:1"></span><button type="button" data-backup title="Tải 1 file chứa toàn bộ số đã lưu (xuất bán, tồn kho, cài đặt) để mang sang máy khác">💾 Sao lưu dữ liệu</button>
               <button type="button" data-restore title="Nhận file sao lưu: ngày nào bản nào mới hơn thì dùng bản đó, không mất số đang có">📂 Khôi phục từ file</button><input type="file" accept=".json,application/json" data-restore-file hidden></div></details>
           <div data-status class="kxb-status">Sẵn sàng.</div><div class="prog"><div data-bar></div></div>
@@ -3051,15 +3194,9 @@ tr{break-inside:avoid;page-break-inside:avoid}
         </div>`;
         const today = isoDate(new Date());
         ui.querySelector('[data-from]').value = today.slice(0, 8) + '01'; ui.querySelector('[data-to]').value = today;
-        ui.querySelector('[data-cfg="basis"]').value = config.basis || 'created'; ui.querySelector('[data-cfg="returnDays"]').value = config.returnDays || 7; ui.querySelector('[data-cfg="balTarget"]').value = config.balTarget || 14;
-        ui.querySelector('[data-cfg="freshHours"]').value = config.freshHours ?? 2;
-        ui.querySelector('[data-cfg="balSpare"]').value = config.balSpare ?? 1; ui.querySelector('[data-cfg="ageAlert"]').value = config.ageAlert || 60; ui.querySelector('[data-cfg="srcKeep"]').value = config.srcKeep ?? 1; ui.querySelector('[data-cfg="srcRadius"]').value = srcRadius();
-        ui.querySelector('[data-cfg="notify"]').checked = config.notify !== false;
-        ui.querySelector('[data-cfg="balIncoming"]').checked = config.balIncoming !== false;
-        renderCrmSetting();
+        fillSettings();
         ui.querySelector('[data-geo-reload]').onclick = safely(() => withSession('geo', async ss => { await ensureGeo(crmProvs(), ss, true); renderAll(); return `Đã lấy tọa độ: ${crmProvs().map(id => `${provShort(id)} ${geo.provs[id]?.ok || 0}/${geo.provs[id]?.count || 0} shop`).join(', ')}`; }));
         ui.querySelector('[data-crm-reload]').onclick = safely(() => withSession('crmStores', async () => { await ensureCrmStores(true); return `Đã lấy danh sách siêu thị tra tồn: ${crmStores().length} siêu thị`; }));
-        { const o = imgOpt(); ['cats', 'brands', 'staff'].forEach(k => { ui.querySelector(`[data-img="${k}"]`).checked = !!o[k]; }); ui.querySelector('[data-img="top"]').value = o.top; }
         ui.querySelector('[data-settings]').addEventListener('toggle', e => { if (e.target.open) renderStorage(); });
         (config.shops.length ? config.shops : [{ code: '', name: '' }]).forEach(shopEditor);
         if (!config.shops.length) ui.querySelector('[data-settings]').open = true;
@@ -3076,7 +3213,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         view.tab = okTab(load('mainTab', 'sales'), ['sales', 'inventory', 'balance', 'request'], 'sales');
         view.balModel = !!load('balModel', false);
         view.balCat = String(load('balCat', BAL_CATEGORY) || BAL_CATEGORY);
-        const trBox = ui.querySelector('[data-inv-transit]'); trBox.checked = !!config.invTransit;
+        const trBox = ui.querySelector('[data-inv-transit]');
         trBox.onchange = () => { config.invTransit = trBox.checked; save('config', config); };
         // So với: cùng kỳ tháng trước / 7 ngày trước (chỉ đọc số đã lưu)
         const cmpBox = ui.querySelector('[data-compare]');
@@ -3095,7 +3232,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         });
         const last = load('lastInventory', null);
         if (last && Array.isArray(last.records) && last.noTransit) view.inv = last;   // số tồn cũ có hàng đang chuyển kho → bỏ, đổ lại
-        const open = on => { back.hidden = !on; launch.hidden = on; if (on) { storeReady.then(() => { renderAll(); renderUpdate(); }); checkUpdate(false); } };
+        const open = on => { back.hidden = !on; launch.hidden = on; if (on) { storeReady.then(() => { renderAll(); renderUpdate(); cloudPull(); }); checkUpdate(false); } };
         launch.onclick = () => open(true);
         ui.querySelector('[data-close]').onclick = () => open(false);
         back.addEventListener('mousedown', e => { if (e.target === back && !running) open(false); });
