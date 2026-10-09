@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AutoBI - Kho & Xuất Bán
 // @namespace    https://github.com/PhamngocNDH/AutoBI/kho-xuatban-test
-// @version      2.7.1
+// @version      2.8.0
 // @description  Đổ tồn kho (BI 4286) và xuất bán (BI 77) theo cụm siêu thị cho máy tính: lấy thẳng dữ liệu BI có điều tốc, sổ ngày, bộ chọn tồn kho, Excel.
 // @author       AutoBI / 38967 - Mr Phạm
 // @homepageURL  https://github.com/PhamngocNDH/AutoBI
@@ -42,7 +42,7 @@
  */
 (function () {
     'use strict';
-    const VERSION = '2.7.1';
+    const VERSION = '2.8.0';
     const UPDATE_URL = 'https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_Kho_XuatBan.user.js';
     const SALES_SCHEMA = 4;                             // 4 = tất cả ngành + Loại hàng + Kho xuất (MASIEUTHIXUAT); ngày lưu bằng bản cũ sẽ được lấy lại
     const PREFIX = 'autobi_kxb_test_v1_';               // giữ khóa cũ để không mất khai báo shop
@@ -1368,7 +1368,19 @@ tr{break-inside:avoid;page-break-inside:avoid}
 
     /* ---------- Phiên chạy (cơ chế bản TEST) ---------- */
     function clockText(start, end = Date.now()) { const s = Math.max(0, Math.floor((end - start) / 1000)); return [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60].map(v => pad(v)).join(':'); }
-    function status(message, kind = '') { if (!ui) return; const e = ui.querySelector('[data-status]'); e.textContent = message; e.className = 'kxb-status ' + kind; }
+    function status(message, kind = '') { if (!ui) return; const e = ui.querySelector('[data-status]'); e.textContent = message; e.title = message; e.className = 'kxb-status ' + kind + (kind === 'err' ? ' full' : ''); }
+    // V2.8: ngăn Cài đặt trượt bên phải (thay khối Cài đặt nằm đầu mọi tab)
+    function setDrawer(on, pane) {
+        if (!ui) return;
+        const dr = ui.querySelector('[data-settings]'), sh = ui.querySelector('[data-shade]');
+        dr.hidden = !on; sh.hidden = !on;
+        if (!on) return;
+        const p = pane || 'cfg';
+        ui.querySelectorAll('[data-dtab]').forEach(b => b.classList.toggle('on', b.dataset.dtab === p));
+        ui.querySelectorAll('[data-dpane]').forEach(x => x.hidden = x.dataset.dpane !== p);
+        ui.querySelector('[data-dfoot]').hidden = p !== 'cfg';
+        if (p === 'cfg') renderStorage();
+    }
     function progress(done, total) {
         const p = total ? Math.round(done / total * 100) : 0;
         if (ui) ui.querySelector('[data-bar]').style.width = p + '%';
@@ -1602,6 +1614,49 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const bar = el('div', undefined, parent, 'kxb-subtabs');
         list.forEach(([k, l]) => { const b = el('button', l, bar); b.type = 'button'; b.classList.toggle('on', k === current); b.onclick = () => onPick(k); });
     }
+    /* ---------- V2.8: khối giao diện gọn ---------- */
+    // Tab con 2 tầng: groups = [[nhãn nhóm, [[khóa, nhãn], …]], …] — nhóm có 1 mục thì không hiện hàng dưới
+    function subtabs2(parent, groups, current, onPick) {
+        const gi = Math.max(0, groups.findIndex(g => g[1].some(([k]) => k === current)));
+        const top = el('div', undefined, parent, 'kxb-subtabs');
+        groups.forEach(([label, items], i) => { const b = el('button', label, top); b.type = 'button'; b.classList.toggle('on', i === gi); b.onclick = () => onPick(items[0][0]); });
+        const items = groups[gi][1];
+        if (items.length > 1) {
+            const sub = el('div', undefined, parent, 'kxb-seg');
+            items.forEach(([k, l]) => { const b = el('button', l, sub); b.type = 'button'; b.classList.toggle('on', k === current); b.onclick = () => onPick(k); });
+        }
+    }
+    // Chỉ số phụ nhỏ (bấm được): [nhãn, giá trị, ghi chú, onClick, 'warn'|'bad'|'']
+    function minis(parent, items) {
+        const box = el('div', undefined, parent, 'kxb-minis');
+        items.filter(Boolean).forEach(([l, v, s, onClick, cls]) => {
+            const m = el(onClick ? 'button' : 'div', undefined, box, 'kxb-mini' + (cls ? ' ' + cls : ''));
+            if (onClick) { m.type = 'button'; m.onclick = onClick; m.title = 'Bấm để xem chi tiết'; }
+            el('span', l, m, 'l'); el('b', v, m); if (s) el('span', s, m, 's');
+        });
+        return box;
+    }
+    // Giải thích cách tính: thu gọn, bấm mới mở
+    function infoBox(parent, text, label = 'ⓘ Cách tính') {
+        const d = el('details', undefined, parent, 'kxb-info'); el('summary', label, d); el('div', text, d); return d;
+    }
+    // Bộ lọc đang bật: chip có ✕ (thay cho hộp đỏ)
+    function activeChips(parent, list, rerender) {
+        list = list.filter(Boolean); if (!list.length) return;
+        const box = el('div', undefined, parent, 'kxb-active');
+        el('span', 'Đang lọc:', box, 'kxb-muted');
+        list.forEach(([text, clear]) => { const c = el('button', text + '  ✕', box, 'kxb-fchip'); c.type = 'button'; c.title = 'Bỏ lọc này'; c.onclick = () => { clear(); rerender(); }; });
+        if (list.length > 1) { const all = el('button', 'Bỏ tất cả', box, 'kxb-link'); all.type = 'button'; all.onclick = () => { list.forEach(([, f]) => f()); rerender(); }; }
+    }
+    // Cảnh báo theo mức: 'bad' đỏ (số chưa đủ / lỗi), 'warn' vàng, 'note' xám
+    function alertBox(parent, text, kind = 'bad') { return el('div', text, parent, 'kxb-alert ' + kind); }
+    // Nút có menu thả xuống: items = [[nhãn, onClick, title?]]
+    function menuButton(parent, label, items) {
+        const d = el('details', undefined, parent, 'kxb-menu'); el('summary', label, d);
+        const list = el('div', undefined, d, 'list');
+        items.filter(Boolean).forEach(([l, fn, t]) => { const b = el('button', l, list); b.type = 'button'; if (t) b.title = t; b.onclick = e => { d.open = false; fn(e); }; });
+        return d;
+    }
 
     // Ô thả xuống chọn nhiều (danh sách có ô tích), giữ mở khi chọn
     function multiDrop(box, id, items, set, allLabel, onChange) {
@@ -1705,20 +1760,6 @@ tr{break-inside:avoid;page-break-inside:avoid}
             b.onclick = () => { if (on && view.salesShops.size === 1) return; on ? view.salesShops.delete(c) : view.salesShops.add(c); renderSales(); };
         });
         const shopLines = (view.sales ? view.sales.allLines : []).filter(l => view.salesShops.has(l.shop));
-        const chipRow = (box, set, keyOf, sortFirst, empty, src) => {
-            box.replaceChildren();
-            const by = new Map(); src.forEach(l => { const k = keyOf(l); by.set(k, (by.get(k) || 0) + l.qty); });
-            [...set].forEach(k => { if (!by.has(k)) by.set(k, 0); });
-            const list = [...by.keys()].sort((a, b) => (a === sortFirst ? -1 : b === sortFirst ? 1 : vcmp(a, b)));
-            const all = el('button', 'Tất cả', box, 'chip'); all.type = 'button'; all.classList.toggle('on', !set.size);
-            all.onclick = () => { set.clear(); renderSales(); };
-            list.forEach(k => {
-                const on = set.has(k), b = el('button', `${k} · SL ${fmt(by.get(k))}`, box, 'chip'); b.type = 'button';
-                b.classList.toggle('on', on); b.setAttribute('aria-pressed', on);
-                b.onclick = () => { on ? set.delete(k) : set.add(k); renderSales(); };
-            });
-            if (!list.length) el('span', empty, box, 'kxb-muted');
-        };
         // Ngành hàng: danh sách thả xuống, ngành doanh thu cao lên trên
         const catSel = ui.querySelector('[data-sales-cat]'), byCat = new Map();
         shopLines.filter(l => !view.salesConds.size || view.salesConds.has(conditionText(l.condition))).forEach(l => { const k = categoryText(l.category), x = byCat.get(k) || { q: 0, r: 0 }; x.q += l.qty; x.r += l.qty * l.price; byCat.set(k, x); });
@@ -1741,20 +1782,25 @@ tr{break-inside:avoid;page-break-inside:avoid}
         [...view.salesBrands].forEach(k => { if (!byBrand.has(k)) view.salesBrands.delete(k); });
         multiDrop(ui.querySelector('[data-sales-brands]'), 'sales-brand', [...byBrand.values()].sort((a, b) => b.r - a.r || b.q - a.q).map(b => ({ key: b.key, name: b.name, label: `${b.name} · SL ${fmt(b.q)}` })),
             view.salesBrands, `Tất cả hãng · SL ${fmt([...byBrand.values()].reduce((a, b) => a + b.q, 0))}`, renderSales);
-        chipRow(ui.querySelector('[data-sales-conds]'), view.salesConds, l => conditionText(l.condition), 'Mới', 'Đổ xuất bán để có danh sách loại hàng',
-            shopLines.filter(l => !view.salesCat || categoryText(l.category) === view.salesCat));   // SL loại hàng theo ngành đang chọn
+        // V2.8: Loại hàng = ô thả xuống chọn nhiều (thay hàng chip)
+        const byCond = new Map(); shopLines.filter(l => !view.salesCat || categoryText(l.category) === view.salesCat).forEach(l => { const k = conditionText(l.condition); byCond.set(k, (byCond.get(k) || 0) + l.qty); });
+        [...view.salesConds].forEach(k => { if (!byCond.has(k)) byCond.set(k, 0); });
+        multiDrop(ui.querySelector('[data-sales-conds]'), 'sales-cond', [...byCond.keys()].sort((a, b) => (a === 'Mới' ? -1 : b === 'Mới' ? 1 : vcmp(a, b))).map(k => ({ key: k, name: k, label: `${k} · SL ${fmt(byCond.get(k))}` })),
+            view.salesConds, `Tất cả loại · SL ${fmt([...byCond.values()].reduce((a, v) => a + v, 0))}`, renderSales);
         const r = salesData();
         if (!r) { el('div', 'Chọn kỳ rồi bấm "Đổ xuất bán". Ngày đã lấy được lưu lại, lần sau chỉ lấy ngày còn thiếu. Bấm "Xem số đã lưu" để xem ngay không cần gọi BI.', area, 'kxb-empty'); return; }
         const s = r.summary, codes = config.shops.map(x => keyCode(x.code)).filter(c => view.salesShops.has(c));
-        if (r.missing) el('div', `Còn ${r.missing} ngày chưa lấy trong kỳ ${toBI(r.range.from)}–${toBI(r.range.to)} — số chưa đủ. Bấm "Đổ xuất bán" để lấy tiếp.`, area, 'kxb-warn');
-        if (r.oldSchema) el('div', `${r.oldSchema} ngày lưu bằng bản cũ (chỉ ngành Điện thoại). Bấm "Đổ xuất bán" để lấy lại các ngày này với tất cả ngành hàng.`, area, 'kxb-warn');
-        if (view.salesCat) el('div', `Đang lọc ngành: ${view.salesCat} — chọn "Tất cả ngành" để bỏ lọc.`, area, 'kxb-warn');
-        if (view.salesBrands.size) el('div', `Đang lọc hãng: ${[...byBrand.values()].filter(b => view.salesBrands.has(b.key)).map(b => b.name).join(', ')} — tích "Tất cả hãng" để bỏ lọc.`, area, 'kxb-warn');
-        if (view.salesConds.size) el('div', `Đang lọc loại hàng: ${[...view.salesConds].join(', ')} — bấm "Tất cả" để bỏ lọc.`, area, 'kxb-warn');
+        // Bộ lọc đang bật → chip ✕ (không còn hộp đỏ)
+        activeChips(area, [
+            view.salesCat && [`Ngành: ${view.salesCat}`, () => { view.salesCat = ''; try { save('salesCat', ''); } catch { /* bỏ qua */ } }],
+            view.salesBrands.size && [`Hãng: ${[...byBrand.values()].filter(b => view.salesBrands.has(b.key)).map(b => b.name).join(', ')}`, () => view.salesBrands.clear()],
+            view.salesConds.size && [`Loại hàng: ${[...view.salesConds].join(', ')}`, () => view.salesConds.clear()]], renderSales);
+        if (r.missing) alertBox(area, `Còn ${r.missing} ngày chưa lấy trong kỳ ${toBI(r.range.from)}–${toBI(r.range.to)} — số chưa đủ. Bấm "Đổ xuất bán" để lấy tiếp.`);
+        if (r.oldSchema) alertBox(area, `${r.oldSchema} ngày lưu bằng bản cũ (chỉ ngành Điện thoại). Bấm "Đổ xuất bán" để lấy lại các ngày này với tất cả ngành hàng.`, 'warn');
         const today = isoDate(new Date()), pOrders = pendingOrders(r.pendingLines, today), pendOrders = pOrders.length, oldPend = pOrders.filter(o => o.age >= 2).length;
         const retOrders = new Set(r.returnedLines.map(l => l.order)).size, ps = r.prevSummary;
         if (r.prevMissing) {
-            const w = el('div', `Kỳ so sánh (${r.compareMode === 'week' ? '7 ngày trước' : 'cùng kỳ tháng trước'} ${toBI(r.prevRange.from)}–${toBI(r.prevRange.to)}) còn ${r.prevMissing} ngày chưa lấy — chưa so được ▲▼. `, area, 'kxb-warn');
+            const w = alertBox(area, `Kỳ so sánh (${r.compareMode === 'week' ? '7 ngày trước' : 'cùng kỳ tháng trước'} ${toBI(r.prevRange.from)}–${toBI(r.prevRange.to)}) còn ${r.prevMissing} ngày chưa lấy — chưa so được ▲▼. `, 'warn');
             const b = el('button', 'Đổ kỳ so sánh', w, 'idle-only'); b.type = 'button';
             b.onclick = safely(() => { validateShops(config.shops); return withSession('prev', ss => runSales(ss, false, r.prevRange)); });
         }
@@ -1762,16 +1808,20 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const shopAll = r.allLines.filter(l => view.salesShops.has(l.shop)), att = attachData(shopAll);
         const attPrev = r.prevMissing || r.noCompare ? null : attachData((r.prevAllLines || []).filter(l => view.salesShops.has(l.shop)));
         const proj = projectMonth(r.lines.filter(l => (r.basis === 'shipped' && l.shipped ? l.shipped : l.created) < today).reduce((a, l) => a + l.qty * l.price, 0), r.range, today);
-        const projItem = proj ? ['Dự kiến cuối tháng', mil(proj.value), `theo TB ${proj.elapsed} ngày đã qua × ${proj.dim} ngày`] : null;
+        const projItem = proj ? ['Dự kiến cuối tháng', mil(proj.value), `TB ${proj.elapsed} ngày × ${proj.dim} ngày`] : null;
+        const goTab = k => () => { view.salesTab = k; try { save('salesTab', k); } catch { /* bỏ qua */ } renderSales(); };
+        // V2.8: 1 thẻ chính + từng siêu thị + dự kiến; bán kèm / đơn treo / nhập trả thành chỉ số nhỏ bấm được
         kpis(area, [['Đã bán', `SL ${fmt(s.quantity)}`, mil(s.revenue), delta(s.revenue, ps.revenue, r)],
             ...codes.map(c => { const x = s.shops.find(z => z.code === c) || { quantity: 0, revenue: 0 }, y = ps.shops.find(z => z.code === c) || { revenue: 0 }; return [shopName(c), `SL ${fmt(x.quantity)}`, mil(x.revenue), delta(x.revenue, y.revenue, r)]; }),
-            ['Tỷ lệ bán kèm ĐT', pct(att.total.rate), `${fmt(att.total.attached)}/${fmt(att.total.phoneOrders)} đơn điện thoại`,
-                attPrev && attPrev.total.phoneOrders ? { text: `${att.total.rate >= attPrev.total.rate ? '▲' : '▼'} ${fmt(Math.abs(Math.round(att.total.rate - attPrev.total.rate)))} điểm so cùng kỳ`, cls: att.total.rate >= attPrev.total.rate ? 'up' : 'down' } : null],
-            ...(projItem ? [projItem] : []),
-            ['Đơn treo', fmt(pendOrders), 'chưa xuất / chưa giao', oldPend ? { text: `${fmt(oldPend)} đơn treo từ 2 ngày`, cls: 'down' } : null],
-            ['Khách nhập trả', fmt(retOrders), `đã bỏ SL ${fmt(r.returnedLines.reduce((a, l) => a + l.qty, 0))} · ${mil(r.returnedLines.reduce((a, l) => a + l.qty * l.price, 0))}`]]);
-        el('div', `Kỳ ${toBI(r.range.from)}–${toBI(r.range.to)} · Kho tạo · ngành: ${view.salesCat || 'tất cả'} · tính theo ${r.basis === 'shipped' ? 'ngày xuất' : 'ngày tạo'} · dòng Đã xuất – Đã giao – Chưa hủy · loại hàng: ${view.salesConds.size ? [...view.salesConds].join(', ') : 'tất cả'} · bỏ cả đơn khách nhập trả (kiểm tra lại ${config.returnDays} ngày gần nhất) · doanh thu = Giá bán × SL (gồm VAT)`, area, 'kxb-muted');
-        subtabs(area, [['category', 'Theo ngành hàng'], ['brand', 'Theo hãng'], ['staff', 'Nhân viên × hãng'], ['attach', 'Bán kèm'], ['staffProduct', 'Nhân viên × sản phẩm'], ['product', 'Sản phẩm'], ['daily', 'Theo ngày'], ['hour', 'Theo giờ'], ['channel', 'Thanh toán & giao'], ['pending', `Đơn treo (${pendOrders})`], ['returned', `Nhập trả (${retOrders})`], ['detail', 'Chi tiết']], view.salesTab, k => { view.salesTab = k; try { save('salesTab', k); } catch { /* bỏ qua */ } renderSales(); });
+            ...(projItem ? [projItem] : [])]);
+        minis(area, [['Bán kèm ĐT', pct(att.total.rate), `${fmt(att.total.attached)}/${fmt(att.total.phoneOrders)} đơn` + (attPrev && attPrev.total.phoneOrders ? ` · ${att.total.rate >= attPrev.total.rate ? '▲' : '▼'} ${fmt(Math.abs(Math.round(att.total.rate - attPrev.total.rate)))} điểm` : ''), goTab('attach')],
+            ['Đơn treo', fmt(pendOrders), oldPend ? `${fmt(oldPend)} đơn từ 2 ngày` : 'chưa xuất / chưa giao', goTab('pending'), oldPend ? 'bad' : ''],
+            ['Khách nhập trả', fmt(retOrders), `bỏ SL ${fmt(r.returnedLines.reduce((a, l) => a + l.qty, 0))} · ${mil(r.returnedLines.reduce((a, l) => a + l.qty * l.price, 0))}`, goTab('returned')]]);
+        infoBox(area, `Kỳ ${toBI(r.range.from)}–${toBI(r.range.to)} · Kho tạo · ngành: ${view.salesCat || 'tất cả'} · tính theo ${r.basis === 'shipped' ? 'ngày xuất' : 'ngày tạo'} · dòng Đã xuất – Đã giao – Chưa hủy · loại hàng: ${view.salesConds.size ? [...view.salesConds].join(', ') : 'tất cả'} · bỏ cả đơn khách nhập trả (kiểm tra lại ${config.returnDays} ngày gần nhất) · doanh thu = Giá bán × SL (gồm VAT) · bán kèm, dự kiến tính trên các siêu thị đang chọn, không theo bộ lọc ngành / hãng / loại hàng.`);
+        subtabs2(area, [['Tổng quan', [['category', 'Theo ngành'], ['brand', 'Theo hãng'], ['product', 'Sản phẩm'], ['daily', 'Theo ngày'], ['hour', 'Theo giờ']]],
+            ['Nhân viên', [['staff', 'Nhân viên × hãng'], ['staffProduct', 'Nhân viên × sản phẩm'], ['attach', 'Bán kèm']]],
+            ['Đơn hàng' + (oldPend ? ` · ${oldPend}⚠` : ''), [['pending', `Đơn treo (${pendOrders})`], ['returned', `Nhập trả (${retOrders})`], ['channel', 'Thanh toán & giao']]],
+            ['Chi tiết', [['detail', 'Chi tiết']]]], view.salesTab, k => goTab(k)());
         const pane = el('div', undefined, area);
         const n = (from, count) => Array.from({ length: count }, (_, i) => from + i);
         if (view.salesTab === 'hour') {
@@ -1924,13 +1974,10 @@ tr{break-inside:avoid;page-break-inside:avoid}
         fillSelect(box.querySelector('[data-f="group"]'), opts.groups, view.invFilter.group, 'Nhóm hàng');
         fillSelect(box.querySelector('[data-f="brand"]'), opts.brands, view.invFilter.brand, 'Hãng');
         for (const k of ['category', 'group', 'brand']) view.invFilter[k] = box.querySelector(`[data-f="${k}"]`).value;
-        const condBox = box.querySelector('[data-inv-conds]'); condBox.replaceChildren();
-        opts.conditions.forEach(c => {
-            const b = el('button', c, condBox, 'chip'); b.type = 'button';
-            const on = view.invFilter.conditions.includes(c); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on);
-            b.onclick = () => { view.invFilter.conditions = on ? view.invFilter.conditions.filter(x => x !== c) : [...view.invFilter.conditions, c]; renderInventoryFilters(); renderInventory(); };
-        });
-        if (!opts.conditions.length) el('span', 'Đổ tồn kho để có danh sách trạng thái', condBox, 'kxb-muted');
+        // V2.8: Trạng thái = ô thả xuống chọn nhiều
+        const condSet = new Set(view.invFilter.conditions);
+        multiDrop(box.querySelector('[data-inv-conds]'), 'inv-cond', opts.conditions.map(c => ({ key: c, name: c, label: c })), condSet, opts.conditions.length ? 'Trạng thái: tất cả' : 'Trạng thái: (chưa đổ tồn)',
+            () => { view.invFilter.conditions = [...condSet]; renderInventoryFilters(); renderInventory(); });
     }
     /* ---------- V2.2: Tra tồn quanh đây (CRM) — dùng được cả khi chưa đổ tồn BI ---------- */
     function renderCrmLookup(pane) {
@@ -1941,7 +1988,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const go = el('button', '🔎 Tra tồn', bar, 'primary idle-only'); go.type = 'button';
         const lab = el('label', undefined, bar, 'chk'); const cb = el('input', undefined, lab); cb.type = 'checkbox'; cb.checked = L.onlyFree; el('span', 'Chỉ nơi có tồn bán được', lab);
         cb.onchange = () => { L.onlyFree = cb.checked; renderInventory(); };
-        el('span', `Nguồn: CRM (thời gian thực) · hàng Mới · tỉnh ${crmProvs().map(id => CRM_PROVINCES.find(p => p[0] === id)?.[1] || id).join(', ')} (đổi trong ⚙️ Cài đặt) · không tính kho chi nhánh`, bar, 'kxb-muted');
+        infoBox(pane, `Nguồn: CRM (thời gian thực) · hàng Mới · tỉnh ${crmProvs().map(id => CRM_PROVINCES.find(p => p[0] === id)?.[1] || id).join(', ')} (đổi trong ⚙️ Cài đặt) · không tính kho chi nhánh · 🏠 = siêu thị trong cụm.`, 'ⓘ Nguồn số');
         const run = safely(() => { L.key = clean(q.value); invariant(L.key.length >= 3, 'Gõ mã sản phẩm hoặc tên (ít nhất 3 ký tự)'); return withSession('crm', async session => {
             status('Đang lấy danh sách siêu thị theo tỉnh…'); await ensureCrmStores(); check(session);
             status(`Đang tra CRM: ${L.key}…`);
@@ -1976,20 +2023,23 @@ tr{break-inside:avoid;page-break-inside:avoid}
             el('div', 'Chọn siêu thị rồi bấm "Đổ tồn kho". Muốn xem nhanh siêu thị khác còn hàng không thì dùng tab "🔎 Tra tồn quanh đây" (không cần đổ tồn).', pane, 'kxb-empty'); return;
         }
         const notIn = [...view.invShops].filter(c => !view.inv.shops.includes(c));
-        if (notIn.length) el('div', `Siêu thị ${notIn.map(shopName).join(', ')} chưa có số tồn — bấm "Đổ tồn kho" để lấy.`, area, 'kxb-warn');
-        const f = view.invFilter, active = [f.category, f.group, f.brand, ...f.conditions, f.q].filter(Boolean);
-        if (active.length) el('div', `Đang lọc: ${active.join(' · ')} — bấm "Bỏ lọc" để xem tất cả.`, area, 'kxb-warn');
+        const f = view.invFilter, reInv = () => { renderInventoryFilters(); renderInventory(); };
+        activeChips(area, [f.category && [`Ngành: ${f.category}`, () => { f.category = ''; f.group = ''; }], f.group && [`Nhóm: ${f.group}`, () => { f.group = ''; }], f.brand && [`Hãng: ${f.brand}`, () => { f.brand = ''; }],
+            f.conditions.length && [`Trạng thái: ${f.conditions.join(', ')}`, () => { f.conditions = []; }], f.q && [`Tìm: ${f.q}`, () => { f.q = ''; const qi = ui.querySelector('[data-f="q"]'); if (qi) qi.value = ''; }]], reInv);
+        if (notIn.length) alertBox(area, `Siêu thị ${notIn.map(shopName).join(', ')} chưa có số tồn — bấm "Đổ tồn kho" để lấy.`, 'warn');
         const recs = invRecords();
         const v = inventoryViews(recs), today = isoDate(new Date());
         const times = view.inv.shops.filter(c => view.invShops.has(c)).map(c => `${shopName(c)} lúc ${stamp(new Date(view.inv.shopTimes?.[c] || view.inv.capturedAt))}`).join(' · ');
-        el('div', `Tồn: ${times || '—'} · đang xem ${fmt(recs.length)}/${fmt(view.inv.records.filter(r => view.invShops.has(r.shop)).length)} dòng · không gồm hàng đang chuyển kho`, area, 'kxb-muted');
+        el('div', `Tồn: ${times || '—'} · đang xem ${fmt(recs.length)}/${fmt(view.inv.records.filter(r => view.invShops.has(r.shop)).length)} dòng · không gồm hàng đang chuyển kho`, area, 'kxb-meta');
         const ageLimit = config.ageAlert || 60;
         const aged = recs.map(r => ({ r, age: ageDays(r.input, today) }));
         const old = aged.filter(x => x.age != null && x.age >= ageLimit);
         const transit = (view.inv.transit || []).filter(r => view.invShops.has(r.shop));
-        kpis(area, [['SL tồn', fmt(v.quantity), mil(v.cost)], ['Nhóm hàng', fmt(v.groups.length)], ['Sản phẩm', fmt(v.products.length)], ['IMEI / Serial', fmt(v.serials)],
+        const goInv = k => () => { view.invTab = k; try { save('invTab', k); } catch { /* bỏ qua */ } renderInventory(); };
+        kpis(area, [['SL tồn', fmt(v.quantity), `giá vốn ${mil(v.cost)}`],
             [`Tồn từ ${ageLimit} ngày`, `SL ${fmt(old.reduce((a, x) => a + x.r.qty, 0))}`, mil(old.reduce((a, x) => a + (x.r.cost || 0), 0)), old.length ? { text: `${pct(v.cost ? old.reduce((a, x) => a + (x.r.cost || 0), 0) / v.cost * 100 : 0)} giá trị tồn`, cls: 'down' } : null],
             ...(view.inv.transitShops?.length ? [['Đang về (chưa nhận)', `SL ${fmt(transit.reduce((a, r) => a + r.qty, 0))}`, mil(transit.reduce((a, r) => a + (r.cost || 0), 0))]] : [])]);
+        minis(area, [['Nhóm hàng', fmt(v.groups.length), '', goInv('group')], ['Sản phẩm', fmt(v.products.length), '', goInv('product')], ['IMEI / Serial', fmt(v.serials), '', goInv('imei')]]);
         subtabs(area, [['group', 'Theo nhóm hàng'], ['product', 'Theo sản phẩm'], ['imei', 'Danh sách IMEI'], ['age', `Tuổi tồn (${fmt(old.length)})`], ['transit', `Đang về${view.inv.transitShops?.length ? ` (${fmt(transit.length)})` : ''}`], ['crm', '🔎 Tra tồn quanh đây']], view.invTab, k => { view.invTab = k; try { save('invTab', k); } catch { /* bỏ qua */ } renderInventory(); });
         const pane = el('div', undefined, area), codes = view.inv.shops.filter(c => view.invShops.has(c));
         const cond = v.conditionList;
@@ -2147,26 +2197,21 @@ tr{break-inside:avoid;page-break-inside:avoid}
             catSel.onchange = () => { view.balCat = catSel.value; view.balBrands.clear(); try { save('balCat', view.balCat); } catch { /* bỏ qua */ } renderBalance(); }; }
         multiDrop(ui.querySelector('[data-bal-brands]'), 'bal-brand', d.brands.map(b => ({ key: b.key, name: b.label, label: b.need ? `${b.label} · xin ${fmt(b.ask)}` : b.label })),
             view.balBrands, `Tất cả hãng · xin ${fmt(d.brands.reduce((a, b) => a + b.ask, 0))}`, renderBalance);
-        if (view.balBrands.size) el('div', `Đang lọc hãng: ${d.brands.filter(b => view.balBrands.has(b.key)).map(b => b.label).join(', ')} — tích "Tất cả hãng" để bỏ lọc.`, area, 'kxb-warn');
-        el('div', `${d.cat} · hàng Mới · ${view.balModel ? 'gộp theo model (bỏ màu) · ' : ''}tồn = hàng đã nhận${d.hasTransit && d.useIncoming ? ' · Thiếu đã trừ hàng đang về' : ''} · tốc độ bán = SL bán ${toBI(d.range.from)}–${toBI(d.range.to)} (${view.balDays} ngày) ÷ ${view.balDays} · Cần có = TB/ngày × ${d.target} ngày + ${d.spare} máy dự phòng · Sắp hết = tồn dưới mức cần có → Nên xin phần thiếu · Tồn nhiều = đủ bán trên ${d.target * 2} ngày · đơn xuất từ kho khác không tính`, area, 'kxb-muted');
-        if (!view.inv) { el('div', 'Chưa có số tồn kho — bấm "Đổ cân hàng" để lấy tồn kho và xuất bán.', area, 'kxb-warn'); }
-        else {
-            if (d.noInv.length) el('div', `Siêu thị ${d.noInv.map(shopName).join(', ')} chưa có số tồn — bấm "Đổ cân hàng".`, area, 'kxb-warn');
-            el('div', `Tồn lấy lúc ${[...view.balShops].filter(c => view.inv.shops.includes(c)).map(c => `${shopName(c)} ${stamp(new Date(view.inv.shopTimes?.[c] || view.inv.capturedAt))}`).join(' · ')}.`, area, 'kxb-muted');
-        }
-        if (d.missing) {
-            el('div', `Còn ${d.missing} ngày trong ${view.balDays} ngày gần nhất chưa đổ xuất bán (hoặc lưu bằng bản cũ) — tốc độ bán đang thấp hơn thực tế. Bấm "Đổ cân hàng".`, area, 'kxb-warn');
-        }
+        activeChips(area, [view.balBrands.size && [`Hãng: ${d.brands.filter(b => view.balBrands.has(b.key)).map(b => b.label).join(', ')}`, () => view.balBrands.clear()],
+            view.balStatus && [`Trạng thái: ${view.balStatus === 'need' ? 'Cần xin' : view.balStatus}`, () => { view.balStatus = ''; }]], renderBalance);
+        const howBal = (`${d.cat} · hàng Mới · ${view.balModel ? 'gộp theo model (bỏ màu) · ' : ''}tồn = hàng đã nhận${d.hasTransit && d.useIncoming ? ' · Thiếu đã trừ hàng đang về' : ''} · tốc độ bán = SL bán ${toBI(d.range.from)}–${toBI(d.range.to)} (${view.balDays} ngày) ÷ ${view.balDays} · Cần có = TB/ngày × ${d.target} ngày + ${d.spare} máy dự phòng · Sắp hết = tồn dưới mức cần có → Nên xin phần thiếu · Tồn nhiều = đủ bán trên ${d.target * 2} ngày · đơn xuất từ kho khác không tính`);
+        if (!view.inv) alertBox(area, 'Chưa có số tồn kho — bấm "Đổ cân hàng" để lấy tồn kho và xuất bán.', 'warn');
+        else if (d.noInv.length) alertBox(area, `Siêu thị ${d.noInv.map(shopName).join(', ')} chưa có số tồn — bấm "Đổ cân hàng".`, 'warn');
+        if (d.missing) alertBox(area, `Còn ${d.missing} ngày trong ${view.balDays} ngày gần nhất chưa đổ xuất bán (hoặc lưu bằng bản cũ) — tốc độ bán đang thấp hơn thực tế. Bấm "Đổ cân hàng".`);
+        if (view.inv) el('div', `Tồn lấy lúc ${[...view.balShops].filter(c => view.inv.shops.includes(c)).map(c => `${shopName(c)} ${stamp(new Date(view.inv.shopTimes?.[c] || view.inv.capturedAt))}`).join(' · ')}${view.crmBal ? ` · nguồn CRM lúc ${stamp(new Date(view.crmBal.at))}` : ''}`, area, 'kxb-meta');
         const counts = {}; d.rows.forEach(r => { counts[r.status] = (counts[r.status] || 0) + 1; });
         const need = d.rows.reduce((a, r) => a + r.need, 0), ask = d.rows.reduce((a, r) => a + r.ask, 0), moved = d.moves.reduce((a, m) => a + m.qty, 0);
         const plans = balancePlans(d.rows), pl = [...plans.values()], got = pl.reduce((a, x) => a + x.got, 0), noSrc = d.rows.filter(r => r.ask > 0 && !planOf(plans, r)).reduce((a, r) => a + r.ask, 0);
         const shortAll = pl.reduce((a, x) => a + x.short, 0) + noSrc;
         kpis(area, [['Xin kho', `SL ${fmt(ask)}`, `${fmt(d.rows.filter(r => r.ask > 0).length)} mã`, moved ? { text: `thiếu ${fmt(need)} − chuyển nội cụm ${fmt(moved)}`, cls: 'up' } : null],
             ...(view.crmBal ? [['Đã có nơi cho', `SL ${fmt(got)}`, `${fmt(groupBySource(planItems(d.rows, plans)).length)} siêu thị cho`], ['Còn thiếu', `SL ${fmt(shortAll)}`, 'xin kho tổng / tỉnh lân cận', shortAll ? { text: 'chưa có nơi cho', cls: 'down' } : null]] : []),
-            ...(view.balShops.size > 1 ? [['Chuyển nội cụm', `SL ${fmt(moved)}`, `${fmt(d.moves.length)} lượt chuyển`]] : []),
-            ...['Hết hàng', 'Sắp hết', 'Đủ', 'Tồn nhiều', 'Không bán'].map(k => [k, fmt(counts[k] || 0), 'mã'])]);
-        const tools = el('div', undefined, area, 'bar');
-        const bi = el('button', '🖼 Ảnh cân hàng', tools); bi.type = 'button'; bi.title = 'Ảnh danh sách cần bổ sung + đề xuất xin từ siêu thị nào, bao nhiêu máy (tự tra CRM nếu chưa tra) + chuyển nội cụm — chép sẵn, dán Zalo bằng Ctrl+V'; bi.onclick = safely(balanceImageAuto);
+            ...(view.balShops.size > 1 ? [['Chuyển nội cụm', `SL ${fmt(moved)}`, `${fmt(d.moves.length)} lượt chuyển`]] : [])]);
+        const tools = el('div', undefined, area, 'bar kxb-tools');
         const bc = el('button', '🔎 Tìm nguồn hàng (CRM)', tools, 'idle-only'); bc.type = 'button'; bc.title = 'Tra CRM: siêu thị quanh đây nào có tồn bán được các mã cần xin (Chrome phải đang đăng nhập CRM)';
         bc.onclick = safely(() => {
             const codes = [...new Set(d.rows.filter(r => r.ask > 0 || r.need > 0).flatMap(r => view.balModel ? r.codeList || [] : [r.product]))].filter(c => /^\d{6,}$/.test(c));
@@ -2174,16 +2219,12 @@ tr{break-inside:avoid;page-break-inside:avoid}
             invariant(codes.length <= 120, `Có ${codes.length} mã cần xin — lọc bớt theo hãng (tối đa 120 mã mỗi lần)`);
             return withSession('crmBal', ss => runCrmBalance(ss, codes));
         });
-        const b1 = el('button', '📋 Tin xin hàng', tools); b1.type = 'button'; b1.title = 'Chép danh sách xin hàng (đã trừ phần chuyển nội cụm), gom theo hãng → siêu thị';
-        b1.onclick = safely(() => copyText(requestMessage(d.rows.map(r => ({ ...r, need: r.ask })), shopName, { cat: d.cat, sourceLabel: view.crmBal ? 'xin từ' : 'có tại', sourceOf: r => view.crmBal ? planText(planOf(plans, r)) : srcText(crmSrc(r), 2), date: toBI(isoDate(new Date())), basis: `bán ${view.balDays} ngày, giữ đủ ${d.target} ngày` }), 'Đã chép tin xin hàng — dán vào Zalo / LINE'));
-        const b3 = el('button', '📋 Tin gửi nơi cho', tools); b3.type = 'button'; b3.title = 'Chép tin gom theo từng siêu thị cho: xin bao nhiêu máy, mã nào, chuyển về đâu (theo đề xuất)';
-        b3.onclick = safely(() => copyText(sourceMessage(planItems(d.rows, plans), `🙏 XIN HỖ TRỢ HÀNG ${d.cat.toUpperCase()} · ${toBI(isoDate(new Date()))}`), 'Đã chép tin gửi nơi cho — dán vào Zalo / LINE'));
-        if (d.moves.length) {
-            const b2 = el('button', '📋 Tin chuyển nội cụm', tools); b2.type = 'button';
-            b2.onclick = safely(() => copyText(['🔁 ĐỀ XUẤT CHUYỂN HÀNG NỘI CỤM · ' + toBI(isoDate(new Date())), ...d.moves.map(m => `• ${m.name} (${m.product}): ${shopName(m.from)} → ${shopName(m.to)} · ${m.qty} máy`)].join('\n'), 'Đã chép tin chuyển nội cụm'));
-        }
-        if (view.crmBal) el('div', `Nguồn CRM tra lúc ${stamp(new Date(view.crmBal.at))} · "Có tại (CRM)" = siêu thị có tồn bán được > 0 (không tính kho chi nhánh, siêu thị trong cụm) · "Xin từ (đề xuất)" = chia số Xin kho cho nơi gần trước (${Object.keys(geo.pts).length ? `km thật${srcRadius() ? `, chỉ trong ${srcRadius()} km` : ''}` : 'theo huyện'}), cùng mức gần thì nơi tồn nhiều cho nhiều, nơi cho giữ lại ${srcKeep()} máy (đổi trong ⚙️ Cài đặt).`, area, 'kxb-muted');
-        else if (d.rows.some(r => r.ask > 0)) el('div', 'Bấm "🔎 Tìm nguồn hàng (CRM)" (hoặc "🖼 Ảnh cân hàng" — tự tra) để có đề xuất xin từ siêu thị nào, bao nhiêu máy.', area, 'kxb-muted');
+        const bi = el('button', '🖼 Ảnh cân hàng', tools); bi.type = 'button'; bi.title = 'Ảnh danh sách cần bổ sung + đề xuất xin từ siêu thị nào, bao nhiêu máy (tự tra CRM nếu chưa tra) + chuyển nội cụm — chép sẵn, dán Zalo bằng Ctrl+V'; bi.onclick = safely(balanceImageAuto);
+        menuButton(tools, '📋 Chép tin ▾', [
+            ['Tin xin hàng (gom theo hãng)', safely(() => copyText(requestMessage(d.rows.map(r => ({ ...r, need: r.ask })), shopName, { cat: d.cat, sourceLabel: view.crmBal ? 'xin từ' : 'có tại', sourceOf: r => view.crmBal ? planText(planOf(plans, r)) : srcText(crmSrc(r), 2), date: toBI(isoDate(new Date())), basis: `bán ${view.balDays} ngày, giữ đủ ${d.target} ngày` }), 'Đã chép tin xin hàng — dán vào Zalo / LINE')), 'Chép danh sách xin hàng (đã trừ phần chuyển nội cụm), gom theo hãng → siêu thị'],
+            ['Tin gửi nơi cho (gom theo siêu thị cho)', safely(() => copyText(sourceMessage(planItems(d.rows, plans), `🙏 XIN HỖ TRỢ HÀNG ${d.cat.toUpperCase()} · ${toBI(isoDate(new Date()))}`), 'Đã chép tin gửi nơi cho — dán vào Zalo / LINE')), 'Xin bao nhiêu máy, mã nào, chuyển về đâu (theo đề xuất)'],
+            d.moves.length && ['Tin chuyển nội cụm', safely(() => copyText(['🔁 ĐỀ XUẤT CHUYỂN HÀNG NỘI CỤM · ' + toBI(isoDate(new Date())), ...d.moves.map(m => `• ${m.name} (${m.product}): ${shopName(m.from)} → ${shopName(m.to)} · ${m.qty} máy`)].join('\n'), 'Đã chép tin chuyển nội cụm'))]]);
+        infoBox(tools, howBal + (view.crmBal ? ` · "Có tại (CRM)" = siêu thị có tồn bán được > 0 (không tính kho chi nhánh, siêu thị trong cụm) · "Xin từ (đề xuất)" = chia số Xin kho cho nơi gần trước (${Object.keys(geo.pts).length ? `km thật${srcRadius() ? `, chỉ trong ${srcRadius()} km` : ''}` : 'theo huyện'}), cùng mức gần thì nơi tồn nhiều cho nhiều, nơi cho giữ lại ${srcKeep()} máy (đổi trong ⚙️ Cài đặt).` : ' · Bấm "🔎 Tìm nguồn hàng (CRM)" (hoặc "🖼 Ảnh cân hàng" — tự tra) để có đề xuất xin từ siêu thị nào, bao nhiêu máy.'));
         subtabs(area, [['list', 'Bảng cân hàng'], ['transfer', `Chuyển nội cụm (${d.moves.length})`], ['source', 'Nguồn hàng (CRM)'], ['brand', 'Theo hãng']], view.balTab || 'list', k => { view.balTab = k; renderBalance(); });
         const pane = el('div', undefined, area);
         if ((view.balTab || 'list') === 'transfer') {
@@ -2433,7 +2474,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
             return;
         }
         const my = config.crmStoreCache?.stores?.find(x => x.code === R.shop);
-        el('div', `Check lúc ${stamp(new Date(R.at))} · xin cho ${shopName(R.shop)}${my ? ' — ' + areaText(storeArea(my.full)) : ''} · ${geoReady(R.shop) ? `xếp theo km thật (đường chim bay)${srcRadius() ? `, chỉ đề xuất trong ${srcRadius()} km` : ''}` : 'chưa có tọa độ — xếp theo huyện'} · số thời gian thực trên CRM · bấm vào một dòng để ⭐ đánh dấu / bỏ siêu thị ưu tiên (nhớ cho lần sau)`, area, 'kxb-muted');
+        el('div', `Check lúc ${stamp(new Date(R.at))} · xin cho ${shopName(R.shop)}${my ? ' — ' + areaText(storeArea(my.full)) : ''} · ${geoReady(R.shop) ? `xếp theo km thật (đường chim bay)${srcRadius() ? `, chỉ đề xuất trong ${srcRadius()} km` : ''}` : 'chưa có tọa độ — xếp theo huyện'} · số thời gian thực trên CRM · bấm vào một dòng để ⭐ đánh dấu / bỏ siêu thị ưu tiên (nhớ cho lần sau)`, area, 'kxb-meta');
         const bar = el('div', undefined, area, 'bar');
         const cp = el('button', '📋 Tin xin hàng', bar); cp.type = 'button'; cp.title = 'Chép tin nhắn xin hàng: mỗi sản phẩm 5 nơi gần nhất có tồn bán được';
         cp.onclick = safely(() => copyText(reqMessage(R, R.shop), 'Đã chép tin xin hàng — dán vào Zalo / LINE'));
@@ -2869,7 +2910,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         view.invShops = new Set([...view.invShops].filter(c => codes.has(c))); if (!view.invShops.size) view.invShops = new Set(codes);
         view.salesShops = new Set(codes); view.balShops = new Set(codes); if (view.sales) view.sales = salesView(view.sales.range);
         log('Đã lưu cài đặt'); status('Đã lưu cài đặt', 'ok');
-        ui.querySelector('[data-settings]').open = false; renderAll();
+        setDrawer(false); renderAll();
     }
     // Ô chọn tỉnh cho Tra tồn CRM (lưu ngay khi chọn; đổi tỉnh → lần tra sau tự lấy lại danh sách siêu thị)
     function renderCrmSetting() {
@@ -2896,7 +2937,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         info.textContent = crmStoreCacheOk() ? `Đang dùng ${crmStores().length} siêu thị (lấy lúc ${stamp(new Date(config.crmStoreCache.at))}, không tính kho chi nhánh)` : 'Chưa lấy danh sách theo tỉnh — lần tra đầu sẽ tự lấy (cần đăng nhập CRM)';
     }
     // V2.2.1: báo lỗi rõ — cuộn tới dòng trạng thái để không bị khuất khi đang cuộn xuống dưới
-    function safely(fn) { return async (...args) => { try { await fn(...args); } catch (e) { status(e.message, 'err'); log(e.message, 'error'); try { ui.querySelector('[data-status]').scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch { /* bỏ qua */ } } }; }
+    function safely(fn) { return async (...args) => { try { await fn(...args); } catch (e) { status(e.message, 'err'); log(e.message, 'error'); /* V2.8: dòng trạng thái luôn nằm dưới thanh tiêu đề, không cần cuộn */ } }; }
     function renderAll() {
         ui.querySelectorAll('[data-pane]').forEach(p => p.hidden = p.dataset.pane !== view.tab);
         ui.querySelectorAll('[data-tab]').forEach(b => { b.classList.toggle('on', b.dataset.tab === view.tab); b.setAttribute('aria-selected', b.dataset.tab === view.tab); });
@@ -3014,7 +3055,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const codes = config.shops.map(x => keyCode(x.code));
         view.salesShops = new Set(codes); view.balShops = new Set(codes);
         const keep = [...(view.invShops || [])].filter(c => codes.includes(c)); view.invShops = new Set(keep.length ? keep : codes);
-        if (codes.length) { try { view.sales = salesView(selectedRange()); } catch { /* bỏ qua */ } ui.querySelector('[data-settings]').open = false; }
+        if (codes.length) { try { view.sales = salesView(selectedRange()); } catch { /* bỏ qua */ } setDrawer(false); }
         renderAll();
     }
     function mount() {
@@ -3128,82 +3169,203 @@ tr{break-inside:avoid;page-break-inside:avoid}
         @media (max-width:1400px){#kxb-panel{font-size:13px;height:calc(94vh - var(--kxb-top,0px));width:98vw;max-width:98vw}#kxb-panel .body{padding:12px 14px}#kxb-panel .top{padding:10px 14px}
           #kxb-panel .tabs button{padding:8px 12px;font-size:14px}#kxb-panel .kxb-kpis{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}#kxb-panel .kxb-kpis b{font-size:19px}
           #kxb-panel th,#kxb-panel td{padding:6px 8px;font-size:12.5px}#kxb-panel .kxb-drop>summary{min-width:240px}}
+        /* ===== V2.8: giao diện gọn ===== */
+        #kxb-panel{--c:#087f8c;--c-soft:#e6f4f5;--ink:#172a3a;--mute:#5b6b76;--line:#e3e9ed;--bg2:#f6f8f9;--bad:#b91c1c;--bad-bg:#fdecea;--warn:#8a5a00;--warn-bg:#fff6e0;--ok:#15803d;font:13.5px/1.45 Arial,"Segoe UI",sans-serif}
+        #kxb-panel .top{padding:8px 16px;gap:8px;min-height:52px}
+        #kxb-panel .top strong{font-size:16px;white-space:nowrap}#kxb-panel .kxb-ver{margin-right:6px}
+        #kxb-panel .tabs{margin-left:8px;gap:2px}
+        #kxb-panel .tabs button{padding:14px 14px 11px;font-size:14px}
+        #kxb-panel button{min-height:32px;padding:5px 12px;border-radius:7px;font-size:13px}
+        #kxb-panel button.ghost{background:#fff;border-color:#d3dde2}#kxb-panel button.ghost:hover{background:var(--bg2)}
+        #kxb-panel button.icon{min-width:34px;padding:5px 8px;font-size:15px}
+        #kxb-panel button.primary{min-width:120px}
+        #kxb-panel input,#kxb-panel select{min-height:32px;padding:4px 8px;border-radius:7px;font-size:13px;border-color:#cfdbe0}
+        #kxb-panel select{max-width:260px}
+        #kxb-panel .kxb-statusbar{flex:none;position:relative;display:flex;align-items:center;gap:10px;padding:5px 16px 6px;border-bottom:1px solid var(--line);background:#fbfcfc;min-height:30px}
+        #kxb-panel .kxb-statusbar .kxb-status{flex:1;margin:0;padding:0;background:none;font-size:12.5px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;border-radius:0}
+        #kxb-panel .kxb-statusbar .kxb-status.full{white-space:normal}
+        #kxb-panel .kxb-statusbar .kxb-status::before{content:'●';margin-right:6px;color:#9fb3bb}
+        #kxb-panel .kxb-statusbar .kxb-status.ok{background:none;color:#14532d}#kxb-panel .kxb-statusbar .kxb-status.ok::before{color:var(--ok)}
+        #kxb-panel .kxb-statusbar .kxb-status.warn{background:none;color:var(--warn)}#kxb-panel .kxb-statusbar .kxb-status.warn::before{color:#d99a00}
+        #kxb-panel .kxb-statusbar .kxb-status.err{background:none;color:var(--bad);font-weight:600}#kxb-panel .kxb-statusbar .kxb-status.err::before{color:var(--bad)}
+        #kxb-panel.busy .kxb-statusbar .kxb-status{color:var(--ink)}#kxb-panel.busy .kxb-statusbar .kxb-status::before{content:'⏳';color:inherit}
+        #kxb-panel .kxb-timer{font:12px Consolas,monospace;color:var(--mute)}
+        #kxb-panel .kxb-statusbar .prog{position:absolute;left:0;right:0;bottom:-1px;height:2px;margin:0;border-radius:0;background:transparent}
+        #kxb-panel.busy .kxb-statusbar .prog{background:#e3e9ed}#kxb-panel [data-bar]{height:2px}
+        #kxb-panel .body{padding:12px 16px}
+        #kxb-panel .filters{border:0;border-radius:10px;padding:10px 12px;gap:8px;margin-bottom:10px;background:var(--bg2)}
+        #kxb-panel .frow{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+        #kxb-panel .frow .sp,#kxb-panel .sp{flex:1}
+        #kxb-panel .frow .grow,#kxb-panel .grow{flex:1;min-width:240px}
+        #kxb-panel .lbl{font-size:12px;color:var(--mute);font-weight:600}
+        #kxb-panel .vsep{width:1px;align-self:stretch;background:#d3dde2;margin:2px 4px}
+        #kxb-panel label.inl{flex-direction:row;align-items:center;gap:6px;font-size:12px}
+        #kxb-panel .chip{min-height:30px;padding:4px 12px;border-radius:15px;font-size:13px;background:#fff;border-color:#d3dde2}
+        #kxb-panel .chip.on{background:var(--c);border-color:var(--c);color:#fff}
+        #kxb-panel .seg,#kxb-panel .kxb-seg{display:inline-flex;background:#e9eff1;border-radius:8px;padding:2px;gap:2px}
+        #kxb-panel .seg .chip,#kxb-panel .kxb-seg button{border:0;border-radius:6px;background:transparent;min-height:28px;padding:3px 12px;color:#3d4f5b}
+        #kxb-panel .seg .chip.on,#kxb-panel .kxb-seg button.on{background:#fff;color:var(--c);font-weight:700;box-shadow:0 1px 2px #0002}
+        #kxb-panel .kxb-seg{margin:0 0 10px}
+        #kxb-panel .kxb-drop>summary{min-width:200px;max-width:340px;min-height:32px;padding:6px 28px 6px 10px;font-size:13px;border-color:#cfdbe0;border-radius:7px}
+        #kxb-panel .kxb-drop>summary::after{top:6px}
+        #kxb-panel select.on{border-color:var(--c);background:var(--c-soft);font-weight:600}
+        #kxb-panel .kxb-active{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 8px}
+        #kxb-panel .kxb-fchip{min-height:26px;padding:2px 10px;border-radius:13px;background:var(--c-soft);border:1px solid #b9dde0;color:#0b5961;font-size:12.5px}
+        #kxb-panel .kxb-fchip:hover{background:#d3ecee}
+        #kxb-panel .kxb-link{border:0!important;background:none!important;color:var(--c)!important;text-decoration:underline;min-height:26px!important;padding:2px 4px!important}
+        #kxb-panel .kxb-alert{padding:7px 12px;border-radius:8px;margin:0 0 8px;font-size:13px;border-left:4px solid}
+        #kxb-panel .kxb-alert.bad{background:var(--bad-bg);color:#8a1c1c;border-color:var(--bad)}
+        #kxb-panel .kxb-alert.warn{background:var(--warn-bg);color:#6b4500;border-color:#e0a800}
+        #kxb-panel .kxb-alert.note{background:var(--bg2);color:var(--mute);border-color:#c5d3d9}
+        #kxb-panel .kxb-alert button{margin-left:8px;min-height:26px;padding:2px 10px}
+        #kxb-panel .kxb-warn{background:var(--warn-bg);color:#6b4500;border-left:4px solid #e0a800;padding:7px 12px;border-radius:8px;margin:0 0 8px}
+        #kxb-panel .kxb-kpis{grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin:0 0 8px}
+        #kxb-panel .kxb-kpis>div{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+        #kxb-panel .kxb-kpis>div.main{background:var(--c);border-color:var(--c)}
+        #kxb-panel .kxb-kpis small{color:var(--mute);font-size:12px}#kxb-panel .kxb-kpis>div.main small{color:#d6eef0}
+        #kxb-panel .kxb-kpis b{font-size:22px;line-height:1.25;font-variant-numeric:tabular-nums}
+        #kxb-panel .kxb-kpis span{color:var(--mute)}#kxb-panel .kxb-kpis>div.main span{color:#e6f6f7}
+        #kxb-panel .kxb-minis{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 8px}
+        #kxb-panel .kxb-mini{display:inline-flex;align-items:baseline;gap:6px;min-height:30px;padding:4px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:12.5px;color:var(--ink);text-align:left}
+        #kxb-panel button.kxb-mini:hover{border-color:var(--c);background:var(--c-soft)}
+        #kxb-panel .kxb-mini .l{color:var(--mute)}#kxb-panel .kxb-mini b{font-size:14px;font-variant-numeric:tabular-nums}#kxb-panel .kxb-mini .s{color:var(--mute);font-size:12px}
+        #kxb-panel .kxb-mini.bad{border-color:#f3b8b1;background:var(--bad-bg)}#kxb-panel .kxb-mini.bad b,#kxb-panel .kxb-mini.bad .s{color:var(--bad)}
+        #kxb-panel .kxb-mini.warn{border-color:#f0d58a;background:var(--warn-bg)}#kxb-panel .kxb-mini.warn b{color:var(--warn)}
+        #kxb-panel .kxb-meta{font-size:12px;color:var(--mute);margin:0 0 8px}
+        #kxb-panel .kxb-info{position:relative;display:inline-block;margin:0 0 6px}
+        #kxb-panel .kxb-info>summary{display:inline-block;list-style:none;font-weight:400;font-size:12px;color:var(--c);padding:2px 0;cursor:pointer}
+        #kxb-panel .kxb-info>summary::-webkit-details-marker{display:none}
+        #kxb-panel .kxb-info>div{position:absolute;z-index:8;left:0;top:100%;width:min(640px,80vw);background:#fff;border:1px solid #cfdbe0;border-radius:8px;box-shadow:0 8px 24px #0002;padding:10px 12px;font-size:12.5px;color:var(--ink);line-height:1.55}
+        #kxb-panel .kxb-tools{align-items:center;margin:4px 0 10px}#kxb-panel .kxb-tools .kxb-info{margin:0 0 0 auto}#kxb-panel .kxb-tools .kxb-info>div{left:auto;right:0}
+        #kxb-panel .kxb-menu{position:relative;display:inline-block;margin:0}#kxb-panel .kxb-drop{margin:0}#kxb-panel .kxb-drawer section>button{align-self:flex-start}
+        #kxb-panel .kxb-menu>summary{list-style:none;display:inline-flex;align-items:center;min-height:32px;padding:5px 12px;border:1px solid #bac9d1;border-radius:7px;background:#f2f7f8;font-weight:400;font-size:13px;cursor:pointer}
+        #kxb-panel .kxb-menu>summary::-webkit-details-marker{display:none}
+        #kxb-panel .kxb-menu .list{position:absolute;z-index:8;left:0;top:calc(100% + 4px);min-width:260px;background:#fff;border:1px solid #cfdbe0;border-radius:8px;box-shadow:0 8px 24px #0002;padding:4px;display:flex;flex-direction:column}
+        #kxb-panel .kxb-menu .list button{border:0;background:none;text-align:left;justify-content:flex-start;border-radius:6px}#kxb-panel .kxb-menu .list button:hover{background:var(--c-soft)}
+        #kxb-panel .kxb-subtabs{margin:6px 0 8px;gap:4px}
+        #kxb-panel .kxb-subtabs button{padding:8px 12px 7px;font-size:13.5px}
+        #kxb-panel .kxb-table{max-height:62vh;border-color:var(--line)}
+        #kxb-panel th{background:#f1f6f7;font-size:12.5px;color:#33454f}#kxb-panel td{font-size:13px}
+        #kxb-panel .kxb-twrap{margin:2px 0 12px}
+        #kxb-panel .kxb-empty{background:var(--bg2);border-radius:10px;padding:28px}
+        #kxb-panel .kxb-search{position:relative;display:flex}
+        #kxb-panel .kxb-search textarea{width:100%;min-height:32px;max-height:120px;resize:vertical;font:inherit;font-size:13px;border:1px solid #cfdbe0;border-radius:7px;padding:6px 10px}
+        #kxb-panel [data-req-quick] .chip{min-height:26px;padding:2px 10px;font-size:12.5px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        #kxb-panel .kxb-reqhead{margin:16px 0 4px;padding-top:12px;border-top:1px solid var(--line);font-size:14px}#kxb-panel .kxb-reqhead:first-of-type{border-top:0}
+        #kxb-panel .kxb-shade{position:absolute;inset:0;z-index:30;background:#0f172a59}
+        #kxb-panel .kxb-shade[hidden],#kxb-panel .kxb-drawer[hidden]{display:none}
+        #kxb-panel .kxb-drawer{position:absolute;z-index:31;top:0;right:0;bottom:0;width:min(560px,92%);background:#fff;box-shadow:-12px 0 32px #0003;display:flex;flex-direction:column}
+        #kxb-panel .kxb-drawer .dhead{flex:none;display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line)}
+        #kxb-panel .kxb-drawer .dhead .kxb-seg{margin:0}
+        #kxb-panel .kxb-drawer .dbody{flex:1;overflow:auto;padding:4px 16px 16px}
+        #kxb-panel .kxb-drawer section{padding:12px 0;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+        #kxb-panel .kxb-drawer section:last-child{border-bottom:0}
+        #kxb-panel .kxb-drawer h4{margin:0;font-size:13px;color:var(--c);text-transform:uppercase;letter-spacing:.3px}
+        #kxb-panel .kxb-drawer .fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px 12px}
+        #kxb-panel .kxb-drawer .fgrid input,#kxb-panel .kxb-drawer .fgrid select{width:100%;max-width:none}
+        #kxb-panel .kxb-drawer .kxb-shop input{width:100%}#kxb-panel .kxb-drawer .kxb-shop label:first-child{width:100px}#kxb-panel .kxb-drawer .kxb-shop label:nth-child(2){flex:1}
+        #kxb-panel .kxb-drawer .dfoot{flex:none;display:flex;align-items:center;gap:10px;padding:10px 16px;border-top:1px solid var(--line);background:#fbfcfc}
+        #kxb-panel .kxb-drawer pre{max-height:none;margin-top:8px}
+        #kxb-panel .kxb-drawer .kxb-drop>summary{min-width:240px}
+        @media (max-width:1400px){#kxb-panel{font-size:13px}#kxb-panel .tabs button{padding:13px 10px 10px;font-size:13.5px}#kxb-panel .kxb-kpis b{font-size:20px}}
         `, document.head || document.documentElement); style.dataset.kxbUi = '';
         const launch = el('button', 'AutoBI · Kho & Xuất Bán', document.body); launch.id = 'kxb-launch'; launch.dataset.kxbUi = ''; launch.type = 'button';
         const back = el('div', undefined, document.body); back.id = 'kxb-back'; back.dataset.kxbUi = ''; back.hidden = true;
         ui = el('div', undefined, back); ui.id = 'kxb-panel'; ui.setAttribute('role', 'dialog'); ui.setAttribute('aria-label', 'AutoBI Kho và Xuất bán');
         ui.innerHTML = `
-        <div class="top"><strong>AutoBI · Kho &amp; Xuất Bán</strong><span class="kxb-muted">V${VERSION}</span>
+        <div class="top"><strong>AutoBI · Kho &amp; Xuất Bán</strong><span class="kxb-muted kxb-ver">V${VERSION}</span>
           <div class="tabs" role="tablist"><button type="button" role="tab" data-tab="sales">🛒 Xuất bán</button><button type="button" role="tab" data-tab="inventory">📦 Tồn kho</button><button type="button" role="tab" data-tab="balance">⚖️ Cân hàng</button><button type="button" role="tab" data-tab="request">🔁 Check xin hàng</button></div>
-          <span class="sp"></span><span data-timer class="kxb-muted">00:00:00</span>
+          <span class="sp"></span>
           <button type="button" class="danger busy-only" data-stop>⛔ Dừng</button>
-          <button type="button" class="idle-only" data-excel>⬇ Tải Excel</button>
-          <button type="button" data-close aria-label="Đóng">✕</button></div>
+          <button type="button" class="ghost idle-only" data-excel title="Tải Excel đúng tab và bộ lọc đang xem">⬇ Excel</button>
+          <button type="button" class="ghost icon" data-open-settings title="Cài đặt, sao lưu, nhật ký">⚙️</button>
+          <button type="button" class="ghost icon" data-close aria-label="Đóng" title="Đóng (Esc)">✕</button></div>
+        <div class="kxb-statusbar"><span data-status class="kxb-status" title="Bấm để xem đủ nội dung">Sẵn sàng.</span><span data-timer class="kxb-timer busy-only">00:00:00</span><div class="prog"><div data-bar></div></div></div>
         <div class="body">
           <div data-update></div>
-          <details class="settings" data-settings><summary>⚙️ Cài đặt siêu thị</summary>
-            <div data-shops></div><button type="button" data-add>+ Thêm siêu thị</button>
-            <div class="bar" style="margin-top:10px"><label>Tính doanh số theo<select data-cfg="basis"><option value="created">Ngày tạo đơn</option><option value="shipped">Ngày xuất hàng</option></select></label>
-              <label>Kiểm tra lại nhập trả (ngày gần nhất)<input type="number" min="2" max="35" data-cfg="returnDays" style="width:120px"></label>
-              <label>Cân hàng: giữ đủ bán (ngày)<input type="number" min="3" max="60" data-cfg="balTarget" style="width:120px"></label>
-              <label>Không lấy lại ngày vừa lấy dưới (giờ)<input type="number" min="0" max="24" data-cfg="freshHours" style="width:120px"></label>
-              <label>Cân hàng: máy dự phòng<input type="number" min="0" max="5" data-cfg="balSpare" style="width:120px"></label>
-              <label>Cảnh báo tồn lâu từ (ngày)<input type="number" min="15" max="365" data-cfg="ageAlert" style="width:120px"></label>
-              <label title="Khi chia số cần xin cho các siêu thị khác: mỗi nơi cho giữ lại bấy nhiêu máy; chỉ khi thiếu mới lấy cả máy giữ lại (ghi “máy cuối”)">Xin hàng: nơi cho giữ lại (máy)<input type="number" min="0" max="5" data-cfg="srcKeep" style="width:120px"></label>
-              <label title="Chỉ đề xuất xin ở siêu thị cách siêu thị cần hàng không quá bấy nhiêu km (đường chim bay, đường thật dài hơn khoảng 1,3 lần). 0 = không giới hạn">Xin hàng: bán kính tối đa (km)<input type="number" min="0" max="200" data-cfg="srcRadius" style="width:120px"></label>
-              <span class="group" style="gap:10px"><b style="min-width:0">Ảnh xuất bán gồm</b><label class="chk"><input type="checkbox" data-img="cats">Theo ngành</label><label class="chk"><input type="checkbox" data-img="brands">Theo hãng</label><label class="chk"><input type="checkbox" data-img="staff">Nhân viên</label>
-                <label class="chk">Top<input type="number" min="5" max="30" data-img="top" style="width:64px"></label></span>
-              <label class="chk"><input type="checkbox" data-cfg="balIncoming">Cân hàng: trừ hàng đang về vào số xin</label>
-              <label class="chk"><input type="checkbox" data-cfg="notify">Kêu "ting" + thông báo khi đổ xong (phiên trên 20 giây)</label></div>
-            <div class="group" style="margin:6px 0 10px"><b>Tra tồn CRM</b><span>Tỉnh</span><span data-crm-prov></span><button type="button" data-crm-reload title="Lấy lại danh sách siêu thị của các tỉnh đã chọn từ CRM (cần đăng nhập CRM)">🔄 Lấy lại danh sách siêu thị</button><span class="kxb-muted" data-crm-info></span></div>
-            <div class="group" style="margin:-4px 0 10px"><b></b><button type="button" class="idle-only" data-geo-reload title="Lấy lại tọa độ thật của từng siêu thị (tỉnh đã chọn) từ web Điện Máy Xanh — không cần đăng nhập, khoảng 20–40 giây">📍 Lấy tọa độ shop</button><span class="kxb-muted" data-geo-info></span></div>
-            <div class="group" style="margin:-4px 0 10px"><b></b><span>Tỉnh lân cận</span><span data-crm-near></span><span class="kxb-muted">Check xin hàng: khi cả tỉnh hết, bấm "🔎 Tỉnh lân cận" để tìm thêm ở các tỉnh này. Bỏ chọn hết = dùng tỉnh giáp ranh mặc định.</span></div>
-            <div class="kxb-muted" data-storage style="margin-bottom:8px"></div>
-            <div class="bar" style="align-items:center"><button type="button" class="primary" data-save>Lưu cài đặt</button> <button type="button" data-check-update>🔄 Kiểm tra bản mới</button> <span class="kxb-muted" data-cloud-info></span>
-              <button type="button" class="idle-only" data-cloud-reload title="Lấy lại cấu hình của bạn đã lưu trên Sheet (tab ConfigKho), thay cho cấu hình đang có trên máy">☁️ Tải lại cấu hình từ Sheet</button>
-              <span style="flex:1"></span><button type="button" data-backup title="Cấu hình đã tự lưu trên Sheet. Nút này tải 1 file chứa SỐ LIỆU đã đổ (xuất bán từng tháng, tồn kho) để mang sang máy khác, khỏi phải đổ lại từ BI">💾 Sao lưu số liệu</button>
-              <button type="button" data-restore title="Nhận file sao lưu số liệu: ngày nào bản nào mới hơn thì dùng bản đó, không mất số đang có">📂 Khôi phục số liệu</button><input type="file" accept=".json,application/json" data-restore-file hidden style="display:none"></div></details>
-          <div data-status class="kxb-status">Sẵn sàng.</div><div class="prog"><div data-bar></div></div>
           <div data-pane="sales">
             <div class="filters">
-              <div class="group"><b>Kỳ</b><span class="group" data-presets></span></div>
-              <div class="bar" style="margin:0"><label>Từ ngày<input type="date" data-from></label><label>Đến ngày<input type="date" data-to></label>
-                <label style="flex-direction:row;align-items:center;gap:6px;font-size:13px"><input type="checkbox" data-refetch style="min-height:auto">Lấy lại cả ngày đã chốt</label>
-                <span style="flex:1"></span><button type="button" data-img title="Tạo ảnh báo cáo theo bộ lọc đang chọn: chép vào bộ nhớ để dán Zalo, đồng thời tải file PNG">🖼 Ảnh báo cáo</button><button type="button" class="idle-only" data-view>Xem số đã lưu</button><button type="button" class="primary idle-only" data-run-sales>Đổ xuất bán</button></div>
-              <div class="group"><b>Siêu thị</b><span class="group" data-sales-shops></span></div>
-              <div class="group"><b>Ngành hàng</b><select data-sales-cat style="min-width:320px"></select><button type="button" class="chip" data-phone-only>📱 Chỉ điện thoại</button><b style="margin-left:12px">Hãng</b><span data-sales-brands></span></div>
-              <div class="group"><b>Loại hàng</b><span class="group" data-sales-conds></span></div></div>
+              <div class="frow"><span class="group" data-presets></span>
+                <label class="inl">Từ<input type="date" data-from></label><label class="inl">đến<input type="date" data-to></label>
+                <label class="chk" title="Lấy lại cả các ngày đã chốt (mặc định chỉ lấy ngày thiếu + 7 ngày gần nhất)"><input type="checkbox" data-refetch>Lấy lại cả ngày đã chốt</label>
+                <span class="sp"></span><button type="button" data-sales-img title="Tạo ảnh báo cáo theo bộ lọc đang chọn: chép vào bộ nhớ để dán Zalo, đồng thời tải file PNG">🖼 Ảnh</button><button type="button" class="idle-only" data-view title="Xem lại số đã lưu trên máy, không gọi BI">Xem số đã lưu</button><button type="button" class="primary idle-only" data-run-sales>Đổ xuất bán</button></div>
+              <div class="frow"><span class="group" data-sales-shops></span><span class="vsep"></span>
+                <select data-sales-cat title="Ngành hàng"></select><button type="button" class="chip" data-phone-only>📱 Điện thoại</button>
+                <span data-sales-brands title="Hãng"></span><span data-sales-conds title="Loại hàng"></span></div></div>
             <div data-sales-result></div></div>
           <div data-pane="inventory" hidden>
             <div class="filters" data-inv-filters>
-              <div class="group"><b>Siêu thị</b><span class="group" data-inv-shops></span><span class="sp" style="flex:1"></span><button type="button" class="idle-only" data-print-inv title="In danh sách đang lọc ra giấy A4 dọc, có ô KIỂM để tích">🖨 In phiếu kiểm</button><label class="chk idle-only" title="Gọi BI thêm 1 lần mỗi siêu thị để lấy hàng đang chuyển về (đã xuất từ nơi khác, chưa nhận) — xem ở tab con Đang về; Cân hàng trừ vào số xin"><input type="checkbox" data-inv-transit>Kèm hàng đang về</label><button type="button" class="primary idle-only" data-run-inv>Đổ tồn kho</button></div>
-              <div class="group"><b>Lọc</b><select data-f="category"></select><select data-f="group"></select><select data-f="brand"></select>
-                <input type="search" data-f="q" placeholder="Tìm IMEI, mã hoặc tên sản phẩm" style="min-width:280px"><button type="button" data-clear>Bỏ lọc</button></div>
-              <div class="group"><b>Trạng thái</b><span class="group" data-inv-conds></span></div></div>
+              <div class="frow"><span class="group" data-inv-shops></span><span class="sp"></span>
+                <label class="chk idle-only" title="Gọi BI thêm 1 lần mỗi siêu thị để lấy hàng đang chuyển về (đã xuất từ nơi khác, chưa nhận) — xem ở tab con Đang về; Cân hàng trừ vào số xin"><input type="checkbox" data-inv-transit>Kèm hàng đang về</label>
+                <button type="button" class="idle-only" data-print-inv title="In danh sách đang lọc ra giấy A4 dọc, có ô KIỂM để tích">🖨 In phiếu kiểm</button><button type="button" class="primary idle-only" data-run-inv>Đổ tồn kho</button></div>
+              <div class="frow"><select data-f="category"></select><select data-f="group"></select><select data-f="brand"></select><span data-inv-conds></span>
+                <input type="search" data-f="q" placeholder="Tìm IMEI, mã hoặc tên sản phẩm" class="grow"><button type="button" class="ghost" data-clear>Bỏ lọc</button></div></div>
             <div data-inv-result></div></div>
           <div data-pane="balance" hidden>
             <div class="filters">
-              <div class="group"><b>Tốc độ bán</b><span class="group" data-bal-days></span><span class="sp" style="flex:1"></span><button type="button" class="primary idle-only" data-run-bal title="Đổ tồn kho mới + xuất bán các ngày còn thiếu">Đổ cân hàng</button></div>
-              <div class="group"><b>Siêu thị</b><span class="group" data-bal-shops></span></div>
-              <div class="group"><b>Ngành hàng</b><select data-bal-cat style="min-width:220px"></select><b style="margin-left:12px;min-width:0">Hãng</b><span data-bal-brands></span><button type="button" class="chip" data-bal-model title="Gộp các mã khác màu của cùng một model thành 1 dòng">🧩 Gộp theo model</button></div></div>
+              <div class="frow"><span class="lbl">Tốc độ bán</span><span class="seg" data-bal-days></span><span class="vsep"></span><span class="group" data-bal-shops></span><span class="sp"></span>
+                <button type="button" class="primary idle-only" data-run-bal title="Đổ tồn kho mới + xuất bán các ngày còn thiếu">Đổ cân hàng</button></div>
+              <div class="frow"><select data-bal-cat title="Ngành hàng"></select><span data-bal-brands title="Hãng"></span><button type="button" class="chip" data-bal-model title="Gộp các mã khác màu của cùng một model thành 1 dòng">🧩 Gộp theo model</button></div></div>
             <div data-bal-result></div></div>
           <div data-pane="request" hidden>
             <div class="filters">
-              <div class="group"><b>Xin cho</b><select data-req-shop style="min-width:220px"></select><span class="kxb-muted">siêu thị đang cần hàng — quyết định "gần" là cùng huyện / cùng tỉnh cũ với siêu thị này</span></div>
-              <div class="group" style="align-items:flex-start"><b>Sản phẩm</b><span style="flex:1;min-width:360px;position:relative;display:flex"><textarea data-req-q rows="2" placeholder="Gõ tên (vd: iPhone 18) → chọn trong danh sách gợi ý, hoặc dán mã 13 số · nhiều mã: mỗi mã một dòng (Shift+Enter) · Enter = Check" style="width:100%;font:inherit;border:1px solid #b8c9ce;border-radius:8px;padding:6px 8px"></textarea></span>
-                <label class="chk" title="Số máy cần xin cho mỗi sản phẩm — tool chia cho từng nơi cho (gần trước, nơi tồn nhiều cho nhiều)">SL cần<input type="number" min="1" max="50" step="1" data-req-qty style="width:64px"></label><button type="button" class="primary idle-only" data-run-req>🔎 Check</button><label class="chk"><input type="checkbox" data-req-far>Hiện cả nơi xa</label></div>
-              <div class="group"><b>Đang hết</b><span class="group" data-req-quick></span></div></div>
+              <div class="frow"><span class="lbl">Xin cho</span><select data-req-shop title="Siêu thị đang cần hàng — nơi gần / xa tính từ siêu thị này"></select>
+                <span class="kxb-search grow"><textarea data-req-q rows="1" placeholder="Gõ tên (vd: iPhone 18) rồi chọn trong gợi ý, hoặc dán mã 13 số · nhiều mã: mỗi mã một dòng (Shift+Enter) · Enter = Check"></textarea></span>
+                <label class="inl" title="Số máy cần xin cho mỗi sản phẩm — tool chia cho từng nơi cho (gần trước, nơi tồn nhiều cho nhiều)">SL<input type="number" min="1" max="50" step="1" data-req-qty style="width:60px"></label>
+                <button type="button" class="primary idle-only" data-run-req>🔎 Check</button><label class="chk"><input type="checkbox" data-req-far>Hiện cả nơi xa</label></div>
+              <div class="frow"><span class="lbl">Đang hết</span><span class="group" data-req-quick></span></div></div>
             <div data-req-result></div></div>
-          <details data-logbox><summary class="logbar">📋 Nhật ký <button type="button" data-copy-log>Sao chép</button><button type="button" data-clear-log>Xóa nhật ký</button></summary><pre data-log></pre></details>
-        </div>`;
+        </div>
+        <div class="kxb-shade" data-shade hidden></div>
+        <aside class="kxb-drawer" data-settings hidden>
+          <div class="dhead"><strong>⚙️ Cài đặt</strong><div class="kxb-seg" data-dtabs><button type="button" class="on" data-dtab="cfg">Cài đặt</button><button type="button" data-dtab="log">📋 Nhật ký</button></div><span class="sp"></span><button type="button" class="ghost icon" data-close-settings aria-label="Đóng">✕</button></div>
+          <div class="dbody" data-dpane="cfg">
+            <section><h4>Siêu thị</h4><div data-shops></div><button type="button" class="ghost" data-add>+ Thêm siêu thị</button></section>
+            <section><h4>Xuất bán</h4><div class="fgrid">
+              <label>Tính doanh số theo<select data-cfg="basis"><option value="created">Ngày tạo đơn</option><option value="shipped">Ngày xuất hàng</option></select></label>
+              <label>Kiểm tra lại nhập trả (ngày)<input type="number" min="2" max="35" data-cfg="returnDays"></label>
+              <label>Không lấy lại ngày vừa lấy dưới (giờ)<input type="number" min="0" max="24" data-cfg="freshHours"></label></div>
+              <label class="chk"><input type="checkbox" data-cfg="notify">Kêu "ting" + thông báo khi đổ xong (phiên trên 20 giây)</label></section>
+            <section><h4>Tồn kho &amp; Cân hàng</h4><div class="fgrid">
+              <label>Giữ đủ bán (ngày)<input type="number" min="3" max="60" data-cfg="balTarget"></label>
+              <label>Máy dự phòng<input type="number" min="0" max="5" data-cfg="balSpare"></label>
+              <label>Cảnh báo tồn lâu từ (ngày)<input type="number" min="15" max="365" data-cfg="ageAlert"></label></div>
+              <label class="chk"><input type="checkbox" data-cfg="balIncoming">Trừ hàng đang về vào số xin</label></section>
+            <section><h4>Xin hàng (CRM)</h4><div class="fgrid">
+              <label title="Khi chia số cần xin cho các siêu thị khác: mỗi nơi cho giữ lại bấy nhiêu máy; chỉ khi thiếu mới lấy cả máy giữ lại (ghi “máy cuối”)">Nơi cho giữ lại (máy)<input type="number" min="0" max="5" data-cfg="srcKeep"></label>
+              <label title="Chỉ đề xuất xin ở siêu thị cách siêu thị cần hàng không quá bấy nhiêu km (đường chim bay, đường thật dài hơn khoảng 1,3 lần). 0 = không giới hạn">Bán kính tối đa (km)<input type="number" min="0" max="200" data-cfg="srcRadius"></label></div>
+              <div class="frow"><span class="lbl">Tỉnh</span><span data-crm-prov></span><button type="button" class="ghost" data-crm-reload title="Lấy lại danh sách siêu thị của các tỉnh đã chọn từ CRM (cần đăng nhập CRM)">🔄 Lấy lại danh sách</button></div>
+              <div class="kxb-muted" data-crm-info></div>
+              <div class="frow"><span class="lbl">Tỉnh lân cận</span><span data-crm-near></span></div>
+              <div class="kxb-muted">Check xin hàng: khi cả tỉnh hết, bấm "🔎 Tỉnh lân cận" để tìm thêm ở các tỉnh này. Bỏ chọn hết = dùng tỉnh giáp ranh mặc định.</div>
+              <div class="frow"><button type="button" class="ghost idle-only" data-geo-reload title="Lấy lại tọa độ thật của từng siêu thị (tỉnh đã chọn) từ web Điện Máy Xanh — không cần đăng nhập, khoảng 20–40 giây">📍 Lấy tọa độ shop</button></div>
+              <div class="kxb-muted" data-geo-info></div></section>
+            <section><h4>Ảnh xuất bán gồm</h4><div class="frow"><label class="chk"><input type="checkbox" data-img="cats">Theo ngành</label><label class="chk"><input type="checkbox" data-img="brands">Theo hãng</label><label class="chk"><input type="checkbox" data-img="staff">Nhân viên</label>
+              <label class="inl">Top<input type="number" min="5" max="30" data-img="top" style="width:64px"></label></div></section>
+            <section><h4>Dữ liệu &amp; Sao lưu</h4>
+              <div class="kxb-muted" data-storage></div>
+              <div class="frow"><button type="button" class="ghost" data-backup title="Cấu hình đã tự lưu trên Sheet. Nút này tải 1 file chứa SỐ LIỆU đã đổ (xuất bán từng tháng, tồn kho) để mang sang máy khác, khỏi phải đổ lại từ BI">💾 Sao lưu số liệu</button>
+                <button type="button" class="ghost" data-restore title="Nhận file sao lưu số liệu: ngày nào bản nào mới hơn thì dùng bản đó, không mất số đang có">📂 Khôi phục số liệu</button><input type="file" accept=".json,application/json" data-restore-file hidden style="display:none"></div>
+              <div class="kxb-muted" data-cloud-info></div>
+              <div class="frow"><button type="button" class="ghost idle-only" data-cloud-reload title="Lấy lại cấu hình của bạn đã lưu trên Sheet (tab ConfigKho), thay cho cấu hình đang có trên máy">☁️ Tải lại cấu hình từ Sheet</button><button type="button" class="ghost" data-check-update>🔄 Kiểm tra bản mới</button></div></section>
+          </div>
+          <div class="dbody" data-dpane="log" hidden>
+            <div class="frow"><button type="button" class="ghost" data-copy-log>Sao chép nhật ký</button><button type="button" class="ghost" data-clear-log>Xóa nhật ký</button></div>
+            <pre data-log></pre></div>
+          <div class="dfoot" data-dfoot><button type="button" class="primary" data-save>Lưu cài đặt</button><span class="kxb-muted">Cấu hình tự lưu lên Sheet sau khi bấm Lưu.</span></div>
+        </aside>`;
         const today = isoDate(new Date());
         ui.querySelector('[data-from]').value = today.slice(0, 8) + '01'; ui.querySelector('[data-to]').value = today;
         fillSettings();
         ui.querySelector('[data-geo-reload]').onclick = safely(() => withSession('geo', async ss => { await ensureGeo(crmProvs(), ss, true); renderAll(); return `Đã lấy tọa độ: ${crmProvs().map(id => `${provShort(id)} ${geo.provs[id]?.ok || 0}/${geo.provs[id]?.count || 0} shop`).join(', ')}`; }));
         ui.querySelector('[data-crm-reload]').onclick = safely(() => withSession('crmStores', async () => { await ensureCrmStores(true); return `Đã lấy danh sách siêu thị tra tồn: ${crmStores().length} siêu thị`; }));
-        ui.querySelector('[data-settings]').addEventListener('toggle', e => { if (e.target.open) renderStorage(); });
+        ui.querySelector('[data-open-settings]').onclick = () => setDrawer(ui.querySelector('[data-settings]').hidden);
+        ui.querySelector('[data-close-settings]').onclick = () => setDrawer(false);
+        ui.querySelector('[data-shade]').onclick = () => setDrawer(false);
+        ui.querySelectorAll('[data-dtab]').forEach(b => b.onclick = () => setDrawer(true, b.dataset.dtab));
+        ui.querySelector('[data-status]').onclick = e => e.currentTarget.classList.toggle('full');
         (config.shops.length ? config.shops : [{ code: '', name: '' }]).forEach(shopEditor);
-        if (!config.shops.length) ui.querySelector('[data-settings]').open = true;
+        if (!config.shops.length) setTimeout(() => setDrawer(true), 0);
         const savedShops = load('invShops', null);
         const codes = config.shops.map(s => keyCode(s.code));
         view.salesShops = new Set(codes); view.balShops = new Set(codes);
@@ -3240,7 +3402,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         launch.onclick = () => open(true);
         ui.querySelector('[data-close]').onclick = () => open(false);
         back.addEventListener('mousedown', e => { if (e.target === back && !running) open(false); });
-        document.addEventListener('keydown', e => { if (e.key !== 'Escape' || back.hidden) return; const c = document.getElementById('kxb-card'); if (c) { c.remove(); return; } if (!running) open(false); });
+        document.addEventListener('keydown', e => { if (e.key !== 'Escape' || back.hidden) return; const c = document.getElementById('kxb-card'); if (c) { c.remove(); return; } if (!ui.querySelector('[data-settings]').hidden) { setDrawer(false); return; } if (!running) open(false); });
         ui.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { view.tab = b.dataset.tab; try { save('mainTab', view.tab); } catch { /* bỏ qua */ } renderAll(); });
         // Đổi ngày bằng tay: tự hiện số đã lưu của kỳ mới (không gọi BI)
         let td2; const onDate = () => { clearTimeout(td2); td2 = setTimeout(() => { try { if (!config.shops.length) return; presets.querySelectorAll('.chip').forEach(x => x.classList.remove('on')); view.sales = salesView(selectedRange()); renderSales(); } catch (e) { status(e.message, 'err'); } }, 300); };
@@ -3266,10 +3428,13 @@ tr{break-inside:avoid;page-break-inside:avoid}
         ui.querySelector('[data-clear-log]').onclick = e => { e.preventDefault(); e.stopPropagation(); journal.length = 0; try { save('journal', journal); } catch { /* bỏ qua */ } log('Đã xóa nhật ký cũ'); };
         storeReady = initStore().then(() => { if (config.shops.length) { view.sales = salesView(selectedRange()); if (!back.hidden) renderAll(); } });
         ui.querySelector('[data-run-sales]').onclick = safely(() => { validateShops(config.shops); selectedRange(); return withSession('sales', s => runSales(s, ui.querySelector('[data-refetch]').checked)); });
-        ui.querySelector('[data-img]').onclick = safely(salesImage);
+        ui.querySelector('[data-sales-img]').onclick = safely(salesImage);   // V2.8: trước đây '[data-img]' trúng nhầm ô tích "Theo ngành" trong Cài đặt
         ui.querySelector('[data-view]').onclick = safely(() => { validateShops(config.shops); view.sales = salesView(selectedRange()); renderSales(); status(view.sales.missing ? `Còn ${view.sales.missing} ngày chưa lấy trong kỳ` : 'Số đã lưu trên máy này', view.sales.missing ? 'warn' : 'ok'); });
         ui.querySelector('[data-print-inv]').onclick = safely(printInventory);
-        ui.addEventListener('mousedown', e => { if (!e.target.closest('.kxb-drop')) { view.openDrop = ''; ui.querySelectorAll('.kxb-drop[open]').forEach(d => d.open = false); } });
+        ui.addEventListener('mousedown', e => {
+            if (!e.target.closest('.kxb-drop')) { view.openDrop = ''; ui.querySelectorAll('.kxb-drop[open]').forEach(d => d.open = false); }
+            ui.querySelectorAll('.kxb-menu[open], .kxb-info[open]').forEach(d => { if (!d.contains(e.target)) d.open = false; });
+        });
         ui.querySelector('[data-run-req]').onclick = safely(() => { reqState().q = ui.querySelector('[data-req-q]').value; return withSession('crmReq', runRequest); });
         ui.querySelector('[data-req-q]').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ui.querySelector('[data-run-req]').click(); } });
         ui.querySelector('[data-req-q]').addEventListener('input', e => { reqState().q = e.target.value; });
