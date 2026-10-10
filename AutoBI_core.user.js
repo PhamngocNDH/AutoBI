@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.67
+// @name         AutoBI Core V17.68
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.67
+// @version      17.68
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -3527,6 +3527,7 @@ window.__AutoBIRun67 = (function () {
                     _0x1811b7('cfg-line-token', _0x2d25d6.lineToken);
                     
                     _0xc77438('cfg-target-bi-check', _0x2d25d6.defaultTargetBI !== false);
+                    if (typeof _0x2d25d6.autoBiTarget === 'boolean') { GM_setValue('autobi_auto_bi_target100', _0x2d25d6.autoBiTarget); _0xc77438('cfg-auto-bi-target100', _0x2d25d6.autoBiTarget); } /* V17.68: Load cấu hình → ô "Tự động theo BI" theo cấu hình */
                     _0xc77438('cfg-use-target-rate', _0x2d25d6.useTargetRate);
                     _0x1811b7('cfg-target-rate', _0x2d25d6.targetRate || '100');
                     const _0x24f5dd = window.__AutoBIJson(GM_getValue('tgdd_user_available_themes', '[{"name":"M\u1EB7c \u0111\u1ECBnh","url":"default"}]'), '[{"name":"M\u1EB7c \u0111\u1ECBnh","url":"default"}]');
@@ -3973,6 +3974,7 @@ window.__AutoBIRun67 = (function () {
                         lineGroups: _0x5cbffa,
                         schedules: _0x141ec6,
                         defaultTargetBI: _0x55b101('cfg-target-bi-check'),
+                        autoBiTarget: (() => { const e = document.getElementById('cfg-auto-bi-target100'); return e ? !!e.checked : GM_getValue('autobi_auto_bi_target100', true) !== false; })(), /* V17.68: lưu ô "Tự động theo BI" vào cấu hình */
                         targetRate: parseFloat(_0x560c0c('cfg-target-rate')) || 100,
                         useTargetRate: _0x55b101('cfg-use-target-rate'),
                         shop1: _0x560c0c('cfg-name-1'),
@@ -7926,7 +7928,8 @@ window.__AutoBIBiTarget99 = (function () {
   const AUTO_KEY = 'autobi_auto_bi_target100';
   const PERM_KEY = 'TGDD_BI_STORE_PERMANENT_CONFIG_GM_V1';
   const RUN_KEY = 'tgdd_active_run_config';
-  const autoOn = () => GM_getValue(AUTO_KEY, true) !== false;
+  /* V17.68: ô "Tự động theo BI" đi theo CẤU HÌNH (cfg.autoBiTarget, lưu cùng Lưu cấu hình / Cloud). Cấu hình cũ chưa có thì dùng ô trên máy (mặc định bật). */
+  const autoOn = () => { try { const p = readObj(PERM_KEY); if (p && typeof p.autoBiTarget === 'boolean') return p.autoBiTarget; } catch (_) { } return GM_getValue(AUTO_KEY, true) !== false; };
   const readObj = key => { try { let v = GM_getValue(key, null); if (typeof v === 'string') v = JSON.parse(v); return v && typeof v === 'object' ? v : null; } catch (_) { return null; } };
   const core = name => { try { return (typeof unsafeWindow !== 'undefined' && unsafeWindow[name]) || window[name]; } catch (_) { return window[name]; } };
 
@@ -8052,7 +8055,7 @@ window.__AutoBIBiTarget99 = (function () {
       cb.id = 'cfg-auto-bi-target100';
       cb.checked = autoOn();
       cb.addEventListener('click', e => e.stopPropagation());
-      cb.addEventListener('change', e => { e.stopPropagation(); GM_setValue(AUTO_KEY, cb.checked); toast(cb.checked ? '✅ Đã bật: mỗi lần đổ số sẽ tự lấy Target theo BI.' : 'Đã tắt: dùng Target nhập tay trong Khai báo.', 5000); });
+      cb.addEventListener('change', e => { e.stopPropagation(); GM_setValue(AUTO_KEY, cb.checked); try { const p = readObj(PERM_KEY); if (p) { p.autoBiTarget = cb.checked; const U = core('UTILS'); if (U && U.savePersistentConfig) U.savePersistentConfig(p); else GM_setValue(PERM_KEY, p); } } catch (_) { } toast(cb.checked ? '✅ Đã bật: mỗi lần đổ số sẽ tự lấy Target theo BI.' : 'Đã tắt: dùng Target nhập tay trong Khai báo.', 5000); });
       lab.append(cb, document.createTextNode('Tự động theo BI mỗi lần đổ số'));
       bar.appendChild(lab);
       card.before(bar);
@@ -9690,8 +9693,9 @@ window.__AutoBIBiTarget99 = (function () {
     ['Cài đặt', ['btn-menu-config-home', 'btn-menu-config-report']],
     ['Hướng dẫn', ['.btn-tutorial-link']]
   ];
-  try {
-    GM_addStyle(`
+  /* V17.68: báo cáo dựng lại <head> (document.head.innerHTML) làm mất CSS gắn 1 lần lúc tải → Danh mục ở màn báo cáo bị mất kiểu (chữ nhóm nhỏ, mỏng, hiện thanh dưới).
+     Nay gắn CSS vào thẻ <style id="ab-sb30-css"> và mỗi lần quét thấy mất thì gắn lại. Tiêu đề nhóm (Báo cáo, Dữ liệu và công cụ…) to + đậm hơn. */
+  const SB_CSS = `
       #tgdd-sidebar-menu.ab-sb30 { width: 320px !important; }
       #tgdd-sidebar-menu.ab-sb30 .sidebar-bottom-nav { display: none !important; }
       #tgdd-sidebar-menu.ab-sb30 .sidebar-header { border-bottom: 1px solid #edf1f6 !important; padding: 16px 18px 12px !important; }
@@ -9700,7 +9704,7 @@ window.__AutoBIBiTarget99 = (function () {
       #tgdd-sidebar-menu.ab-sb30 .ab-sb-body { flex: 1; overflow-y: auto; overflow-x: hidden; margin-right: 10px; padding: 6px 10px 10px; display: flex; flex-direction: column; gap: 4px; }
       #tgdd-sidebar-menu.ab-sb30 .ab-sb-sec { display: flex; flex-direction: column; gap: 2px; }
       #tgdd-sidebar-menu.ab-sb30 .ab-sb-sec.is-empty { display: none; }
-      #tgdd-sidebar-menu.ab-sb30 .ab-sb-lbl { font-size: 11.5px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; color: #64748b; padding: 12px 8px 4px; }
+      #tgdd-sidebar-menu.ab-sb30 .ab-sb-lbl { font-size: 14px; font-weight: 900; letter-spacing: .6px; text-transform: uppercase; color: #0f1b2d; padding: 14px 8px 6px; }
       #tgdd-sidebar-menu.ab-sb30 .tgdd-menu-item { min-height: 46px; padding: 0 10px !important; gap: 12px !important; border: 0 !important; border-radius: 11px; font-size: 14.5px !important; font-weight: 600 !important; color: #0f1b2d !important; margin: 0 !important; }
       #tgdd-sidebar-menu.ab-sb30 .tgdd-menu-item:hover { background: #f2f5f9 !important; padding-left: 10px !important; color: #0b4fb3 !important; }
       #tgdd-sidebar-menu.ab-sb30 .tgdd-menu-item svg { width: 18px !important; height: 18px !important; box-sizing: content-box; padding: 8px; border-radius: 10px; background: #f2f5f9; fill: #475569; margin: 0 !important; flex: none; }
@@ -9716,8 +9720,15 @@ window.__AutoBIBiTarget99 = (function () {
       #tgdd-sidebar-menu.ab-sb30 .ab-sb-av { width: 34px; height: 34px; border-radius: 50%; background: #e8f0fd; color: #0b4fb3; display: flex; align-items: center; justify-content: center; flex: none; }
       #tgdd-sidebar-menu.ab-sb30 .ab-sb-id { font-size: 13.5px; font-weight: 800; color: #0f1b2d; display: flex; align-items: center; gap: 4px; }
       #tgdd-sidebar-menu.ab-sb30 .ab-sb-cp { font-size: 11.5px; color: #64748b; line-height: 1.4; }
-    `);
-  } catch (_) { }
+    `;
+  function ensureCss() {
+    try {
+      if (document.getElementById('ab-sb30-css')) return;
+      const host = document.head || document.documentElement; if (!host) return;
+      const st = document.createElement('style'); st.id = 'ab-sb30-css'; st.textContent = SB_CSS; host.appendChild(st);
+    } catch (_) { }
+  }
+  ensureCss();
   const visible = el => { try { return getComputedStyle(el).display !== 'none'; } catch (_) { return true; } };
   function pick(root, sel) { return sel.startsWith('.') ? [...root.querySelectorAll(sel)] : [root.querySelector('#' + sel)].filter(Boolean); }
   function process(menu) {
@@ -9743,7 +9754,7 @@ window.__AutoBIBiTarget99 = (function () {
     (menu.querySelector('.sidebar-panel-tab, .sidebar-panel') || menu).appendChild(ft);
     requestAnimationFrame(() => secs.forEach(s => { const items = [...s.children].slice(1); s.classList.toggle('is-empty', !items.some(visible)); }));
   }
-  function scan() { const m = document.getElementById('tgdd-sidebar-menu'); if (m) process(m); }
+  function scan() { const m = document.getElementById('tgdd-sidebar-menu'); if (m) { ensureCss(); process(m); } }
   const mo = new MutationObserver(scan);
   const start = () => { scan(); mo.observe(document.body, { childList: true, subtree: true }); };
   if (document.body) start(); else document.addEventListener('DOMContentLoaded', start, { once: true });
