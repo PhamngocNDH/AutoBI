@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.68
+// @name         AutoBI Core V17.71
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.68
+// @version      17.71
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -9704,10 +9704,11 @@ window.__AutoBIBiTarget99 = (function () {
       #tgdd-sidebar-menu.ab-sb30 .ab-sb-body { flex: 1; overflow-y: auto; overflow-x: hidden; margin-right: 10px; padding: 6px 10px 10px; display: flex; flex-direction: column; gap: 4px; }
       #tgdd-sidebar-menu.ab-sb30 .ab-sb-sec { display: flex; flex-direction: column; gap: 2px; }
       #tgdd-sidebar-menu.ab-sb30 .ab-sb-sec.is-empty { display: none; }
-      #tgdd-sidebar-menu.ab-sb30 .ab-sb-lbl { font-size: 14px; font-weight: 900; letter-spacing: .6px; text-transform: uppercase; color: #0f1b2d; padding: 14px 8px 6px; }
+      #tgdd-sidebar-menu.ab-sb30 .ab-sb-lbl { font-size: 14px !important; font-weight: 900 !important; letter-spacing: .6px; text-transform: uppercase; color: #0f1b2d !important; padding: 14px 8px 6px; }
+      #tgdd-sidebar-menu.ab-sb30 .ab-sb-left { display: none !important; }
       #tgdd-sidebar-menu.ab-sb30 .tgdd-menu-item { min-height: 46px; padding: 0 10px !important; gap: 12px !important; border: 0 !important; border-radius: 11px; font-size: 14.5px !important; font-weight: 600 !important; color: #0f1b2d !important; margin: 0 !important; }
       #tgdd-sidebar-menu.ab-sb30 .tgdd-menu-item:hover { background: #f2f5f9 !important; padding-left: 10px !important; color: #0b4fb3 !important; }
-      #tgdd-sidebar-menu.ab-sb30 .tgdd-menu-item svg { width: 18px !important; height: 18px !important; box-sizing: content-box; padding: 8px; border-radius: 10px; background: #f2f5f9; fill: #475569; margin: 0 !important; flex: none; }
+      #tgdd-sidebar-menu.ab-sb30 .tgdd-menu-item svg { width: 34px !important; height: 34px !important; min-width: 34px; box-sizing: border-box !important; padding: 8px !important; border-radius: 10px; background: #f2f5f9; fill: #475569; margin: 0 !important; flex: none; }
       #tgdd-sidebar-menu.ab-sb30 #btn-menu-bonus-points svg { fill: none !important; stroke: #6f42c1 !important; background: #f1ecfb; }
       #tgdd-sidebar-menu.ab-sb30 #btn-menu-config-home, #tgdd-sidebar-menu.ab-sb30 #btn-menu-config-report { color: #0b4fb3 !important; }
       #tgdd-sidebar-menu.ab-sb30 #btn-menu-config-home svg, #tgdd-sidebar-menu.ab-sb30 #btn-menu-config-report svg { background: #e8f0fd; fill: #0b4fb3; }
@@ -9746,6 +9747,8 @@ window.__AutoBIBiTarget99 = (function () {
     [...menu.querySelectorAll('.tgdd-menu-item')].forEach(el => { if (!used.has(el) && !el.closest('.ab-sb-body')) { used.add(el); secs[1].appendChild(el); } });
     secs.forEach(s => body.appendChild(s));
     const host = content.parentNode; host.insertBefore(body, content);
+    /* V17.69: khung cũ (sidebar-tab-content, footer…) sau khi chuyển hết mục vẫn còn khoảng trắng → chiếm nửa Danh mục, che mục Cài đặt. Ẩn khung rỗng. */
+    [...host.children].forEach(el => { if (el === body || el.classList.contains('ab-sb-ft')) return; if (!el.querySelector('.tgdd-menu-item, .tgdd-app-item, input, button, img') && !String(el.textContent || '').trim()) el.classList.add('ab-sb-left'); });
     const ok = !!auth().isAuthorized;
     const ft = document.createElement('div'); ft.className = 'ab-sb-ft';
     ft.innerHTML = '<div class="ab-sb-av"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div>' +
@@ -10707,4 +10710,125 @@ window.__AutoBIRunPick = (() => {
     paint();
   }
   return { mount };
+})();
+
+
+/* ==== V17.69 (+V17.71): Chụp từng mục (__AutoBIShot) — trong "⚙️ Tùy chọn" báo cáo thêm khung "CHỤP TỪNG MỤC".
+   Mỗi mục (Tổng quan, Nhóm hàng thi đua, Doanh thu nhân viên, bảng có data-capture-id, hoặc cả trang đang xem)
+   có nút 📋 Chép ảnh (dán thẳng vào LINE/Zalo) và ⬇ Tải ảnh. Ảnh mục lẻ có kèm dòng tiêu đề shop + giờ số.
+   Chỉ đọc giao diện đang hiện, không gọi BI, không đổi số. ==== */
+(function () {
+  'use strict';
+  if (window.top !== window.self || window.__AutoBIShot) return;
+  const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const toast = m => { try { if (window.UI && window.UI.showToast) return window.UI.showToast(m, 4000); } catch (_) { } try { console.log('[AutoBI] ' + m); } catch (_) { } };
+  const area = () => document.getElementById('capture-area');
+  const firstText = el => { if (!el) return ''; for (const n of el.childNodes) if (n.nodeType === 3 && n.textContent.trim()) return n.textContent.trim(); return String(el.textContent || '').trim(); };
+  const shown = el => { try { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; } catch (_) { return false; } };
+  function shopTitle() { const a = area(); const t = a && a.querySelector('.rt2-title'); return t ? t.textContent.trim() : ''; }
+
+  /* Danh sách mục chụp được trong trang đang xem */
+  function blocks() {
+    const a = area(); if (!a) return [];
+    const out = [];
+    const root = a.querySelector('.rt2');
+    if (root && shown(root)) {
+      /* V17.71: Nhóm hàng thi đua luôn đi kèm Doanh thu siêu thị (hàng thẻ Tổng quan) trong 1 ảnh; thêm bảng Thi đua NV theo nhóm hàng (.rt2 > .rt2-card) */
+      const r1 = root.querySelector('.rt2-row1');
+      const cards = [...root.querySelectorAll('.rt2-row2 > .rt2-card, .rt2-row3 > .rt2-card, .rt2 > .rt2-card')].filter(c => c.closest('.rt2') === root && shown(c));
+      const isGroup = c => /NHÓM HÀNG THI ĐUA/i.test(firstText(c.querySelector('.rt2-lbl')));
+      const g = cards.find(isGroup);
+      if (g && r1 && shown(r1)) out.push(merge([{ name: 'Doanh thu siêu thị', els: [r1], root, head: true, wide: true }, { name: firstText(g.querySelector('.rt2-lbl')), els: [g], root, head: true }], 'Doanh thu + ' + (firstText(g.querySelector('.rt2-lbl')) || 'Nhóm hàng thi đua')));
+      else if (r1 && shown(r1)) out.push({ name: 'Doanh thu siêu thị (tổng quan)', els: [r1], root, head: true });
+      cards.forEach(c => { if (c === g && r1) return; out.push({ name: firstText(c.querySelector('.rt2-lbl')) || 'Bảng', els: [c], root, head: true }); });
+    }
+    a.querySelectorAll('[data-capture-id]').forEach(t => { if (shown(t) && !t.closest('.rt2')) out.push({ name: t.getAttribute('data-table-name') || ('Bảng ' + t.getAttribute('data-capture-id')), els: [t], root: null, head: false }); });
+    if (shown(a)) out.push({ name: 'Cả trang đang xem', els: [a], root: null, head: false, whole: true });
+    return out;
+  }
+
+  /* Dựng bản sao gọn để chụp (kèm tiêu đề shop + giờ số khi chụp 1 thẻ) */
+  /* Ghép Doanh thu (Tổng quan) + Nhóm hàng: xếp dọc, tiêu đề shop 1 lần, Tổng quan chuyển kiểu dọc (rt2-m) cho vừa bề ngang bảng */
+  function merge(list, name) {
+    const root = (list.find(b => b.root) || {}).root || null;
+    const narrow = list.filter(b => !b.wide).map(b => Math.max(...b.els.map(e => e.getBoundingClientRect().width)));
+    const w = narrow.length ? Math.max(560, ...narrow) : 620;
+    return { name: name || list.map(b => b.name.split(' (')[0]).join(' + '), els: [].concat(...list.map(b => b.els)), root, head: list.some(b => b.head), w, stack: true };
+  }
+  function stage(b) {
+    if (b.whole) return { el: b.els[0], done: () => { } };
+    const w = b.w || Math.max(...b.els.map(e => e.getBoundingClientRect().width));
+    const box = document.createElement('div');
+    box.style.cssText = 'position:fixed;left:0;top:0;z-index:-1;pointer-events:none;background:#f4f6f8;padding:14px;box-sizing:content-box;width:' + Math.ceil(w) + 'px;';
+    const wrap = document.createElement('div');
+    if (b.root) wrap.className = b.root.className + (b.stack ? ' rt2-m' : '');
+    wrap.style.cssText = 'margin:0;padding:0;max-width:none;width:100%;';
+    if (b.head && b.root) { const hd = b.root.querySelector('.rt2-hd'); if (hd) wrap.appendChild(hd.cloneNode(true)); }
+    b.els.forEach(e => { const c = e.cloneNode(true); c.style.width = '100%'; c.style.boxSizing = 'border-box'; c.style.margin = '0 0 10px 0'; wrap.appendChild(c); });
+    box.appendChild(wrap);
+    document.body.appendChild(box);
+    return { el: box, done: () => box.remove() };
+  }
+  function shoot(b) {
+    return new Promise((resolve, reject) => {
+      if (typeof html2canvas !== 'function') return reject(new Error('Chưa tải được thư viện chụp ảnh'));
+      const st = stage(b);
+      setTimeout(() => {
+        html2canvas(st.el, { scale: 2, useCORS: true, backgroundColor: '#f4f6f8', logging: false })
+          .then(cv => { st.done(); cv.toBlob(bl => bl ? resolve(bl) : reject(new Error('Không tạo được ảnh')), 'image/png'); })
+          .catch(e => { st.done(); reject(e); });
+      }, b.whole ? 450 : 60);
+    });
+  }
+  const fileName = b => ('AutoBI_' + (shopTitle() || 'bao-cao') + '_' + b.name).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').replace(/[^a-z0-9]+/gi, '_').replace(/^_|_$/g, '').slice(0, 80) + '.png';
+  function download(blob, b) { const u = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = u; a.download = fileName(b); document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); }
+
+  function copy(b, btn) {
+    const old = btn.textContent; btn.textContent = '⏳'; btn.disabled = true;
+    const p = shoot(b);
+    const end = msg => { btn.textContent = old; btn.disabled = false; if (msg) toast(msg); };
+    let ok = false;
+    try {
+      if (navigator.clipboard && window.ClipboardItem) {
+        /* Gọi ngay trong lúc bấm (Chrome/Safari cho phép ảnh tạo sau) */
+        navigator.clipboard.write([new ClipboardItem({ 'image/png': p })])
+          .then(() => end('📋 Đã chép ảnh "' + b.name + '" — dán (Ctrl+V) vào LINE/Zalo'))
+          .catch(() => p.then(bl => { download(bl, b); end('Không chép được — đã tải ảnh về máy'); }).catch(e => end('❌ Chụp lỗi: ' + (e && e.message))));
+        ok = true;
+      }
+    } catch (_) { }
+    if (!ok) p.then(bl => { download(bl, b); end('Trình duyệt không cho chép ảnh — đã tải ảnh về máy'); }).catch(e => end('❌ Chụp lỗi: ' + (e && e.message)));
+  }
+  function save(b, btn) {
+    const old = btn.textContent; btn.textContent = '⏳'; btn.disabled = true;
+    shoot(b).then(bl => { download(bl, b); toast('⬇ Đã tải ảnh "' + b.name + '"'); }).catch(e => toast('❌ Chụp lỗi: ' + (e && e.message))).finally(() => { btn.textContent = old; btn.disabled = false; });
+  }
+
+  /* Gắn khung vào hộp Tùy chọn */
+  function closeModal() { try { const x = document.getElementById('tgdd-modal-btn-x'); if (x) x.click(); } catch (_) { } }
+  function inject() {
+    const title = document.getElementById('tgdd-msg-title'), text = document.getElementById('tgdd-msg-text');
+    if (!title || !text || !/T(Ù|U)Y CH(Ọ|O)N B(Á|A)O C(Á|A)O/i.test(title.textContent || '')) return;
+    if (text.querySelector('#ab-shot69')) return;
+    const list = blocks(); if (!list.length) return;
+    const sec = document.createElement('div'); sec.id = 'ab-shot69';
+    sec.style.cssText = 'margin:0 0 14px;text-align:left;';
+    sec.innerHTML = '<div style="font-weight:bold;color:#007bff;margin-bottom:8px;font-size:12.5px;border-bottom:1px dashed #ddd;padding-bottom:5px;">📷 CHỤP TỪNG MỤC <span style="color:#64748b;font-weight:600">— chép ảnh rồi dán vào LINE/Zalo</span></div>' +
+      list.map((b, i) => '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f1f5f9;"><span style="flex:1;font-size:13px;font-weight:700;color:#0f1b2d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + esc(b.name) + '">' + esc(b.name) + '</span>' +
+        '<button type="button" data-i="' + i + '" data-a="copy" style="min-height:34px;padding:0 12px;border:0;border-radius:17px;background:#0b4fb3;color:#fff;font-weight:800;font-size:12.5px;cursor:pointer;">📋 Chép ảnh</button>' +
+        '<button type="button" data-i="' + i + '" data-a="save" style="min-height:34px;padding:0 10px;border:1px solid #cbd5e1;border-radius:17px;background:#fff;color:#334155;font-weight:700;font-size:12.5px;cursor:pointer;">⬇ Tải</button></div>').join('');
+    sec.addEventListener('click', e => {
+      const btn = e.target.closest('button[data-a]'); if (!btn) return;
+      e.preventDefault(); e.stopPropagation();
+      const b = list[Number(btn.dataset.i)]; if (!b) return;
+      /* đóng hộp trước khi chụp mục "Cả trang" để không dính lớp mờ */
+      if (b.whole) closeModal();
+      (btn.dataset.a === 'copy' ? copy : save)(b, btn);
+    });
+    text.insertBefore(sec, text.firstChild);
+  }
+  const mo = new MutationObserver(() => { try { inject(); } catch (_) { } });
+  const start = () => { try { mo.observe(document.body, { childList: true, subtree: true, characterData: true }); } catch (_) { } };
+  if (document.body) start(); else document.addEventListener('DOMContentLoaded', start, { once: true });
+  window.__AutoBIShot = { blocks, inject };
 })();
