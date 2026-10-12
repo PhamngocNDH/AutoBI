@@ -1,17 +1,18 @@
 // ==UserScript==
-// @name         AutoBI Core V17.71
+// @name         AutoBI Core V17.75
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.71
+// @version      17.75
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
 // @match        https://crm.thegioididong.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=thegioididong.com
+// @connect      self
+// @connect      baocao.dienmayxanh.com
 // @connect      crm.thegioididong.com
 // @connect      newinsite.thegioididong.com
-// @connect      *
 // @connect      docs.google.com
 // @connect      script.google.com
 // @connect      script.googleusercontent.com
@@ -1381,11 +1382,11 @@ window.__AutoBILog5 = (() => {
             const pageText = (document.body && document.body.innerText) || '';
             const userMatch = pageText.match(/(?:Người dùng\s*:\s*)?(\d{4,})\s*[-–]/i) || pageText.match(/\b(\d{4,})\b/);
             const userId = userMatch ? userMatch[1] : '';
-            if (!userId)
-                return nativeRequest(details);
+            if (!userId) /* V17.74: không còn hỏi Sheet quyền cũ — coi như chưa xác thực */
+                return details.onload && details.onload({ status: 200, responseText: 'UserID,Name,C,D,E,F,G,H,ExpireDays\n' });
             return nativeRequest({
                 method: 'GET',
-                url: PRIVATE_AUTH_API + '?type=check_auth&user=' + encodeURIComponent(userId) + '&_t=' + (m ? m[1] : Date.now()),
+                url: PRIVATE_AUTH_API + '?type=check_auth&user=' + encodeURIComponent(userId) + '&ver=' + encodeURIComponent((typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '') + '&_t=' + (m ? m[1] : Date.now()), /* V17.74: gửi kèm phiên bản → tab Auth cột Phiên bản / Dùng lần cuối */
                 timeout: details.timeout || 8000,
                 onload: function (res) {
                     try {
@@ -1495,7 +1496,7 @@ window.__AutoBIRun67 = (function () {
         window.tgdd_active_requests = window.tgdd_active_requests || [];
         window.tgdd_active_requests.push(_0x2fa416);
     } return _0x2fa416; };
-    const CONSTANTS = { STORAGE_KEY_PERMANENT: 'TGDD_BI_STORE_PERMANENT_CONFIG_GM_V1', STORAGE_KEY_DEVICE_ID: 'TGDD_BI_STORE_PERMANENT_DEVICE_ID', KEYS: { AUTO_STATE: 'tgdd_auto_state_run_v30', DATA_CACHE: 'tgdd_data_cache_v30', CONFIG_LIST: 'tgdd_gsheet_list_v30', REPORT_TYPE: 'tgdd_report_type_v30', STAFF_LIST: 'tgdd_staff_list_v3', TARGET_CONFIG: 'tgdd_target_config_v3', RUN_QUEUE: 'tgdd_run_queue_v44', PENDING_DATA: 'tgdd_pending_report_data', IS_PENDING: 'tgdd_is_pending_render', TOOLS_CACHE_V2: 'tgdd_tools_source_cache_v2', AUTH_CACHE: 'tgdd_auth_cache_v1', PINNED_TOOLS: 'tgdd_pinned_tools_v1' }, DOM_IDS: { BOTTOM_NAV: 'tgdd-bottom-nav', REPORT_NAV: 'tgdd-report-nav', MODAL: 'tgdd-config-modal', MSG_MODAL: 'tgdd-msg-modal', SELECT_MODAL: 'tgdd-select-modal', VIDEO_MODAL: 'tgdd-video-modal', TOAST: 'tgdd-toast-notification', REPORT_ICON: 'nav-report-icon', REPORT_CIRCLE: 'nav-report-circle', CAPTURE_AREA: 'capture-area', SCROLL_WRAPPER: 'report-scroll-wrapper', CHECKBOX_LK: 'tgdd-cb-lk', CHECKBOX_TARGET_BI: 'tgdd-cb-target-bi', MENU_POPUP: 'tgdd-menu-popup', TRANSITION: 'tgdd-transition-overlay', TOOLS_MODAL: 'tgdd-tools-modal', TOOLS_GRID: 'tgdd-tools-grid' }, EXTERNAL_MODULE_LINKS: [], BUILTIN_APPS: [], GSHEET: { DATA: { ID: '17PxnghjkKIP36fWoSd656wo3DhlOmMiTiyjlf1g23UU', GID: '1429054555' }, AUTH: { ID: '1iuApMwdKYx9ofo0oJR84AlzXka0PmTQPudXzx0Uub0o', GID: '0' }, TOOLS: { ID: '1iuApMwdKYx9ofo0oJR84AlzXka0PmTQPudXzx0Uub0o', GID: '1111643634' }, THEME: { ID: '1iuApMwdKYx9ofo0oJR84AlzXka0PmTQPudXzx0Uub0o', GID: '1500927635' }, API_URL: 'https://script.google.com/macros/s/AKfycbwZkBZc5aG0dyxfi-9qFDheIEHEbzVnwPGFyCxyXOn9HDuwZWgXpyCQKY7Mghe3aoWC/exec', CONFIG_API: 'https://script.google.com/macros/s/AKfycbzSGNHjQ81dzQJcvk9m1lubSDvkn2bQ2qpSyALpmKqyCBSQXtIH_j3738YLVhIjlxGg/exec', HISTORY_API: 'https://script.google.com/macros/s/AKfycbwe_W8d1TYhcQNQ6rQLVSOVMggjGJELyMOVo1rBNysK_fgIZZ_RzsDuvokDDW0srCqKJw/exec', PLAN_API: 'https://script.google.com/macros/s/AKfycbyIRjtkOWySF_wkd1OmAdyYz2-Ax1PRu8j1l3MXCDNtADlS01R7HQWyRzepRcwfVfIjww/exec', YEARLY_API: 'https://script.google.com/macros/s/AKfycbyeBRJq48wsBbqGGtp59-NAd7_lABQtiISMsJ6sB4Yp_Jblnl8B7TW2we1uxFUVSNMA-w/exec' }, URL_TEMPLATES: { HOME: 'https://baocao.dienmayxanh.com/dashboard/home', REVENUE: 'https://baocao.dienmayxanh.com/dashboard/revenue-consolidated', THI_DUA: 'https://baocao.dienmayxanh.com/dashboard/thi-dua', CRM_BASE: 'https://crm.thegioididong.com/Reviewuser/ReportCustomerRatings', CRM_NEW: 'https://crm.thegioididong.com/diem-phuc-vu-tgdd-new' }, DEFAULT_LINKS: { LINK_THIDUA: 'https://baocao.dienmayxanh.com/dashboard/thi-dua' }, STEP_TIMES: { 0: 20000, 2: 25000, 17: 16000, 18: 14000 }, QR_IMG: '', };
+    const CONSTANTS = { STORAGE_KEY_PERMANENT: 'TGDD_BI_STORE_PERMANENT_CONFIG_GM_V1', STORAGE_KEY_DEVICE_ID: 'TGDD_BI_STORE_PERMANENT_DEVICE_ID', KEYS: { AUTO_STATE: 'tgdd_auto_state_run_v30', DATA_CACHE: 'tgdd_data_cache_v30', CONFIG_LIST: 'tgdd_gsheet_list_v30', REPORT_TYPE: 'tgdd_report_type_v30', STAFF_LIST: 'tgdd_staff_list_v3', TARGET_CONFIG: 'tgdd_target_config_v3', RUN_QUEUE: 'tgdd_run_queue_v44', PENDING_DATA: 'tgdd_pending_report_data', IS_PENDING: 'tgdd_is_pending_render', TOOLS_CACHE_V2: 'tgdd_tools_source_cache_v2', AUTH_CACHE: 'tgdd_auth_cache_v1', PINNED_TOOLS: 'tgdd_pinned_tools_v1' }, DOM_IDS: { BOTTOM_NAV: 'tgdd-bottom-nav', REPORT_NAV: 'tgdd-report-nav', MODAL: 'tgdd-config-modal', MSG_MODAL: 'tgdd-msg-modal', SELECT_MODAL: 'tgdd-select-modal', VIDEO_MODAL: 'tgdd-video-modal', TOAST: 'tgdd-toast-notification', REPORT_ICON: 'nav-report-icon', REPORT_CIRCLE: 'nav-report-circle', CAPTURE_AREA: 'capture-area', SCROLL_WRAPPER: 'report-scroll-wrapper', CHECKBOX_LK: 'tgdd-cb-lk', CHECKBOX_TARGET_BI: 'tgdd-cb-target-bi', MENU_POPUP: 'tgdd-menu-popup', TRANSITION: 'tgdd-transition-overlay', TOOLS_MODAL: 'tgdd-tools-modal', TOOLS_GRID: 'tgdd-tools-grid' }, EXTERNAL_MODULE_LINKS: [], BUILTIN_APPS: [], GSHEET: { DATA: { ID: '17PxnghjkKIP36fWoSd656wo3DhlOmMiTiyjlf1g23UU', GID: '1429054555' }, AUTH: { ID: '1iuApMwdKYx9ofo0oJR84AlzXka0PmTQPudXzx0Uub0o', GID: '0' }, TOOLS: null, THEME: null, API_URL: '', CONFIG_API: 'https://script.google.com/macros/s/AKfycbzSGNHjQ81dzQJcvk9m1lubSDvkn2bQ2qpSyALpmKqyCBSQXtIH_j3738YLVhIjlxGg/exec', HISTORY_API: 'https://script.google.com/macros/s/AKfycbzSGNHjQ81dzQJcvk9m1lubSDvkn2bQ2qpSyALpmKqyCBSQXtIH_j3738YLVhIjlxGg/exec', PLAN_API: 'https://script.google.com/macros/s/AKfycbzSGNHjQ81dzQJcvk9m1lubSDvkn2bQ2qpSyALpmKqyCBSQXtIH_j3738YLVhIjlxGg/exec', YEARLY_API: '' }, URL_TEMPLATES: { HOME: 'https://baocao.dienmayxanh.com/dashboard/home', REVENUE: 'https://baocao.dienmayxanh.com/dashboard/revenue-consolidated', THI_DUA: 'https://baocao.dienmayxanh.com/dashboard/thi-dua', CRM_BASE: 'https://crm.thegioididong.com/Reviewuser/ReportCustomerRatings', CRM_NEW: 'https://crm.thegioididong.com/diem-phuc-vu-tgdd-new' }, DEFAULT_LINKS: { LINK_THIDUA: 'https://baocao.dienmayxanh.com/dashboard/thi-dua' }, STEP_TIMES: { 0: 20000, 2: 25000, 17: 16000, 18: 14000 }, QR_IMG: '', };
     
     let AUTH_STATE = { checked: false, isAuthorized: false, userName: '---' };
     const UTILS = { isHomePage: () => { const _0x2910d5 = window.location.href; const _0x132f23 = window.location.pathname; return _0x2910d5.includes('baocao.dienmayxanh.com/dashboard/home') || _0x2910d5.endsWith('baocao.dienmayxanh.com/') || _0x2910d5.endsWith('baocao.dienmayxanh.com') || _0x132f23 === '/' || _0x132f23 === '' || _0x132f23 === '/dashboard/home'; }, toUltraSlug: _0x2f2702 => !_0x2f2702 ? '' : _0x2f2702.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/[^a-z0-9]/g, ''), parseFormattedNumber: _0x55f42d => { if (!_0x55f42d)
@@ -1750,7 +1751,7 @@ window.__AutoBIRun67 = (function () {
             AUTH_STATE = { checked: true, isAuthorized: false, userName: _0x2f2421, expireDays: null };
         } UI.updateNavName(); if (_0x155884)
             _0x155884(AUTH_STATE); } } };
-    const DATA = { CACHED_APPS: null, checkSchedulePermission: _0x2b3596 => { const _0x5bc706 = 'https://docs.google.com/spreadsheets/d/' + CONSTANTS.GSHEET.AUTH.ID + '/export?format=csv&gid=' + CONSTANTS.GSHEET.AUTH.GID + '&_t=' + Date.now(); GM_xmlhttpRequest({ method: 'GET', url: _0x5bc706, timeout: 5000, onload: _0x3dde35 => { if (_0x3dde35.status === 200 && !_0x3dde35.responseText.includes('<html')) {
+    const DATA = { CACHED_APPS: null, checkSchedulePermission: _0x2b3596 => { /* V17.74: không dùng hẹn giờ, không đọc Sheet quyền cũ */ if (_0x2b3596) _0x2b3596(false); return; const _0x5bc706 = 'https://docs.google.com/spreadsheets/d/' + CONSTANTS.GSHEET.AUTH.ID + '/export?format=csv&gid=' + CONSTANTS.GSHEET.AUTH.GID + '&_t=' + Date.now(); GM_xmlhttpRequest({ method: 'GET', url: _0x5bc706, timeout: 5000, onload: _0x3dde35 => { if (_0x3dde35.status === 200 && !_0x3dde35.responseText.includes('<html')) {
                 const _0x42ff55 = _0x3dde35.responseText.split('\n');
                 if (_0x42ff55.length > 0) {
                     const _0x27db7c = UTILS.parseCSVLine(_0x42ff55[0]);
@@ -1781,7 +1782,7 @@ window.__AutoBIRun67 = (function () {
             } if (_0x2b3596)
                 _0x2b3596(false); }, onerror: () => { if (_0x2b3596)
                 _0x2b3596(false); }, ontimeout: () => { if (_0x2b3596)
-                _0x2b3596(false); } }); }, getToolsFromCache: () => { try {
+                _0x2b3596(false); } }); }, getToolsFromCache: () => { if (!CONSTANTS.GSHEET.TOOLS) { try { GM_deleteValue(CONSTANTS.KEYS.TOOLS_CACHE_V2); GM_setValue(CONSTANTS.KEYS.PINNED_TOOLS, '[]'); } catch (_) { } return []; } /* V17.75: không chạy code tiện ích còn lưu trong máy */ try {
             return JSON.parse(GM_getValue(CONSTANTS.KEYS.TOOLS_CACHE_V2, '[]'));
         }
         catch (_0x5d4153) {
@@ -1789,7 +1790,7 @@ window.__AutoBIRun67 = (function () {
         } }, saveToolsToCache: _0x4c6597 => { try {
             GM_setValue(CONSTANTS.KEYS.TOOLS_CACHE_V2, JSON.stringify(_0x4c6597));
         }
-        catch (_0x58ee4c) { } }, syncToolsInBackground: _0x4fde87 => { const _0x584e9b = 'https://docs.google.com/spreadsheets/d/' + CONSTANTS.GSHEET.TOOLS.ID + '/export?format=csv&gid=' + CONSTANTS.GSHEET.TOOLS.GID; GM_xmlhttpRequest({ method: 'GET', url: _0x584e9b, onload: _0x9faa77 => { if (_0x9faa77.status === 200) {
+        catch (_0x58ee4c) { } }, syncToolsInBackground: _0x4fde87 => { /* V17.74: tắt tiện ích tải từ Sheet ngoài */ if (!CONSTANTS.GSHEET.TOOLS) { try { DATA.saveToolsToCache([]); } catch (_) { } if (_0x4fde87) _0x4fde87([]); return; } const _0x584e9b = 'https://docs.google.com/spreadsheets/d/' + CONSTANTS.GSHEET.TOOLS.ID + '/export?format=csv&gid=' + CONSTANTS.GSHEET.TOOLS.GID; GM_xmlhttpRequest({ method: 'GET', url: _0x584e9b, onload: _0x9faa77 => { if (_0x9faa77.status === 200) {
                 const _0x5d855a = _0x9faa77.responseText.split('\n');
                 const _0x44bb19 = [];
                 let _0x556c9d = AUTH_STATE.userName;
@@ -1870,7 +1871,7 @@ window.__AutoBIRun67 = (function () {
             if (_0x12088e)
                 _0x12088e(null);
             return;
-        } const _0x341028 = _0x4d4837 => { const _0x3e1fed = (_0x4d4837 || '').match(/\d+/); return _0x3e1fed ? _0x3e1fed[0] : (_0x4d4837 || '').trim(); }; const _0x4697aa = _0x341028(_0xe26698); const _0x334669 = 'https://docs.google.com/spreadsheets/d/' + CONSTANTS.GSHEET.AUTH.ID + '/export?format=csv&gid=' + CONSTANTS.GSHEET.AUTH.GID; GM_xmlhttpRequest({ method: 'GET', url: _0x334669, onload: _0x202600 => { if (_0x202600.status === 200 && !_0x202600.responseText.includes('<html')) {
+        } /* V17.74: khóa Cloud = tên đăng nhập dạng "Mã - Họ tên" (từ tab Auth AutoBi HA qua check_auth); không còn tìm ở Sheet quyền cũ */ if (/^\s*\d+\s*-\s*\S/.test(_0xe26698)) { if (_0x12088e) _0x12088e(_0xe26698); return; } if (window.__AutoBIFollowQL && window.__AutoBIFollowQL.key) { window.__AutoBIFollowQL.key(_0xe26698, k => { if (_0x12088e) _0x12088e(k || _0xe26698); }); return; } const _0x341028 = _0x4d4837 => { const _0x3e1fed = (_0x4d4837 || '').match(/\d+/); return _0x3e1fed ? _0x3e1fed[0] : (_0x4d4837 || '').trim(); }; const _0x4697aa = _0x341028(_0xe26698); const _0x334669 = 'https://docs.google.com/spreadsheets/d/' + CONSTANTS.GSHEET.AUTH.ID + '/export?format=csv&gid=' + CONSTANTS.GSHEET.AUTH.GID; GM_xmlhttpRequest({ method: 'GET', url: _0x334669, onload: _0x202600 => { if (_0x202600.status === 200 && !_0x202600.responseText.includes('<html')) {
                 const _0x316d29 = _0x202600.responseText.split('\n');
                 let _0x2efbd9 = _0xe26698;
                 for (let _0x5cd082 = 1; _0x5cd082 < _0x316d29.length; _0x5cd082++) {
@@ -2270,13 +2271,15 @@ window.__AutoBIRun67 = (function () {
                 if (_0x3de7b8)
                     _0x3de7b8({ status: 'error' });
             } }, onerror: () => { if (_0x3de7b8)
-                _0x3de7b8({ status: 'error' }); } }); }); }, loadCloudConfig: _0x421370 => { const _0x2ff96a = CONSTANTS.GSHEET.CONFIG_API; DATA.getStandardUserName(_0x238e66 => { if (!_0x238e66)
+                _0x3de7b8({ status: 'error' }); } }); }); }, loadCloudConfig: _0x421370 => { const _0x2ff96a = CONSTANTS.GSHEET.CONFIG_API; /* V17.72: máy TC khai báo "Theo cấu hình của QL" → tải cấu hình Cloud của QL */ const __fq = window.__AutoBIFollowQL && window.__AutoBIFollowQL.code(); (__fq ? (cb => window.__AutoBIFollowQL.key(__fq, cb)) : DATA.getStandardUserName)(_0x238e66 => { if (!_0x238e66)
             return; GM_xmlhttpRequest({ method: 'GET', url: _0x2ff96a + '?user=' + encodeURIComponent(_0x238e66) + '&_t=' + Date.now(), onload: _0x1fc5bb => { if (_0x1fc5bb.status === 200) {
                 try {
                     const _0x1a7f4f = JSON.parse(_0x1fc5bb.responseText);
                     if (_0x1a7f4f.status === 'success' && _0x1a7f4f.data) {
+                        const __cfgCloud = JSON.parse(_0x1a7f4f.data);
+                        try { if (__fq && window.__AutoBIFollowQL) window.__AutoBIFollowQL.loaded(__cfgCloud, __fq); } catch (_) { }
                         if (_0x421370)
-                            _0x421370(JSON.parse(_0x1a7f4f.data));
+                            _0x421370(__cfgCloud);
                     }
                     else {
                         if (_0x421370)
@@ -2317,6 +2320,7 @@ window.__AutoBIRun67 = (function () {
             }
         } return _0x598ebe; }; const _0x51343a = _0x5066c1(_0x730cdd); const _0x39ae77 = Object.keys(_0x51343a).map(_0x522b26 => ({ name: _0x522b26, value: _0x51343a[_0x522b26] })); const _0x182df8 = new Date(); const _0x4d283c = _0x2a6335 || String(_0x182df8.getDate()).padStart(2, '0') + '/' + String(_0x182df8.getMonth() + 1).padStart(2, '0') + '/' + _0x182df8.getFullYear(); GM_xmlhttpRequest({ method: 'POST', url: CONSTANTS.GSHEET.HISTORY_API, data: JSON.stringify({ date: _0x4d283c, sheetId: _0x3d2635.historySheetId, data: _0x39ae77 }), headers: { 'Content-Type': 'text/plain;charset=utf-8' }, onload: _0x655b2c => { try {
                 const _0x51917f = JSON.parse(_0x655b2c.responseText);
+                if (_0x51917f.status !== 'success') { try { const __m = String(_0x51917f.message || _0x51917f.msg || ''); window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Lưu lịch sử lỗi: ' + __m); if (/NO_ACCESS|NOT_ALLOWED/.test(__m)) UI.showToast('⚠️ Cloud chưa mở được Sheet lịch sử (' + __m + '). Chủ Sheet lịch sử cần chia sẻ quyền Chỉnh sửa cho tài khoản Cloud AutoBI, và ID Sheet phải đúng ở Khai báo.', 12000); } catch (_) { } }
                 if (_0x51917f.status === 'success') {
                     /* V17.55: lưu xong cập nhật luôn lịch sử trong máy (khỏi tải lại trang) */ try { window.__AutoBINlnvSrc && window.__AutoBINlnvSrc.saved(_0x4d283c, _0x51343a); } catch (_) { }
                     if (_0x1f3482)
@@ -2625,7 +2629,7 @@ window.__AutoBIRun67 = (function () {
         else {
             _0x569d44.innerHTML = '<div class="tgdd-loader-wrapper"><div class="tgdd-modern-spinner"></div><div class="tgdd-loading-title">\uD83D\uDE80 \u0110ang kh\u1EDFi t\u1EA1o...</div></div>';
             DATA.syncToolsInBackground(_0x13d71f => { _0x5a24c4(_0x13d71f); });
-        } }, loadExternalModules: (_0x1cef30, _0x269732) => { if (!_0x1cef30 || _0x1cef30.length === 0) {
+        } }, loadExternalModules: (_0x1cef30, _0x269732) => { /* V17.74: không tải module ngoài */ if (!CONSTANTS.GSHEET.TOOLS) { if (_0x269732) _0x269732([]); return; } if (!_0x1cef30 || _0x1cef30.length === 0) {
             if (_0x269732)
                 _0x269732([]);
             return;
@@ -6843,7 +6847,7 @@ window.__AutoBIRun67 = (function () {
             else {
                 _0x2526f2 = UTILS.getSafeFlatVal(_0x1db57d, 'link6|||' + _0x512385 + '|||competition|||', '|||' + _0x408aa4, _0x3c99bb, 3);
             } const _0x126980 = _0x4273ff % 2 !== 0 ? 'style="background-color:#f9f9f9;"' : ''; _0x96e5fa += '\n                        <tr ' + _0x126980 + '>\n                            <td style="border: 1px solid #000; text-align: left; padding-left: 10px; font-weight: bold; background-color:' + (_0x1e6129.color || '#FFF2CC') + '; font-size: 13px;">' + _0x408aa4 + '</td>\n                            <td style="border: 1px solid #000; font-weight: bold; font-size: 14px;">' + UTILS.formatNumber(_0x44b4fa) + '</td>\n                            <td style="border: 1px solid #000; font-weight: bold; color: #0070C0; font-size: 14px;">' + UTILS.formatRealData(_0x2526f2) + '</td>\n                            ' + _0x389111.map((_0x2d750e, _0x425d66) => _0x305c4c(_0x425d66, _0x22c548 => _0x22c548.groups[_0x408aa4] || 0, '#000000')).join('') + '\n                        </tr>\n                    '; }); const _0x2e0689 = '\n                    <colgroup>\n                        <col style="width: 170px;">\n                        <col style="width: 95px;">\n                        <col style="width: 95px;">\n                        ' + _0x389111.map(() => '<col style="width: 85px;">').join('') + '\n                    </colgroup>\n                '; return '\n                    <div style="overflow-x: auto; width: max-content; min-width: auto; max-width: none; margin: 0 auto; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">\n                        <table class="mwg-table" style="width: max-content; min-width: auto; table-layout: fixed; border-collapse:collapse; text-align:center; font-size:12.5px; border: 2px solid #000; color:#000;">\n                            ' + _0x2e0689 + '\n                            <thead>\n                                ' + _0x18c65e + '\n                            </thead>\n                            <tbody>\n                                ' + _0x96e5fa + '\n                            </tbody>\n                        </table>\n                    </div>\n                '; } } };
-    const CodeInjector = { init: _0x40ac91 => { const _0x5de4e8 = GM_getValue('tgdd_active_theme_url', 'default'); const _0x3d3a4d = GM_getValue('tgdd_active_theme_code', ''); if (_0x5de4e8 !== 'default' && _0x3d3a4d) {
+    const CodeInjector = { init: _0x40ac91 => { if (!CONSTANTS.GSHEET.THEME) { /* V17.74: tắt theme tải từ Sheet ngoài, xóa code theme đã lưu */ try { GM_setValue('tgdd_active_theme_url', 'default'); GM_deleteValue('tgdd_active_theme_code'); GM_deleteValue('tgdd_cached_theme_sources'); } catch (_) { } } const _0x5de4e8 = GM_getValue('tgdd_active_theme_url', 'default'); const _0x3d3a4d = GM_getValue('tgdd_active_theme_code', ''); if (_0x5de4e8 !== 'default' && _0x3d3a4d) {
             console.log('[THEME] \u00C1p d\u1EE5ng giao di\u1EC7n \u1EA3o h\u00F3a t\u1EEB b\u1ED9 nh\u1EDB \u0111\u1EC7m (Cache)...');
             CodeInjector.injectCode(_0x3d3a4d, 'Cached-Theme');
         } if (!CONSTANTS.GSHEET.THEME || !CONSTANTS.GSHEET.THEME.ID) {
@@ -7429,7 +7433,7 @@ const _0x133c09 = '<div style="font-size:15px; color:#333; line-height:1.6; text
                     }
                 }
             }
-        } UI.showToast('\uD83C\uDF89 Ho\u00E0n t\u1EA5t ch\u1EE5p t\u1EF1 \u0111\u1ED9ng!'); GM_deleteValue('tgdd_auto_capture_tabs'); GM_deleteValue('tgdd_is_scheduled_run'); }, uploadImageToGAS: (_0x4eb4a5, _0x44f148, _0x51cf2c, _0x244f37) => { return new Promise((_0x32fd05, _0x1562bc) => { const _0x282302 = 'https://script.google.com/macros/s/AKfycbxYqw7ly8HtuuOojqdI5p_CV0qMgKK_dct4VaFpVu7GBf8YMRfFqc7846O35810WDDm/exec'; GM_xmlhttpRequest({ method: 'POST', url: _0x282302, data: JSON.stringify({ action: 'save_file', folderId: _0x4eb4a5, subFolderName: _0x44f148, name: _0x51cf2c, data: _0x244f37 }), headers: { 'Content-Type': 'application/json' }, onload: _0x382931 => { try {
+        } UI.showToast('\uD83C\uDF89 Ho\u00E0n t\u1EA5t ch\u1EE5p t\u1EF1 \u0111\u1ED9ng!'); GM_deleteValue('tgdd_auto_capture_tabs'); GM_deleteValue('tgdd_is_scheduled_run'); }, uploadImageToGAS: (_0x4eb4a5, _0x44f148, _0x51cf2c, _0x244f37) => { return new Promise((_0x32fd05, _0x1562bc) => { const _0x282302 = CONSTANTS.GSHEET.CONFIG_API; /* V17.74: bỏ Apps Script lưu ảnh của người khác */ GM_xmlhttpRequest({ method: 'POST', url: _0x282302, data: JSON.stringify({ action: 'save_file', folderId: _0x4eb4a5, subFolderName: _0x44f148, name: _0x51cf2c, data: _0x244f37 }), headers: { 'Content-Type': 'application/json' }, onload: _0x382931 => { try {
                 const _0x1410a1 = JSON.parse(_0x382931.responseText);
                 if (_0x1410a1.status === 'success')
                     _0x32fd05();
@@ -7504,6 +7508,7 @@ const _0x133c09 = '<div style="font-size:15px; color:#333; line-height:1.6; text
     GLOBAL.UTILS = UTILS;
     GLOBAL.UI = UI;
     GLOBAL.APP = APP;
+    GLOBAL.__AutoBIConst = CONSTANTS; /* V17.72: cho module Theo cấu hình QL đọc link Cloud / Sheet quyền */
     try {
         window.__AutoBIWorktime73.install({ UI: UI, DATA: DATA, UTILS: UTILS, authorize: cb => AuthService.check(cb), denied: () => UI.showUserInfoModal(), configKey: CONSTANTS.KEYS.CONFIG_LIST });
     }
@@ -10669,7 +10674,7 @@ window.__AutoBIRunPick = (() => {
     view.style.padding = '0';
     view.prepend(box);
     const chips = box.querySelector('.arp-cs'), run = box.querySelector('[data-a="run"]');
-    function paint() {
+    function paint(statusOnly) {
       const m = MODES.find(x => x.id === mode);
       box.querySelectorAll('.arp-m').forEach(b => {
         const on = b.dataset.m === mode, mm = MODES.find(x => x.id === b.dataset.m);
@@ -10831,4 +10836,178 @@ window.__AutoBIRunPick = (() => {
   const start = () => { try { mo.observe(document.body, { childList: true, subtree: true, characterData: true }); } catch (_) { } };
   if (document.body) start(); else document.addEventListener('DOMContentLoaded', start, { once: true });
   window.__AutoBIShot = { blocks, inject };
+})();
+
+/* ================================================================
+   V17.72 — Theo cấu hình QL (__AutoBIFollowQL)
+   Máy Trưởng ca nhập mã NV của Quản lý ở Khai báo → nút LOAD CẤU HÌNH
+   tải cấu hình Cloud của QL (cả 2 shop, target, tỉ lệ, ô Tự động theo BI,
+   nhóm hàng, nhân viên…). Ô mã QL lưu riêng trên máy (GM), LOAD không xóa.
+   Mỗi lần đổ số: kiểm ngầm cấu hình QL trên Cloud, khác bản đã nạp → ⚠ nhật ký + thông báo.
+   LƯU CẤU HÌNH ở máy TC vẫn lưu vào bản của TC (không ghi đè bản QL).
+   ================================================================ */
+(function () {
+  'use strict';
+  const K_CODE = 'autobi_follow_ql_v1';   // mã NV QL mà máy này theo
+  const K_SIG = 'autobi_follow_ql_sig';   // chữ ký cấu hình QL lúc nạp gần nhất
+  const K_AT = 'autobi_follow_ql_at';     // thời điểm nạp gần nhất (ms)
+  const G = () => (typeof unsafeWindow !== 'undefined' ? unsafeWindow : window);
+  const C = name => { try { return G()[name] || window[name]; } catch (_) { return window[name]; } };
+  const digits = s => { const m = String(s || '').match(/\d+/); return m ? m[0] : String(s || '').trim(); };
+  const code = () => digits(GM_getValue(K_CODE, '') || '');
+  const toast = (m, t) => { try { const U = C('UI'); if (U && U.showToast) U.showToast(m, t || 5000); } catch (_) { } };
+  const note = m => { try { const L = window.__AutoBILog5; const st = L && L.snapshot && L.snapshot(); if (st && st.status === 'running' && L.note) { L.note(m); return true; } } catch (_) { } return false; };
+  const fmt = ms => { if (!ms) return '—'; const d = new Date(ms), p = n => String(n).padStart(2, '0'); return p(d.getHours()) + ':' + p(d.getMinutes()) + ' ' + p(d.getDate()) + '/' + p(d.getMonth() + 1); };
+  const stable = v => Array.isArray(v) ? '[' + v.map(stable).join(',') + ']' : (v && typeof v === 'object') ? '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + stable(v[k])).join(',') + '}' : JSON.stringify(v === undefined ? null : v);
+  const sig = cfg => { const s = stable(cfg); let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return s.length + ':' + h; };
+
+  /* Mã NV → khóa cấu hình Cloud. Tab Config (Sheet AutoBi HA) lưu theo "Mã - Họ tên" (vd "173599 - Lâm Văn Quân"),
+     lấy họ tên bằng API quyền riêng (?type=check_auth, cùng Apps Script với CONFIG_API — đọc tab Auth AutoBi HA).
+     Lỗi thì thử Sheet quyền cũ (GSHEET.AUTH) như DATA.getStandardUserName. */
+  const keyCache = {};
+  function keyOld(c, cb) { cb(null); return; /* V17.74: không đọc Sheet quyền cũ */
+    const K = C('__AutoBIConst'), U = C('UTILS');
+    const A = K && K.GSHEET && K.GSHEET.AUTH;
+    if (!A || !U || !U.parseCSVLine) { cb(null); return; }
+    GM_xmlhttpRequest({
+      method: 'GET', timeout: 20000,
+      url: 'https://docs.google.com/spreadsheets/d/' + A.ID + '/export?format=csv&gid=' + A.GID + '&_t=' + Date.now(),
+      onload: r => {
+        let out = null;
+        try {
+          if (r.status === 200 && !String(r.responseText).includes('<html')) {
+            const rows = r.responseText.split('\n');
+            for (let i = 1; i < rows.length; i++) {
+              if (!rows[i].trim()) continue;
+              const x = U.parseCSVLine(rows[i].trim());
+              if (x.length >= 2 && (digits(x[0]) === c || digits(x[1]) === c)) { out = x[1].trim(); break; }
+            }
+          }
+        } catch (_) { }
+        cb(out);
+      },
+      onerror: () => cb(null), ontimeout: () => cb(null)
+    });
+  }
+  function key(c, cb) {
+    c = digits(c); if (!c) { cb(null); return; }
+    if (keyCache[c]) { cb(keyCache[c]); return; }
+    const K = C('__AutoBIConst'); const api = K && K.GSHEET && K.GSHEET.CONFIG_API;
+    const done = k => { if (k) keyCache[c] = k; else { note('Khai báo: không tìm thấy mã ' + c + ' trong danh sách quyền AutoBI'); toast('⚠️ Không tìm thấy mã ' + c + ' trong danh sách quyền AutoBI — kiểm lại mã NV của QL.', 8000); } cb(k || c); };
+    if (!api) { keyOld(c, done); return; }
+    GM_xmlhttpRequest({
+      method: 'GET', timeout: 20000,
+      url: api + '?type=check_auth&user=' + encodeURIComponent(c) + '&_t=' + Date.now(),
+      onload: r => {
+        try {
+          const d = JSON.parse(r.responseText || '{}');
+          const name = String(d.name || '').trim();
+          if (d.status === 'success' && name) { done(String(d.user || c).trim() + ' - ' + name); return; }
+        } catch (_) { }
+        keyOld(c, done);
+      },
+      onerror: () => keyOld(c, done), ontimeout: () => keyOld(c, done)
+    });
+  }
+
+  /* Gọi từ DATA.loadCloudConfig khi tải xong cấu hình của QL */
+  function loaded(cfg, c) {
+    GM_setValue(K_SIG, sig(cfg)); GM_setValue(K_AT, Date.now());
+    const shops = [1, 2, 3, 4, 5].map(i => cfg['shop' + i + 'Short'] || cfg['shop' + i]).filter(Boolean);
+    toast('👥 Đã nạp cấu hình của QL ' + c + (shops.length ? ' (' + shops.join(', ') + ')' : '') + '.', 6000);
+    if (typeof cfg.autoBiTarget !== 'boolean') {
+      setTimeout(() => toast('⚠️ Cấu hình của QL ' + c + ' chưa ghi ô "Tự động theo BI" (lưu từ bản cũ). QL cần mở Khai báo bấm LƯU CẤU HÌNH 1 lần, rồi máy này LOAD lại — nếu không target vẫn có thể lệch.', 12000), 1500);
+    }
+    setTimeout(() => paint(true), 200);
+  }
+
+  /* ---- Ô "Theo cấu hình của QL" trong Khai báo ---- */
+  function paint(statusOnly) {
+    const btn = document.getElementById('btn-load-cloud');
+    const st = document.getElementById('ab-fql-st');
+    const c = code();
+    if (btn && !btn.disabled && !statusOnly) btn.textContent = c ? 'LOAD CẤU HÌNH QL ' + c : 'LOAD CẤU HÌNH';
+    if (st) {
+      st.innerHTML = c
+        ? 'Máy này <b>theo QL ' + c + '</b> · nạp lần cuối: <b>' + fmt(GM_getValue(K_AT, 0)) + '</b>. Sửa Khai báo ở máy QL; bấm LƯU ở đây chỉ lưu bản riêng của bạn, lần LOAD sau sẽ bị thay.'
+        : 'Để trống = dùng cấu hình của chính mình (máy QL để trống).';
+      st.style.color = c ? '#0b4fb3' : '#64748b';
+    }
+  }
+  function inject() {
+    const btn = document.getElementById('btn-load-cloud');
+    if (!btn || document.getElementById('ab-fql')) return;
+    const bar = btn.parentElement; if (!bar || !bar.parentElement) return;
+    const box = document.createElement('div'); box.id = 'ab-fql';
+    box.style.cssText = 'width:100%;margin:0 0 10px;padding:8px 10px;border:1px dashed #93c5fd;border-radius:8px;background:#eff6ff;box-sizing:border-box;text-align:left;';
+    box.innerHTML = '<label style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;font-weight:800;color:#0f1b2d;">👥 Theo cấu hình của QL (mã NV):' +
+      '<input id="ab-fql-code" type="text" inputmode="numeric" autocomplete="off" placeholder="vd 12345" value="' + code() + '" style="width:110px;min-height:34px;padding:4px 8px;border:1px solid #94a3b8;border-radius:6px;font-size:14px;font-weight:800;text-align:center;">' +
+      '<button type="button" id="ab-fql-clear" style="min-height:34px;padding:0 10px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;font-size:12px;font-weight:700;cursor:pointer;">Bỏ theo QL</button></label>' +
+      '<div id="ab-fql-st" style="margin-top:5px;font-size:11.5px;line-height:1.4;"></div>';
+    bar.parentElement.insertBefore(box, bar);
+    const inp = box.querySelector('#ab-fql-code');
+    const set = v => {
+      const c = digits(v);
+      const old = code();
+      GM_setValue(K_CODE, c);
+      if (c !== old) { GM_deleteValue(K_SIG); GM_deleteValue(K_AT); }
+      inp.value = c; paint();
+      if (c && c !== old) toast('👥 Máy này sẽ theo cấu hình của QL ' + c + '. Bấm "LOAD CẤU HÌNH QL ' + c + '" để nạp.', 6000);
+      if (!c && old) toast('Đã bỏ theo QL — LOAD CẤU HÌNH sẽ tải cấu hình của chính bạn.', 5000);
+    };
+    ['click', 'mousedown', 'keydown', 'keyup', 'input'].forEach(ev => box.addEventListener(ev, e => e.stopPropagation()));
+    inp.addEventListener('change', () => set(inp.value));
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); set(inp.value); inp.blur(); } });
+    box.querySelector('#ab-fql-clear').addEventListener('click', e => { e.preventDefault(); set(''); });
+    /* bấm LOAD khi ô đang gõ dở → ghi mã trước */
+    btn.addEventListener('mousedown', () => { if (digits(inp.value) !== code()) set(inp.value); }, true);
+    btn.addEventListener('touchstart', () => { if (digits(inp.value) !== code()) set(inp.value); }, { capture: true, passive: true });
+    paint();
+  }
+
+  /* ---- Mỗi lần đổ số: so cấu hình QL trên Cloud với bản đã nạp ---- */
+  function check() {
+    const c = code(); if (!c) return;
+    const K = C('__AutoBIConst'); const url = K && K.GSHEET && K.GSHEET.CONFIG_API; if (!url) return;
+    const say = (m, warn) => { note(m); if (warn) toast(m, 9000); };
+    key(c, k => {
+      if (!k) return;
+      GM_xmlhttpRequest({
+        method: 'GET', timeout: 20000, url: url + '?user=' + encodeURIComponent(k) + '&_t=' + Date.now(),
+        onload: r => {
+          try {
+            const j = JSON.parse(r.responseText);
+            if (!(r.status === 200 && j.status === 'success' && j.data)) { note('Khai báo: không đọc được cấu hình QL ' + c + ' trên Cloud — bỏ qua bước kiểm'); return; }
+            const s = sig(JSON.parse(j.data)), had = GM_getValue(K_SIG, '');
+            if (!had) say('⚠ Khai báo: máy này theo QL ' + c + ' nhưng chưa nạp lần nào — vào Khai báo bấm LOAD CẤU HÌNH QL ' + c + ' rồi đổ lại', true);
+            else if (had !== s) say('⚠ Khai báo: QL ' + c + ' đã lưu Khai báo mới sau lần nạp ' + fmt(GM_getValue(K_AT, 0)) + ' — vào Khai báo bấm LOAD CẤU HÌNH QL ' + c + ' rồi đổ lại để số khớp QL', true);
+            else note('Khai báo: theo QL ' + c + ' · nạp lúc ' + fmt(GM_getValue(K_AT, 0)) + ' · khớp bản QL trên Cloud');
+          } catch (_) { note('Khai báo: lỗi đọc cấu hình QL ' + c + ' — bỏ qua bước kiểm'); }
+        },
+        onerror: () => note('Khai báo: không kết nối được Cloud để kiểm cấu hình QL — bỏ qua'),
+        ontimeout: () => note('Khai báo: kiểm cấu hình QL quá 20 giây — bỏ qua')
+      });
+    });
+  }
+  function hookRun() {
+    const D = C('DATA');
+    if (!D || !D.loadConfigAndRun) return false;
+    if (D.loadConfigAndRun.__abFql) return true;
+    const orig = D.loadConfigAndRun;
+    const wrapped = function (...args) {
+      try { if (args[1] === 'current' || !args[1]) setTimeout(check, 300); } catch (_) { }
+      return orig.apply(this, args);
+    };
+    wrapped.__abFql = true;
+    D.loadConfigAndRun = wrapped;
+    return true;
+  }
+
+  window.__AutoBIFollowQL = { code, key, loaded, check, sig };
+  try { if (typeof unsafeWindow !== 'undefined') unsafeWindow.__AutoBIFollowQL = window.__AutoBIFollowQL; } catch (_) { }
+  if (location.hostname !== 'baocao.dienmayxanh.com') return;
+  let tries = 0; const t = setInterval(() => { if (hookRun() || ++tries > 120) clearInterval(t); }, 500);
+  const mo = new MutationObserver(() => { try { inject(); } catch (_) { } });
+  const start = () => { try { inject(); } catch (_) { } try { mo.observe(document.body, { childList: true, subtree: true }); } catch (_) { } };
+  if (document.body) start(); else document.addEventListener('DOMContentLoaded', start, { once: true });
 })();
