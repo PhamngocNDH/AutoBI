@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AutoBI - Kho & Xuất Bán
 // @namespace    https://github.com/PhamngocNDH/AutoBI/kho-xuatban-test
-// @version      2.8.0
+// @version      2.9.2
 // @description  Đổ tồn kho (BI 4286) và xuất bán (BI 77) theo cụm siêu thị cho máy tính: lấy thẳng dữ liệu BI có điều tốc, sổ ngày, bộ chọn tồn kho, Excel.
 // @author       AutoBI / 38967 - Mr Phạm
 // @homepageURL  https://github.com/PhamngocNDH/AutoBI
@@ -35,6 +35,9 @@
  *   Bộ lọc: Hình thức xuất = 3, Tìm theo = 2 (Kho tạo), Ngành = 13. Đối chiếu khớp 41/41 dòng với file
  *   Excel xuất tay ngày 29–30/09/2026.
  * - Tham số báo cáo đọc từ /Home/GetDynamicReport nên tự theo khi BI đổi định nghĩa.
+ * V2.9 (12/10/2026): bỏ trống Hình thức xuất → BI trả mọi hình thức (đối chiếu khớp 870/870 dòng file sếp ngày 11/10).
+ *   Dòng bán = Xuất bán hàng tại siêu thị / (TCĐM) / pre-order / ưu đãi nhân viên / TRẢ GÓP tại siêu thị (+TCĐM). Trước 2.9 thiếu trả góp.
+ *   Giữ thêm dòng "Xuất dịch vụ thu hộ bảo hiểm" (svc) chỉ cho tab Hiệu quả NV; KM, thu hộ khác, đổi bảo hành bỏ.
  * Quy tắc tính bán: Trạng thái xuất = Đã xuất, Trạng thái giao = Đã giao, Trả hàng = Chưa trả, Hủy = Chưa hủy.
  * Doanh thu = Giá bán × SL (đã gồm VAT). Không dùng Phải thu (tổng cả đơn, lặp ở mọi dòng).
  * Không lưu tên, số điện thoại, địa chỉ, email khách hàng.
@@ -42,13 +45,13 @@
  */
 (function () {
     'use strict';
-    const VERSION = '2.8.0';
+    const VERSION = '2.9.2';
     const UPDATE_URL = 'https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_Kho_XuatBan.user.js';
-    const SALES_SCHEMA = 4;                             // 4 = tất cả ngành + Loại hàng + Kho xuất (MASIEUTHIXUAT); ngày lưu bằng bản cũ sẽ được lấy lại
+    const SALES_SCHEMA = 5;                             // 5 (V2.9) = mọi hình thức bán (gồm trả góp) + dòng dịch vụ bảo hiểm; 4 = tất cả ngành + Loại hàng + Kho xuất; ngày lưu bằng bản cũ sẽ được lấy lại
     const PREFIX = 'autobi_kxb_test_v1_';               // giữ khóa cũ để không mất khai báo shop
     const AUTH_SHEET = Object.freeze({ id: '17PxnghjkKIP36fWoSd656wo3DhlOmMiTiyjlf1g23UU', gid: '1237161146' });
     const REPORT = Object.freeze({ inventory: 4286, sales: 77 });
-    const SALES_FILTER = Object.freeze({ exportType: '3', warehouseMode: '2', category: '' });   // '' = tất cả ngành hàng
+    const SALES_FILTER = Object.freeze({ exportType: '', warehouseMode: '2', category: '' });   // V2.9: exportType '' = mọi hình thức xuất (lọc dòng bán trong code bằng saleKind); category '' = tất cả ngành hàng
     const RECHECK_DAYS = 60;                            // ngày còn treo: xem lại tối đa 60 ngày
     const COMPARE = false;                              // V2.5.4: anh Ngọc bỏ "So với" (tháng trước / 7 ngày trước) ở Xuất bán — đặt true để bật lại
 
@@ -154,15 +157,24 @@
             pay: clean(r.HINHTHUCTHANHTOAN), ship: clean(r.HINHTHUCGIAOHANG)   // V2.0: hình thức thanh toán / giao hàng (không phải thông tin khách)
         };
     }
+    // V2.9: phân loại theo Hình thức xuất (cột HINHTHUCXUAT) — 'sale' bán thường, 'inst' trả góp (trả chậm), 'svc' dịch vụ bảo hiểm, '' bỏ
+    const SALE_TYPE = /^xuat ban (hang (tra gop )?tai sieu thi( \(tcdm\))?|pre-?order tai sieu thi|uu dai cho nhan vien)$/;
+    const SVC_TYPE = /^xuat dich vu thu ho bao hiem$/;
+    function saleKind(exportType) {
+        const n = norm(exportType);
+        if (SALE_TYPE.test(n)) return /tra gop/.test(n) ? 'inst' : 'sale';
+        return SVC_TYPE.test(n) ? 'svc' : '';
+    }
+    const isSaleType = l => { const k = saleKind(l.exportType); return k === 'sale' || k === 'inst'; };
     const RULE = [['exported', 'Đã xuất', 'Chưa xuất'], ['delivered', 'Đã giao', 'Chưa giao'], ['cancelled', 'Chưa hủy', 'Đã hủy'], ['returned', 'Chưa trả', 'Đã trả hàng']];
     function reasons(line) {
         const out = RULE.filter(([k, ok]) => !same(line[k], ok)).map(([, , label]) => label);
         if (SALES_FILTER.category && !hasCode(line.category, SALES_FILTER.category)) out.push('Ngành khác ' + SALES_FILTER.category);
-        if (!/xuat ban hang tai sieu thi$/.test(norm(line.exportType))) out.push('Hình thức xuất khác 3');
+        if (!saleKind(line.exportType)) out.push('Không phải dòng bán (KM, thu hộ…)');
         return out;
     }
     // Đơn còn treo = chưa hủy nhưng chưa xuất hoặc chưa giao → ngày tạo phải lấy lại sau
-    const pending = line => same(line.cancelled, 'Chưa hủy') && !(same(line.exported, 'Đã xuất') && same(line.delivered, 'Đã giao'));
+    const pending = line => isSaleType(line) && same(line.cancelled, 'Chưa hủy') && !(same(line.exported, 'Đã xuất') && same(line.delivered, 'Đã giao'));
     function validateSalesLines(lines, shops, dayOrRange) {
         const codes = new Set(shops.map(s => keyCode(s.code)));
         const from = typeof dayOrRange === 'string' ? dayOrRange : dayOrRange.from, to = typeof dayOrRange === 'string' ? dayOrRange : dayOrRange.to;
@@ -183,14 +195,16 @@
         for (const l of lines) {
             if (returnedOrders.has(l.order)) {
                 excluded['Đơn khách nhập trả'] = (excluded['Đơn khách nhập trả'] || 0) + 1;
-                if ((!SALES_FILTER.category || hasCode(l.category, SALES_FILTER.category)) && l.price > 0) returnedLines.push(brief(l));
+                if ((!SALES_FILTER.category || hasCode(l.category, SALES_FILTER.category)) && l.price > 0 && isSaleType(l)) returnedLines.push(brief(l));
                 continue;
             }
             if (pending(l)) { pendingOrders.add(l.order); pendingLines.push(brief(l)); }
             const why = reasons(l);
             if (why.length) { why.forEach(w => excluded[w] = (excluded[w] || 0) + 1); continue; }
+            const kind = saleKind(l.exportType);
+            if (kind === 'svc') { invariant(l.creator, `Dòng dịch vụ ${l.order}: thiếu Người tạo`); valid.push({ ...l, svc: 1 }); continue; }
             invariant(l.creator && l.brand && l.product, `Dòng bán ${l.order}: thiếu Người tạo/Nhà sản xuất/Mã sản phẩm`);
-            valid.push(l);
+            valid.push(kind === 'inst' ? { ...l, inst: 1 } : l);
         }
         return { valid, excluded, pending: pendingOrders.size, pendingLines, returned: returnedOrders.size, returnedLines };
     }
@@ -238,6 +252,144 @@
         return lines.filter(l => { const d = basis === 'shipped' && l.shipped ? l.shipped : l.created; return d >= range.from && d <= range.to; });
     }
 
+
+    /* ================= HIỆU QUẢ NHÂN VIÊN (V2.9 — theo file "Theo dõi nhân viên" của sếp, sheet HIỆU QUẢ NV) =================
+     * Doanh thu thực = SALEPRICE (giá chưa VAT, cột "Giá bán_1") × SL. Trả chậm = dòng Hình thức xuất trả góp.
+     * SP chính = Smartphone + Laptop + Máy lọc nước + CE (Tivi LED, Tủ lạnh, Máy giặt, Máy lạnh).
+     * Bảo hiểm quy đổi ×4,18, đồng hồ (Wearable) quy đổi ×3 như file sếp. Mọi tỉ lệ ở dòng Tổng tính theo tổng cụm. */
+    const PERF_BRANDS = [['iPhone', 'apple'], ['Samsung', 'samsung'], ['Oppo', 'oppo'], ['Xiaomi', 'xiaomi'], ['Vivo', 'vivo'], ['Realme', 'realme']];
+    const PERF_SECS = [
+        ['dt', 'DOANH THU + TRẢ CHẬM'], ['smf', 'SMARTPHONE - LAPTOP'], ['kem', 'NGÀNH HÀNG THÊM - BÁN KÈM'],
+        ['gd', 'GIA DỤNG'], ['ce', 'ĐIỆN TỬ - ĐIỆN LẠNH (TIVI - TỦ LẠNH - MÁY GIẶT - MÁY LẠNH)']];
+    // [khóa, tiêu đề, khối, kiểu (n số · m tiền · u đơn giá · p %), các luật tô màu]
+    // luật: y30 = 30% cao nhất vàng · r30/r40 = 30%/40% thấp nhất hồng · g30 = 30% cao nhất xanh · lt = thấp hơn dòng Tổng · z = bằng 0 · p30 = dưới 30%
+    const PERF_COLS = [
+        ['spc', 'SL SP Chính', 'dt', 'n', ['y30', 'r40']], ['rev', 'Tổng Doanh Thu Thực', 'dt', 'm', []],
+        ['instQ', 'SL Trả Chậm', 'dt', 'n', ['y30']], ['instR', 'Doanh Thu Trả Chậm', 'dt', 'm', ['y30']],
+        ['instShare', 'Tỉ Trọng Trả Chậm', 'dt', 'p', ['p30', 'y30']], ['instRate', 'Tỉ lệ Trả Chậm/SPC', 'dt', 'p', ['p30', 'y30']],
+        ['smfR', 'Doanh thu SMF', 'smf', 'm', ['r30']], ['smfQ', 'Số lượng SMF', 'smf', 'n', ['r30']],
+        ['smfAvg', 'Đơn giá SMF', 'smf', 'u', ['lt']], ['andAvg', 'Đơn giá Android', 'smf', 'u', ['lt']],
+        ...PERF_BRANDS.map(([label]) => ['b_' + label, label, 'smf', 'n', []]), ['laptop', 'Laptop', 'smf', 'n', []],
+        ['sim', 'Sim', 'kem', 'n', []], ['simRate', 'Sim/SMF', 'kem', 'p', ['lt']], ['cam', 'Cam', 'kem', 'n', []], ['camRate', 'Cam/SMF', 'kem', 'p', ['lt']],
+        ['bhQ', 'SL Bảo hiểm', 'kem', 'n', ['z']], ['bhQD', 'DT Bảo hiểm (QĐ)', 'kem', 'm', []], ['bhRate', 'BH/DT Trả chậm', 'kem', 'p', ['lt']],
+        ['smwQ', 'SL SMW', 'kem', 'n', []], ['smwQD', 'DT SMW (QĐ)', 'kem', 'm', []], ['smwRate', 'SMW/Phone', 'kem', 'p', ['lt']],
+        ['gdR', 'Doanh thu Gia dụng', 'gd', 'm', []], ['gdRate', 'Gia dụng/ Tổng DT', 'gd', 'p', ['lt']], ['mln', 'SL MLN', 'gd', 'n', ['r30']], ['mlnRate', 'MLN/CE', 'gd', 'p', ['lt']],
+        ['tvQ', 'Tivi', 'ce', 'n', ['z']], ['tvR', 'Doanh thu TV', 'ce', 'm', ['z', 'r30', 'g30']], ['tvAvg', 'TB giá TV', 'ce', 'u', ['lt']],
+        ['tlQ', 'Tủ lạnh', 'ce', 'n', ['z']], ['tlR', 'Doanh thu TL', 'ce', 'm', ['z', 'r30', 'g30']], ['tlAvg', 'TB giá TL', 'ce', 'u', ['lt']],
+        ['mgQ', 'Máy giặt', 'ce', 'n', ['z']], ['mgR', 'Doanh thu MG', 'ce', 'm', ['z', 'r30', 'g30']], ['mgAvg', 'TB giá MG', 'ce', 'u', ['lt']],
+        ['mlQ', 'Máy lạnh', 'ce', 'n', ['z']], ['mlR', 'Doanh thu ML', 'ce', 'm', ['z', 'r30', 'g30']], ['mlAvg', 'TB giá ML', 'ce', 'u', ['lt']],
+        ['ceQ', 'SL bán CE', 'ce', 'n', ['z', 'r30', 'g30']], ['ceR', 'Doanh thu CE', 'ce', 'm', ['z', 'g30', 'r30']], ['ceAvg', 'TB giá CE', 'ce', 'u', ['lt']]];
+    function perfBlank() {
+        const o = { rev: 0, instQ: 0, instR: 0, smfR: 0, smfQ: 0, appleR: 0, laptop: 0, sim: 0, cam: 0, bhQ: 0, bhR: 0, smwQ: 0, smwR: 0, gdR: 0, mln: 0,
+            tvQ: 0, tvR: 0, tlQ: 0, tlR: 0, mgQ: 0, mgR: 0, mlQ: 0, mlR: 0 };
+        PERF_BRANDS.forEach(([label]) => { o['b_' + label] = 0; });
+        return o;
+    }
+    const perfAny = (label, codes) => codes.some(c => hasCode(label, c));
+    function perfAdd(o, l) {
+        const q = l.qty || 0, r = q * (l.priceNet || l.priceNet === 0 ? l.priceNet : l.price || 0);
+        if (l.svc) { if (perfAny(l.group, ['4499', '4479'])) { o.bhQ += q; o.bhR += r; } return; }
+        o.rev += r;
+        if (l.inst) { o.instQ += q; o.instR += r; }
+        if (hasCode(l.group, '1491')) {
+            o.smfQ += q; o.smfR += r;
+            const b = PERF_BRANDS.find(([, k]) => norm(l.brand).startsWith(k));
+            if (b) o['b_' + b[0]] += q;
+            if (norm(l.brand).startsWith('apple')) o.appleR += r;
+        }
+        if (hasCode(l.category, '22')) o.laptop += q;
+        if (hasCode(l.group, '1891')) o.sim += q;
+        if (perfAny(l.group, ['6479', '4219'])) o.cam += q;
+        if (hasCode(l.category, '23')) { o.smwQ += q; o.smwR += r; }
+        if (perfAny(l.category, ['484', '1034', '1214', '1116'])) o.gdR += r;
+        if (hasCode(l.category, '1116')) o.mln += q;
+        if (hasCode(l.group, '1094')) { o.tvQ += q; o.tvR += r; }
+        if (hasCode(l.category, '1755')) { o.tlQ += q; o.tlR += r; }
+        if (hasCode(l.category, '1756')) { o.mgQ += q; o.mgR += r; }
+        if (hasCode(l.group, '1098')) { o.mlQ += q; o.mlR += r; }
+    }
+    function perfFinish(o) {
+        const div = (a, b) => b ? a / b : 0;
+        o.ceQ = o.tvQ + o.tlQ + o.mgQ + o.mlQ; o.ceR = o.tvR + o.tlR + o.mgR + o.mlR;
+        o.spc = o.smfQ + o.laptop + o.mln + o.ceQ;
+        o.instShare = div(o.instR, o.rev); o.instRate = div(o.instQ, o.spc);
+        o.smfAvg = div(o.smfR, o.smfQ); o.andAvg = div(o.smfR - o.appleR, o.smfQ - o.b_iPhone);
+        o.simRate = div(o.sim, o.smfQ); o.camRate = div(o.cam, o.smfQ);
+        o.bhQD = o.bhR * 4.18; o.bhRate = div(o.bhQD, o.instR);
+        o.smwQD = o.smwR * 3; o.smwRate = div(o.smwQ, o.smfQ);
+        o.gdRate = div(o.gdR, o.rev); o.mlnRate = div(o.mln, o.ceQ);
+        o.tvAvg = div(o.tvR, o.tvQ); o.tlAvg = div(o.tlR, o.tlQ); o.mgAvg = div(o.mgR, o.mgQ); o.mlAvg = div(o.mlR, o.mlQ); o.ceAvg = div(o.ceR, o.ceQ);
+        return o;
+    }
+    // V2.9.1: khai báo nhân viên từng siêu thị — 1 dòng "mã" hoặc "mã - tên"
+    function parseStaffEntry(text) {
+        const t = clean(text).replace(/\s+/g, ' '); if (!t) return null;
+        const id = t.match(/^(\d+)/)?.[1] || norm(t);
+        return { id, label: t };
+    }
+    function parseStaffList(text) {
+        const seen = new Map(), out = [];   // trùng mã: giữ vị trí đầu, ưu tiên dòng có tên
+        String(text || '').split(/[\n;]+/).map(parseStaffEntry).filter(Boolean).forEach(e => {
+            if (!seen.has(e.id)) { seen.set(e.id, out.length); out.push(e.label); } else if (e.label.length > out[seen.get(e.id)].length) out[seen.get(e.id)] = e.label;
+        });
+        return out;
+    }
+    // lines = dòng bán (có cờ inst), svcLines = dòng dịch vụ bảo hiểm; shopOrder = thứ tự siêu thị trong Cài đặt
+    // lists = { mã ST: ['mã - tên', …] } — siêu thị đã khai báo: chỉ tính đúng các nhân viên đó, bán tại chính siêu thị đó, theo thứ tự khai báo (kể cả người chưa bán)
+    function staffPerf(lines, svcLines = [], shopOrder = [], lists = {}) {
+        const m = new Map(), total = perfBlank(), decl = {};
+        for (const [shop, arr] of Object.entries(lists || {})) {
+            const es = (arr || []).map(parseStaffEntry).filter(Boolean);
+            if (es.length) decl[keyCode(shop)] = new Map(es.map((e, i) => [e.id, { ...e, i }]));
+        }
+        const idOf = c => clean(c).match(/^(\d+)\s*[-–]/)?.[1] || norm(c);
+        for (const l of [...lines, ...svcLines]) {
+            const id = idOf(l.creator), d = decl[l.shop];
+            if (d && !d.has(id)) continue;
+            const key = l.shop + '|' + id;
+            const x = m.get(key) || m.set(key, { shop: l.shop, label: clean(l.creator), ...perfBlank() }).get(key);
+            perfAdd(x, l); perfAdd(total, l);
+        }
+        for (const [shop, d] of Object.entries(decl)) for (const [id, e] of d) {
+            const key = shop + '|' + id; if (!m.has(key)) m.set(key, { shop, label: e.label, ...perfBlank() });
+            m.get(key).declared = e.i + 1;
+        }
+        const pos = c => { const i = shopOrder.indexOf(c); return i < 0 ? 999 : i; };
+        const rows = [...m.values()].map(perfFinish).sort((a, b) => pos(a.shop) - pos(b.shop) || vcmp(a.shop, b.shop) || (a.declared || 1e9) - (b.declared || 1e9) || b.rev - a.rev || vcmp(a.label, b.label));
+        return { rows, total: perfFinish(total), declaredShops: Object.keys(decl) };
+    }
+    // Tô màu như file sếp: trả về { 'hàng|khóa': 'y'|'r'|'g' }
+    function perfMarks(perf) {
+        const out = {}, n = perf.rows.length;
+        for (const [key, , , kind, rules] of PERF_COLS) {
+            const vals = perf.rows.map(r => r[key]), k30 = Math.max(1, Math.floor(n * 0.3)), k40 = Math.max(1, Math.floor(n * 0.4));
+            const desc = vals.slice().sort((a, b) => b - a), asc = vals.slice().sort((a, b) => a - b);
+            perf.rows.forEach((r, i) => {
+                const v = r[key];
+                for (const rule of rules) {
+                    let hit = '';
+                    if (rule === 'z' && v === 0) hit = 'r';
+                    else if (rule === 'p30' && v < 0.3) hit = 'r';
+                    else if (rule === 'lt' && v < perf.total[key] - 1e-9) hit = 'r';
+                    else if (n >= 3 && rule === 'y30' && v >= desc[k30 - 1] && v > 0) hit = 'y';
+                    else if (n >= 3 && rule === 'g30' && v >= desc[k30 - 1] && v > 0) hit = 'g';
+                    else if (n >= 3 && rule === 'r30' && v <= asc[k30 - 1]) hit = 'r';
+                    else if (n >= 3 && rule === 'r40' && v <= asc[k40 - 1]) hit = 'r';
+                    if (hit) { out[i + '|' + key] = hit; break; }
+                }
+            });
+            void kind;
+        }
+        return out;
+    }
+    // Định dạng kiểu file sếp: 252 triệu · 1,9 tỷ · 11,0 tr · 27%
+    function perfText(kind, v, dash = false) {
+        if (kind === 'n') return v ? String(Math.round(v * 100) / 100).replace('.', ',') : (dash ? '-' : '0');
+        if (kind === 'p') return Math.round(v * 100) + '%';
+        if (kind === 'u') return (Math.round(v / 1e5) / 10).toFixed(1).replace('.', ',') + ' tr';
+        if (Math.abs(v) >= 1e9) return (Math.round(v / 1e8) / 10).toFixed(1).replace('.', ',') + ' tỷ';
+        return Math.round(v / 1e6) + ' triệu';
+    }
 
     /* ================= ĐIỀU TỐC (BI: tối đa 5 lần/60 giây cho mỗi báo cáo) ================= */
     // Đọc thông báo "Bạn thao tác quá nhanh ... (tối đa 5 lần/60 giây). Vui lòng thử lại sau 5 giây !"
@@ -851,7 +1003,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
     /* ---------- V2.7: cấu hình lưu trên Google Sheet (AutoBi HA, tab ConfigKho) ----------
      * Chỉ đồng bộ các khóa cài đặt người dùng tự chọn; không đưa bộ nhớ tạm (danh sách siêu thị CRM, tọa độ) và số liệu lên Sheet. */
     const SYNC_KEYS = ['shops', 'basis', 'returnDays', 'balTarget', 'balSpare', 'ageAlert', 'freshHours', 'notify', 'invTransit', 'balIncoming', 'attachGroups', 'img',
-        'crmProvinces', 'crmNearProvinces', 'reqFavs', 'srcKeep', 'srcRadius', 'compareMode'];
+        'crmProvinces', 'crmNearProvinces', 'reqFavs', 'srcKeep', 'srcRadius', 'compareMode', 'staffLists'];
     function syncPick(cfg) { const o = {}; for (const k of SYNC_KEYS) if (cfg && cfg[k] !== undefined) o[k] = cfg[k]; return o; }
     // Người mới: lấy danh sách siêu thị từ cấu hình AutoBI Core (shopCode1/makho1 + shop1 "ĐMM_NDI_HHA - Hải Anh" / shop1Short)
     function coreShops(json) {
@@ -870,7 +1022,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
     // Hàm thuần cho kiểm thử offline; không cài global trên website thật.
     if (typeof module === 'object' && module.exports) {
         module.exports = { clean, norm, hasCode, day, toBI, addDays, validateRange, daysIn, apiNumber, parseDelimited,
-            lineFromApi, reasons, pending, validateSalesLines, splitSales, summarizeSales, inPeriod, dayStatus, daysToFetch,
+            lineFromApi, reasons, pending, saleKind, staffPerf, parseStaffList, PERF_COLS, PERF_SECS, perfMarks, perfText, validateSalesLines, splitSales, summarizeSales, inPeriod, dayStatus, daysToFetch,
             parseRateLimit, waitBeforeCall, inventoryRecordFromApi, summarizeInventory, filterInventory, inventoryOptions, inventoryViews, validateShops, authorizeSheetRows, escHtml, inventoryChecklist, inventoryPrintHtml, conditionKey, conditionText, newerVersion, parseRemoteScript, outStoreKey, balanceRows, isFresh, shiftMonth, prevMonthRange, attachStats, pendingOrders, projectMonth, daysBetween,
             modelOf, transferPlan, ageDays, ageBucket, AGE_BUCKETS, transitDiff, hourMatrix, weekdayOf, compareRange, cellNumber, toTsv, requestMessage, mergeMonth, crmCell, parseCrmDoc, crmSources, crmStoreList, CRM_DEFAULT_STORES, CRM_PROVINCES, parseStoreOptions, storeArea, rankSources, areaText, isNotNewName, isServiceName, crmUsable,
             NEAR_PROVS, nearProvsOf, provShort, variantBase, altOptions, nearbySources, mergeCrm, allocateAsk, allocateMany, planText, groupBySource,
@@ -892,7 +1044,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
     const cloud = { ready: false, pulling: false, pulled: false, timer: 0, lastSeen: '', geoPulled: false, info: '' };
     let config = { ...defaults, ...load('config', {}) };
     let ui, running = null, auth = null;
-    const view = { tab: 'sales', sales: null, salesTab: 'category', salesShops: null, salesConds: new Set(), salesCat: '', salesBrands: new Set(), openDrop: '', salesQuery: '', balDays: 10, balStatus: '', balShops: null, balBrands: new Set(), openStaff: new Set(), inv: null, invTab: 'group', invShops: null, invFilter: { category: '', group: '', brand: '', conditions: [], q: '' } };
+    const view = { tab: 'sales', sales: null, salesTab: 'category', salesShops: null, salesConds: new Set(), salesCat: '', salesBrands: new Set(), openDrop: '', salesQuery: '', balDays: 10, balStatus: '', balShops: null, balBrands: new Set(), openStaff: new Set(), perfSecs: new Set(['dt', 'smf', 'ce']), perfSort: { key: '', dir: 0 }, inv: null, invTab: 'group', invShops: null, invFilter: { category: '', group: '', brand: '', conditions: [], q: '' } };
     let journal = load('journal', []).slice(-300);
     if (load('journalVersion', '') !== VERSION) { journal = []; try { save('journal', journal); save('journalVersion', VERSION); } catch { /* bỏ qua */ } }
     function log(message, kind = 'info') {
@@ -1362,7 +1514,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         validateSalesLines(lines, config.shops, iso);
         const s = splitSales(lines), now = new Date();
         const record = { schema: SALES_SCHEMA, shops: shopsKey(), status: dayStatus(iso, s.pending, isoDate(now), config.returnDays), pending: s.pending, pendingLines: s.pendingLines, returned: s.returned, returnedLines: s.returnedLines, rows: rows.length, valid: s.valid.length,
-            quantity: s.valid.reduce((a, l) => a + l.qty, 0), revenue: s.valid.reduce((a, l) => a + l.qty * l.price, 0), excluded: s.excluded, at: stamp(now), atMs: now.getTime() };
+            quantity: s.valid.filter(l => !l.svc).reduce((a, l) => a + l.qty, 0), revenue: s.valid.filter(l => !l.svc).reduce((a, l) => a + l.qty * l.price, 0), excluded: s.excluded, at: stamp(now), atMs: now.getTime() };
         return { day: iso, record, lines: s.valid };
     }
 
@@ -1498,7 +1650,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
     }
     function salesView(range) {
         const { book, lines } = loadBook(range);
-        const period = inPeriod(lines, range, config.basis);
+        const periodAll = inPeriod(lines, range, config.basis), period = periodAll.filter(l => !l.svc), svcLines = periodAll.filter(l => l.svc);   // V2.9: dịch vụ bảo hiểm chỉ dùng cho Hiệu quả NV
         const today = isoDate(new Date());
         const days = daysIn(range).filter(d => d <= today).map(d => ({ day: d, ...(book[d] || { status: 'Chưa lấy' }) }));
         const pend = days.flatMap(d => (d.pendingLines || [])), ret = days.flatMap(d => (d.returnedLines || []));
@@ -1506,8 +1658,8 @@ tr{break-inside:avoid;page-break-inside:avoid}
         // Cùng kỳ tháng trước (chỉ đọc số đã lưu, không gọi BI)
         const prevRange = compareRange(range, config.compareMode), pb = COMPARE ? loadBook(prevRange) : { book: {}, lines: [] };
         const prevMissing = COMPARE ? daysIn(prevRange).filter(d => d <= today && (!pb.book[d] || pb.book[d].schema !== SALES_SCHEMA)).length : 0;
-        return { range, compareMode: config.compareMode === 'week' ? 'week' : 'month', basis: config.basis, days, missing: days.filter(d => d.status === 'Chưa lấy').length, oldSchema, allLines: period, pendingLines: pend, returnedLines: ret,
-            prevRange, prevMissing, noCompare: !COMPARE, prevAllLines: inPeriod(pb.lines, prevRange, config.basis) };
+        return { range, compareMode: config.compareMode === 'week' ? 'week' : 'month', basis: config.basis, days, missing: days.filter(d => d.status === 'Chưa lấy').length, oldSchema, allLines: period, svcLines, pendingLines: pend, returnedLines: ret,
+            prevRange, prevMissing, noCompare: !COMPARE, prevAllLines: inPeriod(pb.lines, prevRange, config.basis).filter(l => !l.svc) };
     }
 
     /* ---------- Định dạng & bảng ---------- */
@@ -1750,6 +1902,132 @@ tr{break-inside:avoid;page-break-inside:avoid}
             `• Hãng bán nhiều: ${s.brands.slice(0, 3).map(b => `${b.label} ${fmt(b.quantity)}`).join(', ') || '—'}`,
             `• Giờ bán nhiều: ${peak.join(', ') || '—'}`].join('\n'), 'Đã chép nhận xét nhân viên'));
     }
+    /* ---------- V2.9: Hiệu quả nhân viên (khuôn bảng "HIỆU QUẢ LÀM VIỆC NHÂN VIÊN" của sếp) ---------- */
+    const PERF_CELL = { y: ['#ffeb9c', '#9c5700'], r: ['#ffc7ce', '#9c0006'], g: ['#c6efce', '#006100'] };
+    const PERF_HEAD = { spc: ['#92d050', '#000'], rev: ['#92d050', '#000'], instQ: ['#e4b4ec', '#000'], instR: ['#e4b4ec', '#000'], instShare: ['#e4b4ec', '#000'], instRate: ['#e4b4ec', '#000'],
+        b_iPhone: ['#000', '#fff'], b_Samsung: ['#0070c0', '#fff'], b_Oppo: ['#00b050', '#fff'], b_Xiaomi: ['#ed7d31', '#fff'], b_Vivo: ['#1f3a93', '#fff'], b_Realme: ['#ffc000', '#000'], laptop: ['#5b9bd5', '#fff'] };
+    const PERF_SEC_HEAD = { dt: ['#92d050', '#000'], smf: ['#ffc000', '#000'], kem: ['#d9d9d9', '#000'], gd: ['#f2f2f2', '#000'], ce: ['#0000ff', '#fff'] };
+    const perfHead = c => PERF_HEAD[c[0]] || PERF_SEC_HEAD[c[2]];
+    const perfBrandShare = (perf, key) => key.startsWith('b_') && perf.total.smfQ ? perf.total[key] / perf.total.smfQ : null;
+    function perfInput(r) {
+        const shops = view.salesShops, lines = r.allLines.filter(l => shops.has(l.shop)), svc = (r.svcLines || []).filter(l => shops.has(l.shop));
+        // V2.9.2: chỉ dùng danh sách của các siêu thị đang chọn (trước đây chọn Trực Cường vẫn hiện NV Hải Anh dòng 0)
+        const lists = Object.fromEntries(Object.entries(config.staffLists || {}).filter(([code]) => shops.has(keyCode(code))));
+        const all = staffPerf(lines, svc, config.shops.map(x => keyCode(x.code)), lists);
+        // Siêu thị chưa khai báo nhân viên: ẩn người chỉ bán lẻ tẻ (không SP chính, DT < 5 triệu); siêu thị đã khai báo: hiện đủ danh sách
+        const rows = view.perfAll ? all.rows : all.rows.filter(x => x.declared || x.spc > 0 || x.rev >= 5e6);
+        return { ...all, rows, hidden: all.rows.length - rows.length };
+    }
+    const perfCols = () => PERF_COLS.filter(c => view.perfSecs.has(c[2]));
+    function renderPerf(pane, r) {
+        const perf = perfInput(r), marks = perfMarks(perf), cols = perfCols();
+        const bar = el('div', undefined, pane, 'bar');
+        el('b', 'Khối:', bar);
+        PERF_SECS.forEach(([k, label]) => {
+            const b = el('button', label.replace(/ \(.*\)$/, ''), bar, 'chip'); b.type = 'button'; b.classList.toggle('on', view.perfSecs.has(k));
+            b.onclick = () => { if (view.perfSecs.has(k)) { if (view.perfSecs.size > 1) view.perfSecs.delete(k); } else view.perfSecs.add(k); try { save('perfSecs', [...view.perfSecs]); } catch { /* bỏ qua */ } renderSales(); };
+        });
+        const hl = el('label', undefined, bar, 'inl'), hc = el('input', undefined, hl); hc.type = 'checkbox'; hc.checked = !!view.perfAll;
+        el('span', ` Hiện cả NV ít số${perf.hidden ? ` (${perf.hidden} người)` : ''}`, hl); hl.title = 'Siêu thị chưa khai báo nhân viên: mặc định ẩn người không bán SP chính và doanh thu dưới 5 triệu ở siêu thị đó (vd tạo hộ 1 đơn thu hộ)';
+        if (perf.declaredShops.length && !perf.hidden) hl.hidden = true;
+        hc.onchange = () => { view.perfAll = hc.checked; renderSales(); };
+        el('span', undefined, bar, 'sp');
+        const ib = el('button', '🖼 Ảnh hiệu quả NV', bar); ib.type = 'button'; ib.title = 'Ảnh đúng khuôn bảng của sếp, các khối đang chọn — chép sẵn để dán Zalo, đồng thời tải PNG'; ib.onclick = safely(() => perfImage(r));
+        const decl = perf.declaredShops.filter(c => view.salesShops.has(c)), undecl = [...view.salesShops].filter(c => !decl.includes(c));
+        const nb = el('div', decl.length ? `👥 Theo danh sách nhân viên đã khai báo: ${decl.map(shopName).join(', ')} — chỉ tính số họ bán tại đúng siêu thị đó.` : '👥 Chưa khai báo nhân viên — đang lấy mọi người có bán.', pane, 'kxb-muted');
+        if (undecl.length && decl.length) nb.textContent += ` ${undecl.map(shopName).join(', ')}: chưa khai báo, lấy mọi người có bán.`;
+        const kb = el('button', '✏️ Khai báo nhân viên', nb, 'kxb-link'); kb.type = 'button'; kb.style.marginLeft = '8px';
+        kb.onclick = () => { setDrawer(true, 'cfg'); ui.querySelector('[data-staff-lists]')?.scrollIntoView({ block: 'start' }); };
+        if (r.oldSchema) alertBox(pane, `${r.oldSchema} ngày lưu bằng bản cũ chưa có đơn trả góp / bảo hiểm — số trả chậm, doanh thu đang thiếu. Bấm "Đổ xuất bán" để lấy lại.`, 'bad');
+        infoBox(pane, 'Theo file "Theo dõi nhân viên" của sếp. Doanh thu thực = giá chưa VAT (SALEPRICE) × SL, gồm bán tại siêu thị, TCĐM, pre-order, ưu đãi NV và trả góp. Trả chậm = dòng hình thức "Xuất bán hàng trả góp tại siêu thị". SP chính = Smartphone + Laptop + Máy lọc nước + CE (Tivi LED, Tủ lạnh, Máy giặt, Máy lạnh). Đơn giá Android = (DT SMF − DT iPhone) ÷ (SL SMF − SL iPhone). Bảo hiểm quy đổi = DT bảo hiểm × 4,18; SMW (đồng hồ) quy đổi × 3. Dòng Tổng tính theo tổng cụm. Tô màu: vàng = 30% cao nhất, hồng = 30% (SP chính: 40%) thấp nhất hoặc thấp hơn mức chung của cụm, hoặc bằng 0; tỉ lệ trả chậm dưới 30% tô hồng; CE xanh = 30% cao nhất. Tính trên các siêu thị đang chọn, không theo bộ lọc ngành / hãng / loại hàng. Khác file sếp: tool chỉ tính dòng Đã xuất – Đã giao và bỏ đơn khách nhập trả, nên đơn giao tại nhà chưa giao xong sẽ vào số khi giao.');
+        if (!perf.rows.length) { el('div', 'Không có dòng bán nào trong kỳ / siêu thị đang chọn', pane, 'kxb-empty'); return; }
+        const sort = view.perfSort, order = perf.rows.map((_, i) => i);
+        if (sort.key) order.sort((a, b) => (perf.rows[a][sort.key] - perf.rows[b][sort.key]) * sort.dir || a - b);
+        const wrap = el('div', undefined, pane, 'kxb-twrap'), tb = el('div', undefined, wrap, 'kxb-tbar');
+        el('span', `${fmt(perf.rows.length)} nhân viên · bấm tiêu đề cột để sắp xếp · bấm tên để mở thẻ nhân viên`, tb, 'kxb-muted');
+        const cp = el('button', '📋 Chép bảng', tb, 'mini'); cp.type = 'button';
+        cp.onclick = safely(() => copyText(toTsv(['Siêu thị', 'Nhân viên', ...cols.map(c => c[1])], [['Tổng', '', ...cols.map(c => perfText(c[3], perf.total[c[0]]))], ...order.map(i => [shopName(perf.rows[i].shop), perf.rows[i].label, ...cols.map(c => perfText(c[3], perf.rows[i][c[0]]))])]), 'Đã chép bảng hiệu quả nhân viên'));
+        const box = el('div', undefined, wrap, 'kxb-table kxb-perf'), t = el('table', undefined, box), th = el('thead', undefined, t);
+        const r1 = el('tr', undefined, th, 'sec'); el('th', '', r1, 'stk s1').colSpan = 1; el('th', '', r1, 'stk s2');
+        PERF_SECS.filter(([k]) => view.perfSecs.has(k)).forEach(([k, label]) => {
+            const n = cols.filter(c => c[2] === k);
+            if (k === 'smf') { const a = n.filter(c => !c[0].startsWith('b_') && c[0] !== 'laptop'); el('th', label, r1).colSpan = a.length; n.filter(c => c[0].startsWith('b_') || c[0] === 'laptop').forEach(c => { const sh = perfBrandShare(perf, c[0]); el('th', sh == null ? '' : perfText('p', sh), r1, 'n'); }); }
+            else el('th', label, r1).colSpan = n.length;
+        });
+        const r2 = el('tr', undefined, th, 'tot'); el('th', 'Tổng cụm', r2, 'stk s1'); el('th', `${fmt(perf.rows.length)} NV`, r2, 'stk s2');
+        cols.forEach(c => el('th', perfText(c[3], perf.total[c[0]], true), r2, 'n'));
+        const r3 = el('tr', undefined, th, 'hd'); el('th', 'Siêu thị', r3, 'stk s1'); el('th', 'Nhân viên', r3, 'stk s2');
+        cols.forEach(c => {
+            const h = el('th', c[1] + (sort.key === c[0] ? (sort.dir < 0 ? ' ▼' : ' ▲') : ''), r3, 'n sort'), hc = perfHead(c);
+            h.style.background = hc[0]; h.style.color = hc[1]; h.title = 'Bấm để sắp xếp';
+            h.onclick = () => { view.perfSort = sort.key !== c[0] ? { key: c[0], dir: -1 } : sort.dir < 0 ? { key: c[0], dir: 1 } : { key: '', dir: 0 }; renderSales(); };
+        });
+        const body = el('tbody', undefined, t);
+        order.forEach(i => {
+            const x = perf.rows[i], tr = el('tr', undefined, body);
+            el('td', shopName(x.shop), tr, 'stk s1');
+            const nm = el('td', x.label, tr, 'stk s2 click'); nm.title = 'Bấm để mở thẻ nhân viên'; nm.onclick = () => openStaffCard(x.shop, x.label);
+            cols.forEach(c => { const td = el('td', perfText(c[3], x[c[0]], c[0].startsWith('b_') || c[0] === 'laptop'), tr, 'n'), m = marks[i + '|' + c[0]]; if (m) { td.style.background = PERF_CELL[m][0]; td.style.color = PERF_CELL[m][1]; } });
+        });
+    }
+    // Ảnh theo khuôn sếp: tiêu đề đỏ, hàng khối nền đen chữ vàng, dòng tổng, tiêu đề cột màu, ô tô màu
+    async function perfImage(r) {
+        const perf = perfInput(r); invariant(perf.rows.length, 'Chưa có số trong kỳ — bấm "Đổ xuất bán" hoặc "Xem số đã lưu"');
+        const marks = perfMarks(perf), cols = perfCols(), secs = PERF_SECS.filter(([k]) => view.perfSecs.has(k));
+        const CW = { n: 66, m: 96, u: 84, p: 80 }, W0 = 96, W1 = 250, rowH = 30, DPR = 2;
+        const xs = [0, W0, W0 + W1]; cols.forEach(c => xs.push(xs[xs.length - 1] + CW[c[3]]));
+        const IW = xs[xs.length - 1] + 2, H = 44 + 34 + 34 + 52 + rowH * perf.rows.length + 30;
+        const cv = document.createElement('canvas'); cv.width = IW * DPR; cv.height = H * DPR;
+        const g = cv.getContext('2d'); invariant(g, 'Trình duyệt không vẽ được ảnh'); g.scale(DPR, DPR);
+        const F = (wt, px) => `${wt} ${px}px Calibri, Arial, "Segoe UI", sans-serif`;
+        const fill = (x, y, w, h, c) => { g.fillStyle = c; g.fillRect(x, y, w, h); };
+        const line = (x, y, w, h) => { g.strokeStyle = '#9aa5ad'; g.lineWidth = 0.6; g.strokeRect(x + 0.5, y + 0.5, w, h); };
+        const txt = (t, x, y, w, { font = F(400, 14), color = '#000', align = 'right' } = {}) => {
+            g.font = font; g.fillStyle = color; g.textAlign = align; t = String(t ?? '');
+            while (t.length > 1 && g.measureText(t).width > w - 8) t = t.slice(0, -2) + '…';
+            g.fillText(t, align === 'right' ? x + w - 5 : align === 'center' ? x + w / 2 : x + 5, y);
+        };
+        const wrap2 = (t, w, font) => { g.font = font; const words = String(t).split(' '), out = ['']; words.forEach(wd => { const cur = out[out.length - 1]; if (cur && g.measureText(cur + ' ' + wd).width > w - 8 && out.length < 2) out.push(wd); else out[out.length - 1] = cur ? cur + ' ' + wd : wd; }); return out; };
+        fill(0, 0, IW, H, '#fff');
+        txt('HIỆU QUẢ LÀM VIỆC NHÂN VIÊN', 0, 30, IW * 0.6, { font: F(700, 24), color: '#e00000', align: 'left' });
+        txt(r.range.from === r.range.to ? toBI(r.range.from) : `${toBI(r.range.from)} – ${toBI(r.range.to)}`, IW * 0.5, 30, IW * 0.5 - 4, { font: F(700, 22), color: '#e00000' });
+        let y = 44;
+        // hàng khối
+        fill(0, y, IW, 34, '#000');
+        let ci = 0;
+        secs.forEach(([k, label]) => {
+            const n = cols.filter(c => c[2] === k), x0 = xs[2 + ci];
+            const span = k === 'smf' ? n.filter(c => !c[0].startsWith('b_') && c[0] !== 'laptop').length : n.length;
+            txt(label, ci === 0 ? 0 : x0, y + 23, (ci === 0 ? xs[2 + span] : xs[2 + ci + span] - x0) + 400, { font: F(700, 17), color: '#ffff00', align: 'left' });
+            if (k === 'smf') n.slice(span).forEach((c, j) => { const sh = perfBrandShare(perf, c[0]); if (sh != null) txt(perfText('p', sh), xs[2 + ci + span + j], y + 23, CW.n, { font: F(700, 15), color: '#ffff00' }); });
+            ci += n.length;
+        });
+        y += 34;
+        // dòng tổng
+        fill(0, y, IW, 34, '#000');
+        cols.forEach((c, j) => txt(perfText(c[3], perf.total[c[0]], true), xs[2 + j], y + 23, CW[c[3]], { font: F(700, 16), color: '#ffff00' }));
+        y += 34;
+        // tiêu đề cột
+        const hdr = [['SIÊU THỊ', ['#92d050', '#000']], ['NHÂN VIÊN', ['#92d050', '#000']], ...cols.map(c => [c[1], perfHead(c)])];
+        hdr.forEach(([label, hc], j) => {
+            const x = xs[j], w = xs[j + 1] - x; fill(x, y, w, 52, hc[0]); line(x, y, w, 52);
+            const ls = wrap2(label, w, F(700, 13)); ls.forEach((t, k) => txt(t, x, y + (ls.length === 1 ? 31 : 22 + k * 16), w, { font: F(700, 13), color: hc[1], align: 'center' }));
+        });
+        y += 52;
+        perf.rows.forEach((x, i) => {
+            const yy = y + i * rowH;
+            line(0, yy, W0, rowH); txt(shopName(x.shop), 0, yy + 20, W0, { font: F(400, 14), align: 'left' });
+            line(W0, yy, W1, rowH); txt(x.label, W0, yy + 20, W1, { font: F(700, 14), align: 'left' });
+            cols.forEach((c, j) => {
+                const cx = xs[2 + j], w = CW[c[3]], m = marks[i + '|' + c[0]];
+                if (m) fill(cx, yy, w, rowH, PERF_CELL[m][0]); line(cx, yy, w, rowH);
+                txt(perfText(c[3], x[c[0]], c[0].startsWith('b_') || c[0] === 'laptop'), cx, yy + 20, w, { font: F(400, 14), color: m ? PERF_CELL[m][1] : '#000' });
+            });
+        });
+        y += rowH * perf.rows.length;
+        txt(`AutoBI Kho & Xuất Bán V${VERSION} · ${[...view.salesShops].map(shopName).join(', ')} · doanh thu chưa VAT · lấy lúc ${stamp(new Date())}${r.missing ? ` · CHƯA ĐỦ: còn ${r.missing} ngày chưa lấy` : ''}`, 0, y + 20, IW, { font: F(400, 12), color: r.missing ? '#b91c1c' : '#5b6b76', align: 'left' });
+        await deliverCanvas(cv, `AutoBI_HieuQuaNV_${r.range.from.replace(/-/g, '')}-${r.range.to.replace(/-/g, '')}.png`, 'Hiệu quả nhân viên');
+    }
     function renderSales() {
         if (view.tab !== 'sales') return;   // V2.5.6: tab đang ẩn thì không vẽ, bấm sang tab đó mới vẽ
         const area = ui.querySelector('[data-sales-result]'); area.replaceChildren();
@@ -1796,7 +2074,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
             view.salesBrands.size && [`Hãng: ${[...byBrand.values()].filter(b => view.salesBrands.has(b.key)).map(b => b.name).join(', ')}`, () => view.salesBrands.clear()],
             view.salesConds.size && [`Loại hàng: ${[...view.salesConds].join(', ')}`, () => view.salesConds.clear()]], renderSales);
         if (r.missing) alertBox(area, `Còn ${r.missing} ngày chưa lấy trong kỳ ${toBI(r.range.from)}–${toBI(r.range.to)} — số chưa đủ. Bấm "Đổ xuất bán" để lấy tiếp.`);
-        if (r.oldSchema) alertBox(area, `${r.oldSchema} ngày lưu bằng bản cũ (chỉ ngành Điện thoại). Bấm "Đổ xuất bán" để lấy lại các ngày này với tất cả ngành hàng.`, 'warn');
+        if (r.oldSchema) alertBox(area, `${r.oldSchema} ngày lưu bằng bản cũ (chưa có đơn trả góp / dịch vụ bảo hiểm). Bấm "Đổ xuất bán" để lấy lại các ngày này cho đủ.`, 'warn');
         const today = isoDate(new Date()), pOrders = pendingOrders(r.pendingLines, today), pendOrders = pOrders.length, oldPend = pOrders.filter(o => o.age >= 2).length;
         const retOrders = new Set(r.returnedLines.map(l => l.order)).size, ps = r.prevSummary;
         if (r.prevMissing) {
@@ -1817,13 +2095,14 @@ tr{break-inside:avoid;page-break-inside:avoid}
         minis(area, [['Bán kèm ĐT', pct(att.total.rate), `${fmt(att.total.attached)}/${fmt(att.total.phoneOrders)} đơn` + (attPrev && attPrev.total.phoneOrders ? ` · ${att.total.rate >= attPrev.total.rate ? '▲' : '▼'} ${fmt(Math.abs(Math.round(att.total.rate - attPrev.total.rate)))} điểm` : ''), goTab('attach')],
             ['Đơn treo', fmt(pendOrders), oldPend ? `${fmt(oldPend)} đơn từ 2 ngày` : 'chưa xuất / chưa giao', goTab('pending'), oldPend ? 'bad' : ''],
             ['Khách nhập trả', fmt(retOrders), `bỏ SL ${fmt(r.returnedLines.reduce((a, l) => a + l.qty, 0))} · ${mil(r.returnedLines.reduce((a, l) => a + l.qty * l.price, 0))}`, goTab('returned')]]);
-        infoBox(area, `Kỳ ${toBI(r.range.from)}–${toBI(r.range.to)} · Kho tạo · ngành: ${view.salesCat || 'tất cả'} · tính theo ${r.basis === 'shipped' ? 'ngày xuất' : 'ngày tạo'} · dòng Đã xuất – Đã giao – Chưa hủy · loại hàng: ${view.salesConds.size ? [...view.salesConds].join(', ') : 'tất cả'} · bỏ cả đơn khách nhập trả (kiểm tra lại ${config.returnDays} ngày gần nhất) · doanh thu = Giá bán × SL (gồm VAT) · bán kèm, dự kiến tính trên các siêu thị đang chọn, không theo bộ lọc ngành / hãng / loại hàng.`);
+        infoBox(area, `Kỳ ${toBI(r.range.from)}–${toBI(r.range.to)} · Kho tạo · ngành: ${view.salesCat || 'tất cả'} · tính theo ${r.basis === 'shipped' ? 'ngày xuất' : 'ngày tạo'} · hình thức: bán tại siêu thị + trả góp + TCĐM + pre-order + ưu đãi NV · dòng Đã xuất – Đã giao – Chưa hủy · loại hàng: ${view.salesConds.size ? [...view.salesConds].join(', ') : 'tất cả'} · bỏ cả đơn khách nhập trả (kiểm tra lại ${config.returnDays} ngày gần nhất) · doanh thu = Giá bán × SL (gồm VAT) · bán kèm, dự kiến tính trên các siêu thị đang chọn, không theo bộ lọc ngành / hãng / loại hàng.`);
         subtabs2(area, [['Tổng quan', [['category', 'Theo ngành'], ['brand', 'Theo hãng'], ['product', 'Sản phẩm'], ['daily', 'Theo ngày'], ['hour', 'Theo giờ']]],
-            ['Nhân viên', [['staff', 'Nhân viên × hãng'], ['staffProduct', 'Nhân viên × sản phẩm'], ['attach', 'Bán kèm']]],
+            ['Nhân viên', [['perf', 'Hiệu quả NV'], ['staff', 'Nhân viên × hãng'], ['staffProduct', 'Nhân viên × sản phẩm'], ['attach', 'Bán kèm']]],
             ['Đơn hàng' + (oldPend ? ` · ${oldPend}⚠` : ''), [['pending', `Đơn treo (${pendOrders})`], ['returned', `Nhập trả (${retOrders})`], ['channel', 'Thanh toán & giao']]],
             ['Chi tiết', [['detail', 'Chi tiết']]]], view.salesTab, k => goTab(k)());
         const pane = el('div', undefined, area);
         const n = (from, count) => Array.from({ length: count }, (_, i) => from + i);
+        if (view.salesTab === 'perf') renderPerf(pane, r);
         if (view.salesTab === 'hour') {
             // Giờ × thứ: tô đậm ô bán nhiều để xếp ca / giờ công
             const hm = hourMatrix(r.lines), metric = view.hourMetric || 'orders';
@@ -2054,7 +2333,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         if (view.invTab === 'age') {
             // Tuổi tồn = số ngày từ Ngày nhập đến hôm nay; cột "Bán 30 ngày" lấy từ số xuất bán đã lưu (không gọi BI)
             const sold = new Map(), r30 = { from: addDays(today, -30), to: addDays(today, -1) };
-            inPeriod(loadBook(r30).lines, r30, 'created').forEach(l => sold.set(l.shop + '|' + l.product, (sold.get(l.shop + '|' + l.product) || 0) + l.qty));
+            inPeriod(loadBook(r30).lines, r30, 'created').filter(l => !l.svc).forEach(l => sold.set(l.shop + '|' + l.product, (sold.get(l.shop + '|' + l.product) || 0) + l.qty));
             const buckets = [...AGE_BUCKETS.map(b => b[2]), 'Không rõ ngày nhập'].map(b => {
                 const xs = aged.filter(x => ageBucket(x.age) === b);
                 return { b, lines: xs.length, qty: xs.reduce((a, x) => a + x.r.qty, 0), cost: xs.reduce((a, x) => a + (x.r.cost || 0), 0) };
@@ -2086,7 +2365,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const shops = view.balShops;
         const cat = view.balCat || BAL_CATEGORY;
         const isPhone = c => categoryText(c) === cat, isNew = c => conditionText(c) === BAL_CONDITION;
-        const sales = inPeriod(lines, range, 'created').filter(l => shops.has(l.shop) && isPhone(l.category) && isNew(l.condition));
+        const sales = inPeriod(lines, range, 'created').filter(l => !l.svc && shops.has(l.shop) && isPhone(l.category) && isNew(l.condition));
         const stock = view.inv ? view.inv.records.filter(r => shops.has(r.shop) && isPhone(r.category) && isNew(r.condition)) : [];
         const transit = view.inv ? (view.inv.transit || []).filter(r => shops.has(r.shop) && isPhone(r.category) && isNew(r.condition)) : [];
         const target = config.balTarget || 14, spare = config.balSpare ?? 1;
@@ -2597,13 +2876,17 @@ tr{break-inside:avoid;page-break-inside:avoid}
             y += rowH * (sec.rows.length + 1) + 14;
         }
         text(spec.footer || '', P, y + 26, { font: F(400, 12), color: spec.warn ? '#b91c1c' : '#5b6b76', max: IW - 2 * P });
+        await deliverCanvas(cv, spec.name, spec.title);
+    }
+    // Tải PNG + chép vào bộ nhớ để dán Zalo (dùng chung cho mọi ảnh)
+    async function deliverCanvas(cv, name, title) {
         const blob = await new Promise(res => cv.toBlob(res, 'image/png'));
         invariant(blob, 'Không tạo được ảnh');
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = spec.name; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
         let copied = false;
         try { if (window.ClipboardItem) { await navigator.clipboard.write([new (window.ClipboardItem)({ 'image/png': blob })]); copied = true; } } catch { /* trình duyệt chặn → chỉ tải file */ }
-        status(copied ? `Đã chép ảnh — mở Zalo bấm Ctrl+V để dán (cũng đã tải ${spec.name})` : `Đã tải ảnh ${spec.name}`, 'ok');
-        log(`Ảnh báo cáo: ${spec.title}`);
+        status(copied ? `Đã chép ảnh — mở Zalo bấm Ctrl+V để dán (cũng đã tải ${name})` : `Đã tải ảnh ${name}`, 'ok');
+        log(`Ảnh báo cáo: ${title}`);
     }
     const imgOpt = () => ({ cats: false, brands: true, staff: true, top: 12, ...(config.img || {}) });
     async function salesImage() {
@@ -2724,6 +3007,12 @@ tr{break-inside:avoid;page-break-inside:avoid}
             sheet('TheoHang', [['Bán theo hãng · ' + title], [], ['Hãng', ...codes.flatMap(c => [shopName(c) + ' SL', shopName(c) + ' DT (đ)']), 'Cụm SL', '% SL', 'Cụm DT (đ)', '% DT'],
                 ...s.brands.map(b => [b.label, ...codes.flatMap(c => { const x = s.brandShop[norm(b.label) + '|' + c]; return [x ? x.quantity : 0, x ? x.revenue : 0]; }), b.quantity, b.pctQty / 100, b.revenue, b.pctRev / 100]),
                 ['Tổng', ...codes.flatMap(c => { const x = s.shops.find(z => z.code === c); return [x ? x.quantity : 0, x ? x.revenue : 0]; }), s.quantity, 1, s.revenue, 1]], [16, ...codes.flatMap(() => [12, 15]), 9, 8, 15, 8]);
+            const pf = perfInput(r);   // V2.9: Hiệu quả NV — mọi khối, số thô (đồng / tỉ lệ)
+            const pv = (c, v) => c[3] === 'p' ? v : c[3] === 'n' ? v : Math.round(v);
+            sheet('HieuQuaNV', [['Hiệu quả làm việc nhân viên · ' + `Kỳ ${toBI(r.range.from)}–${toBI(r.range.to)} · ${codes.map(shopName).join(', ')} · doanh thu chưa VAT, gồm trả góp · không theo bộ lọc ngành / hãng`], [],
+                ['Siêu thị', 'Nhân viên', ...PERF_COLS.map(c => c[1] + (c[3] === 'p' ? ' (%)' : c[3] === 'm' || c[3] === 'u' ? ' (đ)' : ''))],
+                ['Tổng', '', ...PERF_COLS.map(c => pv(c, pf.total[c[0]]))],
+                ...pf.rows.map(x => [shopName(x.shop), x.label, ...PERF_COLS.map(c => pv(c, x[c[0]]))])], [12, 30, ...PERF_COLS.map(c => c[3] === 'm' ? 14 : 10)]);
             const vc = salesByCategory(r.lines, codes);
             sheet('TheoNganh', [['Bán theo ngành hàng · ' + title], [], ['Ngành hàng', 'Nhóm hàng', ...codes.map(c => shopName(c) + ' SL'), 'SL', 'Doanh thu (đ)', '% DT'],
                 ...vc.rows.map(x => [x.category, x.group, ...codes.map(c => x.byShop[c] || 0), x.qty, x.rev, vc.rev ? x.rev / vc.rev : 0]),
@@ -2903,7 +3192,9 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const top = Math.round(Number(ui.querySelector('[data-img="top"]').value));
         invariant(top >= 5 && top <= 30, 'Số dòng top trong ảnh phải từ 5 đến 30');
         const img = { cats: ui.querySelector('[data-img="cats"]').checked, brands: ui.querySelector('[data-img="brands"]').checked, staff: ui.querySelector('[data-img="staff"]').checked, top };
-        config = { ...config, img, shops, selectors: config.selectors || {}, basis: v('basis') === 'shipped' ? 'shipped' : 'created', returnDays: rd, balTarget: bt, balSpare: sp, ageAlert: ag, srcKeep: sk, srcRadius: sr,
+        const staffLists = {};
+        ui.querySelectorAll('[data-staff-list]').forEach(ta => { const list = parseStaffList(ta.value); if (list.length && shops.some(x => keyCode(x.code) === ta.dataset.staffList)) staffLists[ta.dataset.staffList] = list; });
+        config = { ...config, staffLists, img, shops, selectors: config.selectors || {}, basis: v('basis') === 'shipped' ? 'shipped' : 'created', returnDays: rd, balTarget: bt, balSpare: sp, ageAlert: ag, srcKeep: sk, srcRadius: sr,
             notify: ui.querySelector('[data-cfg="notify"]').checked, balIncoming: ui.querySelector('[data-cfg="balIncoming"]').checked, freshHours: fh };
         save('config', config);
         const codes = new Set(shops.map(s => keyCode(s.code)));
@@ -3046,6 +3337,33 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const tr = q('[data-inv-transit]'); if (tr) tr.checked = !!config.invTransit;
         const ci = q('[data-cloud-info]'); if (ci) ci.textContent = cloud.info;
         renderCrmSetting();
+        renderStaffLists();
+    }
+    // V2.9.1: ô khai báo nhân viên cho từng siêu thị (theo danh sách siêu thị đã lưu)
+    function renderStaffLists() {
+        const box = ui?.querySelector('[data-staff-lists]'); if (!box) return;
+        box.replaceChildren();
+        if (!config.shops.length) { el('div', 'Khai báo siêu thị và Lưu cài đặt trước.', box, 'kxb-muted'); return; }
+        config.shops.forEach(sh => {
+            const code = keyCode(sh.code), wrap = el('div', undefined, box, 'kxb-stafflist');
+            const head = el('div', undefined, wrap, 'frow'); el('b', `${sh.code} · ${sh.name}`, head);
+            const cnt = el('span', '', head, 'kxb-muted'); el('span', undefined, head, 'sp');
+            const fillBtn = el('button', '⤵ Lấy từ số đã bán', head, 'ghost'); fillBtn.type = 'button'; fillBtn.dataset.staffFill = code;
+            fillBtn.title = 'Điền những người có bán SP chính (hoặc doanh thu từ 5 triệu) ở siêu thị này trong kỳ đang xem ở tab Xuất bán — xem lại, xóa người không thuộc siêu thị rồi Lưu cài đặt';
+            const ta = el('textarea', undefined, wrap); ta.dataset.staffList = code; ta.rows = 4; ta.spellcheck = false;
+            ta.placeholder = 'Để trống = tự lấy mọi người có bán ở siêu thị này'; ta.value = ((config.staffLists || {})[code] || []).join('\n');
+            const upd = () => { const n = parseStaffList(ta.value).length; cnt.textContent = n ? ` — ${n} nhân viên` : ' — chưa khai báo'; };
+            ta.oninput = upd; upd();
+            fillBtn.onclick = safely(() => {
+                const r = view.sales; invariant(r && r.allLines.length, 'Chưa có số xuất bán — bấm "Xem số đã lưu" hoặc "Đổ xuất bán" ở tab Xuất bán trước');
+                const p = staffPerf(r.allLines.filter(l => l.shop === code), (r.svcLines || []).filter(l => l.shop === code), [code]);
+                const found = p.rows.filter(x => x.spc > 0 || x.rev >= 5e6).map(x => x.label);
+                invariant(found.length, `Kỳ đang xem không có ai bán ở ${sh.name}`);
+                const have = parseStaffList(ta.value);
+                ta.value = parseStaffList([...have, ...found].join('\n')).join('\n'); upd();
+                status(`Đã điền ${found.length} nhân viên có bán ở ${sh.name} (kỳ ${toBI(r.range.from)}–${toBI(r.range.to)}) — kiểm tra rồi bấm Lưu cài đặt`, 'ok');
+            });
+        });
     }
     function applyConfigToUi() {
         if (!ui || running) return;
@@ -3156,6 +3474,13 @@ tr{break-inside:avoid;page-break-inside:avoid}
         #kxb-panel .kxb-card .body{overflow:auto;padding:12px 18px}
         #kxb-panel .kxb-grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
         #kxb-panel .kxb-card .kxb-table{max-height:300px}
+        #kxb-panel .kxb-perf table{border-collapse:separate;border-spacing:0}#kxb-panel .kxb-perf th,#kxb-panel .kxb-perf td{white-space:nowrap;border-right:1px solid #e3e9ec}
+        #kxb-panel .kxb-perf thead tr.sec th{position:static;background:#000;color:#ff0;font-weight:700;text-align:left}#kxb-panel .kxb-perf thead tr.sec th.n{text-align:right}
+        #kxb-panel .kxb-perf thead tr.tot th{background:#000;color:#ff0;font-weight:700}#kxb-panel .kxb-perf thead tr.hd th{white-space:normal;min-width:64px;max-width:96px;vertical-align:middle;text-align:center}
+        #kxb-panel .kxb-perf thead th{position:static}#kxb-panel .kxb-perf .stk{position:sticky;z-index:2;background:#fff}#kxb-panel .kxb-perf thead .stk{background:#000;color:#ff0}
+        #kxb-panel .kxb-perf thead tr.hd .stk{background:#92d050;color:#000}#kxb-panel .kxb-perf .s1{left:0;min-width:80px}#kxb-panel .kxb-perf .s2{left:80px;min-width:210px;font-weight:600}
+        #kxb-panel .kxb-stafflist{margin:8px 0}#kxb-panel .kxb-stafflist textarea{width:100%;box-sizing:border-box;font:13px/1.4 Consolas,monospace;padding:6px 8px;border:1px solid #cfd9de;border-radius:6px;resize:vertical}
+        #kxb-panel .kxb-perf td.click{cursor:pointer;color:var(--c)}#kxb-panel .kxb-perf td.click:hover{text-decoration:underline}
                 #kxb-panel .kxb-suggest{position:absolute;z-index:30;left:0;right:0;top:100%;margin-top:4px;max-height:360px;overflow:auto;background:#fff;border:1px solid #b8c9ce;border-radius:8px;box-shadow:0 10px 28px #0003;padding:4px 0;font-size:13px}
         #kxb-panel .kxb-suggest .hd{display:flex;justify-content:space-between;align-items:center;padding:4px 10px;color:#5b6b76;font-size:12px;border-bottom:1px solid #edf1f3}
         #kxb-panel .kxb-suggest .it{display:flex;gap:10px;align-items:center;padding:6px 10px;cursor:pointer}#kxb-panel .kxb-suggest .it:hover{background:#e6f4f5}
@@ -3321,6 +3646,9 @@ tr{break-inside:avoid;page-break-inside:avoid}
           <div class="dhead"><strong>⚙️ Cài đặt</strong><div class="kxb-seg" data-dtabs><button type="button" class="on" data-dtab="cfg">Cài đặt</button><button type="button" data-dtab="log">📋 Nhật ký</button></div><span class="sp"></span><button type="button" class="ghost icon" data-close-settings aria-label="Đóng">✕</button></div>
           <div class="dbody" data-dpane="cfg">
             <section><h4>Siêu thị</h4><div data-shops></div><button type="button" class="ghost" data-add>+ Thêm siêu thị</button></section>
+            <section><h4>Nhân viên từng siêu thị <small class="kxb-muted">(Hiệu quả NV)</small></h4>
+              <div class="kxb-muted">Mỗi dòng 1 nhân viên: <b>mã</b> hoặc <b>mã - tên</b> (vd <code>12345 - Phạm Văn A</code>). Siêu thị đã khai báo thì bảng Hiệu quả NV chỉ hiện đúng những người này, theo thứ tự khai báo, và chỉ tính số họ bán <b>tại siêu thị đó</b>. Để trống = tự lấy mọi người có bán.</div>
+              <div data-staff-lists></div></section>
             <section><h4>Xuất bán</h4><div class="fgrid">
               <label>Tính doanh số theo<select data-cfg="basis"><option value="created">Ngày tạo đơn</option><option value="shipped">Ngày xuất hàng</option></select></label>
               <label>Kiểm tra lại nhập trả (ngày)<input type="number" min="2" max="35" data-cfg="returnDays"></label>
@@ -3374,7 +3702,8 @@ tr{break-inside:avoid;page-break-inside:avoid}
         view.invShops = new Set(Array.isArray(savedShops) && savedShops.some(c => codes.includes(c)) ? savedShops.filter(c => codes.includes(c)) : codes);
         // V2.0: nhớ tab con, chế độ gộp model, tab chính lần trước
         const okTab = (k, list, d) => list.includes(k) ? k : d;
-        view.salesTab = okTab(load('salesTab', 'category'), ['category', 'brand', 'staff', 'attach', 'staffProduct', 'product', 'daily', 'hour', 'channel', 'pending', 'returned', 'detail'], 'category');
+        try { const ps = load('perfSecs', null); if (Array.isArray(ps)) { const ok = ps.filter(k => PERF_SECS.some(x => x[0] === k)); if (ok.length) view.perfSecs = new Set(ok); } } catch { /* bỏ qua */ }
+        view.salesTab = okTab(load('salesTab', 'category'), ['category', 'brand', 'perf', 'staff', 'attach', 'staffProduct', 'product', 'daily', 'hour', 'channel', 'pending', 'returned', 'detail'], 'category');
         view.invTab = okTab(load('invTab', 'group'), ['group', 'product', 'imei', 'age', 'transit', 'crm'], 'group');
         view.tab = okTab(load('mainTab', 'sales'), ['sales', 'inventory', 'balance', 'request'], 'sales');
         view.balModel = !!load('balModel', false);
