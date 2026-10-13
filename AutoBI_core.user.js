@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.84
+// @name         AutoBI Core V17.85
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.84
+// @version      17.85
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -2038,7 +2038,7 @@ window.__AutoBIRun67 = (function () {
                 _0x348883(null); }, onerror: () => { if (_0x348883)
                 _0x348883(null); }, ontimeout: () => { if (_0x348883)
                 _0x348883(null); } }); }); }, loadConfigAndRun: (_0x218727, _0x29d341 = null) => { if (!window.__AutoBIRun67.active())
-            return; const _0x3ef13c = GM_getValue(CONSTANTS.KEYS.RUN_QUEUE, [2]); const _0x2b696e = _0x3ef13c.length > 0 ? _0x3ef13c[0] : 2; GM_setValue(CONSTANTS.KEYS.AUTO_STATE, _0x2b696e); GM_setValue(CONSTANTS.KEYS.DATA_CACHE, {}); const _0x4b85e9 = UTILS.getStepUrl(_0x2b696e, _0x218727); const __fastHere = !!(window.__AutoBIApi && window.__AutoBIApi.fastOn && window.__AutoBIApi.fastOn() && [0, 2, 3, 17, 18].includes(_0x2b696e) && location.hostname === 'baocao.dienmayxanh.com'); let __navDone = false; const _0x230d82 = () => { if (__navDone)
+            return; const _0x3ef13c = GM_getValue(CONSTANTS.KEYS.RUN_QUEUE, [2]); const _0x2b696e = _0x3ef13c.length > 0 ? _0x3ef13c[0] : 2; GM_setValue(CONSTANTS.KEYS.AUTO_STATE, _0x2b696e); GM_setValue(CONSTANTS.KEYS.DATA_CACHE, (() => { try { return window.__AutoBICrmKeep ? window.__AutoBICrmKeep.seed() : {}; } catch (_) { return {}; } })()); /* V17.85: giữ số CRM lần trước (lượt không chạy CRM vẫn có Phục vụ) */ const _0x4b85e9 = UTILS.getStepUrl(_0x2b696e, _0x218727); const __fastHere = !!(window.__AutoBIApi && window.__AutoBIApi.fastOn && window.__AutoBIApi.fastOn() && [0, 2, 3, 17, 18].includes(_0x2b696e) && location.hostname === 'baocao.dienmayxanh.com'); let __navDone = false; const _0x230d82 = () => { if (__navDone)
             return; __navDone = true; if (__fastHere) {
             /* V16.8.5: chạy nhanh bằng API ngay trên trang đang mở, không tải trang Doanh thu */
             setTimeout(() => APP.checkAutoProcess(), 0);
@@ -8864,6 +8864,36 @@ window.__AutoBIBiTarget99 = (function () {
     try { await crmOpen(); return await F[kind](crmPost, ids); }
     catch (e) { if (e && e.code === 'CRM_LOGIN') { e.crmKind = kind; e.crmIds = ids; } throw e; }
   }
+  /* V17.85: Lượt chạy nào cũng xóa cache số (DATA_CACHE = {}) → lượt Lũy kế / Realtime không kèm CRM làm mất Điểm phục vụ.
+     Lưu bản CRM gần nhất riêng (autobi_crm_last_v1) và gieo lại link8/link9 khi bắt đầu lượt mới — chỉ trong cùng tháng.
+     Lượt có chạy CRM sẽ ghi đè số mới. */
+  const CRM_KEEP = 'autobi_crm_last_v1';
+  const crmKeep = {
+    save(kind, data, month) {
+      try {
+        const k = GM_getValue(CRM_KEEP, null) || {};
+        k['link' + kind] = data;
+        k['__apiCrm' + kind] = { at: Date.now(), month };
+        GM_setValue(CRM_KEEP, k);
+      } catch (_) { }
+    },
+    seed() {
+      const out = {};
+      const k = GM_getValue(CRM_KEEP, null);
+      if (!k) return out;
+      const now = new Date();
+      ['8', '9'].forEach(x => {
+        const a = k['__apiCrm' + x], d = k['link' + x];
+        if (!a || !d || !Object.keys(d).length) return;
+        const t = new Date(Number(a.at) || 0);
+        if (t.getFullYear() !== now.getFullYear() || t.getMonth() !== now.getMonth()) return;
+        out['link' + x] = d;
+        out['__apiCrm' + x] = Object.assign({}, a, { kept: true });
+      });
+      return out;
+    }
+  };
+  window.__AutoBICrmKeep = crmKeep;
   async function applyCrmStore(cfgIn) {
     const b = await baseData(cfgIn);
     const ids = b.matched.map(s => s.storeId).join(',');
@@ -8875,6 +8905,7 @@ window.__AutoBIBiTarget99 = (function () {
     }
     if (!Object.keys(out).length) throw new Error('CRM không trả shop nào khớp Khai báo');
     writeCache(cache => { cache.link9 = out; cache.__apiCrm9 = { at: Date.now(), month: used }; });
+    crmKeep.save('9', out, used);
     note('CRM Điểm phục vụ: tháng ' + used);
     return Object.keys(out).length;
   }
@@ -8892,6 +8923,7 @@ window.__AutoBIBiTarget99 = (function () {
       out[st.name] = { s5: num(r.FIVESTARTS), s4: num(r.FOURSTARTS), s3: num(r.THREESTARTS), s2: num(r.TWOSTARTS), s1: num(r.ONESTARTS), sent: num(r.TOTALSURVEY), rated: num(r.COUNTRATINGSUSSCESS), total: num(r.COUNTRATINGSUSSCESS), ratePct: Math.round(num(r.RATIOSUCCESS) * 100) / 100, score: Math.round(num(r.POINTEND) * 100) / 100 };
     }
     writeCache(cache => { cache.link8 = out; cache.__apiCrm8 = { at: Date.now(), month: used }; });
+    if (Object.keys(out).length) crmKeep.save('8', out, used);
     note('CRM Phục vụ nhân viên: tháng ' + used);
     return Object.keys(out).length;
   }
@@ -11279,7 +11311,7 @@ window.__AutoBIRunPick = (() => {
     tot.tcPct = tot.tcDt > 0 ? Math.round((tot.tcAmt / tot.tcDt) * 10000) / 100 : 0;
     tot.tcOk = tot.tcPct >= inst;
     const hasPV = staff.some((o) => o.pv) || SH.some((s) => s.sum.pv);
-    return { tc, dp, dim, left, G, shops: SH, staff, ranked, cum, tot, inst, hasPV, multi: SH.length > 1, cfg, c };
+    return { tc, dp, dim, left, G, shops: SH, staff, ranked, cum, tot, inst, hasPV, multi: SH.length > 1, cfg, c, gcache };
   }
 
   /* ---------- 2. CSS chung ---------- */
@@ -11581,7 +11613,7 @@ window.__AutoBIRunPick = (() => {
       '<tr><th class="l">Siêu thị / Nhân viên</th><th>Target QĐ</th><th>Thực hiện</th><th class="c">Dự kiến</th><th>DT thực</th><th><select id="tgdd-hq-mode-select"><option value="0"' + (hqMode === 0 ? " selected" : "") + '>Hiệu quả QĐ</option><option value="1"' + (hqMode === 1 ? " selected" : "") + ">Tỉ lệ QĐ</option></select></th><th>DT trả chậm</th><th>Thực hiện</th><th class=\"c\">Đánh giá</th><th>Tích lũy</th><th>Nóng</th><th>Tổng</th>" +
       (pv ? "<th>5★</th><th>4★</th><th>3★</th><th>2★</th><th>1★</th><th>Tổng đơn</th><th>TL đánh giá</th><th>Điểm PV</th>" : '<th class="c">Điểm PV</th>') +
       "</tr></thead><tbody>";
-    const pvCells = (p, score) => (pv ? (p ? ["s5", "s4", "s3", "s2", "s1", "total"].map((k) => "<td>" + vn(p[k]) + "</td>").join("") + "<td>" + (p.ratePct !== undefined && p.ratePct !== "-" ? vn(num(p.ratePct), 1) + "%" : "—") + "</td><td>" + score + "</td>" : '<td colspan="8" class="c c-mu">—</td>') : '<td class="c c-mu">—</td>');
+    const pvCells = (p, score) => (pv ? (p ? ["s5", "s4", "s3", "s2", "s1", "total"].map((k) => "<td>" + vn(p[k]) + "</td>").join("") + "<td>" + (p.ratePct !== undefined && p.ratePct !== "-" ? vn(num(p.ratePct), 1) + "%" : "—") + "</td><td>" + (typeof score === "number" ? vn(score, 2) : score) + "</td>" : '<td colspan="8" class="c c-mu">—</td>') : '<td class="c c-mu">—</td>');
     const dkCell = (p) => '<td class="c"><span class="' + (p >= 100 ? "h4" : p >= 90 ? "h3" : "h2") + '" style="padding:2px 6px;border-radius:4px;font-weight:800">' + p + "%</span></td>";
     const ev = (ok, has) => (has ? '<td class="c ' + (ok ? "c-ok" : "c-no") + '"><b>' + (ok ? "✓ Đạt" : "✕ Chưa đạt") + "</b></td>" : '<td class="c c-mu">—</td>');
     M.shops.forEach((s) => {
@@ -11612,7 +11644,13 @@ window.__AutoBIRunPick = (() => {
         "</tr>";
     }
     h += "</tbody></table></div>";
-    if (!pv) h += '<div class="nv2-note">Phục vụ: CRM chưa có số tháng ' + M.tc.month + " (CRM chỉ mở trước 8h / sau 18h) — các cột 5★…Tổng đơn, TL đánh giá tự hiện lại khi có số.</div>";
+    if (!pv) h += '<div class="nv2-note">Phục vụ: chưa có số CRM tháng ' + M.tc.month + " — chạy kèm \"Phục vụ CRM\" (CRM chỉ mở trước 8h / sau 18h), các cột 5★…Tổng đơn, TL đánh giá tự hiện khi có số.</div>";
+    else {
+      /* V17.85: số CRM giữ từ lượt trước → ghi rõ lấy lúc nào */
+      const a = (M.c && (M.c.__apiCrm8 || M.c.__apiCrm9)) || (M.gcache && (M.gcache.__apiCrm8 || M.gcache.__apiCrm9)) || null;
+      const t = a && Number(a.at) ? new Date(Number(a.at)) : null;
+      if (t && t.toDateString() !== new Date().toDateString()) h += '<div class="nv2-note">Phục vụ: số CRM lấy lúc ' + pad(t.getHours()) + ":" + pad(t.getMinutes()) + " " + pad(t.getDate()) + "/" + pad(t.getMonth() + 1) + " — chạy kèm \"Phục vụ CRM\" (trước 8h / sau 18h) để cập nhật.</div>";
+    }
     return h + "</div>";
   }
 
