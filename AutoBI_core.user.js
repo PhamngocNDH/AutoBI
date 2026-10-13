@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.83
+// @name         AutoBI Core V17.84
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.83
+// @version      17.84
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -4555,7 +4555,7 @@ window.__AutoBIRun67 = (function () {
                 _0x329bab = UI.HTML.getNLNVV2(['daily', 'product_group'].includes(_0x37589a) ? _0x37589a : 'overview', _0x3aa5c8, _0x37b477, _0x13b9c3, _0x4df754, _0x19aafa, () => { let __h = ''; if (_0x37589a === 'daily') { __h = UI.HTML.getNLNVDailyReport(window.__AutoBINlnvSrc ? window.__AutoBINlnvSrc.hist(_0x3aa5c8) : window.tgdd_history_cache, _0x37b477, _0x13b9c3, window.tgdd_nlnv_selected_staff, _0x3aa5c8, _0x4df754, _0x19aafa); if (window.__AutoBINlnvSrc) __h = window.__AutoBINlnvSrc.note(_0x13b9c3) + __h; } else if (_0x37589a === 'product_group') { __h = UI.HTML.getNLNVProductGroupReport(window.__AutoBINlnvSrc ? window.__AutoBINlnvSrc.hist(_0x3aa5c8) : window.tgdd_history_cache, _0x37b477, _0x13b9c3, _0x3aa5c8, _0x4df754); if (window.__AutoBINlnvSrc) __h = window.__AutoBINlnvSrc.note(_0x13b9c3) + __h; } else { __h = UI.HTML.getNLNVReport(_0x3aa5c8, _0x37b477, _0x13b9c3, _0x4df754, _0x10626e); } return __h; });
             }
             else if (_0x450ffb === 'compare_week') {
-                _0x329bab = UI.HTML.getWeeklyCompareReport(window.tgdd_history_cache, _0x37b477, _0x13b9c3, _0x37589a);
+                _0x329bab = UI.HTML.getWeekV2(window.tgdd_history_cache, _0x37b477, _0x13b9c3, _0x37589a); /* V17.84 */
             }
             else if (_0x450ffb === 'revenue') {
                 _0x329bab = UI.HTML.getChartV2('rev', window.tgdd_history_cache, _0x13b9c3, _0x37589a); /* V17.82 */
@@ -5037,7 +5037,7 @@ window.__AutoBIRun67 = (function () {
                 _0x5035f6.forEach(_0x2aa55d => { _0x3779b5 += _0x407611 * (parseFloat(_0x2aa55d.rate) / 100); });
                 const _0x47ce14 = Math.max(0, _0x407611 - _0x3779b5);
                 _0x605fb7 = _0x47ce14 / _0xb50ba8.length;
-            } return UI.HTML.applyTargetRounding(_0x605fb7, _0x4084be); }, getChartV2: (kind, hist, cfg, view) => { /* V17.82: Chart Doanh thu / Chart Phục vụ giao diện mới; chưa có số hoặc lỗi → biểu đồ cũ */ const old = () => kind === 'svc' ? UI.HTML.getServiceChart(hist, cfg, view) : UI.HTML.getRevenueChart(hist, cfg, view); try { if (!window.__AutoBINv2 || !window.__AutoBINv2.renderRev) throw new Error('thiếu module'); const c = GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {}; const h = kind === 'svc' ? window.__AutoBINv2.renderSvc({ UI, UTILS }, c, cfg, view) : window.__AutoBINv2.renderRev({ UI, UTILS }, c, cfg, view); return h || old(); } catch (e) { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Chart mới lỗi, dùng biểu đồ cũ: ' + String(e && e.message || e)); } catch (_) { } return '<div data-html2canvas-ignore="true" style="padding:8px;text-align:center;color:#b42318;font-weight:700;">Biểu đồ mới lỗi: ' + String(e && e.message || e).replace(/[<>&]/g, '') + ' — đang hiện biểu đồ cũ</div>' + old(); } }, getOneShopV2: (c, groups, cfg, view, sortFlag, onlyRT, useBi, timeArg) => { /* V17.77: Realtime V1 giao diện mới; lỗi → bảng cũ */ try { if (!window.__AutoBINv2 || !window.__AutoBINv2.renderRT1) throw new Error('thiếu module'); return window.__AutoBINv2.renderRT1({ UI, UTILS }, c, groups, cfg, view, sortFlag, onlyRT, useBi, timeArg); } catch (e) { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Realtime V1 mới lỗi, dùng bảng cũ: ' + String(e && e.message || e)); } catch (_) { } return '<div data-html2canvas-ignore="true" style="padding:8px;text-align:center;color:#b42318;font-weight:700;">Realtime V1 mới lỗi: ' + String(e && e.message || e).replace(/[<>&]/g, '') + ' — đang hiện bảng cũ</div>' + UI.HTML.getOneShop(c, groups, cfg, view, sortFlag, onlyRT, useBi, timeArg); } }, getHealthReportV2: (c, cfg, view, useBi, timeArg) => { /* V17.77: Sức khỏe ST giao diện mới; chưa đủ cây Ngành hàng BI hoặc lỗi → bảng cũ */ try { if (!window.__AutoBINv2 || !window.__AutoBINv2.renderHealth) throw new Error('thiếu module'); const h = window.__AutoBINv2.renderHealth({ UI, UTILS }, c, cfg, view, useBi, timeArg); if (h) return h; return UI.HTML.getHealthReport(c, cfg, view, useBi, timeArg); } catch (e) { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Sức khỏe ST mới lỗi, dùng bảng cũ: ' + String(e && e.message || e)); } catch (_) { } return '<div data-html2canvas-ignore="true" style="padding:8px;text-align:center;color:#b42318;font-weight:700;">Sức khỏe ST mới lỗi: ' + String(e && e.message || e).replace(/[<>&]/g, '') + ' — đang hiện bảng cũ</div>' + UI.HTML.getHealthReport(c, cfg, view, useBi, timeArg); } }, getEmployeeReportV2: (c, groups, cfg, view, useBi, timeArg) => { /* V17.76: Chi tiết NV giao diện mới (module __AutoBINv2 cuối file); lỗi → bảng cũ */ try { if (!window.__AutoBINv2) throw new Error('thiếu module'); return window.__AutoBINv2.renderStaff({ UI, UTILS, gcache: GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {} }, c, groups, cfg, view, useBi, timeArg); } catch (e) { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Chi tiết NV mới lỗi, dùng bảng cũ: ' + String(e && e.message || e)); } catch (_) { } return '<div data-html2canvas-ignore="true" style="padding:8px;text-align:center;color:#b42318;font-weight:700;">Chi tiết NV mới lỗi: ' + String(e && e.message || e).replace(/[<>&]/g, '') + ' — đang hiện bảng cũ</div>' + UI.HTML.getEmployeeReport(c, groups, cfg, view, useBi, timeArg); } }, getNLNVV2: (sub, c, groups, cfg, useBi, timeArg, oldFn) => { /* V17.76: Năng lực NV giao diện mới; lỗi → bảng cũ */ try { if (!window.__AutoBINv2) throw new Error('thiếu module'); return (window.__AutoBINlnvSrc && sub !== 'overview' ? window.__AutoBINlnvSrc.note(cfg) : '') + window.__AutoBINv2.renderNL({ UI, UTILS, gcache: GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {} }, c, groups, cfg, sub, useBi, timeArg); } catch (e) { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Năng lực NV mới lỗi, dùng bảng cũ: ' + String(e && e.message || e)); } catch (_) { } return '<div data-html2canvas-ignore="true" style="padding:8px;text-align:center;color:#b42318;font-weight:700;">Năng lực NV mới lỗi: ' + String(e && e.message || e).replace(/[<>&]/g, '') + ' — đang hiện bảng cũ</div>' + oldFn(); } }, getLuyKeNew: (c, groups, cfg, view, useBi, timeArg) => { try { return window.__AutoBIRt2 ? window.__AutoBIRt2.renderLK({ UI, UTILS }, c, groups, cfg, view, useBi, timeArg) : ''; } catch (e) { return '<div style="padding:40px;text-align:center;color:#b42318;font-weight:700;">LK NEW lỗi: ' + String(e && e.message || e) + '</div>'; } }, getNhatKyBH: (c, groups, cfg, view, useBi, timeArg) => { try { if (!window.tgdd_history_cache && cfg && cfg.historySheetId && !window.__nkbhHistLoading) { window.__nkbhHistLoading = true; DATA.fetchHistoryFromSheet(cfg, hs => { window.tgdd_history_cache = hs || {}; try { window.__AutoBINkbh && window.__AutoBINkbh.histSave(hs || {}); } catch (_) { } const t = document.querySelector('.rpt-nav-item.active[data-tab="nkbh"]'); if (t) { if (window.__AutoBINkbh && window.__AutoBINkbh.redraw && document.querySelector('.nk-root')) window.__AutoBINkbh.redraw(); else t.click(); } }); } return window.__AutoBINkbh ? window.__AutoBINkbh.render({ UI, UTILS }, c, groups, cfg, view, useBi, timeArg) : ''; } catch (e) { return '<div style="padding:40px;text-align:center;color:#b42318;font-weight:700;">NK Bán hàng lỗi: ' + String(e && e.message || e) + '</div>'; } }, getRealtimeV2: (c, groups, cfg, view, useBi, timeArg) => { try { return window.__AutoBIRt2 ? window.__AutoBIRt2.render({ UI, UTILS }, c, groups, cfg, view, useBi, timeArg) : ''; } catch (e) { return '<div style="padding:40px;text-align:center;color:#b42318;font-weight:700;">Realtime V2 lỗi: ' + String(e && e.message || e) + '</div>'; } }, getRealtimeV4: (_0x11f2c6, _0x208609, _0xbf3329, _0x99373a, _0x1079b1, _0x1b65a9) => { const _0x2c9196 = UI.HTML.resolveTimeContext(_0xbf3329, _0x1b65a9); const _0x3241b4 = _0x2c9196.daysPassed; const _0x11109e = _0x2c9196.daysInMonth; const _0x457416 = window.tgdd_rt4_mode || 'realtime'; const _0x3c3819 = _0x457416 === 'realtime'; let _0x21a1ca = false; if (_0x99373a === 'total') {
+            } return UI.HTML.applyTargetRounding(_0x605fb7, _0x4084be); }, getWeekV2: (hist, groups, cfg, view) => { /* V17.84: So sánh tuần giao diện mới; chưa có số hoặc lỗi → bảng cũ */ const old = () => UI.HTML.getWeeklyCompareReport(hist, groups, cfg, view); try { if (!window.__AutoBINv2 || !window.__AutoBINv2.renderWeek) throw new Error('thiếu module'); const c = GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {}; const h = window.__AutoBINv2.renderWeek({ UI, UTILS }, c, groups, cfg); return h || old(); } catch (e) { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('So sánh tuần mới lỗi, dùng bảng cũ: ' + String(e && e.message || e)); } catch (_) { } return '<div data-html2canvas-ignore="true" style="padding:8px;text-align:center;color:#b42318;font-weight:700;">So sánh tuần mới lỗi: ' + String(e && e.message || e).replace(/[<>&]/g, '') + ' — đang hiện bảng cũ</div>' + old(); } }, getChartV2: (kind, hist, cfg, view) => { /* V17.82: Chart Doanh thu / Chart Phục vụ giao diện mới; chưa có số hoặc lỗi → biểu đồ cũ */ const old = () => kind === 'svc' ? UI.HTML.getServiceChart(hist, cfg, view) : UI.HTML.getRevenueChart(hist, cfg, view); try { if (!window.__AutoBINv2 || !window.__AutoBINv2.renderRev) throw new Error('thiếu module'); const c = GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {}; const h = kind === 'svc' ? window.__AutoBINv2.renderSvc({ UI, UTILS }, c, cfg, view) : window.__AutoBINv2.renderRev({ UI, UTILS }, c, cfg, view); return h || old(); } catch (e) { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Chart mới lỗi, dùng biểu đồ cũ: ' + String(e && e.message || e)); } catch (_) { } return '<div data-html2canvas-ignore="true" style="padding:8px;text-align:center;color:#b42318;font-weight:700;">Biểu đồ mới lỗi: ' + String(e && e.message || e).replace(/[<>&]/g, '') + ' — đang hiện biểu đồ cũ</div>' + old(); } }, getOneShopV2: (c, groups, cfg, view, sortFlag, onlyRT, useBi, timeArg) => { /* V17.77: Realtime V1 giao diện mới; lỗi → bảng cũ */ try { if (!window.__AutoBINv2 || !window.__AutoBINv2.renderRT1) throw new Error('thiếu module'); return window.__AutoBINv2.renderRT1({ UI, UTILS }, c, groups, cfg, view, sortFlag, onlyRT, useBi, timeArg); } catch (e) { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Realtime V1 mới lỗi, dùng bảng cũ: ' + String(e && e.message || e)); } catch (_) { } return '<div data-html2canvas-ignore="true" style="padding:8px;text-align:center;color:#b42318;font-weight:700;">Realtime V1 mới lỗi: ' + String(e && e.message || e).replace(/[<>&]/g, '') + ' — đang hiện bảng cũ</div>' + UI.HTML.getOneShop(c, groups, cfg, view, sortFlag, onlyRT, useBi, timeArg); } }, getHealthReportV2: (c, cfg, view, useBi, timeArg) => { /* V17.77: Sức khỏe ST giao diện mới; chưa đủ cây Ngành hàng BI hoặc lỗi → bảng cũ */ try { if (!window.__AutoBINv2 || !window.__AutoBINv2.renderHealth) throw new Error('thiếu module'); const h = window.__AutoBINv2.renderHealth({ UI, UTILS }, c, cfg, view, useBi, timeArg); if (h) return h; return UI.HTML.getHealthReport(c, cfg, view, useBi, timeArg); } catch (e) { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Sức khỏe ST mới lỗi, dùng bảng cũ: ' + String(e && e.message || e)); } catch (_) { } return '<div data-html2canvas-ignore="true" style="padding:8px;text-align:center;color:#b42318;font-weight:700;">Sức khỏe ST mới lỗi: ' + String(e && e.message || e).replace(/[<>&]/g, '') + ' — đang hiện bảng cũ</div>' + UI.HTML.getHealthReport(c, cfg, view, useBi, timeArg); } }, getEmployeeReportV2: (c, groups, cfg, view, useBi, timeArg) => { /* V17.76: Chi tiết NV giao diện mới (module __AutoBINv2 cuối file); lỗi → bảng cũ */ try { if (!window.__AutoBINv2) throw new Error('thiếu module'); return window.__AutoBINv2.renderStaff({ UI, UTILS, gcache: GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {} }, c, groups, cfg, view, useBi, timeArg); } catch (e) { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Chi tiết NV mới lỗi, dùng bảng cũ: ' + String(e && e.message || e)); } catch (_) { } return '<div data-html2canvas-ignore="true" style="padding:8px;text-align:center;color:#b42318;font-weight:700;">Chi tiết NV mới lỗi: ' + String(e && e.message || e).replace(/[<>&]/g, '') + ' — đang hiện bảng cũ</div>' + UI.HTML.getEmployeeReport(c, groups, cfg, view, useBi, timeArg); } }, getNLNVV2: (sub, c, groups, cfg, useBi, timeArg, oldFn) => { /* V17.76: Năng lực NV giao diện mới; lỗi → bảng cũ */ try { if (!window.__AutoBINv2) throw new Error('thiếu module'); return (window.__AutoBINlnvSrc && sub !== 'overview' ? window.__AutoBINlnvSrc.note(cfg) : '') + window.__AutoBINv2.renderNL({ UI, UTILS, gcache: GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {} }, c, groups, cfg, sub, useBi, timeArg); } catch (e) { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Năng lực NV mới lỗi, dùng bảng cũ: ' + String(e && e.message || e)); } catch (_) { } return '<div data-html2canvas-ignore="true" style="padding:8px;text-align:center;color:#b42318;font-weight:700;">Năng lực NV mới lỗi: ' + String(e && e.message || e).replace(/[<>&]/g, '') + ' — đang hiện bảng cũ</div>' + oldFn(); } }, getLuyKeNew: (c, groups, cfg, view, useBi, timeArg) => { try { return window.__AutoBIRt2 ? window.__AutoBIRt2.renderLK({ UI, UTILS }, c, groups, cfg, view, useBi, timeArg) : ''; } catch (e) { return '<div style="padding:40px;text-align:center;color:#b42318;font-weight:700;">LK NEW lỗi: ' + String(e && e.message || e) + '</div>'; } }, getNhatKyBH: (c, groups, cfg, view, useBi, timeArg) => { try { if (!window.tgdd_history_cache && cfg && cfg.historySheetId && !window.__nkbhHistLoading) { window.__nkbhHistLoading = true; DATA.fetchHistoryFromSheet(cfg, hs => { window.tgdd_history_cache = hs || {}; try { window.__AutoBINkbh && window.__AutoBINkbh.histSave(hs || {}); } catch (_) { } const t = document.querySelector('.rpt-nav-item.active[data-tab="nkbh"]'); if (t) { if (window.__AutoBINkbh && window.__AutoBINkbh.redraw && document.querySelector('.nk-root')) window.__AutoBINkbh.redraw(); else t.click(); } }); } return window.__AutoBINkbh ? window.__AutoBINkbh.render({ UI, UTILS }, c, groups, cfg, view, useBi, timeArg) : ''; } catch (e) { return '<div style="padding:40px;text-align:center;color:#b42318;font-weight:700;">NK Bán hàng lỗi: ' + String(e && e.message || e) + '</div>'; } }, getRealtimeV2: (c, groups, cfg, view, useBi, timeArg) => { try { return window.__AutoBIRt2 ? window.__AutoBIRt2.render({ UI, UTILS }, c, groups, cfg, view, useBi, timeArg) : ''; } catch (e) { return '<div style="padding:40px;text-align:center;color:#b42318;font-weight:700;">Realtime V2 lỗi: ' + String(e && e.message || e) + '</div>'; } }, getRealtimeV4: (_0x11f2c6, _0x208609, _0xbf3329, _0x99373a, _0x1079b1, _0x1b65a9) => { const _0x2c9196 = UI.HTML.resolveTimeContext(_0xbf3329, _0x1b65a9); const _0x3241b4 = _0x2c9196.daysPassed; const _0x11109e = _0x2c9196.daysInMonth; const _0x457416 = window.tgdd_rt4_mode || 'realtime'; const _0x3c3819 = _0x457416 === 'realtime'; let _0x21a1ca = false; if (_0x99373a === 'total') {
                 const _0xc428a = (_0xbf3329.shop1 || '').trim().toUpperCase();
                 const _0x5b5597 = (_0xbf3329.shop2 || '').trim().toUpperCase();
                 const _0x1bab49 = (_0xbf3329.shop3 || '').trim().toUpperCase();
@@ -11015,7 +11015,7 @@ window.__AutoBIRunPick = (() => {
   if (document.body) start(); else document.addEventListener('DOMContentLoaded', start, { once: true });
 })();
 
-/* ==== V17.76: Chi tiết NV + Năng lực NV giao diện mới (module __AutoBINv2); V17.77: thêm Realtime V1 (renderRT1) + Sức khỏe ST (renderHealth); V17.82: Chart Doanh thu (renderRev) + Chart Phục vụ (renderSvc) ====
+/* ==== V17.76: Chi tiết NV + Năng lực NV giao diện mới (module __AutoBINv2); V17.77: thêm Realtime V1 (renderRT1) + Sức khỏe ST (renderHealth); V17.82: Chart Doanh thu (renderRev) + Chart Phục vụ (renderSvc); V17.84: So sánh tuần (renderWeek) ====
    Hàm thuần: chỉ đọc cache (link2, link4_smart, link6, link7, link8, link9, link10_reward, staffReal) + lịch sử Sheet,
    công thức điểm / mục tiêu / dự kiến giữ y như getEmployeeReport / getNLNVReport cũ.
    Cửa vào trong lõi: UI.HTML.getEmployeeReportV2, UI.HTML.getNLNVV2 (lỗi → rơi về hàm cũ). */
@@ -12393,26 +12393,48 @@ window.__AutoBIRunPick = (() => {
     const now = new Date();
     const m = now.getMonth() + 1,
       y = now.getFullYear();
-    const H = history(c);
+    const H = Object.assign({}, history(c));
+    /* V17.84: ngày hôm nay dùng số CRM vừa chạy (bản lưu Sheet có lúc ghi điểm sai, vd 1.900) */
+    try {
+      const a9 = c.__apiCrm9 || (h.gcache && h.gcache.__apiCrm9);
+      const l9 = c.link9;
+      const tk = pad(now.getDate()) + "/" + pad(m) + "/" + y;
+      if (l9 && a9 && new Date(Number(a9.at) || 0).toDateString() === now.toDateString()) {
+        H[tk] = Object.assign({}, H[tk] || {});
+        Object.keys(l9).forEach((s) => {
+          const o = l9[s] || {};
+          Object.keys(o).forEach((f) => {
+            if (typeof o[f] === "number") H[tk]["link9|||" + s + "|||" + f] = o[f];
+          });
+        });
+      }
+    } catch (_) {}
     const all = monthKeys(H, m, y);
-    const has = (k) => Object.keys(H[k] || {}).some((x) => x.startsWith("link9|||") && x.endsWith("|||ratePct") && isFinite(parseFloat(H[k][x])));
+    const okR = (v) => isFinite(v) && v >= 0 && v <= 100;
+    const okS = (v) => isFinite(v) && v > 0 && v <= 10;
+    const has = (k) => Object.keys(H[k] || {}).some((x) => x.startsWith("link9|||") && x.endsWith("|||ratePct") && okR(parseFloat(H[k][x])));
     const keys = all.filter(has);
     if (!keys.length) return null;
     const shopKeys = view === "total" ? ["shop1", "shop2", "shop3", "shop4", "shop5"].filter((k) => cfg[k]) : [view];
     const shopOf = (F) => {
+      /* điểm ngoài thang 0–10 / tỉ lệ ngoài 0–100% = số lỗi → bỏ, không kéo lệch bình quân */
       let r = 0,
         s = 0,
-        n = 0;
+        nr = 0,
+        ns = 0;
       shopKeys.forEach((k) => {
         const a = parseFloat(F["link9|||" + k + "|||ratePct"]),
           b = parseFloat(F["link9|||" + k + "|||score"]);
-        if (!isNaN(a) && !isNaN(b)) {
+        if (okR(a)) {
           r += a;
+          nr++;
+        }
+        if (okS(b)) {
           s += b;
-          n++;
+          ns++;
         }
       });
-      return n ? { r: r / n, s: s / n } : null;
+      return nr || ns ? { r: nr ? r / nr : null, s: ns ? s / ns : null } : null;
     };
     const minRate = num(cfg.serviceMinRate) || 10;
     const pts = all.map((k) => ({ k, d: k.slice(0, 5), v: has(k) ? shopOf(H[k]) : null }));
@@ -12420,8 +12442,13 @@ window.__AutoBIRunPick = (() => {
       prevK = keys.length > 1 ? keys[keys.length - 2] : null;
     const L = H[lastK] || {},
       P = prevK ? H[prevK] || {} : {};
-    const cur = shopOf(L),
-      prv = prevK ? shopOf(P) : null;
+    const cur0 = shopOf(L),
+      prv0 = prevK ? shopOf(P) : null;
+    /* thẻ chỉ dùng số hợp lệ: tỉ lệ / điểm tách riêng */
+    const cur = cur0 && cur0.r !== null ? cur0 : null,
+      prv = prv0 && prv0.r !== null ? prv0 : null;
+    const curS = cur0 && cur0.s !== null ? cur0.s : null,
+      prvS = prv0 && prv0.s !== null ? prv0.s : null;
     const g = (F, name, f) => {
       const v = parseFloat(F["link8|||" + name + "|||" + f]);
       if (!isFinite(v)) return 0;
@@ -12450,7 +12477,7 @@ window.__AutoBIRunPick = (() => {
     html += hdr("Phục vụ khách hàng", "Phục vụ khách hàng — tháng " + m, title, "Lũy kế CRM đến " + lastK.slice(0, 5) + "/" + y, "CRM chỉ mở trước 8h / sau 18h — " + keys.length + " ngày có số");
     html += '<div class="nv2-kpis" data-capture-id="svckpi" data-table-name="Phục vụ tổng quan" style="grid-template-columns:repeat(' + (mobile ? 2 : 4) + ',minmax(0,1fr))">';
     html += '<div class="nv2-hero"><div class="l">TỈ LỆ ĐÁNH GIÁ (SIÊU THỊ)</div><div class="big num"><b>' + (cur ? vn(cur.r, 0) + "%" : "—") + "</b><span>MT ≥ " + minRate + '%</span></div><div class="s">' + (prv && cur ? prevK.slice(0, 5) + ": " + vn(prv.r, 0) + "% → " + lastK.slice(0, 5) + ": " + vn(cur.r, 0) + '% <b style="color:#ffd21f">' + (Math.round(cur.r - prv.r) ? sgn1(cur.r - prv.r, 0) : "=") + "</b>" : "Lần có số: " + lastK.slice(0, 5)) + "</div></div>";
-    html += kpi("Điểm phục vụ (siêu thị)", cur ? vn(cur.s, 2) + "<small> / 10</small>" : "—", "c-mid", prv && cur ? prevK.slice(0, 5) + ": " + vn(prv.s, 2) + " → " + vn(cur.s, 2) + ' <b class="' + (cur.s >= prv.s ? "c-ok" : "c-no") + '">' + sgn1(cur.s - prv.s, 2) + "</b>" : "");
+    html += kpi("Điểm phục vụ (siêu thị)", curS !== null ? vn(curS, 2) + "<small> / 10</small>" : "—", "c-mid", prvS !== null && curS !== null ? prevK.slice(0, 5) + ": " + vn(prvS, 2) + " → " + vn(curS, 2) + ' <b class="' + (curS >= prvS ? "c-ok" : "c-no") + '">' + (Math.abs(curS - prvS) >= 0.005 ? sgn1(curS - prvS, 2) : "=") + "</b>" : curS === null ? "Số điểm lần này lỗi — chờ lượt CRM sau" : "");
     html += kpi("Đơn gửi khảo sát (NV)", vn(sumSent), "", vn(sumRated) + " đánh giá · tỉ lệ NV " + (sumSent ? vn((sumRated / sumSent) * 100, 1) : "0") + "%");
     html += kpi("NV chưa có đơn", zero.length + "<small>/" + staff.length + "</small>", zero.length ? "c-no" : "c-ok", zero.length ? zero.slice(0, 4).map((o) => esc(o.nm.split(" ").slice(-1)[0])).join(" · ") + (zero.length > 4 ? " +" + (zero.length - 4) : "") : "Ai cũng có đơn");
     html += "</div>";
@@ -12506,6 +12533,225 @@ window.__AutoBIRunPick = (() => {
     });
     return ok;
   }
+  /* ---------- 10. So sánh tuần (tab 'compare_week') — V17.84 ----------
+     Giữ công thức bản cũ getWeeklyCompareReport: tuần i = bản lưu ngày 7·i (tuần cuối = ngày đang xem);
+     bản lưu ngày D = lũy kế hết D−1. Dự kiến = DT ÷ (D−1) × số ngày tháng ÷ target; nhóm hàng = link4_smart pd (NV: tự tính theo tỉ lệ phân bổ).
+     Mới: DT bán riêng từng tuần = lũy kế tuần này − tuần trước, bình quân/ngày, cột Đổi (điểm %), khối Đang tụt / Đang lên. */
+  const wstate = { sort: "down" };
+  function renderWeek(h, c, groups, cfg) {
+    last.week = [h, c, groups, cfg];
+    const { UTILS } = h;
+    c = c || {};
+    cfg = cfg || {};
+    groups = groups || [];
+    const mobile = UTILS.isMobile();
+    const H = history(c);
+    const dk = (k) => {
+      const p = k.split("/");
+      return parseInt(p[2]) * 10000 + parseInt(p[1]) * 100 + parseInt(p[0]);
+    };
+    const keys = Object.keys(H)
+      .filter((k) => /^\d{2}\/\d{2}\/\d{4}$/.test(k))
+      .sort((a, b) => dk(a) - dk(b));
+    if (!keys.length) return null;
+    const subj = window.tgdd_weekly_compare_subject || "total";
+    const selKey = window.tgdd_weekly_compare_date && H[window.tgdd_weekly_compare_date] ? window.tgdd_weekly_compare_date : keys[keys.length - 1];
+    const [dS, mS, yS] = selKey.split("/");
+    const D = parseInt(dS),
+      M = parseInt(mS),
+      Y = parseInt(yS);
+    const dim = new Date(Y, M, 0).getDate();
+    const W = Math.floor((D - 1) / 7) + 1;
+    const weeks = [];
+    for (let i = 1; i <= W; i++) {
+      const dn = i === W ? D : i * 7;
+      weeks.push({ n: i, day: dn, key: pad(dn) + "/" + mS + "/" + yS });
+    }
+    const staffList = cfg.staffList || [];
+    const SHOPS = ["shop1", "shop2", "shop3", "shop4", "shop5"];
+    const isShop = subj === "total" || SHOPS.includes(subj);
+    let vk = "total",
+      idx = "1",
+      sName = "";
+    if (isShop) {
+      vk = subj;
+      idx = subj === "total" ? "1" : subj.replace("shop", "");
+    } else {
+      sName = subj;
+      const so = staffList.find((s) => s.name === sName) || { shopIdx: "1" };
+      vk = "shop" + so.shopIdx;
+      idx = String(so.shopIdx);
+    }
+    /* nhóm hàng: như bản cũ (siêu thị tên bắt đầu "Đ" → có cả nhóm kênh D) */
+    const up = (s) => String(s || "").trim().toUpperCase();
+    const hasD = subj === "total" ? SHOPS.some((k) => up(cfg[k]).startsWith("Đ")) : up(cfg[vk]).startsWith("Đ");
+    const allowed = groups.filter((g) => (hasD ? true : g.channel === "T")).map((g) => g.short);
+    let gl = [...new Set((cfg.compData || []).map((x) => x.group).filter((g) => allowed.includes(g)))];
+    const hidden = window.tgdd_hidden_report_groups || [];
+    gl = gl.filter((g) => !hidden.includes(g));
+    const gObj = (g) => groups.find((x) => x.short === g) || { color: "", type: "soluong" };
+    const fl = (F, k) => parseFloat(F[k]) || 0;
+    /* phân bổ target cho NV như bản cũ */
+    const staffShare = (T) => {
+      const inShop = staffList.filter((s) => s.shopIdx == idx);
+      const withR = inShop.filter((s) => s.rate && parseFloat(s.rate) > 0);
+      const noR = inShop.filter((s) => !s.rate || parseFloat(s.rate) <= 0);
+      const me = inShop.find((s) => UTILS.matchStaffNameSafe(s.name, sName)) || { rate: "" };
+      let used = 0;
+      withR.forEach((s) => (used += Math.round((T * parseFloat(s.rate)) / 100)));
+      if (me.rate && parseFloat(me.rate) > 0) return Math.round((T * parseFloat(me.rate)) / 100);
+      return noR.length ? Math.round(Math.max(0, T - used) / noR.length) : 0;
+    };
+    const grpT0 = (F, g) => {
+      const money = isMoneyOf(gObj(g));
+      let t = fl(F, "link4_smart|||" + g + "|||" + vk + "|||t");
+      if (t > 0 && money) t = t / 1000;
+      else if (t === 0) {
+        const cd = (cfg.compData || []).find((x) => x.group === g);
+        if (cd) t = vk === "total" && isShop ? [1, 2, 3, 4, 5].reduce((a, i) => a + (num(cd["t" + i]) || 0), 0) : num(cd["t" + idx]) || 0;
+      }
+      return { t, mult: money ? 1000 : 1 };
+    };
+    const snap = (F, dayNum) => {
+      if (!F || !Object.keys(F).length) return null;
+      const dp = dayNum - 1;
+      if (isShop) {
+        const r = fl(F, "link2|||" + vk + "|||r"),
+          dt = fl(F, "link2|||" + vk + "|||dtlk");
+        const t = fl(F, "link2|||" + vk + "|||t") || num(vk === "total" ? cfg.totalTarget : cfg["target" + idx]);
+        const dkv = fl(F, "link2|||" + vk + "|||dk");
+        const rev = dp >= 1 && t > 0 ? Math.round((((r / dp) * dim) / t) * 1000) / 10 : dkv;
+        const g = {};
+        gl.forEach((x) => (g[x] = fl(F, "link4_smart|||" + x + "|||" + vk + "|||pd")));
+        return { r, t, rev, hq: dt > 0 ? (r / dt) * 100 : 0, tc: fl(F, "link2|||" + vk + "|||tg"), g, dp };
+      }
+      const r = UTILS.getSafeFlatVal(F, "link6|||" + vk + "|||revenue|||", "|||dtqd", sName, 3);
+      const dt = UTILS.getSafeFlatVal(F, "link6|||" + vk + "|||revenue|||", "|||dtlk", sName, 3);
+      const shopT = fl(F, "link2|||" + vk + "|||t") || num(cfg["target" + idx]);
+      const t = staffShare(shopT);
+      const g = {};
+      gl.forEach((x) => {
+        const o = grpT0(F, x);
+        const tt = staffShare(o.t) * o.mult;
+        const rr = UTILS.getSafeFlatVal(F, "link6|||" + vk + "|||competition|||", "|||" + x, sName, 3);
+        g[x] = tt > 0 ? (((rr / Math.max(1, dp)) * dim) / tt) * 100 : rr > 0 ? 100 : 0;
+      });
+      return { r, t, rev: t > 0 ? (((r / Math.max(1, dp)) * dim) / t) * 100 : 0, hq: dt > 0 ? (r / dt) * 100 : 0, tc: num(UTILS.getSafeFlatVal(F, "link7|||" + vk + "|||", "", sName, 2)), g, dp };
+    };
+    const S = weeks.map((w) => (H[w.key] ? snap(H[w.key], w.day) : null));
+    const cur = S[W - 1],
+      prv = W > 1 ? S[W - 2] : null;
+    /* DT bán riêng từng tuần */
+    let pr = 0,
+      pd = 0;
+    weeks.forEach((w, i) => {
+      const s = S[i];
+      if (!s) return;
+      w.from = pd + 1;
+      w.to = s.dp;
+      w.days = Math.max(0, s.dp - pd);
+      w.rev = Math.max(0, s.r - pr);
+      w.avg = w.days > 0 ? w.rev / w.days : null;
+      pr = s.r;
+      pd = s.dp;
+    });
+    const L = H[selKey] || {};
+    const base = cur || S.filter(Boolean).pop() || { r: 0, t: 0, dp: D - 1 };
+    const need = base.t > 0 ? base.t / dim : 0;
+    const left = Math.max(0, dim - (D - 1));
+    const timeMark = ((D - 1) / dim) * 100;
+    /* bảng nhóm hàng */
+    const rows = gl.map((g, i) => {
+      const go = gObj(g);
+      const o = grpT0(L, g);
+      const T = Math.round((isShop ? o.t : staffShare(o.t)) * o.mult);
+      const R = isShop ? fl(L, "link4_smart|||" + g + "|||" + vk + "|||r") : UTILS.getSafeFlatVal(L, "link6|||" + vk + "|||competition|||", "|||" + g, sName, 3);
+      const wk = S.map((s) => (s ? s.g[g] || 0 : null));
+      const a = wk[W - 1],
+        b = W > 1 ? wk[W - 2] : null;
+      const d = a !== null && b !== null ? Math.round(a) - Math.round(b) : null;
+      return { g, i, color: go.color || "", T, R, p: T > 0 ? (R / T) * 100 : 0, wk, d };
+    });
+    const withD = rows.filter((r) => r.d !== null);
+    const downs = withD.filter((r) => r.d < 0).sort((a, b) => a.d - b.d);
+    const ups = withD.filter((r) => r.d >= 0).sort((a, b) => b.d - a.d);
+    const sgn = (v) => (v > 0 ? "▲ " + vn(v) : v < 0 ? "▼ " + vn(-v) : "=");
+    const dcls = (v) => (v > 0 ? "c-ok" : v < 0 ? "c-no" : "c-mu");
+    const pt = (v) => (v === null || v === undefined ? "—" : Math.round(v) + "%");
+    /* tiêu đề */
+    const subjName = subj === "total" ? esc(cfg.cluster || "Tổng cụm") : isShop ? esc(cfg[subj + "Short"] || cfg[subj] || subj) : esc(sName);
+    const rng = (w) => (w.from ? pad(w.from) + "–" + pad(w.to) + "/" + mS : "chưa có số");
+    let html = style3() + '<div class="nv2' + (mobile ? " nv2-m" : "") + '" id="nv2-week">';
+    html += hdr("So sánh tuần", (W > 1 ? "Tuần này so với tuần trước" : "Tuần 1") + " — tháng " + M, subjName, "Tuần " + W + " · số đến hết " + pad(D - 1) + "/" + mS + " · còn " + left + " ngày", "Mỗi tuần = số chốt ngày 7, 14, 21, 28 và ngày đang xem");
+    /* chọn đối tượng */
+    const chip = (v, l) => '<button class="nv2-btn' + (subj === v ? " on" : "") + '" data-nv2-wk="' + esc(v) + '">' + l + "</button>";
+    html += '<div class="nv2-tabs" data-html2canvas-ignore="true">' + chip("total", "Tổng cụm") + SHOPS.filter((k) => cfg[k]).map((k) => chip(k, esc(cfg[k + "Short"] || cfg[k]))).join("");
+    html += '<select id="nv2-wk-staff" class="nv2-sel"><option value="">👤 Chọn nhân viên…</option>' + staffList.map((s) => '<option value="' + esc(s.name) + '"' + (s.name === subj ? " selected" : "") + ">" + esc(s.name) + "</option>").join("") + "</select>";
+    html += '<span style="flex:1"></span><span style="font-size:12.5px;color:#4a5872">' + weeks.map((w) => "<b>T" + w.n + "</b> " + rng(w)).join(" · ") + "</span></div>";
+    /* thẻ */
+    const pc = prv && cur;
+    html += '<div class="nv2-kpis" data-capture-id="wkkpi" data-table-name="So sánh tuần — tổng" style="grid-template-columns:' + (mobile ? "repeat(2,minmax(0,1fr))" : "1.3fr 1fr 1fr 1fr") + '">';
+    html +=
+      '<div class="nv2-hero"><div class="l">DỰ KIẾN ' + (isShop ? "DT QĐ" : "DT QĐ CỦA NV") + ' CUỐI THÁNG</div><div class="big num">' + (pc ? '<span style="font-size:15px;color:#cfe0ff">T' + (W - 1) + " " + pt(prv.rev) + " →</span>" : "") + '<b style="color:#ffd21f">' + pt(cur ? cur.rev : null) + "</b>" + (pc ? "<span>" + (Math.round(cur.rev) - Math.round(prv.rev) > 0 ? "▲ " + (Math.round(cur.rev) - Math.round(prv.rev)) : Math.round(cur.rev) - Math.round(prv.rev) < 0 ? "▼ " + (Math.round(prv.rev) - Math.round(cur.rev)) : "giữ nhịp") + "</span>" : "") + '</div><div class="s">Lũy kế ' + vn(base.r) + " / " + vn(base.t) + " tr" + (left > 0 && base.t > base.r ? " · cần " + vn((base.t - base.r) / left) + " tr/ngày còn lại" : "") + "</div></div>";
+    const wc = weeks[W - 1],
+      wp = W > 1 ? weeks[W - 2] : null;
+    const avgD = wc && wp && wc.avg !== null && wp.avg ? ((wc.avg - wp.avg) / wp.avg) * 100 : null;
+    html +=
+      '<div class="nv2-kpi"><div class="l">DT QĐ bán trong tuần</div><div class="nv2-two num">' + (wp ? "<div><span>T" + wp.n + "</span><b>" + (wp.rev !== undefined ? vn(wp.rev) : "—") + "</b></div>" : "") + "<div><span>T" + wc.n + '</span><b class="' + (wp && wc.avg !== null && wp.avg !== null ? (wc.avg >= wp.avg ? "c-ok" : "c-no") : "") + '">' + (wc.rev !== undefined ? vn(wc.rev) : "—") + '</b></div></div><div class="s">' + (wc.avg !== null && wc.avg !== undefined ? "Bình quân " + (wp && wp.avg ? vn(wp.avg) + " → " : "") + "<b>" + vn(wc.avg) + " tr/ngày</b>" + (avgD !== null ? ' <b class="' + (avgD >= 0 ? "c-ok" : "c-no") + '">(' + (avgD >= 0 ? "+" : "−") + vn(Math.abs(avgD)) + "%)</b>" : "") : "Chưa có số") + "</div></div>";
+    const twoK = (label, a, b, cls, s) => {
+      const dd = a !== null && b !== null ? Math.round(a) - Math.round(b) : null;
+      return '<div class="nv2-kpi"><div class="l">' + label + '</div><div class="v num ' + cls + '">' + (b !== null ? '<small style="color:#6b7891">' + pt(b) + " → </small>" : "") + pt(a) + (dd !== null && dd !== 0 ? ' <small class="' + dcls(dd) + '">' + (dd > 0 ? "+" : "−") + Math.abs(dd) + "</small>" : "") + '</div><div class="s">' + s + "</div></div>";
+    };
+    const inst = num(cfg.installment);
+    html += twoK("Hiệu quả quy đổi", cur ? cur.hq : null, prv ? prv.hq : null, cur && cur.hq >= 100 ? "c-ok" : "c-no", "DT QĐ ÷ DT thực");
+    html += twoK("Tỷ trọng trả chậm" + (inst ? " · MT " + inst + "%" : ""), cur ? cur.tc : null, prv ? prv.tc : null, !inst || (cur && cur.tc >= inst) ? "c-ok" : "c-no", inst ? (cur && cur.tc >= inst ? (prv && prv.tc >= inst ? "Đạt mục tiêu cả 2 tuần" : "Tuần này đạt mục tiêu") : "Chưa đạt mục tiêu") : "");
+    html += "</div>";
+    /* bình quân/ngày từng tuần + lên/tụt */
+    const maxA = Math.max(need, ...weeks.map((w) => w.avg || 0)) * 1.15 || 1;
+    let bars = "";
+    for (let i = 1; i <= Math.max(W, Math.min(5, W + 1)); i++) {
+      const w = weeks[i - 1];
+      if (w && w.avg !== null && w.avg !== undefined) bars += '<div style="display:grid;grid-template-columns:34px 1fr 84px;gap:10px;align-items:center"><b>T' + i + '</b><div class="nv2-mk" style="height:14px;border-radius:4px"><i style="height:14px;border-radius:4px;width:' + Math.min(100, (w.avg / maxA) * 100).toFixed(1) + "%;background:" + (i === W ? "#0b4fb3" : "#7da7e0") + '"></i>' + (need ? '<u style="left:' + Math.min(100, (need / maxA) * 100).toFixed(1) + '%"></u>' : "") + "</div><span" + (i === W ? ' class="' + (w.avg >= need ? "c-ok" : "c-no") + '" style="font-weight:800"' : "") + ">" + vn(w.avg) + " tr</span></div>";
+      else bars += '<div style="display:grid;grid-template-columns:34px 1fr 84px;gap:10px;align-items:center;color:#9aa6b8"><b>T' + i + '</b><div style="height:12px;border:1px dashed #c9d2e0;border-radius:4px"></div><span>—</span></div>';
+    }
+    const lst = (arr, cls) => (arr.length ? arr.slice(0, 4).map((r) => '<div class="r num"><span>' + esc(r.g) + '</span><b class="' + cls + '">' + (r.d > 0 ? "+" : r.d < 0 ? "−" : "") + vn(Math.abs(r.d)) + "</b></div>").join("") : '<span class="c-mu" style="font-size:12.5px">—</span>');
+    html += '<div class="nv2-2e" data-capture-id="wkavg" data-table-name="Bình quân ngày theo tuần">';
+    html += '<div class="nv2-box nv2-pad" style="margin:0;display:flex;flex-direction:column;gap:10px"><div style="font-size:16px;font-weight:900">Bình quân DT QĐ mỗi ngày, theo tuần</div><div class="num" style="display:flex;flex-direction:column;gap:9px;font-size:13px">' + bars + '</div><div style="font-size:12px;color:#4a5872">' + (need ? "Vạch đen = bình quân cần mỗi ngày để đạt target tháng (" + vn(need) + " tr)" : "Chưa có target tháng") + "</div></div>";
+    html += '<div class="nv2-mv" style="margin:0">' + (W > 1 ? '<div><b class="c-ok" style="font-size:14px">▲ Lên mạnh nhất (dự kiến)</b>' + lst(ups.filter((r) => r.d > 0), "c-ok") + '</div><div><b class="c-no" style="font-size:14px">▼ Tụt mạnh nhất (dự kiến)</b>' + lst(downs, "c-no") + "</div>" : '<div style="grid-column:1/-1;color:#4a5872;font-size:13px">Tuần 1 chưa có tuần trước để so — từ ngày 08 sẽ có so sánh lên/tụt.</div>') + "</div>";
+    html += "</div>";
+    /* bảng */
+    const cell = (v, i) => {
+      if (v === null) return '<td class="c"><span class="c-mu">—</span></td>';
+      return '<td class="c"><span class="nv2-pp ' + lv(v) + '"' + (i === W - 1 ? "" : ' style="opacity:.8"') + ">" + pt(v) + "</span></td>";
+    };
+    const bar = (r) => '<div style="display:flex;align-items:center;gap:8px"><div class="nv2-mk" style="flex:1"><i class="' + (r.p >= timeMark ? "b-ok" : "b-no") + '" style="width:' + Math.min(100, Math.max(0, r.p)).toFixed(0) + '%;opacity:.75"></i><u style="left:' + timeMark.toFixed(1) + '%"></u></div><b style="min-width:38px">' + pt(r.p) + "</b></div>";
+    const fmtR = (v) => (UTILS.formatRealData ? UTILS.formatRealData(v) : vn(v));
+    const fmtT = (v) => (UTILS.formatNumber ? UTILS.formatNumber(v) : vn(v));
+    const sortBtn = (k, l) => '<button class="nv2-btn' + (wstate.sort === k ? " on" : "") + '" data-nv2-wsort="' + k + '">' + l + "</button>";
+    const byDown = wstate.sort === "down" && W > 1;
+    if (mobile) {
+      const li = (r) =>
+        '<div class="nv2-li" style="display:grid;grid-template-columns:1fr ' + (W > 1 ? "auto auto auto" : "auto") + ';gap:6px;align-items:center"><div class="x"><b>' + esc(r.g) + "</b><span>" + fmtR(r.R) + " / " + fmtT(r.T) + " · " + pt(r.p) + "</span></div>" + (W > 1 ? '<span class="nv2-pp ' + lv(r.wk[W - 2] || 0) + '" style="opacity:.8">' + pt(r.wk[W - 2]) + "</span>" : "") + '<span class="nv2-pp ' + lv(r.wk[W - 1] || 0) + '">' + pt(r.wk[W - 1]) + "</span>" + (W > 1 ? '<b class="' + dcls(r.d) + '" style="min-width:42px;text-align:right">' + (r.d === null ? "—" : sgn(r.d)) + "</b>" : "") + "</div>";
+      html += '<div data-capture-id="wkgrp" data-table-name="Nhóm hàng theo tuần"><div class="nv2-tabs" style="padding:0 10px" data-html2canvas-ignore="true">' + sortBtn("down", "Tụt lên đầu") + sortBtn("sheet", "Theo Sheet") + "</div>";
+      if (byDown) html += '<div class="nv2-lbl" style="color:#b3261e">▼ Đang tụt so tuần trước (' + downs.length + ')</div><div class="nv2-lst">' + downs.map(li).join("") + '</div><div class="nv2-lbl" style="color:#0f7a3a">▲ Đang lên / giữ nhịp (' + ups.length + ')</div><div class="nv2-lst">' + ups.map(li).join("") + "</div>";
+      else html += '<div class="nv2-lst">' + rows.map(li).join("") + "</div>";
+      return html + "</div></div>";
+    }
+    const cols = 4 + W + (W > 1 ? 1 : 0);
+    html += '<div class="nv2-box" data-capture-id="wkgrp" data-table-name="Nhóm hàng theo tuần"><div class="nv2-bh"><div><div class="t">' + rows.length + ' nhóm thi đua — dự kiến cuối tháng qua từng tuần</div><div class="n">' + (W > 1 ? "Đổi = điểm % tuần này so tuần trước · " : "") + "Target / Thực hiện như bảng cũ (tiền: nghìn đồng)</div></div>" + (W > 1 ? '<div style="display:flex;gap:6px" data-html2canvas-ignore="true">' + sortBtn("down", "Tụt lên đầu") + sortBtn("sheet", "Theo thứ tự Sheet") + "</div>" : "") + "</div>";
+    html += '<div class="nv2-tw"><table class="nv2-t nv2-rt num"><thead><tr><th class="l">Nhóm hàng</th><th>Target</th><th>Thực hiện</th><th class="l" style="width:170px">% hiện tại</th>' + weeks.map((w) => '<th class="c">Tuần ' + w.n + "</th>").join("") + (W > 1 ? '<th class="c">Đổi</th>' : "") + "</tr></thead><tbody>";
+    const tr = (r) =>
+      '<tr><td class="gn l"' + (r.color ? ' style="border-left-color:' + esc(r.color) + '"' : "") + ">" + esc(r.g) + "</td><td>" + fmtT(r.T) + "</td><td><b>" + fmtR(r.R) + '</b></td><td class="l">' + bar(r) + "</td>" + r.wk.map(cell).join("") + (W > 1 ? '<td class="c"><b class="' + dcls(r.d) + '">' + (r.d === null ? "—" : sgn(r.d)) + "</b></td>" : "") + "</tr>";
+    if (byDown) {
+      html += '<tr class="sec"><td colspan="' + cols + '" style="background:#fdecea;color:#b3261e">ĐANG TỤT SO TUẦN TRƯỚC (' + downs.length + ") · tụt mạnh nhất lên đầu</td></tr>" + downs.map(tr).join("");
+      html += '<tr class="sec ok"><td colspan="' + cols + '">ĐANG LÊN / GIỮ NHỊP (' + ups.length + ")</td></tr>" + ups.map(tr).join("");
+      const rest = rows.filter((r) => r.d === null);
+      if (rest.length) html += '<tr class="sec"><td colspan="' + cols + '" style="background:#eef0f3;color:#4a5872">CHƯA ĐỦ SỐ 2 TUẦN (' + rest.length + ")</td></tr>" + rest.map(tr).join("");
+    } else html += rows.map(tr).join("");
+    html += '</tbody></table></div><div class="nv2-leg"><span class="h4" style="padding:1px 8px;border-radius:4px">≥100% đạt</span><span class="h3" style="padding:1px 8px;border-radius:4px">80–99% sát</span><span class="h2" style="padding:1px 8px;border-radius:4px">&lt;80% chưa đạt</span><span>Vạch đen trong thanh = tiến độ thời gian ' + Math.round(timeMark) + "% (" + (D - 1) + "/" + dim + ")</span><span>Viền màu = màu nhóm trong Sheet</span></div></div>";
+    return html + "</div>";
+  }
+
   function swapRoot(html, rootId) {
     const tmp = document.createElement("div");
     tmp.innerHTML = html;
@@ -12529,6 +12775,10 @@ window.__AutoBIRunPick = (() => {
   };
   const redrawStaff = (ids) => last.staff && keepScroll(() => swapBlocks(renderStaff.apply(null, last.staff), ids));
   const redrawNL = () => last.nl && keepScroll(() => swapRoot(renderNL.apply(null, last.nl), "nv2-nlnv"));
+  const redrawWeek = () => last.week && keepScroll(() => {
+    const h = renderWeek.apply(null, last.week);
+    return h ? swapRoot(h, "nv2-week") : false;
+  });
   const redrawHealth = () => last.health && keepScroll(() => {
     const h = renderHealth.apply(null, last.health);
     return h ? swapBlocks(h, ["hbi"]) : false;
@@ -12536,7 +12786,7 @@ window.__AutoBIRunPick = (() => {
   document.addEventListener(
     "click",
     (ev) => {
-      const el = ev.target && ev.target.closest && ev.target.closest("[data-nv2-mode],[data-nv2-view],[data-nv2-staff],[data-nv2-pg],[data-nv2-tab],[data-nv2-hsort],[data-nv2-hkids],[data-nv2-rev]");
+      const el = ev.target && ev.target.closest && ev.target.closest("[data-nv2-mode],[data-nv2-view],[data-nv2-staff],[data-nv2-pg],[data-nv2-tab],[data-nv2-hsort],[data-nv2-hkids],[data-nv2-rev],[data-nv2-wk],[data-nv2-wsort]");
       if (!el || !el.closest(".nv2")) return;
       if (el.hasAttribute("data-nv2-mode")) {
         const prev = state.mode;
@@ -12573,6 +12823,12 @@ window.__AutoBIRunPick = (() => {
           return h ? swapRoot(h, "nv2-rev") : false;
         });
         if (!ok) navClick("revenue");
+      } else if (el.hasAttribute("data-nv2-wk")) {
+        window.tgdd_weekly_compare_subject = el.getAttribute("data-nv2-wk");
+        if (!redrawWeek()) navClick("compare_week");
+      } else if (el.hasAttribute("data-nv2-wsort")) {
+        wstate.sort = el.getAttribute("data-nv2-wsort");
+        if (!redrawWeek()) navClick("compare_week");
       } else if (el.hasAttribute("data-nv2-tab")) {
         navClick(el.getAttribute("data-nv2-tab"));
       }
@@ -12592,6 +12848,9 @@ window.__AutoBIRunPick = (() => {
       } else if (el.id === "nlnv-pg-shop-selector") {
         window.tgdd_nlnv_pg_shop = el.value;
         done = redrawNL();
+      } else if (el.id === "nv2-wk-staff") {
+        window.tgdd_weekly_compare_subject = el.value || "total";
+        done = redrawWeek();
       } else if (el.id === "tgdd-hq-mode-select") {
         window.tgdd_hq_mode_select = parseInt(el.value) || 0;
         done = redrawStaff(["summary"]);
@@ -12608,7 +12867,7 @@ window.__AutoBIRunPick = (() => {
     if (["pct", "tdt", "pts"].includes(m)) state.mode = m;
   } catch (_) {}
 
-  window.__AutoBINv2 = { compute, renderStaff, renderNL, renderRT1, renderHealth, renderRev, renderSvc, cstate, hstate, state, _t: { vn, trK, series, dayKeys, rp } };
+  window.__AutoBINv2 = { compute, renderStaff, renderNL, renderRT1, renderHealth, renderRev, renderSvc, renderWeek, wstate, cstate, hstate, state, _t: { vn, trK, series, dayKeys, rp } };
   try {
     if (typeof unsafeWindow !== "undefined") unsafeWindow.__AutoBINv2 = window.__AutoBINv2;
   } catch (_) {}
