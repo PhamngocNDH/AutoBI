@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.85
+// @name         AutoBI Core V17.86
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.85
+// @version      17.86
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -5300,7 +5300,7 @@ window.__AutoBIRun67 = (function () {
                 _0x129a94 = (_0x5643b4 - _0xd902d8) * 2;
                 if (_0x129a94 > _0x476ed2)
                     _0x129a94 = _0x476ed2;
-            } let _0x9a7ba0 = 100; let _0x22a1e0 = _0x432e7f + _0x2918aa; let _0x2f6eb7 = _0x45675c(_0x4fe591.name); let _0x428c45 = _0x9a7ba0 + _0x129a94 + _0x4ef166 + _0x22a1e0 + _0x2f6eb7; _0x5392f9.push({ name: _0x4fe591.name, score: _0x428c45 }); }); }); _0x5392f9.sort((_0x31ce6d, _0xda38b3) => _0xda38b3.score - _0x31ce6d.score); const _0x5daf04 = _0x5392f9.length; let _0x4d4579 = []; let _0x444521 = []; if (_0x5daf04 > 0) {
+            } _0x129a94 = 0; /* V17.86: không tính Phục vụ vào điểm NV */ let _0x9a7ba0 = 100; let _0x22a1e0 = _0x432e7f + _0x2918aa; let _0x2f6eb7 = _0x45675c(_0x4fe591.name); let _0x428c45 = _0x9a7ba0 + _0x129a94 + _0x4ef166 + _0x22a1e0 + _0x2f6eb7; _0x5392f9.push({ name: _0x4fe591.name, score: _0x428c45 }); }); }); _0x5392f9.sort((_0x31ce6d, _0xda38b3) => _0xda38b3.score - _0x31ce6d.score); const _0x5daf04 = _0x5392f9.length; let _0x4d4579 = []; let _0x444521 = []; if (_0x5daf04 > 0) {
                 let _0x21ea9c = Math.round(_0x5daf04 * 0.3);
                 if (_0x21ea9c < 1 && _0x5daf04 >= 2)
                     _0x21ea9c = 1;
@@ -6339,7 +6339,7 @@ window.__AutoBIRun67 = (function () {
                 _0x3ed749 = (_0x89b970 - _0x3d8c92) * 2;
                 if (_0x3ed749 > _0xcd50c2)
                     _0x3ed749 = _0xcd50c2;
-            } /* V17.12: nhân viên chưa có số CRM (chưa chạy CRM / CRM khóa giờ) thì không trừ điểm, hiện "-" */
+            } _0x3ed749 = 0; /* V17.86: không tính Phục vụ vào điểm NV */ /* V17.12: nhân viên chưa có số CRM (chưa chạy CRM / CRM khóa giờ) thì không trừ điểm, hiện "-" */
             const __pv = _0x14abb4[_0x500e5a.name]; const __pvNo = !(__pv && ((parseFloat(__pv.total) || 0) > 0 || (parseFloat(__pv.sent) || 0) > 0 || (parseFloat(__pv.ratePct) || 0) > 0)); if (__pvNo)
                 _0x3ed749 = 0; const _0x2908d = _0x11c06a[_0x500e5a.name] || 0; const _0x40682a = typeof _0x2908d === 'object' && _0x2908d !== null ? _0x2908d.tg || 0 : parseFloat(_0x2908d) || 0; let _0x2fcc1d = _0x49d19a[_0x500e5a.name]?.['pctBK'] || 0; let _0x4168ed = 100; let _0x2d6738 = _0x37de96 + _0x252c30; let _0x35b668 = _0x43e026(_0x500e5a.name); let _0x262e17 = _0x4168ed + _0x3ed749 + _0xf1d7c0 + _0x2d6738 + _0x35b668; _0x5b1715.push({ shopName: _0x417f5a.shortName, staffName: _0x500e5a.name, totalCount: _0x4da672.length, passCount: _0x426b1e, failCount: _0x5e12f9, passRate: _0x4da672.length > 0 ? Math.round(_0x426b1e / _0x4da672.length * 100) : 0, actualRev: _0x2f35d9, personalRevTarget: _0x148a5b, forecastRevPct: _0x5cddb0, dtThuc: _0x2c6d65, hieuQuaQD: _0x501399, traChamPct: _0x40682a, pctBK: _0x2fcc1d, diemPhucVu: __pvNo ? '-' : _0x3ed749, diemBoSung: _0x35b668, revInMillions: _0x5588cd, diemBase: _0x4168ed, diemDat: _0x37de96, diemKhongDat: _0x252c30, diemThiDuaNH: _0x2d6738, diemDoanhThu: _0xf1d7c0, tongDiem: _0x262e17, compDataStaff: _0x57a903 }); }); }); _0x5b1715.sort((_0x13dddc, _0x2f90e7) => _0x2f90e7.tongDiem - _0x13dddc.tongDiem || _0x2f90e7.revInMillions - _0x13dddc.revInMillions || _0x2f90e7.passRate - _0x13dddc.passRate); /* V17.12: bằng điểm xét D/thu tạo ra rồi tỉ lệ NH đạt */ _0x5b1715.forEach((_0x52a572, _0x206917) => _0x52a572.rank = _0x206917 + 1); if (window.tgdd_staff_sort_passrate) {
                 _0x5b1715.sort((_0x3c2a75, _0x198f93) => _0x198f93.passRate - _0x3c2a75.passRate || _0x3c2a75.rank - _0x198f93.rank);
@@ -6459,7 +6459,7 @@ window.__AutoBIRun67 = (function () {
                 _0x9160fd = (_0x3a0d90 - _0x107294) * 2;
                 if (_0x9160fd > _0x292f0f)
                     _0x9160fd = _0x292f0f;
-            } let _0x13ce0b = _0x2b2165[_0xf0bcbf.name] !== undefined ? _0x2b2165[_0xf0bcbf.name] : 0; let _0x39468b = typeof _0x13ce0b === 'object' && _0x13ce0b !== null ? _0x13ce0b.tg || 0 : parseFloat(_0x13ce0b) || 0; let _0x3b6907 = _0xc4f00c[_0xf0bcbf.name] || { pctBK: 0 }; let _0x3e777b = _0x3b6907.pctBK || 0; let _0x2c5d88 = 100; let _0x3a8d4c = _0x256473 + _0x5bbef9; let _0x3e555a = _0x415a62(_0xf0bcbf.name); let _0x4985e2 = _0x2c5d88 + _0x9160fd + _0x6bc3ed + _0x3a8d4c + _0x3e555a; _0x2513ab.push({ name: _0xf0bcbf.name, shopIdx: _0xf0bcbf.shopIdx, actualRev: _0x5472ad, personalRevTarget: _0x575606, diemPhucVu: _0x4d81cc, forecastRevPct: _0x1d1ebe, traChamPct: _0x39468b, pctBK: _0x3e777b, tongDiem: _0x4985e2 }); }); }); _0x2513ab.sort((_0x354feb, _0x2bec73) => _0x2bec73.tongDiem - _0x354feb.tongDiem); _0x2513ab.forEach((_0x57d7a0, _0x4557db) => _0x57d7a0.rankThiDua = _0x4557db + 1); const _0x2a7fd9 = _0x2513ab.find(_0x5e43cc => _0x5e43cc.name === _0x517468) || { actualRev: 0, personalRevTarget: 0, diemPhucVu: '-', forecastRevPct: 0, traChamPct: 0, pctBK: 0, rankThiDua: '-' }; let _0x15a090 = ''; _0x2e1195.forEach(_0x222fa5 => { const _0x1fc68b = _0x222fa5.name === _0x517468 ? 'selected' : ''; _0x15a090 += '<option value="' + _0x222fa5.name + '" ' + _0x1fc68b + '>' + _0x222fa5.name + '</option>'; }); const _0x1c5f9c = _0x2e1195.filter(_0x585b37 => _0x585b37.shopIdx == _0x231822); const _0x187900 = _0x468594[_0xaf4cd9] ? _0x468594[_0xaf4cd9].competition || {} : {}; let _0x42dcbe = '\n                <div class="nlnv-container">\n                    <table class="nlnv-table">\n                        <tr>\n                            <td colspan="2" class="nlnv-title-cell">\n                                B\u1EA2NG N\u0102NG L\u1EF0C NH\u00C2N VI\u00CAN<br>\n                                <span style="font-size:14px; color:#c00000;">' + _0x148968 + '</span>\n                            </td>\n                            <td colspan="3" class="nlnv-staff-cell">\n                                <div style="display: grid; min-height: 45px; align-items: center;">\n                                    <div style="grid-area: 1/1; visibility: hidden; font-size: 18px; font-weight: bold; white-space: nowrap; padding: 0 25px;">' + _0x517468 + '</div>\n                                    <select id="nlnv-staff-selector" class="nlnv-staff-select" style="grid-area: 1/1; width: 100%; height: 100%;">\n                                        ' + _0x15a090 + '\n                                    </select>\n                                </div>\n                            </td>\n                        </tr>\n                        <tr>\n                            <td class="nlnv-label">Target Doanh thu</td>\n                            <td class="nlnv-val-red">' + UTILS.formatNumber(_0x2a7fd9.personalRevTarget) + '</td>\n                            <td colspan="2" class="nlnv-label">Th\u1EF1c hi\u1EC7n</td>\n                            <td class="nlnv-val-red">' + UTILS.formatNumber(_0x2a7fd9.actualRev) + '</td>\n                        </tr>\n                        <tr>\n                            <td class="nlnv-label" style="color:#008080;">\u0110i\u1EC3m Ph\u1EE5c v\u1EE5</td>\n                            <td class="nlnv-label" style="color:#008080;">D\u1EF1 ki\u1EBFn DT (%)</td>\n                            <td class="nlnv-label" style="color:#008080;">T\u1EF7 tr\u1ECDng tr\u1EA3 ch\u1EADm</td>\n                            <td class="nlnv-label" style="color:#008080;">T\u1EC9 l\u1EC7 b\u00E1n k\u00E8m</td>\n                            <td class="nlnv-label" style="color:#008080;">X\u1EBFp h\u1EA1ng</td>\n                        </tr>\n                        <tr>\n                            <td class="nlnv-val-red">' + _0x2a7fd9.diemPhucVu + '</td>\n                            <td class="nlnv-val-red">' + Math.round(_0x2a7fd9.forecastRevPct) + '%</td>\n                            <td class="nlnv-val-red">' + _0x2a7fd9.traChamPct + '%</td>\n                            <td class="nlnv-val-red">' + (!isFinite(_0x2a7fd9.pctBK) || Math.round(_0x2a7fd9.pctBK) === 0 ? '-' : Math.round(_0x2a7fd9.pctBK) + '%') + '</td>\n                            <td class="nlnv-val-red" style="font-size:16px; font-weight:900;">' + _0x2a7fd9.rankThiDua + '</td>\n                        </tr>\n                        <tr class="nlnv-header-cyan">\n                            <td>Nh\u00F3m h\u00E0ng</td>\n                            <td>Target</td>\n                            <td>Th\u1EF1c hi\u1EC7n</td>\n                            <td>% Ho\u00E0n th\u00E0nh</td>\n                            <td id="tgdd-sort-btn-nlnv" style="cursor:pointer; white-space:nowrap;">D\u1EF1 ki\u1EBFn <span class="sort-btn">' + (_0x22b237 ? '\u25BC' : '\u25BD') + '</span></td>\n                        </tr>\n                '; let _0x41104a = 0; let _0x2f029e = 0; let _0x5578ce = _0x1205b3.map(_0x57e639 => { const _0xcbc641 = (_0x7ff5ec || []).find(_0x55d330 => _0x55d330.short === _0x57e639); const _0x2dcb50 = !!(_0xcbc641 && _0xcbc641.type && (_0xcbc641.type.toLowerCase().includes('doanhthu') || _0xcbc641.type.toLowerCase().includes('ti\u1EC1n'))); let _0x1aef7d = 0; if (_0x573cc4.link4_smart && _0x573cc4.link4_smart[_0x57e639] && _0x573cc4.link4_smart[_0x57e639][_0xaf4cd9]) {
+            } _0x9160fd = 0; /* V17.86: không tính Phục vụ vào điểm NV */ let _0x13ce0b = _0x2b2165[_0xf0bcbf.name] !== undefined ? _0x2b2165[_0xf0bcbf.name] : 0; let _0x39468b = typeof _0x13ce0b === 'object' && _0x13ce0b !== null ? _0x13ce0b.tg || 0 : parseFloat(_0x13ce0b) || 0; let _0x3b6907 = _0xc4f00c[_0xf0bcbf.name] || { pctBK: 0 }; let _0x3e777b = _0x3b6907.pctBK || 0; let _0x2c5d88 = 100; let _0x3a8d4c = _0x256473 + _0x5bbef9; let _0x3e555a = _0x415a62(_0xf0bcbf.name); let _0x4985e2 = _0x2c5d88 + _0x9160fd + _0x6bc3ed + _0x3a8d4c + _0x3e555a; _0x2513ab.push({ name: _0xf0bcbf.name, shopIdx: _0xf0bcbf.shopIdx, actualRev: _0x5472ad, personalRevTarget: _0x575606, diemPhucVu: _0x4d81cc, forecastRevPct: _0x1d1ebe, traChamPct: _0x39468b, pctBK: _0x3e777b, tongDiem: _0x4985e2 }); }); }); _0x2513ab.sort((_0x354feb, _0x2bec73) => _0x2bec73.tongDiem - _0x354feb.tongDiem); _0x2513ab.forEach((_0x57d7a0, _0x4557db) => _0x57d7a0.rankThiDua = _0x4557db + 1); const _0x2a7fd9 = _0x2513ab.find(_0x5e43cc => _0x5e43cc.name === _0x517468) || { actualRev: 0, personalRevTarget: 0, diemPhucVu: '-', forecastRevPct: 0, traChamPct: 0, pctBK: 0, rankThiDua: '-' }; let _0x15a090 = ''; _0x2e1195.forEach(_0x222fa5 => { const _0x1fc68b = _0x222fa5.name === _0x517468 ? 'selected' : ''; _0x15a090 += '<option value="' + _0x222fa5.name + '" ' + _0x1fc68b + '>' + _0x222fa5.name + '</option>'; }); const _0x1c5f9c = _0x2e1195.filter(_0x585b37 => _0x585b37.shopIdx == _0x231822); const _0x187900 = _0x468594[_0xaf4cd9] ? _0x468594[_0xaf4cd9].competition || {} : {}; let _0x42dcbe = '\n                <div class="nlnv-container">\n                    <table class="nlnv-table">\n                        <tr>\n                            <td colspan="2" class="nlnv-title-cell">\n                                B\u1EA2NG N\u0102NG L\u1EF0C NH\u00C2N VI\u00CAN<br>\n                                <span style="font-size:14px; color:#c00000;">' + _0x148968 + '</span>\n                            </td>\n                            <td colspan="3" class="nlnv-staff-cell">\n                                <div style="display: grid; min-height: 45px; align-items: center;">\n                                    <div style="grid-area: 1/1; visibility: hidden; font-size: 18px; font-weight: bold; white-space: nowrap; padding: 0 25px;">' + _0x517468 + '</div>\n                                    <select id="nlnv-staff-selector" class="nlnv-staff-select" style="grid-area: 1/1; width: 100%; height: 100%;">\n                                        ' + _0x15a090 + '\n                                    </select>\n                                </div>\n                            </td>\n                        </tr>\n                        <tr>\n                            <td class="nlnv-label">Target Doanh thu</td>\n                            <td class="nlnv-val-red">' + UTILS.formatNumber(_0x2a7fd9.personalRevTarget) + '</td>\n                            <td colspan="2" class="nlnv-label">Th\u1EF1c hi\u1EC7n</td>\n                            <td class="nlnv-val-red">' + UTILS.formatNumber(_0x2a7fd9.actualRev) + '</td>\n                        </tr>\n                        <tr>\n                            <td class="nlnv-label" style="color:#008080;">\u0110i\u1EC3m Ph\u1EE5c v\u1EE5</td>\n                            <td class="nlnv-label" style="color:#008080;">D\u1EF1 ki\u1EBFn DT (%)</td>\n                            <td class="nlnv-label" style="color:#008080;">T\u1EF7 tr\u1ECDng tr\u1EA3 ch\u1EADm</td>\n                            <td class="nlnv-label" style="color:#008080;">T\u1EC9 l\u1EC7 b\u00E1n k\u00E8m</td>\n                            <td class="nlnv-label" style="color:#008080;">X\u1EBFp h\u1EA1ng</td>\n                        </tr>\n                        <tr>\n                            <td class="nlnv-val-red">' + _0x2a7fd9.diemPhucVu + '</td>\n                            <td class="nlnv-val-red">' + Math.round(_0x2a7fd9.forecastRevPct) + '%</td>\n                            <td class="nlnv-val-red">' + _0x2a7fd9.traChamPct + '%</td>\n                            <td class="nlnv-val-red">' + (!isFinite(_0x2a7fd9.pctBK) || Math.round(_0x2a7fd9.pctBK) === 0 ? '-' : Math.round(_0x2a7fd9.pctBK) + '%') + '</td>\n                            <td class="nlnv-val-red" style="font-size:16px; font-weight:900;">' + _0x2a7fd9.rankThiDua + '</td>\n                        </tr>\n                        <tr class="nlnv-header-cyan">\n                            <td>Nh\u00F3m h\u00E0ng</td>\n                            <td>Target</td>\n                            <td>Th\u1EF1c hi\u1EC7n</td>\n                            <td>% Ho\u00E0n th\u00E0nh</td>\n                            <td id="tgdd-sort-btn-nlnv" style="cursor:pointer; white-space:nowrap;">D\u1EF1 ki\u1EBFn <span class="sort-btn">' + (_0x22b237 ? '\u25BC' : '\u25BD') + '</span></td>\n                        </tr>\n                '; let _0x41104a = 0; let _0x2f029e = 0; let _0x5578ce = _0x1205b3.map(_0x57e639 => { const _0xcbc641 = (_0x7ff5ec || []).find(_0x55d330 => _0x55d330.short === _0x57e639); const _0x2dcb50 = !!(_0xcbc641 && _0xcbc641.type && (_0xcbc641.type.toLowerCase().includes('doanhthu') || _0xcbc641.type.toLowerCase().includes('ti\u1EC1n'))); let _0x1aef7d = 0; if (_0x573cc4.link4_smart && _0x573cc4.link4_smart[_0x57e639] && _0x573cc4.link4_smart[_0x57e639][_0xaf4cd9]) {
                 _0x1aef7d = _0x573cc4.link4_smart[_0x57e639][_0xaf4cd9].t || 0;
             } let _0x10f659 = UI.HTML.getFinalGroupTarget(_0x1aef7d, _0x57e639, _0xaf4cd9, _0x1d0ef4, _0x7ff5ec, false, _0x3d3737); let _0x1ae8c2 = UI.HTML.calculateStaffPersonalTarget(_0x10f659, _0x1d1187, _0x1c5f9c, _0x2dcb50); let _0x1ae416 = _0x187900[_0x517468]?.[_0x57e639] || _0x534552[_0x517468]?.[_0x57e639] || 0; let _0xc3b6ad = _0x1ae8c2 > 0 ? _0x1ae416 / _0x1ae8c2 * 100 : _0x1ae416 > 0 ? 100 : 0; const _0xb686e9 = _0x1ae416 / _0x4feda5 * _0xbd22f8; let _0x3951de = _0x1ae8c2 > 0 ? _0xb686e9 / _0x1ae8c2 * 100 : _0x1ae416 > 0 ? 100 : 0; _0xc3b6ad = Math.round(_0xc3b6ad); _0x3951de = Math.round(_0x3951de); if (_0x3951de >= 100)
                 _0x41104a++;
@@ -11251,7 +11251,7 @@ window.__AutoBIRunPick = (() => {
           diemKhongDat: ptsFail,
           diemThiDua: ptsPass + ptsFail,
           diemDT,
-          tongDiem: 100 + diemPV + diemDT + ptsPass + ptsFail + bonus,
+          tongDiem: 100 + diemDT + ptsPass + ptsFail + bonus, /* V17.86: không tính Phục vụ vào điểm NV */
         };
         staff.push(o);
         shopStaff.push(o);
@@ -11516,9 +11516,9 @@ window.__AutoBIRunPick = (() => {
     /* Xếp hạng */
     const tmin = Math.min(...M.ranked.map((o) => o.tongDiem)),
       tmax = Math.max(...M.ranked.map((o) => o.tongDiem));
-    const pvCol = M.hasPV,
+    const pvCol = false, /* V17.86: bỏ Phục vụ khỏi xếp hạng; M.hasPV vẫn giữ cho bảng Tổng hợp */
       bsCol = M.staff.some((o) => o.diemBoSung);
-    html += '<div class="nv2-box" data-capture-id="nv2rank" data-table-name="Xếp hạng nhân viên"><div class="nv2-bh"><div class="t">Xếp hạng nhân viên</div><div class="n">Tổng điểm = 100 (base) + Thi đua NH (đạt − không đạt) + Điểm DT' + (pvCol ? " + Phục vụ" : "") + (bsCol ? " + Bổ sung" : "") + (pvCol ? "" : " · Phục vụ: chưa có số CRM") + "</div></div>";
+    html += '<div class="nv2-box" data-capture-id="nv2rank" data-table-name="Xếp hạng nhân viên"><div class="nv2-bh"><div class="t">Xếp hạng nhân viên</div><div class="n">Tổng điểm = 100 (base) + Thi đua NH (đạt − không đạt) + Điểm DT' + (pvCol ? " + Phục vụ" : "") + (bsCol ? " + Bổ sung" : "") + "</div></div>";
     html += '<div class="nv2-tw"><table class="nv2-t num"><thead><tr><th class="c" style="width:52px">Hạng</th><th class="l">Nhân viên</th><th class="l">NH đạt (' + G.length + " nhóm, thứ tự như bảng thi đua)</th><th>DT tạo ra</th><th>Thi đua NH</th><th>Điểm DT</th>" + (pvCol ? "<th>Phục vụ</th>" : "") + (bsCol ? "<th>Bổ sung</th>" : "") + '<th class="l" style="width:210px">Tổng điểm</th></tr></thead><tbody>';
     M.ranked.forEach((o) => {
       const w = tmax > tmin ? 25 + ((o.tongDiem - tmin) / (tmax - tmin)) * 75 : 100;
@@ -11666,8 +11666,7 @@ window.__AutoBIRunPick = (() => {
         (its.length ? '<div style="display:flex;flex-direction:column;gap:6px;border-top:1px dashed #d9dfe8;padding-top:8px"><span style="font-size:11px;font-weight:800;color:#6e4300">CẦN ĐẨY</span>' + its.map((it) => '<div class="nv2-it"><span class="p ' + lv(it.pct) + '">' + it.pct + '%</span><div class="x"><b>' + esc(it.g) + "</b><span>" + it.need + "</span></div></div>").join("") + "</div>" : "") +
         "</div>";
     });
-    if (!M.hasPV) h += '<div class="nv2-warn" style="margin-top:4px">Phục vụ: CRM chưa có số — tự hiện khi có số.</div>';
-    return h;
+    return h; /* V17.86: xếp hạng không còn tính Phục vụ */
   }
 
   /* ---------- 4. Lịch sử theo ngày (cho Năng lực NV) ---------- */
@@ -11816,7 +11815,7 @@ window.__AutoBIRunPick = (() => {
         li = i;
         break;
       }
-    return { last: li >= 0 ? "ngày " + days[li].d : "—", chip: warnChip(s.vals, o.g[x.g].a) };
+    return { last: li >= 0 ? "ngày " + String(days[li].d).padStart(2, "0") : "—", chip: warnChip(s.vals, o.g[x.g].a) }; /* V17.86: ngày 2 chữ số (01, 09) cho cột thẳng hàng */
   }
 
   function nlOverview(h, M, o, H, days, mobile) {
@@ -11846,7 +11845,7 @@ window.__AutoBIRunPick = (() => {
         '<tr><td class="l"><b>' + esc(r.x.g) + "</b>" + (mobile && r.ls.chip ? "<div>" + r.ls.chip + "</div>" : "") + "</td><td>" + unit(r.s.t) + "</td><td>" + unit(r.s.a) + "</td>" +
         (mobile ? "" : '<td class="l"><div style="display:flex;align-items:center;gap:10px"><div class="nv2-ht"><i class="' + (r.ht >= mark ? "d4" : "d2") + '" style="width:' + Math.min(100, Math.max(0, r.ht)) + '%"></i><u style="left:' + mark.toFixed(1) + '%"></u></div><b style="min-width:42px">' + r.ht + "%</b></div></td>") +
         '<td class="c"><span class="nv2-dk ' + lv(r.s.pct) + '">' + r.s.pct + "%</span></td><td><b class=\"" + (nd.indexOf("✓") === 0 ? "c-ok" : "") + '">' + nd + "</b></td>" +
-        (mobile ? "" : '<td class="l"><div style="display:flex;gap:8px;align-items:center">' + r.ls.last + r.ls.chip + "</div></td>") +
+        (mobile ? "" : '<td class="l"><div style="display:flex;gap:8px;align-items:center"><span style="display:inline-block;min-width:58px;font-variant-numeric:tabular-nums;white-space:nowrap">' + r.ls.last + "</span>" + r.ls.chip + "</div></td>") +
         "</tr>";
     });
     html += '</tbody></table></div><div class="nv2-leg"><span class="h4" style="padding:1px 8px;border-radius:4px">≥100%</span><span class="h3" style="padding:1px 8px;border-radius:4px">80–99%</span><span class="h2" style="padding:1px 8px;border-radius:4px">1–79%</span><span class="h1" style="padding:1px 8px;border-radius:4px">0% chưa bán</span><b style="margin-left:auto">Đạt ' + passV + " · Không đạt " + (G.length - passV) + "</b></div></div>";
@@ -12599,12 +12598,23 @@ window.__AutoBIRunPick = (() => {
       M = parseInt(mS),
       Y = parseInt(yS);
     const dim = new Date(Y, M, 0).getDate();
-    const W = Math.floor((D - 1) / 7) + 1;
+    /* V17.86: tuần = Thứ Hai → Chủ nhật; ngày lẻ đầu/cuối tháng cũng tính 1 tuần.
+       Bản lưu ngày K = lũy kế hết K−1 → tuần kết thúc ngày E lấy bản lưu E+1; tuần đang chạy lấy ngày đang xem.
+       Thiếu bản lưu E+1 → lấy bản lưu gần nhất còn trong tuần (số chỉ đến ngày đó). */
+    const lastDay = Math.min(dim, D - 1);
+    if (lastDay < 1) return null;
     const weeks = [];
-    for (let i = 1; i <= W; i++) {
-      const dn = i === W ? D : i * 7;
-      weeks.push({ n: i, day: dn, key: pad(dn) + "/" + mS + "/" + yS });
+    for (let st = 1, i = 1; st <= lastDay; i++) {
+      const dow = new Date(Y, M - 1, st).getDay();
+      const en = Math.min(dim, st + ((7 - dow) % 7));
+      let dn = en < lastDay ? en + 1 : D;
+      if (en < lastDay && !H[pad(dn) + "/" + mS + "/" + yS]) {
+        for (let k = en; k > st; k--) if (H[pad(k) + "/" + mS + "/" + yS]) { dn = k; break; }
+      }
+      weeks.push({ n: i, day: dn, key: dn === D ? selKey : pad(dn) + "/" + mS + "/" + yS, a: st, b: Math.min(en, lastDay) });
+      st = en + 1;
     }
+    const W = weeks.length;
     const staffList = cfg.staffList || [];
     const SHOPS = ["shop1", "shop2", "shop3", "shop4", "shop5"];
     const isShop = subj === "total" || SHOPS.includes(subj);
@@ -12720,7 +12730,7 @@ window.__AutoBIRunPick = (() => {
     const subjName = subj === "total" ? esc(cfg.cluster || "Tổng cụm") : isShop ? esc(cfg[subj + "Short"] || cfg[subj] || subj) : esc(sName);
     const rng = (w) => (w.from ? pad(w.from) + "–" + pad(w.to) + "/" + mS : "chưa có số");
     let html = style3() + '<div class="nv2' + (mobile ? " nv2-m" : "") + '" id="nv2-week">';
-    html += hdr("So sánh tuần", (W > 1 ? "Tuần này so với tuần trước" : "Tuần 1") + " — tháng " + M, subjName, "Tuần " + W + " · số đến hết " + pad(D - 1) + "/" + mS + " · còn " + left + " ngày", "Mỗi tuần = số chốt ngày 7, 14, 21, 28 và ngày đang xem");
+    html += hdr("So sánh tuần", (W > 1 ? "Tuần này so với tuần trước" : "Tuần 1") + " — tháng " + M, subjName, "Tuần " + W + " · số đến hết " + pad(D - 1) + "/" + mS + " · còn " + left + " ngày", "Tuần tính Thứ Hai → Chủ nhật · ngày lẻ đầu/cuối tháng tính 1 tuần");
     /* chọn đối tượng */
     const chip = (v, l) => '<button class="nv2-btn' + (subj === v ? " on" : "") + '" data-nv2-wk="' + esc(v) + '">' + l + "</button>";
     html += '<div class="nv2-tabs" data-html2canvas-ignore="true">' + chip("total", "Tổng cụm") + SHOPS.filter((k) => cfg[k]).map((k) => chip(k, esc(cfg[k + "Short"] || cfg[k]))).join("");
