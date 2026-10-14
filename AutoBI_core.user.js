@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.86
+// @name         AutoBI Core V17.87
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.86
+// @version      17.87
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -7163,7 +7163,7 @@ const _0x133c09 = '<div style="font-size:15px; color:#333; line-height:1.6; text
             window.force_active_tab = sessionStorage.getItem('tgdd_last_active_tab') || 'oneshop';
             const _0x3a456d = GM_getValue(CONSTANTS.KEYS.CONFIG_LIST) || [];
             const _0x3f1c27 = UTILS.getPersistentConfig();
-            UI.renderReport(_0x1413b, _0x3a456d, _0x3f1c27);
+            setTimeout(() => UI.renderReport(_0x1413b, _0x3a456d, _0x3f1c27), 0); /* V17.87: chờ cả file chạy xong (module giao diện mới __AutoBINv2 / __AutoBIRt2 nằm cuối file) rồi mới vẽ lại báo cáo khi F5 */
             return;
         } const _0x39e021 = setInterval(() => { if (document.body) {
             clearInterval(_0x39e021);
