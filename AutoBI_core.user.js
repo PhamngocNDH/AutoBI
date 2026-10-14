@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.87
+// @name         AutoBI Core V17.88
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.87
+// @version      17.88
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -11971,6 +11971,26 @@ window.__AutoBIRunPick = (() => {
   .nv2-rt tr.sec td{background:#0b3a75;color:#fff;font-weight:800;font-size:12px;letter-spacing:.04em;text-align:left;padding:7px 12px}
   .nv2-rt tr.sec.ok td{background:#1f8a4c}
   .nv2-rt td.gn{text-align:left;font-weight:800;border-left:4px solid transparent}
+  .nv2-rt tr.tband td{background:#e8f0fc;color:#1d5fbf;font-weight:900;font-size:13px;letter-spacing:.05em;text-transform:uppercase;text-align:center;padding:8px 12px;border-bottom:2px solid #1d5fbf}
+  .nv2-rt tr.tband.vt td{background:#f1ebfb;color:#6b3fb8;border-bottom-color:#6b3fb8}
+  .nv2-of{color:#6e7b92;font-size:12px;font-weight:600}
+  .nv2-tsum{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:12px}
+  .nv2-m .nv2-tsum{grid-template-columns:minmax(0,1fr);gap:8px;padding:0 10px;margin-bottom:10px}
+  .nv2-ts{background:#fff;border-radius:12px;padding:12px 16px;display:flex;flex-wrap:wrap;gap:6px 22px;align-items:center;border-left:6px solid #1d5fbf}
+  .nv2-ts.vt{border-left-color:#6b3fb8}
+  .nv2-m .nv2-ts .nm{width:100%}
+  .nv2-ts .nm{font-weight:900;font-size:14px;color:#1d5fbf;text-transform:uppercase;letter-spacing:.03em;line-height:1.2;min-width:120px}.nv2-ts.vt .nm{color:#6b3fb8}
+  .nv2-ts .nm small{display:block;font-size:11.5px;color:#4a5872;font-weight:600;text-transform:none;letter-spacing:0}
+  .nv2-ts .m{display:flex;flex-direction:column;gap:2px}.nv2-ts .m span{font-size:11.5px;color:#4a5872;font-weight:600}.nv2-ts .m b{font-size:22px;font-weight:900;line-height:1.1}.nv2-ts .m b small{font-size:13px;color:#4a5872}
+  .nv2-seg{display:inline-flex;gap:6px;flex-wrap:wrap}
+  .nv2-rband{margin:6px 10px;padding:8px 12px;border-radius:10px;background:#e8f0fc;color:#1d5fbf;font-weight:900;font-size:12.5px;text-transform:uppercase;letter-spacing:.04em;text-align:center}
+  .nv2-rband.vt{background:#f1ebfb;color:#6b3fb8}
+  .nv2-rcs{display:flex;flex-direction:column;gap:6px;margin:0 10px 10px}
+  .nv2-rc{background:#fff;border-radius:10px;padding:9px 11px;display:flex;flex-direction:column;gap:5px}
+  .nv2-rc .hd{display:flex;justify-content:space-between;align-items:center;gap:8px}.nv2-rc .hd b{font-size:14px}
+  .nv2-rc .rw{display:grid;grid-template-columns:28px 1fr auto;gap:6px;align-items:center;font-size:12.5px}
+  .nv2-rc .rw em{font-style:normal;font-size:10.5px;font-weight:800;color:#fff;border-radius:4px;text-align:center;padding:1px 0}.nv2-rc .rw em.hn{background:#0b4fb3}.nv2-rc .rw em.lk{background:#0f6b58}
+  .nv2-rc .nv2-pp{min-width:46px}
   .nv2-pp{display:inline-block;min-width:50px;padding:2px 0;border-radius:5px;font-weight:900;text-align:center}
   .nv2-chip.cg{background:#d6efdf;color:#0f5a2a}.nv2-chip.cz{background:#efb9b2;color:#7a150b}.nv2-chip.cn{background:#fbe1dd;color:#9b2216}.nv2-chip.cq{background:#fff2c2;color:#6e4300}
   .nv2-li{display:flex;gap:10px;align-items:center;padding:9px 12px;border-top:1px solid #edf0f5}
@@ -12012,7 +12032,9 @@ window.__AutoBIRunPick = (() => {
   }
   const fmtG = (x, v) => (x.money ? trK(v) : Math.abs(v - Math.round(v)) > 0.05 ? vn(v, 1) : vn(v));
 
+  const rstate = { sort: "dk" }; /* V17.88: Realtime V1 — dk: dự kiến cao → thấp (mặc định) · push: cần đẩy lên đầu · sheet: thứ tự Sheet */
   function renderRT1(h, c, groups, cfg, view, sortFlag, onlyRT, useBi, timeArg) {
+    last.rt1 = [h, c, groups, cfg, view, sortFlag, onlyRT, useBi, timeArg];
     const { UI, UTILS } = h;
     c = c || {};
     cfg = cfg || {};
@@ -12059,8 +12081,12 @@ window.__AutoBIRunPick = (() => {
         lr = num(s4.r);
       const pd = useBi ? num(s4.pd) : lt > 0 ? (((lr / dp) * dim) / lt) * 100 : 0;
       const need = left > 0 && lt > lr ? (lt - lr) / left : 0;
+      let tier = g.tier || "";
+      if (!tier) try { tier = window.__AutoBIGroupList ? window.__AutoBIGroupList.tierOf(g.short) || "" : ""; } catch (_) {}
+      x.tier = tier;
       return { x, rtT, rr, rtP: rtT > 0 ? (rr / rtT) * 100 : 0, lt, lr, lP: lt > 0 ? (lr / lt) * 100 : 0, pd, need };
     });
+    rows.forEach((r, i) => (r.i = i));
     /* số realtime trùng y nhau giữa 2 nhóm (vd Hút bụi = FeCredit) → cảnh báo kiểm lại */
     const seen = {};
     rows.forEach((r) => {
@@ -12089,38 +12115,59 @@ window.__AutoBIRunPick = (() => {
       html += pvK;
     }
     html += "</div>";
-    /* chia khối */
-    const isMiss = (r) => (onlyRT ? r.rtP < 100 : r.pd < 100);
-    const miss = rows.filter(isMiss).sort((a, b) => (onlyRT ? a.rtP - b.rtP : a.pd - b.pd));
-    const hit = rows.filter((r) => !isMiss(r)).sort((a, b) => (onlyRT ? b.rtP - a.rtP : b.pd - a.pd));
-    const vsCell = (r) => {
-      if (r.pd >= 100) return '<span class="c-mu">—</span>';
-      if (r.need <= 0) return '<span class="c-mu">—</span>';
-      if (r.rr <= 0) return '<span class="nv2-chip cz">chưa bán hôm nay</span>';
-      if (r.rr >= r.need) return '<span class="nv2-chip cg">✓ đủ (' + fmtG(r.x, r.rr) + ")</span>";
-      return '<span class="nv2-chip cn">thiếu ' + fmtG(r.x, r.need - r.rr) + "</span>";
+    /* V17.88: bảng nhóm thi đua chia Nhóm Chính / Nhóm Vượt Trội (cột "Loại TĐ" trong Sheet); mỗi nhóm 1 dòng Hôm nay | Lũy kế; bỏ phần "Để kịp target tháng" */
+    const key = (r) => (onlyRT ? (r.rr > 0 ? r.rtP : -1) : r.pd);
+    const order = (list) => {
+      const b = list.slice();
+      if (rstate.sort === "push") b.sort((a, z) => key(a) - key(z) || a.i - z.i);
+      else if (rstate.sort === "sheet") b.sort((a, z) => a.i - z.i);
+      else b.sort((a, z) => key(z) - key(a) || a.i - z.i);
+      return b;
     };
-    const dupChip = () => ""; /* V17.79: user không cần hiện chip "trùng số" */
-    if (mobile) {
-      const li = (r) =>
-        '<div class="nv2-li"><span class="nv2-pp ' + lv(onlyRT ? r.rtP : r.pd) + '">' + pctTxt(onlyRT ? r.rtP : r.pd) + '</span><div class="x"><b>' + esc(r.x.g) + "</b><span>Hôm nay " + (r.rr > 0 ? fmtG(r.x, r.rr) : "—") + " / " + fmtG(r.x, r.rtT) + (!onlyRT && r.need > 0 && r.pd < 100 ? " · cần " + fmtG(r.x, r.need) + "/ngày" : "") + "</span>" + (r.dup ? "<div>" + dupChip(r) + "</div>" : "") + "</div>" + (onlyRT || r.pd >= 100 ? "" : vsCell(r)) + "</div>";
-      html += '<div data-capture-id="rt1grp" data-table-name="Nhóm hàng thi đua"><div class="nv2-lbl" style="color:#b3261e">Chưa đạt — cần đẩy (' + miss.length + ')</div><div class="nv2-lst">' + miss.map(li).join("") + '</div><div class="nv2-lbl" style="color:#0f7a3a">Đã đạt / đang vượt (' + hit.length + ')</div><div class="nv2-lst">' + hit.map(li).join("") + "</div></div>";
-      return html + "</div>";
+    const hasTier = rows.some((r) => r.x.tier);
+    const blocks = hasTier
+      ? [
+          { k: "C", name: "Nhóm chính", list: rows.filter((r) => r.x.tier === "chinh") },
+          { k: "V", name: "Nhóm vượt trội", list: rows.filter((r) => r.x.tier !== "chinh") },
+        ].filter((b) => b.list.length)
+      : [{ k: "", name: "", list: rows }];
+    const stat = (list) => ({ n: list.length, lk: list.filter((r) => r.pd >= 100).length, hn: list.filter((r) => r.rr > 0 && r.rtP >= 100).length, no: list.filter((r) => !(r.rr > 0)).length });
+    if (hasTier) {
+      html += '<div class="nv2-tsum" data-capture-id="rt1tier" data-table-name="Nhóm chính / vượt trội">' + blocks.map((b) => {
+        const s = stat(b.list);
+        return '<div class="nv2-ts' + (b.k === "V" ? " vt" : "") + '"><div class="nm">' + b.name + "<small>" + s.n + " nhóm</small></div>" + (onlyRT ? "" : '<div class="m"><span>Lũy kế dự kiến đạt</span><b>' + s.lk + "<small>/" + s.n + "</small></b></div>") + '<div class="m"><span>Hôm nay đạt</span><b>' + s.hn + "<small>/" + s.n + '</small></b></div><div class="m"><span>Chưa bán hôm nay</span><b class="' + (s.no ? "c-no" : "") + '">' + s.no + "</b></div></div>";
+      }).join("") + "</div>";
     }
-    const cols = onlyRT ? 4 : 10;
-    html += '<div class="nv2-box" data-capture-id="rt1grp" data-table-name="Nhóm hàng thi đua"><div class="nv2-bh"><div class="t">' + rows.length + " nhóm thi đua — " + (onlyRT ? "hôm nay" : "hôm nay và lũy kế trên cùng một dòng") + '</div><div class="n">Tiền: triệu (dưới 1 tr ghi k) · ' + (onlyRT ? "" : '"Hôm nay so với cần" = bán hôm nay so với số cần mỗi ngày để kịp target tháng') + "</div></div>";
-    html += '<div class="nv2-tw"><table class="nv2-t nv2-rt num"><thead><tr><th style="background:#0b3a75"></th><th colspan="3" class="g" style="background:#0b4fb3">HÔM NAY (realtime)</th>' + (onlyRT ? "" : '<th colspan="4" class="g sep" style="background:#0f6b58">LŨY KẾ THÁNG (hết ' + pad(dp) + "/" + pad(tc.month) + ')</th><th colspan="2" class="g sep" style="background:#7a5a00">ĐỂ KỊP TARGET THÁNG</th>') + "</tr>";
-    html += '<tr><th class="l">Nhóm hàng</th><th>Mục tiêu ngày</th><th>Thực hiện</th><th class="c">%</th>' + (onlyRT ? "" : '<th class="sep">Target</th><th>Thực hiện</th><th class="l" style="width:180px">% Hiện tại</th><th class="c">Dự kiến</th><th class="sep">Cần / ngày</th><th class="l">Hôm nay so với cần</th>') + "</tr></thead><tbody>";
-    const tr = (r) =>
-      '<tr><td class="gn"' + (r.x.color ? ' style="border-left-color:' + esc(r.x.color) + '"' : "") + ">" + esc(r.x.g) + dupChip(r) + "</td><td>" + fmtG(r.x, r.rtT) + "</td><td><b>" + (r.rr > 0 ? fmtG(r.x, r.rr) : "—") + '</b></td><td class="c"><span class="nv2-pp ' + (r.rr > 0 ? lv(r.rtP) : "hz") + '">' + (r.rr > 0 ? pctTxt(r.rtP) : "—") + "</span></td>" +
+    const pair = (x, a, t, dash) => "<b>" + (dash ? "—" : fmtG(x, a)) + '</b> <span class="nv2-of">/ ' + fmtG(x, t) + "</span>";
+    const sortBtn = (k, l) => '<button class="nv2-btn' + (rstate.sort === k ? " on" : "") + '" data-nv2-rsort="' + k + '">' + l + "</button>";
+    const btns = '<div class="nv2-seg" data-html2canvas-ignore="true">' + sortBtn("dk", onlyRT ? "% cao → thấp" : "Dự kiến cao → thấp") + sortBtn("push", "Cần đẩy lên đầu") + sortBtn("sheet", "Thứ tự Sheet") + "</div>";
+    if (mobile) {
+      const card = (r) =>
+        '<div class="nv2-rc"><div class="hd"><b' + (r.x.color ? ' style="border-left:4px solid ' + esc(r.x.color) + ';padding-left:6px"' : "") + ">" + esc(r.x.g) + "</b>" + (onlyRT ? "" : '<span class="nv2-dk ' + lv(r.pd) + '">DK ' + pctTxt(r.pd) + "</span>") + "</div>" +
+        '<div class="rw"><em class="hn">HN</em><span>' + pair(r.x, r.rr, r.rtT, !(r.rr > 0)) + '</span><span class="nv2-pp ' + (r.rr > 0 ? lv(r.rtP) : "hz") + '">' + (r.rr > 0 ? pctTxt(r.rtP) : "—") + "</span></div>" +
+        (onlyRT ? "" : '<div class="rw"><em class="lk">LK</em><span>' + pair(r.x, r.lr, r.lt) + '</span><b>' + pctTxt(r.lP) + "</b></div>") + "</div>";
+      html += '<div data-capture-id="rt1grp" data-table-name="Nhóm hàng thi đua"><div style="padding:0 10px 8px">' + btns + "</div>";
+      blocks.forEach((b) => {
+        if (b.name) html += '<div class="nv2-rband' + (b.k === "V" ? " vt" : "") + '">' + b.name + "</div>";
+        html += '<div class="nv2-rcs">' + order(b.list).map(card).join("") + "</div>";
+      });
+      return html + "</div></div>";
+    }
+    const cols = onlyRT ? 4 : 7;
+    html += '<div class="nv2-box" data-capture-id="rt1grp" data-table-name="Nhóm hàng thi đua"><div class="nv2-bh"><div><div class="t">' + rows.length + " nhóm thi đua — " + (onlyRT ? "hôm nay" : "hôm nay và lũy kế") + '</div><div class="n">Tiền: triệu (dưới 1 tr ghi k)' + (hasTier ? " · chia Nhóm Chính / Nhóm Vượt Trội" : "") + "</div></div>" + btns + "</div>";
+    html += '<div class="nv2-tw"><table class="nv2-t nv2-rt num"><thead><tr><th colspan="2" style="background:#0b3a75"></th><th colspan="2" class="g sep" style="background:#0b4fb3">HÔM NAY (realtime)</th>' + (onlyRT ? "" : '<th colspan="3" class="g sep" style="background:#0f6b58">LŨY KẾ THÁNG (hết ' + pad(dp) + "/" + pad(tc.month) + ")</th>") + "</tr>";
+    html += '<tr><th class="l" style="width:36px">#</th><th class="l">Nhóm hàng</th><th class="sep">Thực hiện / Mục tiêu ngày</th><th class="c">%</th>' + (onlyRT ? "" : '<th class="sep">Thực hiện / Target</th><th class="l" style="width:200px">% Hiện tại</th><th class="c">Dự kiến</th>') + "</tr></thead><tbody>";
+    const tr = (r, k) =>
+      '<tr><td class="l c-mu">' + (k + 1) + '</td><td class="gn"' + (r.x.color ? ' style="border-left-color:' + esc(r.x.color) + '"' : "") + ">" + esc(r.x.g) + '</td><td class="sep">' + pair(r.x, r.rr, r.rtT, !(r.rr > 0)) + '</td><td class="c"><span class="nv2-pp ' + (r.rr > 0 ? lv(r.rtP) : "hz") + '">' + (r.rr > 0 ? pctTxt(r.rtP) : "—") + "</span></td>" +
       (onlyRT
         ? ""
-        : '<td class="sep">' + fmtG(r.x, r.lt) + "</td><td>" + fmtG(r.x, r.lr) + '</td><td class="l"><div style="display:flex;align-items:center;gap:8px"><div class="nv2-mk" style="flex:1"><i class="' + (r.lP >= timeMark ? "b-ok" : "b-no") + '" style="width:' + Math.min(100, Math.max(0, r.lP)).toFixed(0) + '%;opacity:.75"></i><u style="left:' + timeMark.toFixed(1) + '%"></u></div><b style="min-width:38px">' + pctTxt(r.lP) + '</b></div></td><td class="c"><span class="nv2-dk ' + lv(r.pd) + '">' + pctTxt(r.pd) + "</span></td>" +
-          '<td class="sep"><b>' + (r.pd >= 100 ? '<span class="c-ok">✓ đạt</span>' : r.need > 0 ? fmtG(r.x, r.need) : "—") + '</b></td><td class="l">' + vsCell(r) + "</td>") +
+        : '<td class="sep">' + pair(r.x, r.lr, r.lt) + '</td><td class="l"><div style="display:flex;align-items:center;gap:8px"><div class="nv2-mk" style="flex:1"><i class="' + (r.lP >= timeMark ? "b-ok" : "b-no") + '" style="width:' + Math.min(100, Math.max(0, r.lP)).toFixed(0) + '%;opacity:.75"></i><u style="left:' + timeMark.toFixed(1) + '%"></u></div><b style="min-width:38px">' + pctTxt(r.lP) + '</b></div></td><td class="c"><span class="nv2-dk ' + lv(r.pd) + '">' + (r.pd >= 100 ? "✓ " : "") + pctTxt(r.pd) + "</span></td>") +
       "</tr>";
-    html += '<tr class="sec"><td colspan="' + cols + '">CHƯA ĐẠT — CẦN ĐẨY (' + miss.length + ") · dự kiến thấp nhất lên đầu</td></tr>" + miss.map(tr).join("");
-    html += '<tr class="sec ok"><td colspan="' + cols + '">ĐÃ ĐẠT / ĐANG VƯỢT (' + hit.length + ")</td></tr>" + hit.map(tr).join("");
-    html += '</tbody></table></div><div class="nv2-leg"><span class="h4" style="padding:1px 8px;border-radius:4px">≥100%</span><span class="h3" style="padding:1px 8px;border-radius:4px">80–99%</span><span class="h2" style="padding:1px 8px;border-radius:4px">1–79%</span><span class="hz" style="padding:1px 8px;border-radius:4px">chưa bán hôm nay</span>' + (onlyRT ? "" : "<span>Vạch đen = tiến độ thời gian " + Math.round(timeMark) + "% (" + dp + "/" + dim + ")</span>") + "<span>Viền màu bên trái tên nhóm = màu nhóm trong Sheet</span></div></div>";
+    blocks.forEach((b) => {
+      if (b.name) html += '<tr class="tband' + (b.k === "V" ? " vt" : "") + '"><td colspan="' + cols + '">' + b.name + "</td></tr>";
+      html += order(b.list).map(tr).join("");
+    });
+    html += '</tbody></table></div><div class="nv2-leg"><span class="h4" style="padding:1px 8px;border-radius:4px">≥100%</span><span class="h3" style="padding:1px 8px;border-radius:4px">80–99%</span><span class="h2" style="padding:1px 8px;border-radius:4px">1–79%</span><span class="hz" style="padding:1px 8px;border-radius:4px">— chưa bán hôm nay</span>' + (onlyRT ? "" : "<span>Vạch đen = tiến độ thời gian " + Math.round(timeMark) + "% (" + dp + "/" + dim + ")</span>") + "<span>Viền màu bên trái tên nhóm = màu nhóm trong Sheet</span></div></div>";
     return html + "</div>";
   }
 
@@ -12834,7 +12881,7 @@ window.__AutoBIRunPick = (() => {
   document.addEventListener(
     "click",
     (ev) => {
-      const el = ev.target && ev.target.closest && ev.target.closest("[data-nv2-mode],[data-nv2-view],[data-nv2-staff],[data-nv2-pg],[data-nv2-tab],[data-nv2-hsort],[data-nv2-hkids],[data-nv2-rev],[data-nv2-wk],[data-nv2-wsort]");
+      const el = ev.target && ev.target.closest && ev.target.closest("[data-nv2-mode],[data-nv2-view],[data-nv2-staff],[data-nv2-pg],[data-nv2-tab],[data-nv2-hsort],[data-nv2-hkids],[data-nv2-rev],[data-nv2-wk],[data-nv2-wsort],[data-nv2-rsort]");
       if (!el || !el.closest(".nv2")) return;
       if (el.hasAttribute("data-nv2-mode")) {
         const prev = state.mode;
@@ -12877,6 +12924,10 @@ window.__AutoBIRunPick = (() => {
       } else if (el.hasAttribute("data-nv2-wsort")) {
         wstate.sort = el.getAttribute("data-nv2-wsort");
         if (!redrawWeek()) navClick("compare_week");
+      } else if (el.hasAttribute("data-nv2-rsort")) {
+        rstate.sort = el.getAttribute("data-nv2-rsort");
+        const ok = last.rt1 && keepScroll(() => swapRoot(renderRT1.apply(null, last.rt1), "nv2-rt1"));
+        if (!ok) navClick("oneshop");
       } else if (el.hasAttribute("data-nv2-tab")) {
         navClick(el.getAttribute("data-nv2-tab"));
       }
@@ -12915,7 +12966,7 @@ window.__AutoBIRunPick = (() => {
     if (["pct", "tdt", "pts"].includes(m)) state.mode = m;
   } catch (_) {}
 
-  window.__AutoBINv2 = { compute, renderStaff, renderNL, renderRT1, renderHealth, renderRev, renderSvc, renderWeek, wstate, cstate, hstate, state, _t: { vn, trK, series, dayKeys, rp } };
+  window.__AutoBINv2 = { compute, renderStaff, renderNL, renderRT1, renderHealth, renderRev, renderSvc, renderWeek, rstate, wstate, cstate, hstate, state, _t: { vn, trK, series, dayKeys, rp } };
   try {
     if (typeof unsafeWindow !== "undefined") unsafeWindow.__AutoBINv2 = window.__AutoBINv2;
   } catch (_) {}
