@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.88
+// @name         AutoBI Core V17.89
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.88
+// @version      17.89
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -11979,6 +11979,11 @@ window.__AutoBIRunPick = (() => {
   .nv2-ts{background:#fff;border-radius:12px;padding:12px 16px;display:flex;flex-wrap:wrap;gap:6px 22px;align-items:center;border-left:6px solid #1d5fbf}
   .nv2-ts.vt{border-left-color:#6b3fb8}
   .nv2-m .nv2-ts .nm{width:100%}
+  .nv2-ts{display:grid;gap:4px 14px}.nv2-ts.sm .nm{grid-column:1/-1}.nv2-ts .m span{white-space:nowrap}.nv2-ts.sm .m span{white-space:normal;line-height:1.25}
+  .nv2-ts .dots{grid-column:1/-1;display:flex;gap:4px;margin-top:6px}.nv2-ts .dots i{flex:1;height:9px;border-radius:3px}
+  .nv2-ts .dots i.d4{background:#2e9b5a}.nv2-ts .dots i.d3{background:#e2a40c}.nv2-ts .dots i.d2{background:#e8968b}.nv2-ts .dots i.d1{background:#c8392b}
+  .nv2-rt9{table-layout:fixed;min-width:1100px}.nv2-rt9 td.gn{font-size:15.5px;border-left:0}
+  .nv2-cb{display:flex;align-items:center;gap:8px}.nv2-cb .nv2-mk{flex:1}.nv2-cb .nv2-pp{min-width:52px}
   .nv2-ts .nm{font-weight:900;font-size:14px;color:#1d5fbf;text-transform:uppercase;letter-spacing:.03em;line-height:1.2;min-width:120px}.nv2-ts.vt .nm{color:#6b3fb8}
   .nv2-ts .nm small{display:block;font-size:11.5px;color:#4a5872;font-weight:600;text-transform:none;letter-spacing:0}
   .nv2-ts .m{display:flex;flex-direction:column;gap:2px}.nv2-ts .m span{font-size:11.5px;color:#4a5872;font-weight:600}.nv2-ts .m b{font-size:22px;font-weight:900;line-height:1.1}.nv2-ts .m b small{font-size:13px;color:#4a5872}
@@ -12132,10 +12137,15 @@ window.__AutoBIRunPick = (() => {
         ].filter((b) => b.list.length)
       : [{ k: "", name: "", list: rows }];
     const stat = (list) => ({ n: list.length, lk: list.filter((r) => r.pd >= 100).length, hn: list.filter((r) => r.rr > 0 && r.rtP >= 100).length, no: list.filter((r) => !(r.rr > 0)).length });
+    /* V17.89: thẻ Chính / Vượt trội chia cột đều + dải ô màu (mỗi ô 1 nhóm, màu theo dự kiến; Chỉ xem Realtime: theo % hôm nay) */
+    const dl = (p) => (p >= 100 ? "d4" : p >= 80 ? "d3" : p > 0 ? "d2" : "d1");
     if (hasTier) {
-      html += '<div class="nv2-tsum" data-capture-id="rt1tier" data-table-name="Nhóm chính / vượt trội">' + blocks.map((b) => {
+      html += '<div class="nv2-tsum" style="grid-template-columns:' + (mobile || blocks.length < 2 ? "minmax(0,1fr)" : "minmax(0,2fr) minmax(0,1fr)") + '" data-capture-id="rt1tier" data-table-name="Nhóm chính / vượt trội">' + blocks.map((b) => {
         const s = stat(b.list);
-        return '<div class="nv2-ts' + (b.k === "V" ? " vt" : "") + '"><div class="nm">' + b.name + "<small>" + s.n + " nhóm</small></div>" + (onlyRT ? "" : '<div class="m"><span>Lũy kế dự kiến đạt</span><b>' + s.lk + "<small>/" + s.n + "</small></b></div>") + '<div class="m"><span>Hôm nay đạt</span><b>' + s.hn + "<small>/" + s.n + '</small></b></div><div class="m"><span>Chưa bán hôm nay</span><b class="' + (s.no ? "c-no" : "") + '">' + s.no + "</b></div></div>";
+        const ncol = onlyRT ? 2 : 3;
+        const small = mobile || b.list.length <= 5;
+        return '<div class="nv2-ts' + (b.k === "V" ? " vt" : "") + (small ? " sm" : "") + '" style="grid-template-columns:' + (small ? "" : "minmax(110px,1.1fr) ") + "repeat(" + ncol + ',minmax(0,1fr))"><div class="nm">' + b.name + "<small>" + s.n + " nhóm</small></div>" + (onlyRT ? "" : '<div class="m"><span>Lũy kế dự kiến đạt</span><b class="' + (s.lk === s.n ? "c-ok" : "") + '">' + s.lk + "<small>/" + s.n + "</small></b></div>") + '<div class="m"><span>Hôm nay đạt</span><b>' + s.hn + "<small>/" + s.n + '</small></b></div><div class="m"><span>Chưa bán hôm nay</span><b class="' + (s.no ? "c-no" : "") + '">' + s.no + "</b></div>" +
+          '<div class="dots">' + order(b.list).map((r) => '<i class="' + (onlyRT ? (r.rr > 0 ? dl(r.rtP) : "d1") : dl(r.pd)) + '" title="' + esc(r.x.g) + (onlyRT ? " · hôm nay " + (r.rr > 0 ? pctTxt(r.rtP) : "chưa bán") : " · dự kiến " + pctTxt(r.pd)) + '"></i>').join("") + "</div></div>";
       }).join("") + "</div>";
     }
     const pair = (x, a, t, dash) => "<b>" + (dash ? "—" : fmtG(x, a)) + '</b> <span class="nv2-of">/ ' + fmtG(x, t) + "</span>";
@@ -12143,7 +12153,7 @@ window.__AutoBIRunPick = (() => {
     const btns = '<div class="nv2-seg" data-html2canvas-ignore="true">' + sortBtn("dk", onlyRT ? "% cao → thấp" : "Dự kiến cao → thấp") + sortBtn("push", "Cần đẩy lên đầu") + sortBtn("sheet", "Thứ tự Sheet") + "</div>";
     if (mobile) {
       const card = (r) =>
-        '<div class="nv2-rc"><div class="hd"><b' + (r.x.color ? ' style="border-left:4px solid ' + esc(r.x.color) + ';padding-left:6px"' : "") + ">" + esc(r.x.g) + "</b>" + (onlyRT ? "" : '<span class="nv2-dk ' + lv(r.pd) + '">DK ' + pctTxt(r.pd) + "</span>") + "</div>" +
+        '<div class="nv2-rc"><div class="hd"><b>' + esc(r.x.g) + "</b>" + (onlyRT ? "" : '<span class="nv2-dk ' + lv(r.pd) + '">DK ' + pctTxt(r.pd) + "</span>") + "</div>" +
         '<div class="rw"><em class="hn">HN</em><span>' + pair(r.x, r.rr, r.rtT, !(r.rr > 0)) + '</span><span class="nv2-pp ' + (r.rr > 0 ? lv(r.rtP) : "hz") + '">' + (r.rr > 0 ? pctTxt(r.rtP) : "—") + "</span></div>" +
         (onlyRT ? "" : '<div class="rw"><em class="lk">LK</em><span>' + pair(r.x, r.lr, r.lt) + '</span><b>' + pctTxt(r.lP) + "</b></div>") + "</div>";
       html += '<div data-capture-id="rt1grp" data-table-name="Nhóm hàng thi đua"><div style="padding:0 10px 8px">' + btns + "</div>";
@@ -12154,20 +12164,21 @@ window.__AutoBIRunPick = (() => {
       return html + "</div></div>";
     }
     const cols = onlyRT ? 4 : 7;
-    html += '<div class="nv2-box" data-capture-id="rt1grp" data-table-name="Nhóm hàng thi đua"><div class="nv2-bh"><div><div class="t">' + rows.length + " nhóm thi đua — " + (onlyRT ? "hôm nay" : "hôm nay và lũy kế") + '</div><div class="n">Tiền: triệu (dưới 1 tr ghi k)' + (hasTier ? " · chia Nhóm Chính / Nhóm Vượt Trội" : "") + "</div></div>" + btns + "</div>";
-    html += '<div class="nv2-tw"><table class="nv2-t nv2-rt num"><thead><tr><th colspan="2" style="background:#0b3a75"></th><th colspan="2" class="g sep" style="background:#0b4fb3">HÔM NAY (realtime)</th>' + (onlyRT ? "" : '<th colspan="3" class="g sep" style="background:#0f6b58">LŨY KẾ THÁNG (hết ' + pad(dp) + "/" + pad(tc.month) + ")</th>") + "</tr>";
-    html += '<tr><th class="l" style="width:36px">#</th><th class="l">Nhóm hàng</th><th class="sep">Thực hiện / Mục tiêu ngày</th><th class="c">%</th>' + (onlyRT ? "" : '<th class="sep">Thực hiện / Target</th><th class="l" style="width:200px">% Hiện tại</th><th class="c">Dự kiến</th>') + "</tr></thead><tbody>";
+    html += '<div class="nv2-box" data-capture-id="rt1grp" data-table-name="Nhóm hàng thi đua"><div class="nv2-bh"><div><div class="t">' + rows.length + " nhóm thi đua — " + (onlyRT ? "hôm nay" : "hôm nay và lũy kế") + '</div><div class="n">Tiền: triệu (dưới 1 tr ghi k)' + (onlyRT ? "" : " · vạch đen = tiến độ thời gian " + Math.round(timeMark) + "% (" + dp + "/" + dim + ")") + "</div></div>" + btns + "</div>";
+    html += '<div class="nv2-tw"><table class="nv2-t nv2-rt nv2-rt9 num"><colgroup><col style="width:40px"><col style="width:190px"><col style="width:130px"><col' + (onlyRT ? "" : ' style="width:150px"') + ">" + (onlyRT ? "" : '<col style="width:150px"><col><col style="width:100px">') + "</colgroup>";
+    html += '<thead><tr><th colspan="2" class="g" style="background:#0b3a75;text-align:left">NHÓM HÀNG</th><th colspan="2" class="g sep" style="background:#0b4fb3">HÔM NAY (realtime)</th>' + (onlyRT ? "" : '<th colspan="3" class="g sep" style="background:#0f6b58">LŨY KẾ THÁNG (hết ' + pad(dp) + "/" + pad(tc.month) + ")</th>") + "</tr>";
+    html += '<tr><th class="l">#</th><th class="l">Tên nhóm</th><th class="sep">Thực hiện / MT ngày</th><th class="l">% so mục tiêu ngày</th>' + (onlyRT ? "" : '<th class="sep">Thực hiện / Target</th><th class="l">% hiện tại</th><th class="c">Dự kiến</th>') + "</tr></thead><tbody>";
     const tr = (r, k) =>
-      '<tr><td class="l c-mu">' + (k + 1) + '</td><td class="gn"' + (r.x.color ? ' style="border-left-color:' + esc(r.x.color) + '"' : "") + ">" + esc(r.x.g) + '</td><td class="sep">' + pair(r.x, r.rr, r.rtT, !(r.rr > 0)) + '</td><td class="c"><span class="nv2-pp ' + (r.rr > 0 ? lv(r.rtP) : "hz") + '">' + (r.rr > 0 ? pctTxt(r.rtP) : "—") + "</span></td>" +
+      '<tr><td class="l c-mu">' + (k + 1) + '</td><td class="gn">' + esc(r.x.g) + '</td><td class="sep">' + pair(r.x, r.rr, r.rtT, !(r.rr > 0)) + '</td><td class="l"><div class="nv2-cb"><div class="nv2-mk"><i style="width:' + (r.rr > 0 ? Math.min(100, Math.max(0, r.rtP)).toFixed(0) : 0) + '%;background:#4f86d9"></i></div><span class="nv2-pp ' + (r.rr > 0 ? lv(r.rtP) : "hz") + '">' + (r.rr > 0 ? pctTxt(r.rtP) : "—") + "</span></div></td>" +
       (onlyRT
         ? ""
-        : '<td class="sep">' + pair(r.x, r.lr, r.lt) + '</td><td class="l"><div style="display:flex;align-items:center;gap:8px"><div class="nv2-mk" style="flex:1"><i class="' + (r.lP >= timeMark ? "b-ok" : "b-no") + '" style="width:' + Math.min(100, Math.max(0, r.lP)).toFixed(0) + '%;opacity:.75"></i><u style="left:' + timeMark.toFixed(1) + '%"></u></div><b style="min-width:38px">' + pctTxt(r.lP) + '</b></div></td><td class="c"><span class="nv2-dk ' + lv(r.pd) + '">' + (r.pd >= 100 ? "✓ " : "") + pctTxt(r.pd) + "</span></td>") +
+        : '<td class="sep">' + pair(r.x, r.lr, r.lt) + '</td><td class="l"><div class="nv2-cb"><div class="nv2-mk"><i class="' + (r.lP >= timeMark ? "b-ok" : "b-no") + '" style="width:' + Math.min(100, Math.max(0, r.lP)).toFixed(0) + '%;opacity:.75"></i><u style="left:' + timeMark.toFixed(1) + '%"></u></div><b style="min-width:42px;text-align:right">' + pctTxt(r.lP) + '</b></div></td><td class="c"><span class="nv2-dk ' + lv(r.pd) + '">' + (r.pd >= 100 ? "✓ " : "") + pctTxt(r.pd) + "</span></td>") +
       "</tr>";
     blocks.forEach((b) => {
       if (b.name) html += '<tr class="tband' + (b.k === "V" ? " vt" : "") + '"><td colspan="' + cols + '">' + b.name + "</td></tr>";
       html += order(b.list).map(tr).join("");
     });
-    html += '</tbody></table></div><div class="nv2-leg"><span class="h4" style="padding:1px 8px;border-radius:4px">≥100%</span><span class="h3" style="padding:1px 8px;border-radius:4px">80–99%</span><span class="h2" style="padding:1px 8px;border-radius:4px">1–79%</span><span class="hz" style="padding:1px 8px;border-radius:4px">— chưa bán hôm nay</span>' + (onlyRT ? "" : "<span>Vạch đen = tiến độ thời gian " + Math.round(timeMark) + "% (" + dp + "/" + dim + ")</span>") + "<span>Viền màu bên trái tên nhóm = màu nhóm trong Sheet</span></div></div>";
+    html += '</tbody></table></div><div class="nv2-leg"><span class="h4" style="padding:1px 8px;border-radius:4px">≥100%</span><span class="h3" style="padding:1px 8px;border-radius:4px">80–99%</span><span class="h2" style="padding:1px 8px;border-radius:4px">1–79%</span><span class="h1" style="padding:1px 8px;border-radius:4px">0%</span><span class="hz" style="padding:1px 8px;border-radius:4px">— chưa bán hôm nay</span></div></div>';
     return html + "</div>";
   }
 
