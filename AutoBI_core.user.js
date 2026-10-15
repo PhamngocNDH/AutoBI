@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.03
+// @name         AutoBI Core V18.04
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.03
+// @version      18.04
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -3185,7 +3185,7 @@ window.__AutoBIRun67 = (function () {
         else if (_0x55956a === 'auto-comment')
             _0xfe7799.classList.add('comment-auto-container');
         else
-            _0xfe7799.classList.add('tgdd-msg-info'); _0x574a3c.style.display = 'flex'; }, showHistoryModal: () => { const _0x32f06f = UTILS.getPersistentConfig(); const _0xdf4497 = _0x268350 => { UI.hideToast(); if (!_0x268350 || Object.keys(_0x268350).length === 0) {
+            _0xfe7799.classList.add('tgdd-msg-info'); _0x574a3c.style.display = 'flex'; try { window.__AutoBIModalFit && window.__AutoBIModalFit(_0x574a3c, _0xfe7799); } catch (_) { } /* V18.04: iPhone — khung luôn nằm trong phần màn hình đang nhìn */ }, showHistoryModal: () => { const _0x32f06f = UTILS.getPersistentConfig(); const _0xdf4497 = _0x268350 => { UI.hideToast(); if (!_0x268350 || Object.keys(_0x268350).length === 0) {
             UI.showMsg('L\u1ECBch s\u1EED b\u00E1o c\u00E1o', 'Ch\u01B0a c\u00F3 d\u1EEF li\u1EC7u l\u1ECBch s\u1EED n\u00E0o \u0111\u01B0\u1EE3c l\u01B0u.', 'error');
             return;
         } let _0x412d09 = '<div style="display:flex; flex-direction:column; gap:10px; max-height: 50vh; overflow-y: auto; padding-right: 5px;">'; const _0x20d0e5 = Object.keys(_0x268350).filter(_0x4a6695 => /^\d{2}\/\d{2}\/\d{4}$/.test(_0x4a6695)).sort((_0x448dd6, _0x50d989) => { const _0x38f66c = _0x1fc951 => { const _0x5ea1e1 = _0x1fc951.split('/'); return parseInt(_0x5ea1e1[2]) * 10000 + parseInt(_0x5ea1e1[1]) * 100 + parseInt(_0x5ea1e1[0]); }; return _0x38f66c(_0x50d989) - _0x38f66c(_0x448dd6); }); _0x20d0e5.forEach(_0x2ca682 => { _0x412d09 += '<button class="btn-history-date-logic tgdd-msg-btn" data-date="' + _0x2ca682 + '" style="background: #f8f9fa; color: #333; border: 1px solid #ccc; width: 100%; padding: 12px; font-size: 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;"><span>\uD83D\uDCC5 Ng\u00E0y l\u01B0u:</span> <span style="font-weight:900; color:#007bff;">' + _0x2ca682 + '</span></button>'; }); _0x412d09 += '</div>'; UI.showMsg('XEM L\u1EA0I L\u1ECACH S\u1EEC', 'Ch\u1ECDn ng\u00E0y mu\u1ED1n xem:<br><br>' + _0x412d09, 'info'); setTimeout(() => { document.querySelectorAll('.btn-history-date-logic').forEach(_0x5e3fda => { _0x5e3fda.onclick = function () { const _0xea9a37 = this.getAttribute('data-date'); const _0x13e29f = DATA.unflattenObject(_0x268350[_0xea9a37]); document.getElementById(CONSTANTS.DOM_IDS.MSG_MODAL).style.display = 'none'; document.body.classList.remove('tgdd-body-lock'); UI.showToast('\uD83D\uDD04 \u0110ang m\u1EDF b\u00E1o c\u00E1o ng\u00E0y ' + _0xea9a37 + '...'); GM_setValue(CONSTANTS.KEYS.DATA_CACHE, _0x13e29f); DATA.fetchConfigForModal(_0x567664 => { UI.renderReport(_0x13e29f, _0x567664, _0x32f06f, _0xea9a37); const _0x31f8d7 = document.createElement('div'); _0x31f8d7.style.cssText = 'position:fixed; bottom:65px; left:0; width:100%; background:#d63031; color:white; font-size:12px; font-weight:bold; text-align:center; padding:4px; z-index:49999; animation: pulse-text 2s infinite;'; _0x31f8d7.innerText = '\u26A0\uFE0F B\u1EA0N \u0110ANG XEM D\u1EEE LI\u1EC6U NG\u00C0Y ' + _0xea9a37; document.body.appendChild(_0x31f8d7); }); }; }); }, 200); }; if (window.tgdd_history_cache && Object.keys(window.tgdd_history_cache).length > 0) {
@@ -4617,7 +4617,8 @@ window.__AutoBIRun67 = (function () {
             UI.setupDesktopZoom(_0x598bb9, _0x2ad4ca);
             _0x598bb9.dataset.zoomSetup = 'true';
         } if (!UTILS.isMobile())
-            UI.autoFitContent(); const _0x2250a9 = _0x2ad4ca.querySelectorAll('.tgdd-column-group-select'); _0x2250a9.forEach(_0x1739a1 => { _0x1739a1.onchange = _0x5f3448 => { const _0x184e3b = parseInt(_0x5f3448.target.getAttribute('data-col-idx')); if (!window.tgdd_theo_nh_selected_groups)
+            UI.autoFitContent();
+        else { try { window.__AutoBIPhFit && window.__AutoBIPhFit(); } catch (_) { } } /* V18.04: iPhone — phóng bản gọn cho vừa màn hình */ const _0x2250a9 = _0x2ad4ca.querySelectorAll('.tgdd-column-group-select'); _0x2250a9.forEach(_0x1739a1 => { _0x1739a1.onchange = _0x5f3448 => { const _0x184e3b = parseInt(_0x5f3448.target.getAttribute('data-col-idx')); if (!window.tgdd_theo_nh_selected_groups)
             window.tgdd_theo_nh_selected_groups = []; window.tgdd_theo_nh_selected_groups[_0x184e3b] = _0x5f3448.target.value; _0x5d2d05(); }; }); const _0xc6e628 = _0x2ad4ca.querySelectorAll('.tgdd-inline-mult-select'); _0xc6e628.forEach(_0x5352fb => { _0x5352fb.onchange = _0x2eef9a => { const _0x4db020 = _0x2eef9a.target.getAttribute('data-group'); const _0x398bb0 = parseInt(_0x2eef9a.target.value) || 1; const _0x3f1c77 = _0x13b9c3.compData.find(_0x327405 => _0x327405.group === _0x4db020); if (_0x3f1c77)
             _0x3f1c77.mult = _0x398bb0; UTILS.savePersistentConfig(_0x13b9c3); const _0x1309fb = document.querySelector('.tgdd-top-bar'); if (_0x1309fb && !document.getElementById('btn-save-mult-changes')) {
             const _0x2cfe17 = document.createElement('button');
@@ -13461,4 +13462,62 @@ window.__AutoBIRunPick = (() => {
   try {
     if (typeof unsafeWindow !== "undefined") unsafeWindow.__AutoBINv2 = window.__AutoBINv2;
   } catch (_) {}
+})();
+
+/* ===== V18.04: iPhone — vừa màn hình (bản gọn) + khung Tùy chọn luôn hiện ===== */
+(function () {
+  "use strict";
+  const isMob = () => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+  /* Bản gọn rộng 380px. Trang BI trên iPhone dựng khung ~980px nên bản gọn trông nhỏ, lệch trái.
+     Đặt --ph-z trên #capture-area để .nv2-m phóng lên vừa bề ngang khung cuộn. */
+  function phFit() {
+    if (!isMob()) return;
+    const ca = document.getElementById("capture-area");
+    const wr = document.getElementById("report-scroll-wrapper");
+    if (!ca) return;
+    const W = (wr && wr.clientWidth) || window.innerWidth;
+    const z = Math.max(1, Math.min(3, (W - 34) / 382));
+    ca.style.setProperty("--ph-z", z > 1.02 ? z.toFixed(3) : "1");
+    /* setupMobileZoom có thể đã thu nhỏ (scale<1) theo bề ngang cũ → đặt lại khi bản gọn vừa khung */
+    setTimeout(() => {
+      try {
+        if (!ca.querySelector(".nv2-m")) return;
+        if (ca.offsetWidth <= W + 2 && /scale\(0\./.test(ca.style.transform || "")) {
+          ca.style.transform = "scale(1)"; ca.style.marginBottom = "0px"; ca.style.marginRight = "0px";
+        }
+      } catch (_) {}
+    }, 160);
+  }
+  /* Khung thông báo/Tùy chọn: overlay cố định theo khung bố cục (~980px). Khi đang phóng to bằng 2 ngón,
+     phần đang nhìn chỉ là một góc → khung nằm ngoài, chỉ thấy nền xanh mờ. Ép overlay khớp đúng phần đang nhìn. */
+  let openModal = null;
+  function fitModal(ov, box) {
+    if (ov) openModal = { ov, box };
+    const m = openModal;
+    if (!m || !m.ov || m.ov.style.display === "none") { openModal = null; return; }
+    const vv = window.visualViewport;
+    if (isMob() && vv) {
+      const st = m.ov.style;
+      st.setProperty("left", vv.offsetLeft + "px", "important");
+      st.setProperty("top", vv.offsetTop + "px", "important");
+      st.setProperty("width", vv.width + "px", "important");
+      st.setProperty("height", vv.height + "px", "important");
+      st.setProperty("right", "auto", "important");
+      st.setProperty("bottom", "auto", "important");
+      st.setProperty("box-sizing", "border-box", "important");
+    }
+    if (m.ov.scrollTop) m.ov.scrollTop = 0;
+    /* phòng hờ hiệu ứng popIn không chạy (WebKit đôi khi kẹt opacity:0) */
+    if (m.box) setTimeout(() => {
+      try { if (parseFloat(getComputedStyle(m.box).opacity) < 0.5) { m.box.style.animation = "none"; m.box.style.opacity = "1"; m.box.style.transform = "none"; } } catch (_) {}
+    }, 450);
+  }
+  let t = 0;
+  const later = () => { clearTimeout(t); t = setTimeout(() => { phFit(); if (openModal) fitModal(); }, 150); };
+  window.addEventListener("resize", later);
+  window.addEventListener("orientationchange", later);
+  try { if (window.visualViewport) { window.visualViewport.addEventListener("resize", () => openModal && fitModal()); window.visualViewport.addEventListener("scroll", () => openModal && fitModal()); } } catch (_) {}
+  window.__AutoBIPhFit = phFit;
+  window.__AutoBIModalFit = fitModal;
+  try { if (typeof unsafeWindow !== "undefined") { unsafeWindow.__AutoBIPhFit = phFit; unsafeWindow.__AutoBIModalFit = fitModal; } } catch (_) {}
 })();
