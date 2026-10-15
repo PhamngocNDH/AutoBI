@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.05
+// @name         AutoBI Core V18.07
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.05
+// @version      18.07
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -2975,7 +2975,7 @@ window.__AutoBIRun67 = (function () {
         } }); }, captureArea: async (_0x28e709 = {}) => { try { if (window.__AutoBIGroupWait) await window.__AutoBIGroupWait(); } catch (_) { } /* V17.53 */ const _0x3cf09a = document.getElementById(CONSTANTS.DOM_IDS.CAPTURE_AREA); if (!_0x3cf09a)
             return null; UI.showToast('\uD83D\uDCF8 \u0110ang ch\u1EE5p v\u00E0 x\u1EED l\u00FD \u1EA3nh...', 2000); const _0x2bf44d = document.querySelector('.rpt-nav-item.active'); const _0x18c6ea = _0x2bf44d ? _0x2bf44d.dataset.tab : ''; const _0x22a346 = localStorage.getItem('tgdd_db_theme') === 'dark'; let _0x23a30a = '#ffffff'; if (_0x18c6ea === 'dashboard') {
             _0x23a30a = _0x22a346 ? '#0b1120' : '#f4f6f8';
-        } const _0x594bf5 = document.createElement('style'); _0x594bf5.innerHTML = '\n                * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }\n                .nv2-m { zoom: 1 !important; } /* V18.03: chụp ảnh ở cỡ gốc (html2canvas không hiểu zoom) */\n                .tgdd-chart-wrapper { overflow: visible !important; width: max-content !important; }\n                #tgdd-scroll-wrapper { overflow: visible !important; }\n                .theme-btn, .is-capturing .theme-btn { display: none !important; }\n                .rt4-hdr-title, .bc-shop-name, .header-shop-name, .st-header-main, .chart-title, .sk-title, th, .rt4-table th {\n                    white-space: nowrap !important;\n                    word-break: keep-all !important;\n                }\n\n                /* KHUNG \u0110\u1EC6M CHU\u1EA8N 12PX C\u00C2N X\u1EE8NG \u0110\u1EC0U 4 C\u1EA0NH, KH\u00D4NG D\u00D9NG INLINE-BLOCK */\n                #capture-area {\n                    box-sizing: border-box !important;\n                    padding: 12px !important;\n                    margin: 0 !important;\n                    box-shadow: none !important;\n                    border: none !important;\n                    height: auto !important;\n                    background-color: ' + _0x23a30a + ' !important;\n                }\n\n                /* G\u1EE0 B\u1ECE MARGIN TH\u1EEAA C\u1EE6A C\u00C1C B\u1EA2NG \u0110\u1EC2 KH\u00D4NG B\u1ECA L\u1EC6CH VI\u1EC0N */\n                .sk-macro-container, .rt4-wrapper, .rt3-wrapper, .nlnv-container,\n                .nlnv-daily-wrapper, .cp-container, .tgdd-chart-wrapper,\n                table.mwg-table, .bc-container, .db-wrap {\n                    margin: 0 !important;\n                    box-shadow: none !important;\n                }\n\n                /* \u0110\u1EA2M B\u1EA2O TAB BCSTAFF KH\u00D4NG B\u1ECA PH\u00CCNH TO V\u00D4 C\u1EF0C */\n                #tgdd-flex-wrapper {\n                    display: flex !important;\n                    gap: 20px !important;\n                    align-items: flex-end !important;\n                }\n            '; document.head.appendChild(_0x594bf5); _0x3cf09a.classList.add('is-capturing'); const _0x1d676e = UI.toggleTablesForCapture(_0x28e709.tableIndices); const _0xbebd92 = _0x3cf09a.style.transform; const _0x337b73 = _0x3cf09a.style.margin; _0x3cf09a.style.transform = 'none'; _0x3cf09a.style.margin = '0'; _0x3cf09a.style.padding = '12px'; _0x3cf09a.style.backgroundColor = _0x23a30a; _0x3cf09a.style.height = 'auto'; if (_0x18c6ea === 'bcstaff') {
+        } const _0x594bf5 = document.createElement('style'); _0x594bf5.innerHTML = '\n                * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }\n                                .tgdd-chart-wrapper { overflow: visible !important; width: max-content !important; }\n                #tgdd-scroll-wrapper { overflow: visible !important; }\n                .theme-btn, .is-capturing .theme-btn { display: none !important; }\n                .rt4-hdr-title, .bc-shop-name, .header-shop-name, .st-header-main, .chart-title, .sk-title, th, .rt4-table th {\n                    white-space: nowrap !important;\n                    word-break: keep-all !important;\n                }\n\n                /* KHUNG \u0110\u1EC6M CHU\u1EA8N 12PX C\u00C2N X\u1EE8NG \u0110\u1EC0U 4 C\u1EA0NH, KH\u00D4NG D\u00D9NG INLINE-BLOCK */\n                #capture-area {\n                    box-sizing: border-box !important;\n                    padding: 12px !important;\n                    margin: 0 !important;\n                    box-shadow: none !important;\n                    border: none !important;\n                    height: auto !important;\n                    background-color: ' + _0x23a30a + ' !important;\n                }\n\n                /* G\u1EE0 B\u1ECE MARGIN TH\u1EEAA C\u1EE6A C\u00C1C B\u1EA2NG \u0110\u1EC2 KH\u00D4NG B\u1ECA L\u1EC6CH VI\u1EC0N */\n                .sk-macro-container, .rt4-wrapper, .rt3-wrapper, .nlnv-container,\n                .nlnv-daily-wrapper, .cp-container, .tgdd-chart-wrapper,\n                table.mwg-table, .bc-container, .db-wrap {\n                    margin: 0 !important;\n                    box-shadow: none !important;\n                }\n\n                /* \u0110\u1EA2M B\u1EA2O TAB BCSTAFF KH\u00D4NG B\u1ECA PH\u00CCNH TO V\u00D4 C\u1EF0C */\n                #tgdd-flex-wrapper {\n                    display: flex !important;\n                    gap: 20px !important;\n                    align-items: flex-end !important;\n                }\n            '; document.head.appendChild(_0x594bf5); _0x3cf09a.classList.add('is-capturing'); const _0x1d676e = UI.toggleTablesForCapture(_0x28e709.tableIndices); const _0xbebd92 = _0x3cf09a.style.transform; const _0x337b73 = _0x3cf09a.style.margin; _0x3cf09a.style.transform = 'none'; _0x3cf09a.style.margin = '0'; _0x3cf09a.style.padding = '12px'; _0x3cf09a.style.backgroundColor = _0x23a30a; _0x3cf09a.style.height = 'auto'; if (_0x18c6ea === 'bcstaff') {
             _0x3cf09a.style.width = _0x3cf09a.scrollWidth + 10 + 'px';
         }
         else {
@@ -3001,7 +3001,7 @@ window.__AutoBIRun67 = (function () {
                 return 1.25; if (_0x396d79 > 1200)
                 return 1.5; return 2; };
             const _0x37490c = _0x28e709.scale || _0x20453d(_0x3cf09a);
-            const _0x226333 = await html2canvas(_0x3cf09a, { scale: _0x37490c, useCORS: true, backgroundColor: _0x23a30a, allowTaint: true });
+            const _0x226333 = await html2canvas(_0x3cf09a, { scale: _0x37490c, useCORS: true, backgroundColor: _0x23a30a, allowTaint: true, onclone: __d => { try { const __s = __d.createElement('style'); __s.textContent = '.nv2-m { zoom: 1 !important; }'; __d.head.appendChild(__s); } catch (_) { } } /* V18.07: chụp ở cỡ gốc trong bản sao, màn hình không co lại */ });
             _0x275758();
             const _0x3506c6 = _0x28e709.format || 'image/jpeg';
             const _0x2df369 = _0xe17d94 ? 0.88 : _0x28e709.quality !== undefined ? _0x28e709.quality : 0.95;
@@ -4635,7 +4635,7 @@ window.__AutoBIRun67 = (function () {
             _0xa904f8 = 'report-reveal-active';
         } if (_0x21008a && _0x450ffb === 'oneshop') {
             _0x21008a = false;
-            _0x2ad4ca.innerHTML = '\n                        <div class="split-container">\n                            <div class="split-left">' + _0x329bab + '</div>\n                            <div class="split-right">' + _0x329bab + '</div>\n                        </div>\n                    ';
+            _0x2ad4ca.innerHTML = '\n                        <div class="split-container">\n                            <div class="split-left">' + _0x329bab + '</div>\n                            <div class="split-right">' + _0x329bab + '</div>\n                        </div>\n                    '; if (UTILS.isMobile()) { try { window.__AutoBIPhFit && window.__AutoBIPhFit(); } catch (_) { } } /* V18.07: phóng bản gọn ngay từ hiệu ứng mở, không đợi 1,35 giây */
             setTimeout(() => { _0x2ad4ca.innerHTML = _0x329bab; _0x2be4b4(); }, 1350);
         }
         else {
@@ -10898,8 +10898,8 @@ window.__AutoBIRunPick = (() => {
     const ca = document.getElementById('capture-area');
     const oz = ca ? ca.style.getPropertyValue('--ph-z') : '';
     if (!ca || !oz || oz === '1') return () => { };
-    ca.style.setProperty('--ph-z', '1');
-    return () => { try { ca.style.setProperty('--ph-z', oz); } catch (_) { } };
+    ca.style.setProperty('--ph-z', '1'); ca.dataset.noz = '1';
+    return () => { try { delete ca.dataset.noz; ca.style.setProperty('--ph-z', oz); } catch (_) { } };
   }
   function merge(list, name) {
     const root = (list.find(b => b.root) || {}).root || null;
@@ -10910,7 +10910,7 @@ window.__AutoBIRunPick = (() => {
     return { name: name || list.map(b => b.name.split(' (')[0]).join(' + '), els: [].concat(...list.map(b => b.els)), root, head: list.some(b => b.head), w, stack: true };
   }
   function stage(b) {
-    if (b.whole) { const rz = noZoom(); return { el: b.els[0], done: rz }; } /* V18.04: cả trang → chụp ở cỡ gốc rồi trả lại */
+    if (b.whole) return { el: b.els[0], done: () => { } }; /* V18.07: cả trang → bỏ phóng trong bản sao của html2canvas (onclone), màn hình không co */
     const rz = noZoom();
     let w = b.w || Math.max(...b.els.map(e => e.getBoundingClientRect().width));
     rz();
@@ -10930,7 +10930,7 @@ window.__AutoBIRunPick = (() => {
       if (typeof html2canvas !== 'function') return reject(new Error('Chưa tải được thư viện chụp ảnh'));
       const st = stage(b);
       setTimeout(() => {
-        html2canvas(st.el, { scale: 2, useCORS: true, backgroundColor: '#f4f6f8', logging: false })
+        html2canvas(st.el, { scale: 2, useCORS: true, backgroundColor: '#f4f6f8', logging: false, onclone: d => { try { const c = d.getElementById('capture-area'); if (c) c.style.setProperty('--ph-z', '1'); } catch (_) { } } })
           .then(cv => { st.done(); cv.toBlob(bl => bl ? resolve(bl) : reject(new Error('Không tạo được ảnh')), 'image/png'); })
           .catch(e => { st.done(); reject(e); });
       }, b.whole ? 450 : 60);
@@ -13481,23 +13481,39 @@ window.__AutoBIRunPick = (() => {
   const isMob = () => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
   /* Bản gọn rộng 380px. Trang BI trên iPhone dựng khung ~980px nên bản gọn trông nhỏ, lệch trái.
      Đặt --ph-z trên #capture-area để .nv2-m phóng lên vừa bề ngang khung cuộn. */
-  function phFit() {
+  let ro = null, roEl = null, t = 0;
+  function phFit(again) {
     if (!isMob()) return;
     const ca = document.getElementById("capture-area");
     const wr = document.getElementById("report-scroll-wrapper");
     if (!ca) return;
-    const W = (wr && wr.clientWidth) || window.innerWidth;
+    if (ca.classList.contains("is-capturing") || ca.dataset.noz === "1") return; /* đang chụp ảnh → để nguyên cỡ gốc */
+    const W = (wr && wr.clientWidth) || document.documentElement.clientWidth || window.innerWidth;
     const z = Math.max(1, Math.min(3, (W - 34) / 382));
-    ca.style.setProperty("--ph-z", z > 1.02 ? z.toFixed(3) : "1");
+    const v = z > 1.02 ? z.toFixed(3) : "1";
+    if (ca.style.getPropertyValue("--ph-z") !== v) ca.style.setProperty("--ph-z", v);
     /* setupMobileZoom có thể đã thu nhỏ (scale<1) theo bề ngang cũ → đặt lại khi bản gọn vừa khung */
-    setTimeout(() => {
+    const unscale = () => {
       try {
-        if (!ca.querySelector(".nv2-m")) return;
-        if (ca.offsetWidth <= W + 2 && /scale\(0\./.test(ca.style.transform || "")) {
+        if (!ca.isConnected || !ca.querySelector(".nv2-m")) return;
+        const W2 = (wr && wr.clientWidth) || window.innerWidth;
+        if (ca.offsetWidth <= W2 + 2 && /scale\(0\./.test(ca.style.transform || "")) {
           ca.style.transform = "scale(1)"; ca.style.marginBottom = "0px"; ca.style.marginRight = "0px";
         }
       } catch (_) {}
-    }, 160);
+    };
+    setTimeout(unscale, 160);
+    /* V18.06: khung bố cục iPhone có thể đổi bề ngang SAU lúc vẽ (đổ số xong, hiệu ứng mở báo cáo, Safari áp lại viewport)
+       → theo dõi bề ngang khung cuộn và canh lại vài lần sau khi vẽ */
+    try {
+      if (wr && window.ResizeObserver && roEl !== wr) {
+        if (ro) ro.disconnect();
+        roEl = wr;
+        ro = new ResizeObserver(() => { clearTimeout(t); t = setTimeout(() => phFit(true), 120); });
+        ro.observe(wr);
+      }
+    } catch (_) {}
+    if (!again) [450, 1600, 3000].forEach(ms => setTimeout(() => phFit(true), ms));
   }
   /* Khung thông báo/Tùy chọn: overlay cố định theo khung bố cục (~980px). Khi đang phóng to bằng 2 ngón,
      phần đang nhìn chỉ là một góc → khung nằm ngoài, chỉ thấy nền xanh mờ. Ép overlay khớp đúng phần đang nhìn. */
@@ -13523,7 +13539,6 @@ window.__AutoBIRunPick = (() => {
       try { if (parseFloat(getComputedStyle(m.box).opacity) < 0.5) { m.box.style.animation = "none"; m.box.style.opacity = "1"; m.box.style.transform = "none"; } } catch (_) {}
     }, 450);
   }
-  let t = 0;
   const later = () => { clearTimeout(t); t = setTimeout(() => { phFit(); if (openModal) fitModal(); }, 150); };
   window.addEventListener("resize", later);
   window.addEventListener("orientationchange", later);
