@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V17.89
+// @name         AutoBI Core V18.01
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      17.89
+// @version      18.01
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -4401,7 +4401,7 @@ window.__AutoBIRun67 = (function () {
             if (_0x1c92cb) {
                 _0x2e5685.style.display = 'none';
                 if (_0x577853) {
-                    _0x577853.style.display = 'block';
+                    _0x577853.style.display = 'none'; /* V18.01: chọn nhóm bằng nút trong báo cáo Theo NH mới */
                     window.tgdd_theo_nh_count = parseInt(_0x577853.value) || 1;
                 }
             }
@@ -4544,7 +4544,7 @@ window.__AutoBIRun67 = (function () {
                 _0x329bab = UI.HTML.getBCBottom(_0x3aa5c8, _0x37b477, _0x13b9c3, _0x37589a, _0x4df754, _0x19aafa);
             }
             else if (_0x450ffb === 'bcstaff') {
-                _0x329bab = window.tgdd_theo_nh_enabled ? UI.HTML.getEmployeeReport(_0x3aa5c8, _0x37b477, _0x13b9c3, _0x37589a, _0x4df754, _0x19aafa) : UI.HTML.getEmployeeReportV2(_0x3aa5c8, _0x37b477, _0x13b9c3, _0x37589a, _0x4df754, _0x19aafa); /* V17.76 */
+                _0x329bab = window.tgdd_theo_nh_enabled ? UI.HTML.getEmployeeNHV2(_0x3aa5c8, _0x37b477, _0x13b9c3, _0x37589a, _0x4df754, _0x19aafa) /* V18.01 */ : UI.HTML.getEmployeeReportV2(_0x3aa5c8, _0x37b477, _0x13b9c3, _0x37589a, _0x4df754, _0x19aafa); /* V17.76 */
             }
             else if (_0x450ffb === 'compare') {
                 /* V17.60: So sánh BI CK theo cây Ngành hàng BI mới, gọi thẳng BI 2 kỳ (module __AutoBICmpBI cuối file) — không dùng Sheet */
@@ -5037,7 +5037,7 @@ window.__AutoBIRun67 = (function () {
                 _0x5035f6.forEach(_0x2aa55d => { _0x3779b5 += _0x407611 * (parseFloat(_0x2aa55d.rate) / 100); });
                 const _0x47ce14 = Math.max(0, _0x407611 - _0x3779b5);
                 _0x605fb7 = _0x47ce14 / _0xb50ba8.length;
-            } return UI.HTML.applyTargetRounding(_0x605fb7, _0x4084be); }, getWeekV2: (hist, groups, cfg, view) => { /* V17.84: So sánh tuần giao diện mới; chưa có số hoặc lỗi → bảng cũ */ const old = () => UI.HTML.getWeeklyCompareReport(hist, groups, cfg, view); try { if (!window.__AutoBINv2 || !window.__AutoBINv2.renderWeek) throw new Error('thiếu module'); const c = GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {}; const h = window.__AutoBINv2.renderWeek({ UI, UTILS }, c, groups, cfg); return h || old(); } catch (e) { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('So sánh tuần mới lỗi, dùng bảng cũ: ' + String(e && e.message || e)); } catch (_) { } return '<div data-html2canvas-ignore="true" style="padding:8px;text-align:center;color:#b42318;font-weight:700;">So sánh tuần mới lỗi: ' + String(e && e.message || e).replace(/[<>&]/g, '') + ' — đang hiện bảng cũ</div>' + old(); } }, getChartV2: (kind, hist, cfg, view) => { /* V17.82: Chart Doanh thu / Chart Phục vụ giao diện mới; chưa có số hoặc lỗi → biểu đồ cũ */ const old = () => kind === 'svc' ? UI.HTML.getServiceChart(hist, cfg, view) : UI.HTML.getRevenueChart(hist, cfg, view); try { if (!window.__AutoBINv2 || !window.__AutoBINv2.renderRev) throw new Error('thiếu module'); const c = GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {}; const h = kind === 'svc' ? window.__AutoBINv2.renderSvc({ UI, UTILS }, c, cfg, view) : window.__AutoBINv2.renderRev({ UI, UTILS }, c, cfg, view); return h || old(); } catch (e) { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Chart mới lỗi, dùng biểu đồ cũ: ' + String(e && e.message || e)); } catch (_) { } return '<div data-html2canvas-ignore="true" style="padding:8px;text-align:center;color:#b42318;font-weight:700;">Biểu đồ mới lỗi: ' + String(e && e.message || e).replace(/[<>&]/g, '') + ' — đang hiện biểu đồ cũ</div>' + old(); } }, getOneShopV2: (c, groups, cfg, view, sortFlag, onlyRT, useBi, timeArg) => { /* V17.77: Realtime V1 giao diện mới; lỗi → bảng cũ */ try { if (!window.__AutoBINv2 || !window.__AutoBINv2.renderRT1) throw new Error('thiếu module'); return window.__AutoBINv2.renderRT1({ UI, UTILS }, c, groups, cfg, view, sortFlag, onlyRT, useBi, timeArg); } catch (e) { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Realtime V1 mới lỗi, dùng bảng cũ: ' + String(e && e.message || e)); } catch (_) { } return '<div data-html2canvas-ignore="true" style="padding:8px;text-align:center;color:#b42318;font-weight:700;">Realtime V1 mới lỗi: ' + String(e && e.message || e).replace(/[<>&]/g, '') + ' — đang hiện bảng cũ</div>' + UI.HTML.getOneShop(c, groups, cfg, view, sortFlag, onlyRT, useBi, timeArg); } }, getHealthReportV2: (c, cfg, view, useBi, timeArg) => { /* V17.77: Sức khỏe ST giao diện mới; chưa đủ cây Ngành hàng BI hoặc lỗi → bảng cũ */ try { if (!window.__AutoBINv2 || !window.__AutoBINv2.renderHealth) throw new Error('thiếu module'); const h = window.__AutoBINv2.renderHealth({ UI, UTILS }, c, cfg, view, useBi, timeArg); if (h) return h; return UI.HTML.getHealthReport(c, cfg, view, useBi, timeArg); } catch (e) { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Sức khỏe ST mới lỗi, dùng bảng cũ: ' + String(e && e.message || e)); } catch (_) { } return '<div data-html2canvas-ignore="true" style="padding:8px;text-align:center;color:#b42318;font-weight:700;">Sức khỏe ST mới lỗi: ' + String(e && e.message || e).replace(/[<>&]/g, '') + ' — đang hiện bảng cũ</div>' + UI.HTML.getHealthReport(c, cfg, view, useBi, timeArg); } }, getEmployeeReportV2: (c, groups, cfg, view, useBi, timeArg) => { /* V17.76: Chi tiết NV giao diện mới (module __AutoBINv2 cuối file); lỗi → bảng cũ */ try { if (!window.__AutoBINv2) throw new Error('thiếu module'); return window.__AutoBINv2.renderStaff({ UI, UTILS, gcache: GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {} }, c, groups, cfg, view, useBi, timeArg); } catch (e) { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Chi tiết NV mới lỗi, dùng bảng cũ: ' + String(e && e.message || e)); } catch (_) { } return '<div data-html2canvas-ignore="true" style="padding:8px;text-align:center;color:#b42318;font-weight:700;">Chi tiết NV mới lỗi: ' + String(e && e.message || e).replace(/[<>&]/g, '') + ' — đang hiện bảng cũ</div>' + UI.HTML.getEmployeeReport(c, groups, cfg, view, useBi, timeArg); } }, getNLNVV2: (sub, c, groups, cfg, useBi, timeArg, oldFn) => { /* V17.76: Năng lực NV giao diện mới; lỗi → bảng cũ */ try { if (!window.__AutoBINv2) throw new Error('thiếu module'); return (window.__AutoBINlnvSrc && sub !== 'overview' ? window.__AutoBINlnvSrc.note(cfg) : '') + window.__AutoBINv2.renderNL({ UI, UTILS, gcache: GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {} }, c, groups, cfg, sub, useBi, timeArg); } catch (e) { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Năng lực NV mới lỗi, dùng bảng cũ: ' + String(e && e.message || e)); } catch (_) { } return '<div data-html2canvas-ignore="true" style="padding:8px;text-align:center;color:#b42318;font-weight:700;">Năng lực NV mới lỗi: ' + String(e && e.message || e).replace(/[<>&]/g, '') + ' — đang hiện bảng cũ</div>' + oldFn(); } }, getLuyKeNew: (c, groups, cfg, view, useBi, timeArg) => { try { return window.__AutoBIRt2 ? window.__AutoBIRt2.renderLK({ UI, UTILS }, c, groups, cfg, view, useBi, timeArg) : ''; } catch (e) { return '<div style="padding:40px;text-align:center;color:#b42318;font-weight:700;">LK NEW lỗi: ' + String(e && e.message || e) + '</div>'; } }, getNhatKyBH: (c, groups, cfg, view, useBi, timeArg) => { try { if (!window.tgdd_history_cache && cfg && cfg.historySheetId && !window.__nkbhHistLoading) { window.__nkbhHistLoading = true; DATA.fetchHistoryFromSheet(cfg, hs => { window.tgdd_history_cache = hs || {}; try { window.__AutoBINkbh && window.__AutoBINkbh.histSave(hs || {}); } catch (_) { } const t = document.querySelector('.rpt-nav-item.active[data-tab="nkbh"]'); if (t) { if (window.__AutoBINkbh && window.__AutoBINkbh.redraw && document.querySelector('.nk-root')) window.__AutoBINkbh.redraw(); else t.click(); } }); } return window.__AutoBINkbh ? window.__AutoBINkbh.render({ UI, UTILS }, c, groups, cfg, view, useBi, timeArg) : ''; } catch (e) { return '<div style="padding:40px;text-align:center;color:#b42318;font-weight:700;">NK Bán hàng lỗi: ' + String(e && e.message || e) + '</div>'; } }, getRealtimeV2: (c, groups, cfg, view, useBi, timeArg) => { try { return window.__AutoBIRt2 ? window.__AutoBIRt2.render({ UI, UTILS }, c, groups, cfg, view, useBi, timeArg) : ''; } catch (e) { return '<div style="padding:40px;text-align:center;color:#b42318;font-weight:700;">Realtime V2 lỗi: ' + String(e && e.message || e) + '</div>'; } }, getRealtimeV4: (_0x11f2c6, _0x208609, _0xbf3329, _0x99373a, _0x1079b1, _0x1b65a9) => { const _0x2c9196 = UI.HTML.resolveTimeContext(_0xbf3329, _0x1b65a9); const _0x3241b4 = _0x2c9196.daysPassed; const _0x11109e = _0x2c9196.daysInMonth; const _0x457416 = window.tgdd_rt4_mode || 'realtime'; const _0x3c3819 = _0x457416 === 'realtime'; let _0x21a1ca = false; if (_0x99373a === 'total') {
+            } return UI.HTML.applyTargetRounding(_0x605fb7, _0x4084be); }, getWeekV2: (hist, groups, cfg, view) => { /* V17.84: So sánh tuần giao diện mới; chưa có số hoặc lỗi → bảng cũ */ const old = () => UI.HTML.getWeeklyCompareReport(hist, groups, cfg, view); try { if (!window.__AutoBINv2 || !window.__AutoBINv2.renderWeek) throw new Error('thiếu module'); const c = GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {}; const h = window.__AutoBINv2.renderWeek({ UI, UTILS }, c, groups, cfg); return h || old(); } catch (e) { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('So sánh tuần mới lỗi, dùng bảng cũ: ' + String(e && e.message || e)); } catch (_) { } return '<div data-html2canvas-ignore="true" style="padding:8px;text-align:center;color:#b42318;font-weight:700;">So sánh tuần mới lỗi: ' + String(e && e.message || e).replace(/[<>&]/g, '') + ' — đang hiện bảng cũ</div>' + old(); } }, getChartV2: (kind, hist, cfg, view) => { /* V17.82: Chart Doanh thu / Chart Phục vụ giao diện mới; chưa có số hoặc lỗi → biểu đồ cũ */ const old = () => kind === 'svc' ? UI.HTML.getServiceChart(hist, cfg, view) : UI.HTML.getRevenueChart(hist, cfg, view); try { if (!window.__AutoBINv2 || !window.__AutoBINv2.renderRev) throw new Error('thiếu module'); const c = GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {}; const h = kind === 'svc' ? window.__AutoBINv2.renderSvc({ UI, UTILS }, c, cfg, view) : window.__AutoBINv2.renderRev({ UI, UTILS }, c, cfg, view); return h || old(); } catch (e) { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Chart mới lỗi, dùng biểu đồ cũ: ' + String(e && e.message || e)); } catch (_) { } return '<div data-html2canvas-ignore="true" style="padding:8px;text-align:center;color:#b42318;font-weight:700;">Biểu đồ mới lỗi: ' + String(e && e.message || e).replace(/[<>&]/g, '') + ' — đang hiện biểu đồ cũ</div>' + old(); } }, getOneShopV2: (c, groups, cfg, view, sortFlag, onlyRT, useBi, timeArg) => { /* V17.77: Realtime V1 giao diện mới; lỗi → bảng cũ */ try { if (!window.__AutoBINv2 || !window.__AutoBINv2.renderRT1) throw new Error('thiếu module'); return window.__AutoBINv2.renderRT1({ UI, UTILS }, c, groups, cfg, view, sortFlag, onlyRT, useBi, timeArg); } catch (e) { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Realtime V1 mới lỗi, dùng bảng cũ: ' + String(e && e.message || e)); } catch (_) { } return '<div data-html2canvas-ignore="true" style="padding:8px;text-align:center;color:#b42318;font-weight:700;">Realtime V1 mới lỗi: ' + String(e && e.message || e).replace(/[<>&]/g, '') + ' — đang hiện bảng cũ</div>' + UI.HTML.getOneShop(c, groups, cfg, view, sortFlag, onlyRT, useBi, timeArg); } }, getHealthReportV2: (c, cfg, view, useBi, timeArg) => { /* V17.77: Sức khỏe ST giao diện mới; chưa đủ cây Ngành hàng BI hoặc lỗi → bảng cũ */ try { if (!window.__AutoBINv2 || !window.__AutoBINv2.renderHealth) throw new Error('thiếu module'); const h = window.__AutoBINv2.renderHealth({ UI, UTILS }, c, cfg, view, useBi, timeArg); if (h) return h; return UI.HTML.getHealthReport(c, cfg, view, useBi, timeArg); } catch (e) { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Sức khỏe ST mới lỗi, dùng bảng cũ: ' + String(e && e.message || e)); } catch (_) { } return '<div data-html2canvas-ignore="true" style="padding:8px;text-align:center;color:#b42318;font-weight:700;">Sức khỏe ST mới lỗi: ' + String(e && e.message || e).replace(/[<>&]/g, '') + ' — đang hiện bảng cũ</div>' + UI.HTML.getHealthReport(c, cfg, view, useBi, timeArg); } }, getEmployeeNHV2: (c, groups, cfg, view, useBi, timeArg) => { /* V18.01: Chi tiết NV chế độ Theo NH giao diện mới (thẻ từng nhóm); lỗi → bảng cũ */ try { if (!window.__AutoBINv2 || !window.__AutoBINv2.renderStaffNH) throw new Error('thiếu module'); return window.__AutoBINv2.renderStaffNH({ UI, UTILS, gcache: GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {} }, c, groups, cfg, view, useBi, timeArg); } catch (e) { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Theo NH mới lỗi, dùng bảng cũ: ' + String(e && e.message || e)); } catch (_) { } return '<div data-html2canvas-ignore="true" style="padding:8px;text-align:center;color:#b42318;font-weight:700;">Theo NH mới lỗi: ' + String(e && e.message || e).replace(/[<>&]/g, '') + ' — đang hiện bảng cũ</div>' + UI.HTML.getEmployeeReport(c, groups, cfg, view, useBi, timeArg); } }, getEmployeeReportV2: (c, groups, cfg, view, useBi, timeArg) => { /* V17.76: Chi tiết NV giao diện mới (module __AutoBINv2 cuối file); lỗi → bảng cũ */ try { if (!window.__AutoBINv2) throw new Error('thiếu module'); return window.__AutoBINv2.renderStaff({ UI, UTILS, gcache: GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {} }, c, groups, cfg, view, useBi, timeArg); } catch (e) { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Chi tiết NV mới lỗi, dùng bảng cũ: ' + String(e && e.message || e)); } catch (_) { } return '<div data-html2canvas-ignore="true" style="padding:8px;text-align:center;color:#b42318;font-weight:700;">Chi tiết NV mới lỗi: ' + String(e && e.message || e).replace(/[<>&]/g, '') + ' — đang hiện bảng cũ</div>' + UI.HTML.getEmployeeReport(c, groups, cfg, view, useBi, timeArg); } }, getNLNVV2: (sub, c, groups, cfg, useBi, timeArg, oldFn) => { /* V17.76: Năng lực NV giao diện mới; lỗi → bảng cũ */ try { if (!window.__AutoBINv2) throw new Error('thiếu module'); return (window.__AutoBINlnvSrc && sub !== 'overview' ? window.__AutoBINlnvSrc.note(cfg) : '') + window.__AutoBINv2.renderNL({ UI, UTILS, gcache: GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || {} }, c, groups, cfg, sub, useBi, timeArg); } catch (e) { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Năng lực NV mới lỗi, dùng bảng cũ: ' + String(e && e.message || e)); } catch (_) { } return '<div data-html2canvas-ignore="true" style="padding:8px;text-align:center;color:#b42318;font-weight:700;">Năng lực NV mới lỗi: ' + String(e && e.message || e).replace(/[<>&]/g, '') + ' — đang hiện bảng cũ</div>' + oldFn(); } }, getLuyKeNew: (c, groups, cfg, view, useBi, timeArg) => { try { return window.__AutoBIRt2 ? window.__AutoBIRt2.renderLK({ UI, UTILS }, c, groups, cfg, view, useBi, timeArg) : ''; } catch (e) { return '<div style="padding:40px;text-align:center;color:#b42318;font-weight:700;">LK NEW lỗi: ' + String(e && e.message || e) + '</div>'; } }, getNhatKyBH: (c, groups, cfg, view, useBi, timeArg) => { try { if (!window.tgdd_history_cache && cfg && cfg.historySheetId && !window.__nkbhHistLoading) { window.__nkbhHistLoading = true; DATA.fetchHistoryFromSheet(cfg, hs => { window.tgdd_history_cache = hs || {}; try { window.__AutoBINkbh && window.__AutoBINkbh.histSave(hs || {}); } catch (_) { } const t = document.querySelector('.rpt-nav-item.active[data-tab="nkbh"]'); if (t) { if (window.__AutoBINkbh && window.__AutoBINkbh.redraw && document.querySelector('.nk-root')) window.__AutoBINkbh.redraw(); else t.click(); } }); } return window.__AutoBINkbh ? window.__AutoBINkbh.render({ UI, UTILS }, c, groups, cfg, view, useBi, timeArg) : ''; } catch (e) { return '<div style="padding:40px;text-align:center;color:#b42318;font-weight:700;">NK Bán hàng lỗi: ' + String(e && e.message || e) + '</div>'; } }, getRealtimeV2: (c, groups, cfg, view, useBi, timeArg) => { try { return window.__AutoBIRt2 ? window.__AutoBIRt2.render({ UI, UTILS }, c, groups, cfg, view, useBi, timeArg) : ''; } catch (e) { return '<div style="padding:40px;text-align:center;color:#b42318;font-weight:700;">Realtime V2 lỗi: ' + String(e && e.message || e) + '</div>'; } }, getRealtimeV4: (_0x11f2c6, _0x208609, _0xbf3329, _0x99373a, _0x1079b1, _0x1b65a9) => { const _0x2c9196 = UI.HTML.resolveTimeContext(_0xbf3329, _0x1b65a9); const _0x3241b4 = _0x2c9196.daysPassed; const _0x11109e = _0x2c9196.daysInMonth; const _0x457416 = window.tgdd_rt4_mode || 'realtime'; const _0x3c3819 = _0x457416 === 'realtime'; let _0x21a1ca = false; if (_0x99373a === 'total') {
                 const _0xc428a = (_0xbf3329.shop1 || '').trim().toUpperCase();
                 const _0x5b5597 = (_0xbf3329.shop2 || '').trim().toUpperCase();
                 const _0x1bab49 = (_0xbf3329.shop3 || '').trim().toUpperCase();
@@ -11979,6 +11979,32 @@ window.__AutoBIRunPick = (() => {
   .nv2-ts{background:#fff;border-radius:12px;padding:12px 16px;display:flex;flex-wrap:wrap;gap:6px 22px;align-items:center;border-left:6px solid #1d5fbf}
   .nv2-ts.vt{border-left-color:#6b3fb8}
   .nv2-m .nv2-ts .nm{width:100%}
+  .nv2-pick{background:#fff;border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+  .nv2-m .nv2-pick{margin:0 10px 10px;padding:10px}
+  .nv2-pick .rw{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .nv2-pick .lb{font-size:12px;font-weight:800;color:#4a5872;min-width:110px;text-transform:uppercase;letter-spacing:.03em}.nv2-pick .lb.c{color:#1d5fbf}.nv2-pick .lb.v{color:#6b3fb8}
+  .nv2-m .nv2-pick .lb{width:100%}
+  .nv2-pick .cnt{font-size:12.5px;color:#4a5872}
+  .nv2-chipb{font:700 12.5px -apple-system,"Segoe UI",system-ui,sans-serif;border:1px solid #c9d2e0;background:#fff;color:#22324a;border-radius:20px;padding:0 12px;height:32px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .nv2-chipb.on{background:#0b3a75;border-color:#0b3a75;color:#fff}
+  .nv2-chipb i{width:8px;height:8px;border-radius:50%}.nv2-chipb i.d4{background:#2e9b5a}.nv2-chipb i.d3{background:#e2a40c}.nv2-chipb i.d2{background:#e8968b}.nv2-chipb i.d1{background:#c8392b}
+  .nv2-gg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  .nv2-m .nv2-gg{grid-template-columns:minmax(0,1fr);gap:10px;padding:0 10px}
+  .nv2-nhc{background:#fff;border-radius:14px;overflow:hidden}
+  .nv2-nhc .gh{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid #e3e8f0}
+  .nv2-nhc .gh .n{font-size:16px;font-weight:900;flex:1;min-width:0}
+  .nv2-nhc .gh .n small{display:block;font-size:11.5px;font-weight:700;color:#1d5fbf;letter-spacing:.04em;text-transform:uppercase}.nv2-nhc .gh .n small.v{color:#6b3fb8}
+  .nv2-nhc .gh .big{text-align:right}.nv2-nhc .gh .big span{display:block;font-size:11px;color:#4a5872;font-weight:600}.nv2-nhc .gh .big b{font-size:18px;min-width:76px;padding:3px 8px}
+  .nv2-nh{border-collapse:collapse;width:100%;table-layout:fixed}
+  .nv2-nh th{font-size:11px;color:#4a5872;font-weight:700;background:#f6f8fb;text-align:right;padding:6px 8px}
+  .nv2-nh td{padding:6px 8px;border-bottom:1px solid #eef1f5;font-size:13.5px;text-align:right;white-space:nowrap}
+  .nv2-nh .l{text-align:left}
+  .nv2-nh td.nv{font-weight:700;overflow:hidden;text-overflow:ellipsis}.nv2-nh td.nv small{display:block;font-size:10.5px;color:#8a93a3;font-weight:600}
+  .nv2-nh tr.shop td{background:#f3f6fb;font-weight:900;font-size:13px;border-bottom:1px solid #dfe5ef}
+  .nv2-nh tr.shop.s0 td.nv{color:#0b4fb3}.nv2-nh tr.shop.s1 td.nv{color:#0f6b58}
+  .nv2-nh tr.tot td{background:#fff4cc;font-weight:900;border-bottom:0}.nv2-nh tr.tot td.nv{color:#8a2a00}
+  .nv2-nh .st{display:inline-block;font-size:10.5px;font-weight:800;border-radius:4px;padding:1px 6px;color:#fff;margin-right:5px}.nv2-nh .st.s0{background:#0b4fb3}.nv2-nh .st.s1{background:#0f6b58}
+  .nv2-nh .nv2-cb .nv2-mk{min-width:44px;height:7px}.nv2-nh .nv2-cb .nv2-mk i{height:7px}.nv2-nh .nv2-pp{min-width:50px;font-size:12.5px}
   .nv2-ts{display:grid;gap:4px 14px}.nv2-ts.sm .nm{grid-column:1/-1}.nv2-ts .m span{white-space:nowrap}.nv2-ts.sm .m span{white-space:normal;line-height:1.25}
   .nv2-ts .dots{grid-column:1/-1;display:flex;gap:4px;margin-top:6px}.nv2-ts .dots i{flex:1;height:9px;border-radius:3px}
   .nv2-ts .dots i.d4{background:#2e9b5a}.nv2-ts .dots i.d3{background:#e2a40c}.nv2-ts .dots i.d2{background:#e8968b}.nv2-ts .dots i.d1{background:#c8392b}
@@ -12179,6 +12205,78 @@ window.__AutoBIRunPick = (() => {
       html += order(b.list).map(tr).join("");
     });
     html += '</tbody></table></div><div class="nv2-leg"><span class="h4" style="padding:1px 8px;border-radius:4px">≥100%</span><span class="h3" style="padding:1px 8px;border-radius:4px">80–99%</span><span class="h2" style="padding:1px 8px;border-radius:4px">1–79%</span><span class="h1" style="padding:1px 8px;border-radius:4px">0%</span><span class="hz" style="padding:1px 8px;border-radius:4px">— chưa bán hôm nay</span></div></div>';
+    return html + "</div>";
+  }
+
+  /* ---------- 4b. Chi tiết NV — chế độ "Theo NH" (V18.01): mỗi nhóm hàng 1 thẻ, chọn nhóm bằng nút ---------- */
+  const nhstate = { sel: null };
+  try {
+    const v = JSON.parse(GM_getValue("autobi_nvnh_sel_v1", "null"));
+    if (Array.isArray(v)) nhstate.sel = v;
+  } catch (_) {}
+  const nhSave = () => {
+    try {
+      GM_setValue("autobi_nvnh_sel_v1", JSON.stringify(nhstate.sel || []));
+    } catch (_) {}
+  };
+  function renderStaffNH(h, c, groups, cfg, view, useBi, timeArg) {
+    last.nh = [h, c, groups, cfg, view, useBi, timeArg];
+    const { UTILS } = h;
+    const M = compute(h, c, groups, cfg, "total", useBi, timeArg);
+    if (!(cfg.staffList || []).length) return '<div style="text-align:center;padding:20px;font-weight:bold;color:red;">Chưa khai báo danh sách nhân viên!</div>';
+    if (!M.shops.length || !M.G.length) return "";
+    const mobile = UTILS.isMobile();
+    const G = M.G;
+    const tierOf = (g) => {
+      const o = (groups || []).find((x) => x.short === g);
+      let t = (o && o.tier) || "";
+      if (!t) try { t = window.__AutoBIGroupList ? window.__AutoBIGroupList.tierOf(g) || "" : ""; } catch (_) {}
+      return t;
+    };
+    G.forEach((x) => (x.tier = tierOf(x.g)));
+    const hasTier = G.some((x) => x.tier);
+    const names = G.map((x) => x.g);
+    let sel = (nhstate.sel || []).filter((g) => names.includes(g));
+    if (!nhstate.sel || (!sel.length && (nhstate.sel || []).length)) sel = names.slice(0, Math.max(1, Math.min(names.length, parseInt(window.tgdd_theo_nh_count) || 6)));
+    nhstate.sel = sel;
+    const timeMark = (M.dp / M.dim) * 100;
+    const dl = (p) => (p >= 100 ? "d4" : p >= 80 ? "d3" : p > 0 ? "d2" : "d1");
+    const order = (cfg.staffList || []).map((s) => s.name);
+    const idxOf = (n) => {
+      const i = order.indexOf(n);
+      return i < 0 ? 999 : i;
+    };
+    let html = style2() + '<div class="nv2' + (mobile ? " nv2-m" : "") + '" id="nv2-staffnh">';
+    html += hdr("Chi tiết nhân viên · theo nhóm hàng", M.multi ? "Tổng cụm" : esc(M.shops[0].short), M.multi ? M.shops.map((s) => esc(s.short)).join(" · ") : "", periodTxt(M), "Tiến độ thời gian " + Math.round(timeMark) + "% (" + M.dp + "/" + M.dim + ")");
+    /* thanh chọn nhóm */
+    const chip = (x) => '<button class="nv2-chipb' + (sel.includes(x.g) ? " on" : "") + '" data-nv2-nhg="' + esc(x.g) + '"><i class="' + dl(M.cum[x.g].pct) + '"></i>' + esc(x.g) + "</button>";
+    const rowsSel = hasTier
+      ? [["Nhóm chính", "c", G.filter((x) => x.tier === "chinh")], ["Nhóm vượt trội", "v", G.filter((x) => x.tier !== "chinh")]].filter((r) => r[2].length)
+      : [["Nhóm hàng", "", G]];
+    html += '<div class="nv2-pick" data-html2canvas-ignore="true">' + rowsSel.map((r) => '<div class="rw"><span class="lb ' + r[1] + '">' + r[0] + "</span>" + r[2].map(chip).join("") + "</div>").join("") +
+      '<div class="rw"><span class="lb">Chọn nhanh</span><button class="nv2-chipb" data-nv2-nhq="all">Tất cả</button>' + (hasTier ? '<button class="nv2-chipb" data-nv2-nhq="c">Nhóm chính</button><button class="nv2-chipb" data-nv2-nhq="v">Vượt trội</button>' : "") + '<button class="nv2-chipb" data-nv2-nhq="weak">Dự kiến dưới 100%</button><span style="flex:1"></span><span class="cnt">Đang xem <b>' + sel.length + "</b>/" + G.length + " nhóm</span></div></div>";
+    /* thẻ từng nhóm */
+    const line = (x, cls, label, sub, t, a, pct) => {
+      const ht = t > 0 ? (a / t) * 100 : 0;
+      return '<tr class="' + cls + '"><td class="nv l">' + label + (sub ? "<small>" + esc(sub) + "</small>" : "") + "</td><td><b>" + fmtG(x, a) + '</b> <span class="nv2-of">/ ' + fmtG(x, t) + '</span></td><td><div class="nv2-cb"><div class="nv2-mk"><i class="' + (ht >= timeMark ? "b-ok" : "b-no") + '" style="width:' + Math.min(100, Math.max(0, ht)).toFixed(0) + '%;opacity:.8"></i><u style="left:' + timeMark.toFixed(1) + '%"></u></div><span class="nv2-pp ' + lv(pct) + '">' + Math.round(pct) + "%</span></div></td></tr>";
+    };
+    const cards = G.filter((x) => sel.includes(x.g)).map((x, gi) => {
+      const cu = M.cum[x.g];
+      let t = '<div class="nv2-nhc" data-capture-id="nh' + gi + '" data-table-name="' + esc(x.g) + '"><div class="gh"><div class="n">' + (x.tier ? '<small class="' + (x.tier === "chinh" ? "" : "v") + '">' + (x.tier === "chinh" ? "Nhóm chính" : "Nhóm vượt trội") + "</small>" : "") + esc(x.g) + '</div><div class="big"><span>Dự kiến ' + (M.multi ? "cụm" : "shop") + '</span><b class="nv2-pp ' + lv(cu.pct) + '">' + cu.pct + "%</b></div></div>";
+      t += '<table class="nv2-nh num"><colgroup><col style="width:41%"><col style="width:26%"><col style="width:33%"></colgroup><thead><tr><th class="l">Nhân viên</th><th>Thực hiện / Target</th><th>Dự kiến</th></tr></thead><tbody>';
+      M.shops.forEach((sh, si) => {
+        sh.staff.slice().sort((a, b) => idxOf(a.name) - idxOf(b.name)).forEach((o) => {
+          const v = o.g[x.g] || { t: 0, a: 0, pct: 0 };
+          t += line(x, "", esc(o.nm), o.code, v.t, v.a, v.pct);
+        });
+        const sg = sh.grp[x.g] || { t: 0, a: 0, pct: 0 };
+        t += line(x, "shop s" + (si % 2), '<span class="st s' + (si % 2) + '">' + esc(String(sh.short).replace(/^(ĐMM|ĐMS|ĐMX|TGDĐ|TGDD)\s+/i, "").split(/\s+/).filter(Boolean).map((w) => w[0]).join("").slice(0, 3).toUpperCase()) + "</span>" + esc(String(sh.short).replace(/^(ĐMM|ĐMS|ĐMX|TGDĐ|TGDD)\s+/i, "")), "", sg.t, sg.a, sg.pct);
+      });
+      if (M.multi) t += line(x, "tot", "TỔNG CỤM", "", cu.t, cu.a, cu.pct);
+      return t + "</tbody></table></div>";
+    });
+    html += cards.length ? '<div class="nv2-gg">' + cards.join("") + "</div>" : '<div class="nv2-box" style="padding:24px;text-align:center;color:#4a5872">Chưa chọn nhóm nào — bấm nút nhóm hàng ở trên.</div>';
+    html += '<div class="nv2-leg" style="background:#fff;border-radius:12px;margin-top:12px"><span>Dự kiến:</span><span class="h4" style="padding:1px 8px;border-radius:4px">≥100%</span><span class="h3" style="padding:1px 8px;border-radius:4px">80–99%</span><span class="h2" style="padding:1px 8px;border-radius:4px">1–79%</span><span class="h1" style="padding:1px 8px;border-radius:4px">0%</span><span>Thanh = thực hiện ÷ target, vạch đen = tiến độ thời gian ' + Math.round(timeMark) + "% · Tiền: triệu (dưới 1 tr ghi k)</span></div>";
     return html + "</div>";
   }
 
@@ -12892,7 +12990,7 @@ window.__AutoBIRunPick = (() => {
   document.addEventListener(
     "click",
     (ev) => {
-      const el = ev.target && ev.target.closest && ev.target.closest("[data-nv2-mode],[data-nv2-view],[data-nv2-staff],[data-nv2-pg],[data-nv2-tab],[data-nv2-hsort],[data-nv2-hkids],[data-nv2-rev],[data-nv2-wk],[data-nv2-wsort],[data-nv2-rsort]");
+      const el = ev.target && ev.target.closest && ev.target.closest("[data-nv2-mode],[data-nv2-view],[data-nv2-staff],[data-nv2-pg],[data-nv2-tab],[data-nv2-hsort],[data-nv2-hkids],[data-nv2-rev],[data-nv2-wk],[data-nv2-wsort],[data-nv2-rsort],[data-nv2-nhg],[data-nv2-nhq]");
       if (!el || !el.closest(".nv2")) return;
       if (el.hasAttribute("data-nv2-mode")) {
         const prev = state.mode;
@@ -12935,6 +13033,27 @@ window.__AutoBIRunPick = (() => {
       } else if (el.hasAttribute("data-nv2-wsort")) {
         wstate.sort = el.getAttribute("data-nv2-wsort");
         if (!redrawWeek()) navClick("compare_week");
+      } else if (el.hasAttribute("data-nv2-nhg") || el.hasAttribute("data-nv2-nhq")) {
+        const all = (last.nh && compute(last.nh[0], last.nh[1], last.nh[2], last.nh[3], "total", last.nh[5], last.nh[6]).G) || [];
+        const cur = new Set(nhstate.sel || []);
+        if (el.hasAttribute("data-nv2-nhg")) {
+          const g = el.getAttribute("data-nv2-nhg");
+          cur.has(g) ? cur.delete(g) : cur.add(g);
+          nhstate.sel = all.map((x) => x.g).filter((g2) => cur.has(g2));
+        } else {
+          const q = el.getAttribute("data-nv2-nhq");
+          const M = last.nh ? compute(last.nh[0], last.nh[1], last.nh[2], last.nh[3], "total", last.nh[5], last.nh[6]) : null;
+          const tierOf = (g) => {
+            const o = ((last.nh && last.nh[2]) || []).find((x) => x.short === g);
+            let t = (o && o.tier) || "";
+            if (!t) try { t = window.__AutoBIGroupList ? window.__AutoBIGroupList.tierOf(g) || "" : ""; } catch (_) {}
+            return t;
+          };
+          nhstate.sel = all.filter((x) => q === "all" || (q === "c" && tierOf(x.g) === "chinh") || (q === "v" && tierOf(x.g) !== "chinh") || (q === "weak" && M && M.cum[x.g].pct < 100)).map((x) => x.g);
+        }
+        nhSave();
+        const ok = last.nh && keepScroll(() => swapRoot(renderStaffNH.apply(null, last.nh), "nv2-staffnh"));
+        if (!ok) navClick("bcstaff");
       } else if (el.hasAttribute("data-nv2-rsort")) {
         rstate.sort = el.getAttribute("data-nv2-rsort");
         const ok = last.rt1 && keepScroll(() => swapRoot(renderRT1.apply(null, last.rt1), "nv2-rt1"));
@@ -12977,7 +13096,7 @@ window.__AutoBIRunPick = (() => {
     if (["pct", "tdt", "pts"].includes(m)) state.mode = m;
   } catch (_) {}
 
-  window.__AutoBINv2 = { compute, renderStaff, renderNL, renderRT1, renderHealth, renderRev, renderSvc, renderWeek, rstate, wstate, cstate, hstate, state, _t: { vn, trK, series, dayKeys, rp } };
+  window.__AutoBINv2 = { compute, renderStaff, renderStaffNH, nhstate, renderNL, renderRT1, renderHealth, renderRev, renderSvc, renderWeek, rstate, wstate, cstate, hstate, state, _t: { vn, trK, series, dayKeys, rp } };
   try {
     if (typeof unsafeWindow !== "undefined") unsafeWindow.__AutoBINv2 = window.__AutoBINv2;
   } catch (_) {}
