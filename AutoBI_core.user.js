@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.04
+// @name         AutoBI Core V18.05
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.04
+// @version      18.05
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -10893,16 +10893,27 @@ window.__AutoBIRunPick = (() => {
 
   /* Dựng bản sao gọn để chụp (kèm tiêu đề shop + giờ số khi chụp 1 thẻ) */
   /* Ghép Doanh thu (Tổng quan) + Nhóm hàng: xếp dọc, tiêu đề shop 1 lần, Tổng quan chuyển kiểu dọc (rt2-m) cho vừa bề ngang bảng */
+  /* V18.04: iPhone đang phóng bản gọn (--ph-z) → tạm về cỡ gốc khi đo/chụp. Safari và Chrome báo bề ngang khác nhau khi có zoom nên không chia ngược được. */
+  function noZoom() {
+    const ca = document.getElementById('capture-area');
+    const oz = ca ? ca.style.getPropertyValue('--ph-z') : '';
+    if (!ca || !oz || oz === '1') return () => { };
+    ca.style.setProperty('--ph-z', '1');
+    return () => { try { ca.style.setProperty('--ph-z', oz); } catch (_) { } };
+  }
   function merge(list, name) {
     const root = (list.find(b => b.root) || {}).root || null;
+    const rz = noZoom();
     const narrow = list.filter(b => !b.wide).map(b => Math.max(...b.els.map(e => e.getBoundingClientRect().width)));
+    rz();
     const w = narrow.length ? Math.max(560, ...narrow) : 620;
     return { name: name || list.map(b => b.name.split(' (')[0]).join(' + '), els: [].concat(...list.map(b => b.els)), root, head: list.some(b => b.head), w, stack: true };
   }
   function stage(b) {
-    if (b.whole) return { el: b.els[0], done: () => { } };
+    if (b.whole) { const rz = noZoom(); return { el: b.els[0], done: rz }; } /* V18.04: cả trang → chụp ở cỡ gốc rồi trả lại */
+    const rz = noZoom();
     let w = b.w || Math.max(...b.els.map(e => e.getBoundingClientRect().width));
-    try { const zm = b.els[0] && b.els[0].closest && b.els[0].closest('.nv2-m'); const z = zm ? parseFloat(getComputedStyle(zm).getPropertyValue('--ph-z')) || 1 : 1; if (!b.w && z > 1) w = w / z; } catch (_) { } /* V18.03: iPhone đang phóng to → đo lại bề ngang gốc */
+    rz();
     const box = document.createElement('div');
     box.style.cssText = 'position:fixed;left:0;top:0;z-index:-1;pointer-events:none;background:#f4f6f8;padding:14px;box-sizing:content-box;width:' + Math.ceil(w) + 'px;';
     const wrap = document.createElement('div');
