@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.07
+// @name         AutoBI Core V18.11
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.07
+// @version      18.11
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -1926,7 +1926,7 @@ window.__AutoBIRun67 = (function () {
                     return;
                 }
                 DATA.fetchConfigForModal(_0x4eef05 => {
-                    const _0x49fad7 = _0x3fa5a7.defaultTargetBI !== false;
+                    const _0x49fad7 = false; /* V18.10: ô Target BI đã ẩn từ V16.2.4 — luôn lưu target nhóm theo Khai báo, không ghi 0 */
                     const _0x33e1f7 = [];
                     _0x100f60.forEach(_0x33bd17 => {
                         const _0xdb2aa4 = _0x4eef05.find(_0x4bddcc => _0x4bddcc.short === _0x33bd17.group) || {};
@@ -4363,7 +4363,7 @@ window.__AutoBIRun67 = (function () {
                 const _0x1da304 = Array.from(_0x150c5a).filter(_0x43ad78 => !_0x43ad78.checked).map(_0x1c6322 => _0x1c6322.value);
                 window.tgdd_staff_hidden_tables = _0x1da304;
             } document.getElementById(CONSTANTS.DOM_IDS.MSG_MODAL).style.display = 'none'; document.body.classList.remove('tgdd-body-lock'); _0x5d2d05(); };
-        } }, 100); window.__AutoBILog5.mountHistoryButton(document.getElementById('tgdd-msg-extra')); }; _0x2e27ae.onclick = _0x43ef05; let _0x10626e = false; let _0x17901a = false; let _0x4df754 = _0x13b9c3.defaultTargetBI !== false; let _0x21008a = true; const _0x5d2d05 = () => { document.querySelectorAll('.rpt-nav-item').forEach(_0x319658 => { if (_0x319658.id !== 'btn-menu')
+        } }, 100); window.__AutoBILog5.mountHistoryButton(document.getElementById('tgdd-msg-extra')); }; _0x2e27ae.onclick = _0x43ef05; let _0x10626e = false; let _0x17901a = false; let _0x4df754 = false; /* V18.10: báo cáo luôn dùng target Khai báo (ô Target BI đã ẩn; trước đây cấu hình thiếu trường này bị hiểu là theo BI) */ let _0x21008a = true; const _0x5d2d05 = () => { document.querySelectorAll('.rpt-nav-item').forEach(_0x319658 => { if (_0x319658.id !== 'btn-menu')
             _0x319658.classList.toggle('active', _0x319658.dataset.tab === _0x450ffb); }); let _0x37589a = _0x2e5685.value; if (_0x450ffb === 'nlnv' && _0x2e5685.dataset.isNlnv !== 'true') {
             _0x37589a = 'overview';
         } const _0xfc8799 = _0x450ffb === 'nlnv' && (_0x37589a === 'overview' || _0x37589a === 'daily'); if (['dashboard', 'health', 'oneshop', 'multirt', 'multilk', 'compare_week', 'rt4', 'rt2', 'lknew', 'bcstaff'].includes(_0x450ffb) || _0xfc8799) {
@@ -4989,7 +4989,7 @@ window.__AutoBIRun67 = (function () {
             }
             else {
                 return Math.ceil(_0x240557);
-            } }, getFinalGroupTarget: (_0x2a8c0e, _0x9816c5, _0x5dc9b9, _0x57ea44, _0x32e2eb, _0x15aa63 = false, _0x4ce59f = null) => { const _0x13eb15 = _0x4ce59f !== null ? _0x4ce59f : _0x57ea44.defaultTargetBI !== false; const _0x4eb956 = (_0x32e2eb || []).find(_0x5818f6 => _0x5818f6.short === _0x9816c5); const _0x1d8455 = _0x4eb956 && _0x4eb956.type && (_0x4eb956.type.toLowerCase().includes('doanhthu') || _0x4eb956.type.toLowerCase().includes('ti\u1EC1n')); const _0x542e66 = _0x1d8455 ? 1000 : 1; let _0x24c820 = parseFloat(_0x2a8c0e) || 0; let _0x4028a3 = 0; if (_0x13eb15) {
+            } }, getFinalGroupTarget: (_0x2a8c0e, _0x9816c5, _0x5dc9b9, _0x57ea44, _0x32e2eb, _0x15aa63 = false, _0x4ce59f = null) => { const _0x13eb15 = _0x4ce59f !== null ? _0x4ce59f : false; /* V18.10 */ const _0x4eb956 = (_0x32e2eb || []).find(_0x5818f6 => _0x5818f6.short === _0x9816c5); const _0x1d8455 = _0x4eb956 && _0x4eb956.type && (_0x4eb956.type.toLowerCase().includes('doanhthu') || _0x4eb956.type.toLowerCase().includes('ti\u1EC1n')); const _0x542e66 = _0x1d8455 ? 1000 : 1; let _0x24c820 = parseFloat(_0x2a8c0e) || 0; let _0x4028a3 = 0; if (_0x13eb15) {
                 _0x4028a3 = _0x24c820;
             }
             else {
@@ -8086,7 +8086,7 @@ window.__AutoBIBiTarget99 = (function () {
     const int = parts[0];
     const dec = parts.slice(1).join('').slice(0, 3);
     const shown = (int ? new Intl.NumberFormat('en-US').format(parseInt(int, 10)) : '0') + '.' + dec;
-    queueMicrotask(() => { el.value = shown; });
+    setTimeout(() => { el.value = shown; }, 0); /* V18.11: queueMicrotask chạy TRƯỚC bộ định dạng của lõi (lõi xóa dấu chấm sau đó → gõ 1.1 thành 11); setTimeout chạy sau cùng */
   }, true);
   /* V16.2.6: ẩn "Dữ liệu năm" trong Menu và dòng "Tháng báo cáo" ở bảng Chạy báo cáo (luôn chạy tháng hiện tại) */
   /* V16.2.6: đồng hồ khi chạy luôn đếm lên từ 00:01 cho mọi loại báo cáo (trước đây Lũy kế/Realtime/ALL đếm ngược từ 05:00, Giờ công đếm lên từ 00:00) */
@@ -9091,7 +9091,7 @@ window.__AutoBIBiTarget99 = (function () {
   .rt2-empty{padding:18px;text-align:center;color:#475569;font-weight:600}
   .rt2-tbl tr.g-sec td{font-size:12px;font-weight:900;letter-spacing:.5px;padding:7px 8px;border-bottom:none;text-align:right}
   .rt2-tbl tr.g-sec td.g-nm{text-align:center}
-  .rt2-tbl tr.g-sec td.g-nm{position:relative}.rt2-tbl tr.g-sec td.g-nm>span{position:absolute;left:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center;white-space:nowrap}.rt2-tbl tr.g-sec td.g-nm.lk>span{width:calc(100% + 168px)}.rt2-tbl tr.g-sec td.g-nm.rt>span{width:calc(100% + 198px)}
+  .rt2-tbl tr.g-sec td.g-nm{position:relative}.rt2-tbl tr.g-sec td.g-nm>span{position:absolute;left:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center;white-space:nowrap}.rt2-tbl tr.g-sec td.g-nm.lk>span{width:calc(100% + 84px)}.rt2-tbl tr.g-sec td.g-nm.rt>span{width:calc(100% + 168px)}
   .rt2-tbl th.w-lk{width:84px}.rt2-tbl th.w-p{width:124px}.rt2-tbl th.w-left{width:74px}
   .rt2-tbl tr.g-sec.m td{background:#e3edff;color:#0b4fb3}.rt2-tbl tr.g-sec.m td.g-nm{border-left:4px solid #0b4fb3}
   .rt2-tbl tr.g-sec.v td{background:#f1eafe;color:#7c3aed}.rt2-tbl tr.g-sec.v td.g-nm{border-left:4px solid #7c3aed}
@@ -9105,7 +9105,9 @@ window.__AutoBIBiTarget99 = (function () {
   .rt2-kpi .lk-pass span{color:#0b4fb3;background:#e8f0ff;border-radius:999px;padding:2px 8px}
   .lk-mai-line{border-top:1px solid rgba(255,255,255,.3);padding-top:8px;display:flex;justify-content:space-between;align-items:baseline;font-size:13px;font-weight:600}
   .lk-mai-line b{font-size:16px;font-weight:900}.lk-mai-line i{font-style:normal;color:#ffd23f}.lk-mai-line .lk-mai-p{color:#ffd23f}
-  .rt2-mini.lk-mai-mini{background:#e8f0ff}.rt2-mini.lk-mai-mini div{color:#0b4fb3}`;
+  .rt2-mini.lk-mai-mini{background:#e8f0ff}.rt2-mini.lk-mai-mini div{color:#0b4fb3}
+  .rt2-mini3.rt2-mini4{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.rt2-mini4 .rt2-mini{padding:8px 7px;min-width:0}.rt2-mini4 .rt2-mini div{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rt2-mini4 .rt2-mini b{font-size:15px;white-space:nowrap}
+  .rt2-tbl.rt2-gbig{font-size:15px}.rt2-tbl.rt2-gbig th{font-size:12px}.rt2-tbl.rt2-gbig tr.g-sec td{font-size:13px}`;
 
   function render(h, c, groups, cfg, view, useBi, timeArg) {
     const { UI, UTILS } = h;
@@ -9132,6 +9134,19 @@ window.__AutoBIBiTarget99 = (function () {
     const tgLim = parseFloat(cfg.installment) || 30, tg = num(l1.tg);
     const qd = pctOf(num(l1.r), num(l1.dtlk));
 
+    /* V18.08: ☀️ DK mai chuyển từ LK NEW sang Realtime V2 — cùng công thức V17.36:
+       Mai = lũy kế (hết hôm qua) + realtime hôm nay, tính như đã qua thêm 1 ngày. Không đủ điều kiện thì DK mai = Dự kiến. */
+    const fcL = (v, t) => t > 0 && dp > 0 ? v / dp * dim / t * 100 : (v > 0 ? 100 : 0);
+    const todayD = vnToday(), ydayD = vnDayOff(-1);
+    const ar = c.__apiRevenue || {}, acp = c.__apiCompetition || {};
+    const maiOk = !tc.isPastMonth && num(ar.rtDay) === todayD && num(ar.cumTo) === ydayD && Math.floor(ydayD / 100) === Math.floor(todayD / 100) && dp === ydayD % 100 && dp < dim;
+    const rtToday = maiOk ? rt : 0;
+    const dpM = maiOk ? dp + 1 : dp;
+    const fcM = (v, t) => t > 0 && dpM > 0 ? v / dpM * dim / t * 100 : (v > 0 ? 100 : 0);
+    const lkM = lk + rtToday, dkM = maiOk ? fcM(lkM, monT) : dk;
+    const compM = maiOk && !!c.link3_smart && dayOfMs(acp.at) === todayD;
+    const hhmm = ms => { const d = new Date(num(ms)); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+
     /* Nhóm hàng thi đua (Realtime) — cách lọc như Realtime V3 (V4 cũ) */
     const allCh = idxs.some(i => (cfg['shop' + i] || '').trim().toUpperCase().startsWith('Đ'));
     let gl = groups.filter(g => allCh ? true : g.channel === 'T');
@@ -9142,11 +9157,16 @@ window.__AutoBIBiTarget99 = (function () {
       const b = (c.link4_smart && c.link4_smart[g.short] && c.link4_smart[g.short][view]) || {};
       const t = num(UI.HTML.getFinalGroupTarget(b.t, g.short, view, cfg, groups, true, useBi));
       const r = num(a.r), p = t > 0 ? r / t * 100 : (r > 0 ? 100 : 0);
-      return { name: g.short, t, r, p, left: Math.max(0, t - r), tier: tierOf(g) };
+      /* V18.08: lũy kế nhóm (như LK NEW) để tính ☀️ DK mai */
+      const tL = num(UI.HTML.getFinalGroupTarget(b.t, g.short, view, cfg, groups, false, useBi)), rL = num(b.r);
+      const d = useBi && b.pd != null ? num(b.pd) : fcL(rL, tL);
+      const rr = compM ? r : 0, dm = compM ? fcM(rL + rr, tL) : d;
+      return { name: g.short, t, r, p, left: Math.max(0, t - r), tier: tierOf(g), tL, rL, d, rr, dm };
     });
-    const st = window.__AutoBIRt2.sortGroups || { k: 'p', d: -1 };
-    rows.sort((x, y) => (x[st.k] > y[st.k] ? 1 : x[st.k] < y[st.k] ? -1 : 0) * st.d || y.p - x.p);
+    const st = window.__AutoBIRt2.sortGroups || { k: 'dm', d: -1 }; /* V18.09: mặc định xếp theo ☀️ DK mai cao → thấp */
+    rows.sort((x, y) => (x[st.k] > y[st.k] ? 1 : x[st.k] < y[st.k] ? -1 : 0) * st.d || y.dm - x.dm || y.p - x.p);
     const pass = rows.filter(x => x.p >= 100).length;
+    const passM = rows.filter(x => x.dm >= 100).length;
     const passP = pctOf(pass, rows.length);
 
     /* Nhân viên */
@@ -9183,12 +9203,15 @@ window.__AutoBIBiTarget99 = (function () {
     const sum = k => srows.reduce((a, x) => a + num(x[k]), 0);
 
     const now = new Date();
-    const stamp = tc.isPastMonth ? 'Dữ liệu hết tháng ' + tc.month + '/' + tc.year : 'Số lúc ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0') + '<br>' + String(now.getDate()).padStart(2, '0') + '/' + String(now.getMonth() + 1).padStart(2, '0') + '/' + now.getFullYear();
+    const stamp = tc.isPastMonth ? 'Dữ liệu hết tháng ' + tc.month + '/' + tc.year : 'Số lúc ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0') + '<br>' + String(now.getDate()).padStart(2, '0') + '/' + String(now.getMonth() + 1).padStart(2, '0') + '/' + now.getFullYear() +
+      (tc.isPastMonth ? '' : '<br><span style="color:#0b4fb3">☀️ DK mai: ' + (maiOk ? 'RT lúc ' + hhmm(ar.at) : 'chưa có số hôm nay') + '</span>');
     const neg = v => v < 0 ? ' class="t-low"' : '';
     const th = (tbl, k, label, l) => { const s0 = tbl === 'g' ? st : ss; const ar = s0.k === k ? (s0.d < 0 ? ' ▼' : ' ▲') : ''; return '<th' + (l ? ' class="l"' : '') + ' data-rt2-sort="' + tbl + ':' + k + '">' + label + ar + '</th>'; };
 
-    const gRow = (x, n) => '<tr><td class="l">' + (n + 1) + '</td><td class="l rt2-nm">' + esc(x.name) + '</td><td>' + nf(x.t) + '</td><td' + neg(x.r) + ' style="font-weight:700">' + nf(x.r) + '</td><td class="l"><div class="rt2-pc">' + bar(x.p, lvl(x.p)) + '<b class="t-' + lvl(x.p) + '">' + (x.p >= 100 ? '✓ ' : '') + rp(x.p) + '%</b></div></td><td>' + nf(x.left) + '</td></tr>';
-    const gSec = (cls, name, a) => '<tr class="g-sec ' + cls + '"><td class="g-nm rt" colspan="4">&nbsp;<span>' + name + '</span></td><td>' + a.filter(x => x.p >= 100).length + '/' + a.length + '</td><td></td></tr>';
+    /* V18.08: bỏ cột Còn lại + thanh trong ô %HT; thêm cột ☀️ DK mai (rê chuột xem lũy kế mai) */
+    const maiTip = x => 'Lũy kế đến hết hôm qua: ' + nf(x.rL) + ' / ' + nf(x.tL) + ' · Dự kiến ' + rp(x.d) + '%&#10;' + (compM ? 'Lũy kế mai: ' + nf(x.rL + x.rr) + ' (' + (x.rr < 0 ? '' : '+') + nf(x.rr) + ' hôm nay)' : 'Chưa có số realtime hôm nay — DK mai = Dự kiến');
+    const gRow = (x, n) => '<tr><td class="l">' + (n + 1) + '</td><td class="l rt2-nm">' + esc(x.name) + '</td><td>' + nf(x.t) + '</td><td' + neg(x.r) + ' style="font-weight:700">' + nf(x.r) + '</td><td><b class="t-' + lvl(x.p) + '">' + (x.p >= 100 ? '✓ ' : '') + rp(x.p) + '%</b></td><td class="lk-mai" title="' + maiTip(x) + '"><b class="t-' + lvl(x.dm) + '">' + (x.dm >= 100 ? '✓ ' : '') + rp(x.dm) + '%</b></td></tr>';
+    const gSec = (cls, name, a) => '<tr class="g-sec ' + cls + '"><td class="g-nm rt" colspan="4">&nbsp;<span>' + name + '</span></td><td>' + a.filter(x => x.p >= 100).length + '/' + a.length + '</td><td>' + a.filter(x => x.dm >= 100).length + '/' + a.length + '</td></tr>';
     const gBody = rows.length ? splitGroups(rows, gRow, gSec, 6) : '<tr><td colspan="6" class="rt2-empty">Chưa có số thi đua — bấm Bắt Đầu Chạy</td></tr>';
 
     const sBody = srows.length ? srows.map((x, n) => '<tr><td class="l" style="font-weight:800;color:' + (n < 3 ? '#0b4fb3' : '#475569') + '">' + (n + 1) + '</td><td class="l"><div class="rt2-nm">' + esc(x.nm) + '</div><div class="rt2-id">' + esc([x.id, view === 'total' ? x.shop : ''].filter(Boolean).join(' · ')) + '</div></td>' +
@@ -9206,50 +9229,56 @@ window.__AutoBIBiTarget99 = (function () {
       const money = n => { const t = String(gObj(n).type || '').toLowerCase(); return t.includes('doanhthu') || t.includes('tiền'); };
       const gf = (n, v) => money(n) ? (Math.abs(v) < 1000 ? Math.round(v) + 'k' : vf(v / 1000, 1)) : vf(v, Math.abs(v - Math.round(v)) > 0.05 ? 1 : 0);
       const pc = p => Math.round(p) + '%';
+      const showMai = !tc.isPastMonth;
       let m = PH.css() + '<style>' + CSS + '</style><div class="rt2 rt2-m nv2-m" style="background:#eef1f6;padding:0 0 16px">' +
         '<div class="rt2-hd"><div><div class="rt2-kicker">BÁO CÁO REALTIME V2</div><div class="rt2-title">' + esc(title) + '</div></div><div class="rt2-time">' + stamp + '</div></div><div class="ph-in">';
-      m += '<div data-capture-id="rt2kpi" data-table-name="Doanh thu hôm nay" style="display:flex;flex-direction:column;gap:8px">' + PH.hero('Hôm nay · DT QĐ', vf(rt), '/ ' + vf(dayT) + ' tr', pc(rtP), 'MT ngày', rtP, null, (rt >= dayT ? 'Vượt ' + vf(rt - dayT) + ' tr' : 'Còn thiếu ' + vf(dayT - rt) + ' tr') + ' · Tháng ' + vf(lk) + ' / ' + vf(monT) + ' tr (' + pc(lkP) + ')');
+      m += '<div data-capture-id="rt2kpi" data-table-name="Doanh thu hôm nay" style="display:flex;flex-direction:column;gap:8px">' + PH.hero('Hôm nay · DT QĐ', vf(rt), '/ ' + vf(dayT) + ' tr', pc(rtP), 'MT ngày', rtP, null, (rt >= dayT ? 'Vượt ' + vf(rt - dayT) + ' tr' : 'Còn thiếu ' + vf(dayT - rt) + ' tr') + ' · Tháng ' + vf(lk) + ' / ' + vf(monT) + ' tr (' + pc(lkP) + ')' + (showMai ? ' · ☀ Mai ' + vf(lkM) + ' (' + pc(pctOf(lkM, monT)) + ')' : ''));
       m += PH.tiles([
-        ['Dự kiến tháng', pc(dk), 'cần ' + vf(needDay) + ' tr/ngày', dk >= 100 ? 'c-ok' : 'c-no'],
-        ['Nhóm đạt HN', pass + '<small>/' + rows.length + '</small>', '%HT thi đua ' + pc(passP), passP >= 50 ? 'c-ok' : 'c-no'],
+        ['Dự kiến tháng', pc(dk), showMai ? '☀ DK mai ' + pc(dkM) : 'cần ' + vf(needDay) + ' tr/ngày', dk >= 100 ? 'c-ok' : 'c-no'],
+        ['Nhóm đạt HN', pass + '<small>/' + rows.length + '</small>', showMai ? '☀ DK mai ' + passM + '/' + rows.length : '%HT thi đua ' + pc(passP), passP >= 50 ? 'c-ok' : 'c-no'],
         ['Trả chậm HN', pc(tg), 'MT ' + tgLim + '%', tg >= tgLim ? 'c-ok' : 'c-no'],
       ]) + '</div>';
       const tiers = rows.some(x => x.tier) ? [['Nhóm chính', '', rows.filter(x => x.tier === 'chinh')], ['Nhóm vượt trội', 'vt', rows.filter(x => x.tier !== 'chinh')]].filter(b => b[2].length) : [['', '', rows]];
       m += '<div class="ph-sec">Nhóm hàng hôm nay</div><div class="ph-list" data-capture-id="rt2grp" data-table-name="Nhóm hàng hôm nay">' + PH.head('c3', ['Nhóm hàng', 'TH / MT', '%']);
       if (!rows.length) m += '<div class="ph-r"><div class="ph-s" style="color:#4a5872">Chưa có số thi đua — bấm Bắt Đầu Chạy</div></div>';
-      tiers.forEach(([n, cls, a]) => { if (n) m += PH.band(n, cls); a.forEach(x => { m += PH.row('c3', PH.nm(esc(x.name), x.p >= 100 ? '' : 'còn ' + gf(x.name, x.left)) + PH.r((x.r !== 0 ? gf(x.name, x.r) : '—') + '<span class="ph-of"> / ' + gf(x.name, x.t) + '</span>') + PH.p(x.r !== 0 ? x.p : null), null); }); });
+      tiers.forEach(([n, cls, a]) => { if (n) m += PH.band(n, cls); a.forEach(x => { m += PH.row('c3', PH.nm(esc(x.name), x.p >= 100 ? '' : 'còn ' + gf(x.name, x.left)) + PH.r((x.r !== 0 ? gf(x.name, x.r) : '—') + '<span class="ph-of"> / ' + gf(x.name, x.t) + '</span>') + PH.p(x.r !== 0 ? x.p : null),
+        showMai ? PH.kv('☀ DK mai', '<span class="t-' + lvl(x.dm) + '">' + pc(x.dm) + '</span>' + (compM && x.rr ? ' <span class="ph-of">(+' + gf(x.name, x.rr) + ' hôm nay)</span>' : '')) + PH.kv('Lũy kế', gf(x.name, x.rL) + ' / ' + gf(x.name, x.tL) + ' · dự kiến ' + pc(x.d)) : null); }); });
       m += '</div><div class="ph-sec">Doanh thu nhân viên ' + (today ? 'hôm nay' : '(chưa có số hôm nay)') + '</div><div class="ph-list" data-capture-id="rt2staff" data-table-name="Doanh thu nhân viên">' + PH.head('c3', ['Nhân viên', 'Hôm nay', 'Dự kiến']);
       srows.forEach(x => {
         const det = PH.kv('Hôm nay', x.day == null ? '—' : vf(x.day, 1) + ' tr') + PH.dl('LK', 'lk', '<b>' + (x.mon == null ? '—' : vf(x.mon, 1)) + '</b> <span class="ph-of">/ ' + (x.tgt > 0 ? vf(x.tgt) : '—') + ' tr</span>', x.ht, x.ht != null && x.ht >= timeP ? '#3ea86a' : '#d26a5c', timeP);
         m += PH.row('c3', PH.nm(esc(x.nm), [x.id, view === 'total' ? x.shop : ''].filter(Boolean).join(' · ')) + PH.r(x.day == null ? '—' : vf(x.day, 1)) + PH.p(x.fc), det);
       });
       if (srows.length) m += PH.band('Tổng · hôm nay ' + (today ? vf(sum('day'), 1) : '—') + ' · tháng ' + vf(tMon, 1) + ' / ' + vf(tTgt) + ' tr', 'tot');
-      return m + '</div><div class="ph-leg"><span>Nguồn: BI (API) · Mục tiêu NV theo phân bổ ở Khai báo · chạm tên NV để xem lũy kế</span></div></div></div>';
+      return m + '</div><div class="ph-leg"><span>Nguồn: BI (API) · Mục tiêu NV theo phân bổ ở Khai báo · chạm 1 dòng để xem chi tiết' + (showMai ? ' · ☀ DK mai = lũy kế + realtime hôm nay' : '') + '</span></div></div></div>';
     }
     return '<style>' + CSS + '</style><div class="rt2' + (mobile ? ' rt2-m' : '') + '">' +
       '<div class="rt2-hd"><div><div class="rt2-kicker">BÁO CÁO REALTIME V2</div><div class="rt2-title">' + esc(title) + '</div></div><div class="rt2-time">' + stamp + '</div></div>' +
       '<div class="rt2-row1">' +
         '<div class="rt2-card rt2-hero"><div class="rt2-lbl">DOANH THU HÔM NAY<span class="rt2-badge ' + (rtP >= 100 ? 't-ok' : 't-low') + '">' + (rtP >= 100 ? 'Đạt' : 'Chưa đạt') + '</span></div>' +
           '<div class="rt2-big"><b>' + nf(rt) + '</b><span>/ ' + nf(dayT) + '</span><em>' + Math.round(rtP) + '%</em></div>' + bar(rtP, 'hero') +
-          '<div class="rt2-foot"><span>Target ngày: ' + nf(dayT) + '</span><span>' + (rt >= dayT ? 'Vượt: ' + nf(rt - dayT) : 'Còn thiếu: ' + nf(dayT - rt)) + '</span></div></div>' +
+          '<div class="rt2-foot"><span>Target ngày: ' + nf(dayT) + '</span><span>' + (rt >= dayT ? 'Vượt: ' + nf(rt - dayT) : 'Còn thiếu: ' + nf(dayT - rt)) + '</span></div>' +
+          (tc.isPastMonth ? '' : '<div class="lk-mai-line"><span>☀️ Mai: <b>' + nf(lkM) + '</b> <i>' + (rtToday < 0 ? '' : '+') + nf(rtToday) + ' hôm nay</i></span><b class="lk-mai-p">' + pctOf(lkM, monT).toFixed(1) + '%</b></div>') + '</div>' +
         '<div class="rt2-card"><div class="rt2-lbl">LŨY KẾ THÁNG ' + tc.month + '<span class="rt2-sub">đến hết ' + String(dp).padStart(2, '0') + '/' + String(tc.month).padStart(2, '0') + '</span></div>' +
           '<div class="rt2-big"><b style="font-size:34px">' + nf(lk) + '</b><span style="color:#334155">/ ' + nf(monT) + '</span><em class="t-' + (lkP >= timeP ? 'ok' : 'low') + '" style="font-size:26px">' + lkP.toFixed(1) + '%</em></div>' +
           '<div class="rt2-bar"><i class="' + (lkP >= timeP ? 'ok' : 'low') + '" style="width:' + Math.min(100, lkP).toFixed(1) + '%"></i><span class="rt2-mark" style="left:' + Math.min(100, timeP).toFixed(1) + '%"></span></div>' +
-          '<div class="rt2-mini3"><div class="rt2-mini"><div>Thời gian qua</div><b>' + timeP.toFixed(1) + '%</b></div><div class="rt2-mini"><div>Dự kiến HT</div><b class="t-' + lvl(dk) + '">' + (dk >= 100 ? '▲ ' : '▼ ') + Math.round(dk) + '%</b></div><div class="rt2-mini"><div>Cần / ngày</div><b>' + nf(needDay) + '</b></div></div></div>' +
+          '<div class="rt2-mini3' + (tc.isPastMonth ? '' : ' rt2-mini4') + '"><div class="rt2-mini"><div>Thời gian qua</div><b>' + timeP.toFixed(1) + '%</b></div><div class="rt2-mini"><div>Dự kiến HT</div><b class="t-' + lvl(dk) + '">' + (dk >= 100 ? '▲ ' : '▼ ') + Math.round(dk) + '%</b></div>' +
+          (tc.isPastMonth ? '' : '<div class="rt2-mini lk-mai-mini" title="DK mai = (lũy kế + realtime hôm nay) ÷ (ngày đã qua + 1) × số ngày tháng ÷ target"><div>☀️ DK mai</div><b class="t-' + lvl(dkM) + '">' + (dkM >= 100 ? '▲ ' : '▼ ') + Math.round(dkM) + '%</b></div>') +
+          '<div class="rt2-mini"><div>Cần / ngày</div><b>' + nf(needDay) + '</b></div></div></div>' +
         '<div class="rt2-kpi4">' +
           '<div class="rt2-kpi"><div>% TRẢ CHẬM</div><b class="' + (tg >= tgLim ? 't-ok' : 't-low') + '">' + Math.round(tg) + '% <small>/ ' + tgLim + '%</small></b></div>' +
           '<div class="rt2-kpi"><div>TỈ LỆ QUY ĐỔI</div><b>' + Math.round(qd) + '%</b></div>' +
-          '<div class="rt2-kpi"><div>NHÓM HÀNG ĐẠT</div><b>' + pass + ' <small>/ ' + rows.length + '</small></b></div>' +
+          (tc.isPastMonth ? '<div class="rt2-kpi"><div>NHÓM HÀNG ĐẠT</div><b>' + pass + ' <small>/ ' + rows.length + '</small></b></div>'
+            : '<div class="rt2-kpi lk-kp"><div>NHÓM HÀNG ĐẠT</div><div class="lk-pass"><b>' + pass + '/' + rows.length + '</b><span title="☀️ DK mai: số nhóm đạt sáng mai">☀️ ' + passM + '/' + rows.length + '</span></div></div>') +
           '<div class="rt2-kpi"><div>%HT THI ĐUA</div><b class="' + (passP >= 50 ? 't-ok' : 't-low') + '">' + Math.round(passP) + '%</b></div>' +
         '</div>' +
       '</div>' +
       '<div class="rt2-row2">' +
-        '<div class="rt2-card"><div class="rt2-lbl">NHÓM HÀNG THI ĐUA HÔM NAY<span class="rt2-sub">bấm tiêu đề cột để sắp xếp</span></div><div class="rt2-tblw"><table class="rt2-tbl"><thead><tr><th class="l">#</th>' + th('g', 'name', 'Nhóm hàng', 1) + th('g', 't', 'Target') + th('g', 'r', 'Realtime') + th('g', 'p', '%HT', 1).replace('class="l"', 'class="l w-p"') + th('g', 'left', 'Còn lại').replace('<th', '<th class="w-left"') + '</tr></thead><tbody>' + gBody + '</tbody></table></div></div>' +
+        '<div class="rt2-card"><div class="rt2-lbl">NHÓM HÀNG THI ĐUA HÔM NAY<span class="rt2-sub">☀️ DK mai: đạt khi ≥ 100%</span></div><div class="rt2-tblw"><table class="rt2-tbl rt2-gbig"><thead><tr><th class="l">#</th>' + th('g', 'name', 'Nhóm hàng', 1) + th('g', 't', 'Target') + th('g', 'r', 'Realtime') + th('g', 'p', '%HT').replace('<th', '<th class="w-lk"') + th('g', 'dm', '☀️ DK mai').replace('<th', '<th class="lk-mai w-lk"') + '</tr></thead><tbody>' + gBody + '</tbody></table></div></div>' +
         '<div class="rt2-card"><div class="rt2-lbl">DOANH THU NHÂN VIÊN<span class="rt2-sub">' + (today ? 'Hôm nay + lũy kế tháng' : 'Chưa có số hôm nay') + '</span></div><div class="rt2-tblw"><table class="rt2-tbl"><thead><tr><th class="l">#</th>' + th('s', 'nm', 'Nhân viên', 1) + th('s', 'day', 'Hôm nay') + th('s', 'mon', 'Tháng') + th('s', 'tgt', 'Mục tiêu') + th('s', 'ht', '%HT tháng', 1) + th('s', 'fc', 'Dự kiến') + '</tr></thead><tbody>' + sBody + '</tbody>' +
           (srows.length ? '<tfoot><tr><td></td><td class="l">Tổng</td>' + '<td>' + (today ? nf(sum('day'), 1) : '—') + '</td><td>' + nf(tMon, 1) + '</td><td>' + nf(tTgt) + '</td><td class="l">' + (tTgt > 0 ? Math.round(tMon / tTgt * 100) + '%' : '—') + '</td><td>' + (tTgt > 0 && dp > 0 ? Math.round(tMon / dp * dim / tTgt * 100) + '%' : '—') + '</td></tr></tfoot>' : '') +
         '</table></div></div>' +
       '</div>' +
-      '<div class="rt2-note">Nguồn: BI (API) · Mục tiêu NV theo phân bổ ở Khai báo</div>' +
+      '<div class="rt2-note">Nguồn: BI (API) · Mục tiêu NV theo phân bổ ở Khai báo' + (tc.isPastMonth ? '' : ' · ☀️ DK mai = (lũy kế + realtime hôm nay) ÷ (ngày đã qua + 1) × số ngày tháng ÷ target') + '</div>' +
     '</div>';
   }
 
@@ -9291,17 +9320,7 @@ window.__AutoBIBiTarget99 = (function () {
     const tgLim = parseFloat(cfg.installment) || 30, tg = num(l2.tg);
     const qd = pctOf(lk, num(l2.dtlk));
 
-    /* V17.36: ☀️ DK mai = lũy kế (hết hôm qua) + realtime hôm nay, tính như đã qua thêm 1 ngày.
-       Chỉ cộng khi: số realtime là của HÔM NAY và lũy kế đúng "đến hết hôm qua" (cùng tháng). Không thì DK mai = Dự kiến (chưa có realtime). */
-    const today = vnToday(), yday = vnDayOff(-1);
-    const ar = c.__apiRevenue || {}, acp = c.__apiCompetition || {};
-    const maiOk = !tc.isPastMonth && num(ar.rtDay) === today && num(ar.cumTo) === yday && Math.floor(yday / 100) === Math.floor(today / 100) && dp === yday % 100 && dp < dim;
-    const rtToday = maiOk ? num(((c.link1 && c.link1[view]) || {}).r) : 0;
-    const dpM = maiOk ? dp + 1 : dp, leftM = Math.max(0, dim - dpM);
-    const fcM = (v, t) => t > 0 && dpM > 0 ? v / dpM * dim / t * 100 : (v > 0 ? 100 : 0);
-    const lkM = lk + rtToday, dkM = maiOk ? fcM(lkM, monT) : dk;
-    const compM = maiOk && !!c.link3_smart && dayOfMs(acp.at) === today;
-    const hhmm = ms => { const d = new Date(num(ms)); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+    /* V18.08: ☀️ DK mai đã chuyển sang Realtime V2 — LK NEW chỉ còn số lũy kế đến hết hôm qua */
 
     /* Nhóm hàng thi đua lũy kế — cách tính như Realtime V3 chế độ Lũy kế */
     const allCh = idxs.some(i => (cfg['shop' + i] || '').trim().toUpperCase().startsWith('Đ'));
@@ -9314,15 +9333,13 @@ window.__AutoBIBiTarget99 = (function () {
       const t = gT(g.short, view), r = num(b.r);
       const p = t > 0 ? r / t * 100 : (r > 0 ? 100 : 0);
       const d = useBi && b.pd != null ? num(b.pd) : fc(r, t);
-      const a3 = compM ? ((c.link3_smart[g.short] && c.link3_smart[g.short][view]) || {}) : {};
-      const rr = compM ? num(a3.r) : 0, dm = compM ? fcM(r + rr, t) : d;
-      return { name: g.short, t, r, p, d, need: left > 0 ? Math.max(0, t - r) / left : 0, rr, dm, needM: leftM > 0 ? Math.max(0, t - r - rr) / leftM : 0, tier: tierOf(g) };
+      return { name: g.short, t, r, p, d, need: left > 0 ? Math.max(0, t - r) / left : 0, tier: tierOf(g) };
     });
-    const st = window.__AutoBIRt2.sortLKGroups || { k: 'd', d: -1 };
+    let st = window.__AutoBIRt2.sortLKGroups || { k: 'd', d: -1 };
+    if (st.k === 'dm') st = { k: 'd', d: st.d }; /* V18.08: cột DK mai đã bỏ khỏi LK NEW */
     rows.sort((x, y) => (x[st.k] > y[st.k] ? 1 : x[st.k] < y[st.k] ? -1 : 0) * st.d || y.d - x.d);
     const pass = rows.filter(x => x.d >= 100).length;
     const passP = pctOf(pass, rows.length);
-    const passM = rows.filter(x => x.dm >= 100).length;
 
     /* Nhân viên: doanh thu + thi đua theo nhóm (cách tính như Chi tiết NV) */
     const rateOf = x => { const r = parseFloat(x.rate); return isFinite(r) && r > 0 ? r : 0; };
@@ -9365,15 +9382,13 @@ window.__AutoBIBiTarget99 = (function () {
     const th = (tbl, k, label, l) => { const s0 = tbl === 'lg' ? st : ss; const ar = s0.k === k ? (s0.d < 0 ? ' ▼' : ' ▲') : ''; return '<th' + (l ? ' class="l"' : '') + ' data-rt2-sort="' + tbl + ':' + k + ':lknew">' + label + ar + '</th>'; };
     const neg = v => v < 0 ? ' class="t-low"' : '';
     const nmCell = x => '<td class="l"><div class="rt2-nm">' + esc(x.nm) + '</div><div class="rt2-id">' + esc([x.id, view === 'total' ? x.shop : ''].filter(Boolean).join(' · ')) + '</div></td>';
-    const stamp = 'Số đến hết<br>' + String(dp).padStart(2, '0') + '/' + String(tc.month).padStart(2, '0') + '/' + tc.year +
-      (tc.isPastMonth ? '' : '<br><span style="color:#0b4fb3">☀️ DK mai: ' + (maiOk ? 'RT lúc ' + hhmm(ar.at) : 'chưa có số hôm nay') + '</span>');
+    const stamp = 'Số đến hết<br>' + String(dp).padStart(2, '0') + '/' + String(tc.month).padStart(2, '0') + '/' + tc.year;
     const short = g => esc(g.length > 12 ? g.slice(0, 11) + '…' : g);
 
-    /* V17.36: cột Cần/ngày → ☀️ DK mai (Cần/ngày xem khi rê chuột); chia khối Nhóm chính / Nhóm vượt trội */
-    const maiTip = x => compM ? 'Lũy kế mai: ' + nf(x.r + x.rr) + ' (+' + nf(x.rr) + ' hôm nay)&#10;Cần/ngày từ mai: ' + (x.dm >= 100 ? '—' : nf(Math.ceil(x.needM))) : 'Chưa có số realtime hôm nay — DK mai = Dự kiến';
-    const gRow = (x, n) => '<tr><td class="l">' + (n + 1) + '</td><td class="l rt2-nm">' + esc(x.name) + '</td><td>' + nf(x.t) + '</td><td' + neg(x.r) + ' style="font-weight:700">' + nf(x.r) + '</td><td>' + Math.round(x.p) + '%</td><td title="Cần/ngày: ' + (x.d >= 100 ? '—' : nf(Math.ceil(x.need))) + '"><b class="t-' + lvl(x.d) + '">' + (x.d >= 100 ? '✓ ' : '') + rp(x.d) + '%</b></td><td class="lk-mai" title="' + maiTip(x) + '"><b class="t-' + lvl(x.dm) + '">' + (x.dm >= 100 ? '✓ ' : '') + rp(x.dm) + '%</b></td></tr>';
-    const gSec = (cls, name, a) => '<tr class="g-sec ' + cls + '"><td class="g-nm lk" colspan="5">&nbsp;<span>' + name + '</span></td><td>' + a.filter(x => x.d >= 100).length + '/' + a.length + '</td><td>' + a.filter(x => x.dm >= 100).length + '/' + a.length + '</td></tr>';
-    const gBody = rows.length ? splitGroups(rows, gRow, gSec, 7) : '<tr><td colspan="7" class="rt2-empty">Chưa có số thi đua lũy kế — bấm Bắt Đầu Chạy</td></tr>';
+    /* Chia khối Nhóm chính / Nhóm vượt trội; Cần/ngày xem khi rê chuột ô Dự kiến (V18.08: bỏ cột ☀️ DK mai — đã chuyển sang Realtime V2) */
+    const gRow = (x, n) => '<tr><td class="l">' + (n + 1) + '</td><td class="l rt2-nm">' + esc(x.name) + '</td><td>' + nf(x.t) + '</td><td' + neg(x.r) + ' style="font-weight:700">' + nf(x.r) + '</td><td>' + Math.round(x.p) + '%</td><td title="Cần/ngày: ' + (x.d >= 100 ? '—' : nf(Math.ceil(x.need))) + '"><b class="t-' + lvl(x.d) + '">' + (x.d >= 100 ? '✓ ' : '') + rp(x.d) + '%</b></td></tr>';
+    const gSec = (cls, name, a) => '<tr class="g-sec ' + cls + '"><td class="g-nm lk" colspan="5">&nbsp;<span>' + name + '</span></td><td>' + a.filter(x => x.d >= 100).length + '/' + a.length + '</td></tr>';
+    const gBody = rows.length ? splitGroups(rows, gRow, gSec, 6) : '<tr><td colspan="6" class="rt2-empty">Chưa có số thi đua lũy kế — bấm Bắt Đầu Chạy</td></tr>';
     const sBody = srows.length ? srows.map((x, n) => '<tr><td class="l" style="font-weight:800;color:' + (n < 3 ? '#0b4fb3' : '#475569') + '">' + (n + 1) + '</td>' + nmCell(x) +
       '<td' + neg(x.mon) + ' style="font-weight:800">' + (x.mon == null ? '—' : nf(x.mon, 1)) + '</td><td>' + (x.tgt > 0 ? nf(x.tgt) : '—') + '</td>' +
       '<td>' + (x.ht == null ? '—' : Math.round(x.ht) + '%') + '</td>' +
@@ -9401,7 +9416,7 @@ window.__AutoBIBiTarget99 = (function () {
       mrows.map(x => '<tr>' + nmCell(x) + bg.map(g => cell(g, x.cells[g])).join('') + Array.from({ length: per - bg.length }, () => '<td></td>').join('') + '<td>' + (last ? '<b class="t-' + (x.ok ? 'ok' : 'low') + '">' + x.ok + '</b>/' + sg.length : '') + '</td></tr>').join('') + '</tbody></table>';
     const mHtml = srows.length && sg.length ? blocks.map((bg, k) => '<div class="rt2-tblw' + (k ? ' lk-blk' : '') + '">' + mTable(bg, k === blocks.length - 1) + '</div>').join('') : '<div class="rt2-empty">Chưa có số thi đua nhân viên</div>';
 
-    /* V18.02: iPhone — thẻ Lũy kế (☀ DK mai) + ô số + nhóm hàng Chính/Vượt trội 1 dòng + NV 1 dòng, chạm mở chi tiết */
+    /* V18.02: iPhone — thẻ Lũy kế + ô số + nhóm hàng Chính/Vượt trội 1 dòng + NV 1 dòng, chạm mở chi tiết */
     if (mobile && window.__AutoBIPh) {
       const PH = window.__AutoBIPh;
       const vf = (v, d = 0) => num(v).toLocaleString('vi-VN', { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -9410,20 +9425,19 @@ window.__AutoBIBiTarget99 = (function () {
       const tiers = rows.some(x => x.tier) ? [['Nhóm chính', '', rows.filter(x => x.tier === 'chinh')], ['Nhóm vượt trội', 'vt', rows.filter(x => x.tier !== 'chinh')]].filter(b => b[2].length) : [['', '', rows]];
       let m = PH.css() + '<style>' + CSS + LKCSS + '</style><div class="rt2 rt2-m nv2-m" style="background:#eef1f6;padding:0 0 16px">' +
         '<div class="rt2-hd"><div><div class="rt2-kicker">BÁO CÁO LŨY KẾ (LK NEW)</div><div class="rt2-title">' + esc(title) + '</div></div><div class="rt2-time">' + stamp + '</div></div><div class="ph-in">';
-      m += '<div data-capture-id="lkkpi" data-table-name="Doanh thu lũy kế" style="display:flex;flex-direction:column;gap:8px">' + PH.hero('Lũy kế · DT QĐ', vf(lk), '/ ' + vf(monT) + ' tr', pc(dk), 'dự kiến', lkP, timeP, 'Hoàn thành ' + lkP.toFixed(1) + '%' + (tc.isPastMonth ? '' : ' · ☀ DK mai ' + pc(dkM)) + ' · cần ' + vf(needDay) + ' tr/ngày', true);
+      m += '<div data-capture-id="lkkpi" data-table-name="Doanh thu lũy kế" style="display:flex;flex-direction:column;gap:8px">' + PH.hero('Lũy kế · DT QĐ', vf(lk), '/ ' + vf(monT) + ' tr', pc(dk), 'dự kiến', lkP, timeP, 'Hoàn thành ' + lkP.toFixed(1) + '% · cần ' + vf(needDay) + ' tr/ngày', true);
       m += PH.tiles([
-        ['Nhóm đạt', pass + '<small>/' + rows.length + '</small>', tc.isPastMonth ? '%HT ' + pc(passP) : '☀ mai ' + passM + '/' + rows.length, passP >= 50 ? 'c-ok' : 'c-no'],
+        ['Nhóm đạt', pass + '<small>/' + rows.length + '</small>', '%HT ' + pc(passP), passP >= 50 ? 'c-ok' : 'c-no'],
         ['Trả chậm LK', pc(tg), 'MT ' + tgLim + '%', tg >= tgLim ? 'c-ok' : 'c-no'],
         hasRw ? ['Tổng thưởng', trf(tRw), srows.length + ' NV'] : ['Tỉ lệ QĐ', pc(qd), 'BQ ' + vf(avgDay) + ' tr/ngày'],
       ]) + '</div>';
-      if (rows.some(x => x.tier)) m += '<div class="ph-tsum" data-capture-id="lktier" data-table-name="Nhóm chính / vượt trội">' + tiers.map(([n, cls, a]) => '<div class="ph-ts' + (cls ? ' vt' : '') + '"><div class="n">' + n.toUpperCase() + '<span>LK ' + a.filter(x => x.d >= 100).length + '/' + a.length + (tc.isPastMonth ? '' : ' · ☀ ' + a.filter(x => x.dm >= 100).length + '/' + a.length) + '</span></div>' + PH.dots(a.map(x => x.d)) + '</div>').join('') + '</div>';
+      if (rows.some(x => x.tier)) m += '<div class="ph-tsum" data-capture-id="lktier" data-table-name="Nhóm chính / vượt trội">' + tiers.map(([n, cls, a]) => '<div class="ph-ts' + (cls ? ' vt' : '') + '"><div class="n">' + n.toUpperCase() + '<span>LK ' + a.filter(x => x.d >= 100).length + '/' + a.length + '</span></div>' + PH.dots(a.map(x => x.d)) + '</div>').join('') + '</div>';
       m += '<div class="ph-list" data-capture-id="lkgrp" data-table-name="Nhóm hàng lũy kế">' + PH.head('c4', ['#', 'Nhóm hàng', '% HT', 'Dự kiến']);
       if (!rows.length) m += '<div class="ph-r"><div class="ph-s" style="color:#4a5872">Chưa có số thi đua lũy kế — bấm Bắt Đầu Chạy</div></div>';
       tiers.forEach(([n, cls, a]) => {
         if (n) m += PH.band(n, cls);
         a.forEach((x, k) => {
           const det = PH.dl('LK', 'lk', '<b>' + gf(x.name, x.r) + '</b> <span class="ph-of">/ ' + gf(x.name, x.t) + '</span>', x.p, x.p >= timeP ? '#3ea86a' : '#d26a5c', timeP) +
-            (tc.isPastMonth ? '' : PH.kv('☀ DK mai', '<span class="t-' + lvl(x.dm) + '">' + pc(x.dm) + '</span>' + (compM && x.rr ? ' <span class="ph-of">(+' + gf(x.name, x.rr) + ' hôm nay)</span>' : ''))) +
             PH.kv('Cần / ngày', x.d >= 100 ? '<span class="c-ok">✓ đạt</span>' : gf(x.name, Math.ceil(x.need)));
           m += PH.row('c4', PH.no(k + 1) + PH.nm(esc(x.name), gf(x.name, x.r) + ' / ' + gf(x.name, x.t)) + PH.r(pc(x.p)) + PH.p(x.d), det);
         });
@@ -9436,34 +9450,33 @@ window.__AutoBIBiTarget99 = (function () {
         m += PH.row('c4', PH.no(k + 1) + PH.nm(esc(x.nm), [view === 'total' ? x.shop : '', 'NH đạt ' + x.ok + '/' + sg.length].filter(Boolean).join(' · ')) + PH.r(x.mon == null ? '—' : vf(x.mon)) + PH.p(x.fc), det);
       });
       if (srows.length) m += PH.band('Tổng ' + vf(tMon, 1) + ' / ' + vf(tTgt) + ' tr' + (tTgt > 0 && dp > 0 ? ' · dự kiến ' + Math.round(tMon / dp * dim / tTgt * 100) + '%' : '') + (hasRw ? ' · thưởng ' + trf(tRw) : ''), 'tot');
-      return m + '</div><div class="ph-leg"><span>Nguồn: BI (API) · chạm 1 dòng để mở chi tiết · ☀ DK mai = lũy kế + realtime hôm nay</span></div></div></div>';
+      return m + '</div><div class="ph-leg"><span>Nguồn: BI (API) · chạm 1 dòng để mở chi tiết</span></div></div></div>';
     }
     return '<style>' + CSS + LKCSS + '</style><div class="rt2' + (mobile ? ' rt2-m' : '') + '">' +
       '<div class="rt2-hd"><div><div class="rt2-kicker">BÁO CÁO LŨY KẾ (LK NEW)</div><div class="rt2-title">' + esc(title) + '</div></div><div class="rt2-time">' + stamp + '</div></div>' +
       '<div class="rt2-row1">' +
         '<div class="rt2-card rt2-hero"><div class="rt2-lbl">DOANH THU LŨY KẾ THÁNG ' + tc.month + '<span class="rt2-badge ' + (dk >= 100 ? 't-ok' : 't-low') + '">' + (dk >= 100 ? 'Đúng tiến độ' : 'Chậm tiến độ') + '</span></div>' +
           '<div class="rt2-big"><b>' + nf(lk) + '</b><span>/ ' + nf(monT) + '</span><em>' + lkP.toFixed(1) + '%</em></div>' +
-          '<div class="rt2-bar"><i class="hero" style="width:' + Math.min(100, lkP).toFixed(1) + '%"></i>' + (rtToday > 0 && lkP < 100 ? '<span style="position:absolute;top:0;bottom:0;left:' + Math.min(100, lkP).toFixed(1) + '%;width:' + Math.max(0, Math.min(100, pctOf(lkM, monT)) - Math.min(100, lkP)).toFixed(1) + '%;background:#fff3b0;opacity:.85"></span>' : '') + '<span class="rt2-mark" style="left:' + Math.min(100, timeP).toFixed(1) + '%;background:#fff"></span></div>' +
-          '<div class="rt2-foot"><span>Target tháng: ' + nf(monT) + '</span><span>Còn thiếu: ' + nf(Math.max(0, monT - lk)) + '</span></div>' +
-          (tc.isPastMonth ? '' : '<div class="lk-mai-line"><span>☀️ Mai: <b>' + nf(lkM) + '</b> <i>' + (rtToday < 0 ? '' : '+') + nf(rtToday) + ' hôm nay</i></span><b class="lk-mai-p">' + pctOf(lkM, monT).toFixed(1) + '%</b></div>') + '</div>' +
+          '<div class="rt2-bar"><i class="hero" style="width:' + Math.min(100, lkP).toFixed(1) + '%"></i><span class="rt2-mark" style="left:' + Math.min(100, timeP).toFixed(1) + '%;background:#fff"></span></div>' +
+          '<div class="rt2-foot"><span>Target tháng: ' + nf(monT) + '</span><span>Còn thiếu: ' + nf(Math.max(0, monT - lk)) + '</span></div></div>' +
         '<div class="rt2-card"><div class="rt2-lbl">TIẾN ĐỘ THÁNG<span class="rt2-sub">' + dp + '/' + dim + ' ngày · còn ' + left + ' ngày</span></div>' +
           '<div class="rt2-big"><b style="font-size:34px" class="t-' + lvl(dk) + '">' + arrow(dk) + '</b><span style="color:#334155">dự kiến hoàn thành</span></div>' +
-          '<div class="rt2-mini3"><div class="rt2-mini"><div>Thời gian qua</div><b>' + timeP.toFixed(1) + '%</b></div><div class="rt2-mini"><div>Bình quân / ngày</div><b>' + nf(avgDay) + '</b></div>' + (tc.isPastMonth ? '<div class="rt2-mini"><div>Cần / ngày</div><b class="' + (needDay > avgDay ? 't-low' : 't-ok') + '">' + nf(needDay) + '</b></div>' : '<div class="rt2-mini lk-mai-mini" title="Cần / ngày: ' + nf(needDay) + (maiOk ? ' · từ mai: ' + nf(leftM > 0 ? Math.max(0, monT - lkM) / leftM : 0) : '') + '"><div>☀️ DK mai</div><b class="t-' + lvl(dkM) + '">' + arrow(dkM) + '</b></div>') + '</div></div>' +
+          '<div class="rt2-mini3"><div class="rt2-mini"><div>Thời gian qua</div><b>' + timeP.toFixed(1) + '%</b></div><div class="rt2-mini"><div>Bình quân / ngày</div><b>' + nf(avgDay) + '</b></div><div class="rt2-mini"><div>Cần / ngày</div><b class="' + (needDay > avgDay ? 't-low' : 't-ok') + '">' + nf(needDay) + '</b></div></div></div>' +
         '<div class="rt2-kpi4 lk-k4">' +
           '<div class="rt2-kpi" title="Mức trả chậm: ' + tgLim + '%"><div>% TRẢ CHẬM LK</div><b class="' + (tg >= tgLim ? 't-ok' : 't-low') + '">' + Math.round(tg) + '%</b></div>' +
           '<div class="rt2-kpi"><div>TỈ LỆ QUY ĐỔI LK</div><b>' + Math.round(qd) + '%</b></div>' +
-          '<div class="rt2-kpi lk-kp"><div>NHÓM HÀNG ĐẠT</div><div class="lk-pass"><b>' + pass + '/' + rows.length + '</b>' + (tc.isPastMonth ? '' : '<span title="☀️ DK mai: số nhóm đạt sáng mai">☀️ ' + passM + '/' + rows.length + '</span>') + '</div></div>' +
+          '<div class="rt2-kpi lk-kp"><div>NHÓM HÀNG ĐẠT</div><div class="lk-pass"><b>' + pass + '/' + rows.length + '</b></div></div>' +
           '<div class="rt2-kpi"><div>%HT THI ĐUA</div><b class="' + (passP >= 50 ? 't-ok' : 't-low') + '">' + Math.round(passP) + '%</b></div>' +
         '</div>' +
       '</div>' +
       '<div class="rt2-row2 lk-row2">' +
-        '<div class="rt2-card"><div class="rt2-lbl">NHÓM HÀNG THI ĐUA LŨY KẾ<span class="rt2-sub">đạt khi Dự kiến ≥ 100%</span></div><div class="rt2-tblw"><table class="rt2-tbl"><thead><tr><th class="l">#</th>' + th('lg', 'name', 'Nhóm hàng', 1) + th('lg', 't', 'Target') + th('lg', 'r', 'Lũy kế') + th('lg', 'p', '%HT') + th('lg', 'd', 'Dự kiến').replace('<th', '<th class="w-lk"') + th('lg', 'dm', '☀️ DK mai').replace('<th', '<th class="lk-mai w-lk"') + '</tr></thead><tbody>' + gBody + '</tbody></table></div></div>' +
+        '<div class="rt2-card"><div class="rt2-lbl">NHÓM HÀNG THI ĐUA LŨY KẾ<span class="rt2-sub">đạt khi Dự kiến ≥ 100%</span></div><div class="rt2-tblw"><table class="rt2-tbl"><thead><tr><th class="l">#</th>' + th('lg', 'name', 'Nhóm hàng', 1) + th('lg', 't', 'Target') + th('lg', 'r', 'Lũy kế') + th('lg', 'p', '%HT') + th('lg', 'd', 'Dự kiến').replace('<th', '<th class="w-lk"') + '</tr></thead><tbody>' + gBody + '</tbody></table></div></div>' +
         '<div class="rt2-card"><div class="rt2-lbl">DOANH THU NHÂN VIÊN LŨY KẾ<span class="rt2-sub">mục tiêu theo phân bổ Khai báo</span></div><div class="rt2-tblw"><table class="rt2-tbl lk-st"><thead><tr><th class="l">#</th>' + th('ls', 'nm', 'Nhân viên', 1) + th('ls', 'mon', 'Lũy kế') + th('ls', 'tgt', 'Mục tiêu') + th('ls', 'ht', '%HT') + th('ls', 'fc', 'Dự kiến') + th('ls', 'ok', 'Nhóm đạt') + th('ls', 'rw', '<span title="Tổng thưởng (điểm thực lãnh, newinsite' + (rwKy(c) ? ' ' + rwKy(c) : '') + ')">Thưởng</span>') + '</tr></thead><tbody>' + sBody + '</tbody>' +
           (srows.length ? '<tfoot><tr><td></td><td class="l">Tổng</td><td>' + nf(tMon, 1) + '</td><td>' + nf(tTgt) + '</td><td>' + (tTgt > 0 ? Math.round(tMon / tTgt * 100) + '%' : '—') + '</td><td>' + (tTgt > 0 && dp > 0 ? Math.round(tMon / dp * dim / tTgt * 100) + '%' : '—') + '</td><td></td><td' + (hasRw ? ' title="' + nf(tRw) + '" style="color:#15803d"' : '') + '>' + (hasRw ? trf(tRw) : '—') + '</td></tr></tfoot>' : '') +
         '</table></div></div>' +
       '</div>' +
       '<div class="rt2-card lk-matrix"><div class="rt2-lbl">THI ĐUA NHÂN VIÊN THEO NHÓM HÀNG<span class="rt2-sub">% dự kiến hoàn thành · xanh ≥100% · vàng 80–99% · đỏ &lt;80% · xếp theo số nhóm đạt · rê chuột xem số làm / target</span></div>' + mHtml + '</div>' +
-      '<div class="rt2-note">Nguồn: BI (API) · Dự kiến = lũy kế ÷ ngày đã qua × số ngày tháng ÷ target · ☀️ DK mai = (lũy kế + realtime hôm nay) ÷ (ngày đã qua + 1) × số ngày tháng ÷ target</div>' +
+      '<div class="rt2-note">Nguồn: BI (API) · Dự kiến = lũy kế ÷ ngày đã qua × số ngày tháng ÷ target</div>' +
     '</div>';
   }
   const LKCSS = `
