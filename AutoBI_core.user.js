@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.11
+// @name         AutoBI Core V18.12
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.11
+// @version      18.12
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -1377,42 +1377,49 @@ window.__AutoBILog5 = (() => {
                 Number(details.timeout || 0) === 8000;
             if (!isMainAuthCheck)
                 return nativeRequest(details);
-            const m = url.match(/[?&]_t=([^&]+)/);
-            // User ID is not present in the legacy CSV URL, so obtain it from the page text.
-            const pageText = (document.body && document.body.innerText) || '';
-            const userMatch = pageText.match(/(?:Người dùng\s*:\s*)?(\d{4,})\s*[-–]/i) || pageText.match(/\b(\d{4,})\b/);
-            const userId = userMatch ? userMatch[1] : '';
-            if (!userId) /* V17.74: không còn hỏi Sheet quyền cũ — coi như chưa xác thực */
-                return details.onload && details.onload({ status: 200, responseText: 'UserID,Name,C,D,E,F,G,H,ExpireDays\n' });
-            return nativeRequest({
-                method: 'GET',
-                url: PRIVATE_AUTH_API + '?type=check_auth&user=' + encodeURIComponent(userId) + '&ver=' + encodeURIComponent((typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '') + '&_t=' + (m ? m[1] : Date.now()), /* V17.74: gửi kèm phiên bản → tab Auth cột Phiên bản / Dùng lần cuối */
-                timeout: details.timeout || 8000,
-                onload: function (res) {
-                    try {
-                        const data = JSON.parse(res.responseText || '{}');
-                        if (data.status === 'success' && data.authorized === true) {
-                            // Chuyển JSON riêng thành CSV giả để lõi AutoBI cũ xử lý nguyên vẹn.
+            /* V18.12: lấy mã từ AuthService (ô tên người dùng); chỉ dò chữ trên trang khi không có.
+               Lỗi mạng / quá giờ / máy chủ lỗi → thử lại tối đa 3 lần; hết lần thì báo LỖI (onerror),
+               không còn coi là "chưa được cấp quyền". Chỉ trả "không có quyền" khi máy chủ trả đúng authorized:false. */
+            let userId = String(window.__AutoBIAuthUid || '').replace(/\D/g, '');
+            if (!userId) {
+                const pageText = (document.body && document.body.innerText) || '';
+                const userMatch = pageText.match(/(\d{4,7})\s*[-–]\s*\S/);
+                userId = userMatch ? userMatch[1] : '';
+            }
+            const EMPTY = 'UserID,Name,C,D,E,F,G,H,ExpireDays\n';
+            const note = msg => { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Kiểm quyền: ' + msg); } catch (_) { } };
+            const fail = why => { note(why); if (details.onerror) details.onerror(new Error(why)); };
+            if (!userId) { fail('chưa đọc được mã nhân viên trên trang'); return { abort() { } }; }
+            const MAX_TRY = 3;
+            let tries = 0;
+            const retry = why => { if (tries < MAX_TRY) { note(why + ' → thử lại lần ' + (tries + 1)); setTimeout(go, 1500 * tries); } else fail(why + ' (đã thử ' + tries + ' lần)'); };
+            const go = () => {
+                tries++;
+                nativeRequest({
+                    method: 'GET',
+                    url: PRIVATE_AUTH_API + '?type=check_auth&user=' + encodeURIComponent(userId) + '&ver=' + encodeURIComponent((typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '') + '&_t=' + Date.now(),
+                    timeout: 15000,
+                    onload: function (res) {
+                        let data = null;
+                        try { data = JSON.parse(res.responseText || ''); } catch (_) { data = null; }
+                        if (data && data.status === 'success' && data.authorized === true) {
                             const name = String(data.name || '').replace(/"/g, '""');
                             const exp = (data.expireDays === null || data.expireDays === undefined) ? '' : data.expireDays;
-                            const csv = 'UserID,Name,C,D,E,F,G,H,ExpireDays\n' +
-                                String(data.user || userId) + ',"' + name + '",,,,,,,' + exp;
-                            return details.onload && details.onload({
-                                status: 200,
-                                responseText: csv,
-                                finalUrl: res.finalUrl || PRIVATE_AUTH_API
-                            });
+                            const csv = EMPTY + String(data.user || userId) + ',"' + name + '",,,,,,,' + exp;
+                            return details.onload && details.onload({ status: 200, responseText: csv, finalUrl: res.finalUrl || PRIVATE_AUTH_API });
                         }
-                        return details.onload && details.onload({ status: 200, responseText: 'UserID,Name,C,D,E,F,G,H,ExpireDays\n' });
-                    }
-                    catch (e) {
-                        if (details.onerror)
-                            details.onerror(e);
-                    }
-                },
-                onerror: details.onerror,
-                ontimeout: details.ontimeout
-            });
+                        if (data && data.status === 'fail' && data.authorized === false) {
+                            note('máy chủ trả: không có quyền (' + String(data.message || '') + ')');
+                            return details.onload && details.onload({ status: 200, responseText: EMPTY });
+                        }
+                        retry('máy chủ trả lỗi' + (data && data.message ? ': ' + String(data.message).slice(0, 80) : ' (HTTP ' + res.status + ')'));
+                    },
+                    onerror: function () { retry('lỗi mạng'); },
+                    ontimeout: function () { retry('quá 15 giây'); }
+                });
+            };
+            go();
+            return { abort() { } };
         }
         catch (e) {
             return nativeRequest(details);
@@ -1693,7 +1700,7 @@ window.__AutoBIRun67 = (function () {
             AUTH_STATE = { checked: true, isAuthorized: _0x38b04c.isAuthorized !== false, userName: _0x38b04c.user, expireDays: _0x38b04c.expireDays };
             console.log('[Auto BI] \uD83D\uDEE1\uFE0F \u0110\u00E3 ph\u1EE5c h\u1ED3i danh t\u00EDnh: ' + AUTH_STATE.userName);
             return true;
-        } return false; }, check: _0x155884 => { let _0x2f2421 = AuthService.getUserStringFromDOM(); if (!_0x2f2421) {
+        } return false; }, check: (_0x155884, __n) => { let _0x2f2421 = AuthService.getUserStringFromDOM(); if (!_0x2f2421) {
             const _0x4b5494 = AuthService.restoreCachedAuth();
             if (_0x4b5494) {
                 _0x2f2421 = AUTH_STATE.userName;
@@ -1704,17 +1711,19 @@ window.__AutoBIRun67 = (function () {
         } const _0x384f20 = AuthService.getAuthCache(); const _0x3ec7ee = AuthService.extractUserId(_0x2f2421); const _0x5b5606 = _0x384f20 ? AuthService.extractUserId(_0x384f20.user) : ''; if (_0x3ec7ee && _0x5b5606 && _0x3ec7ee !== _0x5b5606 && _0x3ec7ee !== '---') {
             console.log('[Auto BI] \uD83D\uDD04 Ph\u00E1t hi\u1EC7n \u0111\u1ED5i User t\u1EEB [' + _0x5b5606 + '] sang [' + _0x3ec7ee + ']. \u0110ang l\u00E0m s\u1EA1ch b\u1ED9 nh\u1EDB t\u1EA1m...');
             window.tgdd_active_user_config = null;
-        } const _0x9a8b7e = UTILS.isHomePage(); const _0x5f0ed2 = GM_getValue(CONSTANTS.KEYS.AUTO_STATE, -1); const _0x5e1b7e = _0x5f0ed2 >= 0 && _0x5f0ed2 < 99; let _0x3b0b6d = _0x9a8b7e && !_0x5e1b7e && _0x2f2421 !== '---'; const _0x7d9042 = _0x384f20 ? Date.now() - (_0x384f20.timestamp || 0) : 999999999; const _0xa41eba = _0x384f20 && _0x5b5606 === _0x3ec7ee && _0x7d9042 < 3 * 24 * 60 * 60 * 1000; /* V17.56: đã kiểm đạt trong hôm nay (cùng mã NV) thì dùng lại, không tải Sheet Auth — 1 ngày kiểm 1 lần */ const __authToday = !!(_0x384f20 && _0x384f20.isAuthorized && _0x3ec7ee && _0x5b5606 === _0x3ec7ee && new Date(_0x384f20.timestamp || 0).toDateString() === new Date().toDateString()); if ((!_0x3b0b6d || __authToday) && _0xa41eba) {
+        } const _0x9a8b7e = UTILS.isHomePage(); const _0x5f0ed2 = GM_getValue(CONSTANTS.KEYS.AUTO_STATE, -1); const _0x5e1b7e = _0x5f0ed2 >= 0 && _0x5f0ed2 < 99; let _0x3b0b6d = _0x9a8b7e && !_0x5e1b7e && _0x2f2421 !== '---'; const _0x7d9042 = _0x384f20 ? Date.now() - (_0x384f20.timestamp || 0) : 999999999; const _0xa41eba = _0x384f20 && _0x5b5606 === _0x3ec7ee && _0x7d9042 < 3 * 24 * 60 * 60 * 1000; /* V17.56: đã kiểm đạt trong hôm nay (cùng mã NV) thì dùng lại, không tải Sheet Auth — 1 ngày kiểm 1 lần */ const __authToday = !!(_0x384f20 && _0x384f20.isAuthorized && _0x3ec7ee && _0x5b5606 === _0x3ec7ee && new Date(_0x384f20.timestamp || 0).toDateString() === new Date().toDateString()); if ((!_0x3b0b6d || __authToday) && _0xa41eba && _0x384f20.isAuthorized) { /* V18.12: kết quả 'không có quyền' không dùng lại — luôn kiểm lại */
             AUTH_STATE = { checked: true, isAuthorized: _0x384f20.isAuthorized, userName: _0x384f20.user, expireDays: _0x384f20.expireDays };
             UI.updateNavName();
             if (_0x155884)
                 _0x155884(AUTH_STATE);
             return;
         } if (_0x2f2421 === '---') {
+            /* V18.12: trang chưa hiện tên người dùng → chờ thêm (20 × 0,5 giây) rồi mới kết luận */
+            if ((__n || 0) < 20) { setTimeout(() => AuthService.check(_0x155884, (__n || 0) + 1), 500); return; }
             if (_0x155884)
                 _0x155884(AUTH_STATE);
             return;
-        } const _0x3740cf = Date.now(); const _0x139888 = 'https://docs.google.com/spreadsheets/d/' + CONSTANTS.GSHEET.AUTH.ID + '/export?format=csv&gid=' + CONSTANTS.GSHEET.AUTH.GID + '&_t=' + _0x3740cf; GM_xmlhttpRequest({ method: 'GET', url: _0x139888, timeout: 8000, onload: _0x256bf1 => { let _0x296123 = false; let _0x473880 = null; if (_0x256bf1.status === 200 && !_0x256bf1.responseText.includes('<html')) {
+        } window.__AutoBIAuthUid = _0x3ec7ee; /* V18.12 */ const _0x3740cf = Date.now(); const _0x139888 = 'https://docs.google.com/spreadsheets/d/' + CONSTANTS.GSHEET.AUTH.ID + '/export?format=csv&gid=' + CONSTANTS.GSHEET.AUTH.GID + '&_t=' + _0x3740cf; GM_xmlhttpRequest({ method: 'GET', url: _0x139888, timeout: 8000, onload: _0x256bf1 => { let _0x296123 = false; let _0x473880 = null; if (_0x256bf1.status === 200 && !_0x256bf1.responseText.includes('<html')) {
                 const _0x4c3cf3 = _0x256bf1.responseText.split('\n');
                 for (let _0x318048 = 1; _0x318048 < _0x4c3cf3.length; _0x318048++) {
                     const _0x49a16e = _0x4c3cf3[_0x318048].trim();
@@ -1744,11 +1753,11 @@ window.__AutoBIRun67 = (function () {
             }
             else {
                 _0x540496();
-            } }, onerror: () => _0x540496(), ontimeout: () => _0x540496() }); function _0x540496() { if (_0x384f20 && _0x5b5606 === _0x3ec7ee) {
+            } }, onerror: () => _0x540496(), ontimeout: () => _0x540496() }); function _0x540496() { if (_0x384f20 && _0x5b5606 === _0x3ec7ee && _0x384f20.isAuthorized) {
             AUTH_STATE = { checked: true, isAuthorized: _0x384f20.isAuthorized, userName: _0x384f20.user, expireDays: _0x384f20.expireDays };
         }
         else {
-            AUTH_STATE = { checked: true, isAuthorized: false, userName: _0x2f2421, expireDays: null };
+            AUTH_STATE = { checked: true, isAuthorized: false, userName: _0x2f2421, expireDays: null, netError: true }; /* V18.12: lỗi mạng ≠ không có quyền */
         } UI.updateNavName(); if (_0x155884)
             _0x155884(AUTH_STATE); } } };
     const DATA = { CACHED_APPS: null, checkSchedulePermission: _0x2b3596 => { /* V17.74: không dùng hẹn giờ, không đọc Sheet quyền cũ */ if (_0x2b3596) _0x2b3596(false); return; const _0x5bc706 = 'https://docs.google.com/spreadsheets/d/' + CONSTANTS.GSHEET.AUTH.ID + '/export?format=csv&gid=' + CONSTANTS.GSHEET.AUTH.GID + '&_t=' + Date.now(); GM_xmlhttpRequest({ method: 'GET', url: _0x5bc706, timeout: 5000, onload: _0x3dde35 => { if (_0x3dde35.status === 200 && !_0x3dde35.responseText.includes('<html')) {
@@ -2402,6 +2411,11 @@ window.__AutoBIRun67 = (function () {
         } _0x5ec6d8.innerHTML = '\n                <span class="music-mini-icon" style="font-size:10px; animation: pulse-text 1s infinite alternate;">\u23F3</span>\n                <span class="music-title-text" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:240px; color:#d63031;">' + _0x2a82a0 + '</span>\n            '; }, showUserInfoModal: () => { let _0xe2d2b1 = ''; let _0x54222a = ''; if (!AUTH_STATE.isAuthorized || AUTH_STATE.expireDays !== null && AUTH_STATE.expireDays < 0) {
             _0xe2d2b1 = '\n                    <span style="color: #d63031; font-weight: bold;">\u274C B\u1EA1n ch\u01B0a \u0111\u01B0\u1EE3c c\u1EA5p quy\u1EC1n s\u1EED d\u1EE5ng.</span><br>Vui l\u00F2ng li\u00EAn h\u1EC7 User <b>38967</b> \u0111\u1EC3 \u0111\u01B0\u1EE3c c\u1EA5p quy\u1EC1n nh\u00E9.\n                    <br><br>\n                    <span style="font-size:12.5px; color:#555; display:block; border-top:1px dashed rgba(0,0,0,0.1); padding-top:12px;">\uD83D\uDCA1 N\u1EBFu b\u1EA1n \u0111\u00E3 \u0111\u01B0\u1EE3c c\u1EA5p quy\u1EC1n tr\u01B0\u1EDBc \u0111\u00F3, vui l\u00F2ng <a href="#" id="lnk-auth-error-guide" style="color:#007bff; font-weight:bold; text-decoration:underline;">B\u1EA5m v\u00E0o \u0111\u00E2y</a> \u0111\u1EC3 xem h\u01B0\u1EDBng d\u1EABn x\u1EED l\u00FD l\u1ED7i b\u1EA3n quy\u1EC1n nh\u00E9!</span>\n                ';
             _0x54222a = 'error';
+            if (AUTH_STATE.netError) { /* V18.12 */
+                _0xe2d2b1 = '<span style="color:#e67e22; font-weight:bold;">⚠️ Chưa kiểm tra được quyền.</span><br>Mạng chậm hoặc máy chủ Google đang bận — không phải do tài khoản. Bấm <b>Kiểm tra lại</b> bên dưới.';
+                _0x54222a = 'info';
+            }
+            _0xe2d2b1 += '<button id="btn-auth-retry" class="tgdd-msg-btn" style="background:#0984e3; width:100%; margin-top:14px;">🔄 Kiểm tra lại</button>';
         }
         else {
             if (AUTH_STATE.expireDays === null) {
@@ -2414,6 +2428,8 @@ window.__AutoBIRun67 = (function () {
             }
         } const _0x54b75e = typeof GM_info !== 'undefined' && GM_info.script ? '' + GM_info.script.name : 'Auto BI'; const _0x7a8ed0 = '\n                <div style="font-size: 15px; line-height: 1.6; margin-bottom: 20px; text-align: left;">\n                    Xin ch\u00E0o <b style="color:#007bff; font-size: 18px;">' + AUTH_STATE.userName + '</b>!<br>\n                    B\u1EA1n \u0111ang s\u1EED d\u1EE5ng phi\u00EAn b\u1EA3n <b style="color:#2e7d32;">' + _0x54b75e + '</b>.<br><br>\n                    ' + _0xe2d2b1 + '\n                </div>\n                <div style="display:flex; flex-direction:column; gap:10px; width:100%;">\n                    <button id="btn-quick-donate" class="tgdd-msg-btn" style="background: #d63031; box-shadow: 0 4px 10px rgba(214, 48, 49, 0.4); width: 100%;">\n                        \uD83D\uDC9B 38967 - Mr Ph\u1EA1m\n                    </button>\n                </div>\n                <style>#tgdd-modal-btn-close { display: none !important; }</style>\n            '; UI.showMsg('Th\u00F4ng tin B\u1EA3n quy\u1EC1n', _0x7a8ed0, _0x54222a); setTimeout(() => { const _0x75a8cf = document.getElementById('btn-quick-donate'); if (_0x75a8cf) {
             _0x75a8cf.onclick = () => { UI.showMsg('\u1EE6ng H\u1ED9 T\u00F4i', 'N\u1EBFu AutoBI gi\u00FAp b\u1EA1n l\u00E0m vi\u1EC7c thu\u1EADn ti\u1EC7n h\u01A1n, b\u1EA1n c\u00F3 th\u1EC3 \u1EE7ng h\u1ED9 t\u00F4i m\u1ED9t ly c\u00E0 ph\u00EA nh\u00E9! \u2615<br><br><b style="color:#d63031;font-size:16px;">38967 - Mr Ph\u1EA1m</b><br><span style="font-size:12px;color:#666;">C\u1EA3m \u01A1n b\u1EA1n \u0111\u00E3 \u1EE7ng h\u1ED9!</span>', 'info'); };
+        } const __rb = document.getElementById('btn-auth-retry'); if (__rb) { /* V18.12 */
+            __rb.onclick = () => { __rb.disabled = true; __rb.innerText = '⏳ Đang kiểm tra...'; AuthService.check(() => { try { UI.updateNavName(); } catch (_) { } UI.showUserInfoModal(); }); };
         } const _0x50a9b9 = document.getElementById('lnk-auth-error-guide'); if (_0x50a9b9) {
             _0x50a9b9.onclick = _0x5a992c => { _0x5a992c.preventDefault(); _0x5a992c.stopPropagation(); UI.showMsg('\uD83D\uDCD6 H\u01AF\u1EDANG D\u1EAAN X\u1EEC L\u00DD L\u1ED6I', '\n                            <div style="font-size: 14.5px; line-height: 1.6; text-align: left; color: #333;">\n                                N\u1EBFu b\u1EA1n l\u00E0 ng\u01B0\u1EDDi d\u00F9ng <b>iPhone</b>, h\u00E3y th\u1EF1c hi\u1EC7n theo c\u00E1c b\u01B0\u1EDBc sau \u0111\u1EC3 kh\u1EAFc ph\u1EE5c l\u1ED7i kh\u00F4ng nh\u1EADn b\u1EA3n quy\u1EC1n nhen:<br><br>\n                                1\uFE0F\u20E3 V\u00E0o \u1EE9ng d\u1EE5ng <b>C\u00E0i \u0111\u1EB7t</b> tr\u00EAn m\u00E0n h\u00ECnh ch\u00EDnh c\u1EE7a iPhone.<br>\n                                2\uFE0F\u20E3 B\u1EA5m t\u00ECm ki\u1EBFm <b>Safari</b> r\u1ED3i ch\u1ECDn v\u00E0o Safari \u1EDF k\u1EBFt qu\u1EA3 t\u00ECm ki\u1EBFm.<br>\n                                3\uFE0F\u20E3 K\u00E9o xu\u1ED1ng d\u01B0\u1EDBi c\u00F9ng, ch\u1ECDn d\u00F2ng ch\u1EEF <b>X\u00F3a l\u1ECBch s\u1EED v\u00E0 d\u1EEF li\u1EC7u trang web</b>.<br>\n                                4\uFE0F\u20E3 Ch\u1ECDn kho\u1EA3ng th\u1EDDi gian x\u00F3a l\u00E0 <b>T\u1EA5t c\u1EA3 l\u1ECBch s\u1EED</b> v\u00E0 \u0111\u1EA3m b\u1EA3o b\u1EADt d\u00F2ng <b>\u0110\u00F3ng t\u1EA5t c\u1EA3 c\u00E1c tab</b>.<br>\n                                5\uFE0F\u20E3 Nh\u1EA5n n\u00FAt m\u00E0u \u0111\u1ECF x\u00E1c nh\u1EADn x\u00F3a l\u1ECBch s\u1EED.<br><br>\n                                Sau khi ho\u00E0n t\u1EA5t, b\u1EA1n m\u1EDF l\u1EA1i tr\u00ECnh duy\u1EC7t Safari, truy c\u1EADp v\u00E0 \u0111\u0103ng nh\u1EADp l\u1EA1i v\u00E0o trang <a href="https://baocao.dienmayxanh.com/dashboard/home" style="color:#007bff; font-weight:bold; text-decoration:underline;">bi.thegioididong.com</a> l\u00E0 b\u1EA3n quy\u1EC1n s\u1EBD ho\u1EA1t \u0111\u1ED9ng b\u00ECnh th\u01B0\u1EDDng ngay nha!\n                            </div>\n                        ', 'info'); };
         } }, 100); }, initSidebar: (_0x445605 = 'home', _0x63af09 = {}) => { let _0x252652 = document.getElementById('tgdd-sidebar-menu'); let _0x3e7930 = document.getElementById('tgdd-sidebar-overlay'); if (!_0x252652) {
@@ -3122,10 +3138,10 @@ window.__AutoBIRun67 = (function () {
         } if (!_0x52010d) {
             requestAnimationFrame(() => { setTimeout(() => { _0x375309.classList.add('slide-visible'); }, 150); });
         } document.getElementById('nav-home-menu').onclick = () => { if (!AUTH_STATE.isAuthorized) {
-            UI.showUserInfoModal();
+            UI.showToast('⏳ Đang kiểm tra quyền...', 2500); AuthService.check(__st => { if (__st && __st.isAuthorized) document.getElementById('nav-home-menu').onclick(); else UI.showUserInfoModal(); }); /* V18.12 */
             return;
         } UI.initSidebar('home'); UI.renderPinnedTools(); const _0x5cc3f6 = document.getElementById('tgdd-sidebar-menu'); const _0x3218cd = document.getElementById('tgdd-sidebar-overlay'); requestAnimationFrame(() => { requestAnimationFrame(() => { _0x5cc3f6.classList.add('show'); _0x3218cd.classList.add('show'); document.body.classList.add('tgdd-body-lock'); }); }); }; document.getElementById('nav-report').onclick = () => { if (!AUTH_STATE.isAuthorized) {
-            UI.showUserInfoModal();
+            UI.showToast('⏳ Đang kiểm tra quyền...', 2500); AuthService.check(__st => { if (__st && __st.isAuthorized) document.getElementById('nav-report').onclick(); else UI.showUserInfoModal(); }); /* V18.12 */
             return;
         } UI.createReportSelectModal(); document.getElementById(CONSTANTS.DOM_IDS.SELECT_MODAL).style.display = 'flex'; document.body.classList.add('tgdd-body-lock'); }; document.getElementById('nav-user').onclick = () => { UI.showUserInfoModal(); }; UI.createConfigModal(); UI.createMsgModal(); UI.createToast(); UI.updateNavName(); }, updateNavName: () => { const _0x216944 = document.getElementById('nav-user-name'); if (_0x216944) {
             const _0x1e5010 = _0x5c5687 => { if (!_0x5c5687)
@@ -7182,7 +7198,7 @@ const _0x133c09 = '<div style="font-size:15px; color:#333; line-height:1.6; text
                     const _0x12d2b7 = document.getElementById(CONSTANTS.DOM_IDS.BOTTOM_NAV);
                     if (_0x12d2b7)
                         _0x12d2b7.classList.add('instant-show');
-                    UI.updateLoadingStatus('\u274C T\u00E0i kho\u1EA3n ch\u01B0a \u0111\u01B0\u1EE3c c\u1EA5p quy\u1EC1n s\u1EED d\u1EE5ng!');
+                    UI.updateLoadingStatus(_0x4fbbfe.netError ? '⚠️ Chưa kiểm tra được quyền (mạng chậm) — bấm Menu để thử lại' : '\u274C T\u00E0i kho\u1EA3n ch\u01B0a \u0111\u01B0\u1EE3c c\u1EA5p quy\u1EC1n s\u1EED d\u1EE5ng!');
                     return;
                 } UI.initHome(); const _0x580f4e = document.getElementById(CONSTANTS.DOM_IDS.BOTTOM_NAV); if (_0x580f4e)
                     _0x580f4e.classList.add('instant-show'); /* V16.8.4: bỏ bước kiểm tra sinh nhật khi khởi động (gọi Apps Script làm chậm) */ UI.updateLoadingStatus('\u0110ang \u0111\u1ED3ng b\u1ED9 th\u00F4ng b\u00E1o h\u1EC7 th\u1ED1ng...'); DATA.checkNotification(() => { UI.updateLoadingStatus('Kh\u1EDFi t\u1EA1o ho\u00E0n t\u1EA5t!'); setTimeout(() => { APP.showQueuedPopups(); }, 500); }); });
