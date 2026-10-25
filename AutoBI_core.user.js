@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.12
+// @name         AutoBI Core V18.33
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.12
+// @version      18.33
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -737,10 +737,12 @@ window.__AutoBIWorktime73 = (() => {
             const cache = read('tgdd_data_cache_v30', {}), catalog = read(bridge.configKey, []), config = bridge.UTILS.getPersistentConfig();
             if (job.combined) {
                 bridge.UI.renderReport(cache, catalog, config);
+                /* V18.23: chạy ALL xong không tự mở Giờ công — mở báo cáo ở Realtime V1; xem Giờ công bằng nút ở thanh dưới */
+                setTimeout(() => { try { const t = document.querySelector('.rpt-nav-item[data-tab="oneshop"]'); if (t) t.click(); } catch (_) { } }, 300);
                 if (error)
                     bridge.UI.showToast('\u2713 L\u0169y k\u1EBF \u0111\u00E3 ho\u00E0n t\u1EA5t. \u26A0 Gi\u1EDD c\u00F4ng: ' + error.message, 12000);
                 else
-                    show();
+                    bridge.UI.showToast('\u2713 \u0110\u00E3 xong ALL. Gi\u1EDD c\u00F4ng & N\u0103ng su\u1EA5t: b\u1EA5m n\u00FAt \u1EDF thanh d\u01B0\u1EDBi \u0111\u1EC3 xem.', 6000);
             }
             else {
                 show();
@@ -896,7 +898,7 @@ window.__AutoBIWorktime73 = (() => {
         const money = v => v == null ? '\u2014' : number(v), qd = filters.metric !== 'actual';
         const allShops = [...new Map(original.map(r => [r.shopId, r.shop])).entries()];
         const select = (value, label, current) => '<option value="' + esc(value) + '" ' + (value === current ? 'selected' : '') + '>' + esc(label) + '</option>';
-        const ratio = r => { const pct = average ? r.hours / average * 100 : 0; return '<div class="ratio"><span class="track"><i style="width:' + Math.min(100, pct) + '%;background:' + (pct < 70 ? '#ff9c16' : pct < 100 ? '#438dff' : '#39c975') + '"></i></span><b>' + number(pct, 0) + '%</b></div>'; };
+        const ratio = r => { const pct = average ? r.hours / average * 100 : 0; return '<div class="ratio ' + (pct >= 100 ? 'xg' : pct >= 80 ? 'xy' : 'xr') + '"><span class="track"><i style="width:' + Math.min(100, pct) + '%;background:' + (pct < 70 ? '#ff9c16' : pct < 100 ? '#438dff' : '#39c975') + '"></i></span><b>' + number(pct, 0) + '%</b></div>'; };
         let html = '<header><span class="clock">\u25F7</span><div class="heading"><small>GI\u1EDC C\u00D4NG</small><h1>Gi\u1EDD c\u00F4ng & <em>N\u0103ng su\u1EA5t</em></h1><p>' + (result ? displayDate(result.range.from) + ' \u2013 ' + displayDate(result.range.to) + ' \u00B7 C\u1EADp nh\u1EADt ' + new Date(result.at).toLocaleString('vi-VN') : 'Ch\u01B0a c\u00F3 b\u00E1o c\u00E1o Gi\u1EDD c\u00F4ng') + '</p></div><div class="motto">L\u00E0m \u0111\u00FAng gi\u1EDD<br>Hi\u1EC7u qu\u1EA3 h\u01A1n! <span>\u2582\u2585\u2587 \u2197</span></div><button id="wt-close">\u23FB \u0110\u00F3ng</button></header>';
         html += '<div class="content">';
         if (status?.message)
@@ -927,7 +929,36 @@ window.__AutoBIWorktime73 = (() => {
         return html + (shops.size ? '' : '<p class="empty">Kh\u00F4ng c\u00F3 nh\u00E2n vi\u00EAn kh\u1EDBp b\u1ED9 l\u1ECDc.</p>') + '<p class="foot">\u201C\u2014\u201D = ch\u01B0a c\u00F3 doanh thu \u0111\u00FAng k\u1EF3 ho\u1EB7c gi\u1EDD c\u00F4ng b\u1EB1ng 0. Trung b\u00ECnh \u0111\u01B0\u1EE3c t\u00EDnh theo M\u00E3 NV duy nh\u1EA5t; ng\u01B0\u1EDDi l\u00E0m nhi\u1EC1u shop ch\u1EC9 t\u00EDnh m\u1ED9t ng\u01B0\u1EDDi.</p></div>';
     }
     const css = `:host{font:13px/1.45 Arial,sans-serif;color:#203354}*{box-sizing:border-box}main{max-width:1320px;margin:0 auto;background:#fff;min-height:100%}header{display:flex;align-items:center;gap:14px;padding:18px 24px;color:white;background:linear-gradient(120deg,#168cff,#0055dc 58%,#168cff);position:relative;overflow:hidden}header:after{content:'';position:absolute;inset:0;background:linear-gradient(25deg,transparent 65%,#ffffff0c 65%);pointer-events:none}.clock{width:60px;height:60px;border:4px solid #a9e6ff;border-radius:50%;font-size:47px;line-height:45px;text-align:center;background:white;color:#0675ff;flex-shrink:0}.heading{flex:1}header small{font-size:10px;letter-spacing:1.4px;font-weight:bold;color:#d8f5ff}h1{font-size:28px;line-height:1.15;margin:3px 0;font-weight:900}h1 em{font-style:normal;color:#fff12d}header p{margin:5px 0 0;font-size:11px;color:#e3f2ff}.motto{font-size:16px;font-style:italic;transform:rotate(-5deg);text-align:center;margin-right:16px}.motto span{display:inline-block;color:#ffef4e;font-size:28px;margin-left:12px}button,select{font:inherit;border:1px solid #dce5f0;border-radius:6px;background:#fff;color:#284568;padding:7px 11px;cursor:pointer}header button{color:#005adb;z-index:1}.content{padding:12px 20px 24px}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:4px 0 12px}.stat{display:flex;align-items:center;gap:12px;border:1px solid #deebfa;border-radius:8px;padding:13px 12px;min-width:0}.stat-icon{font-size:30px;display:grid;place-items:center;width:46px;height:46px;border-radius:12px;flex-shrink:0;background:#ffffff77}.stat small{display:block;font-size:10px;font-weight:700;margin-bottom:3px}.stat strong{font-size:24px;font-weight:900;letter-spacing:-.6px}.unit{margin-left:7px;font-size:11px}.blue{background:#e3f3ff;color:#004bda}.pink{background:#fff0f9;color:#b4006a}.green{background:#e7fbf2;color:#056333}.orange{background:#fff5e5;color:#8d4900}.toolbar{display:flex;gap:7px;flex-wrap:wrap;align-items:center}.primary{background:#0769ff;color:#fff;border-color:#0769ff}.period{margin-left:auto;border:1px solid #dce5f0;padding:6px 9px;border-radius:6px;font-size:11px}.toolbar select{max-width:235px;font-size:11px}.hint,.foot{font-size:10px;color:#69819b;margin:10px 1px}.notice{background:#fff6dc;border:1px solid #efd690;border-radius:7px;padding:10px 12px;margin-bottom:10px;overflow-wrap:anywhere;font-size:12px}.shop{border:1px solid #8fc8ff;border-radius:8px;margin:13px 0;overflow:hidden}.shop.warm{border-color:#ffc873}summary{display:flex;align-items:center;gap:10px;padding:10px 13px;cursor:pointer;background:linear-gradient(90deg,#d8f0ff,#f2f9ff);list-style:none}summary:after{content:'⌄';font-size:20px;color:#1674e8}.shop[open]>summary:after{content:'⌃'}.warm>summary{background:linear-gradient(90deg,#fff0cd,#fffaf0)}summary strong{font-size:15px;color:#073586}.store{font-size:26px}.shop-total{margin-left:auto;background:#0669fb;color:white;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:bold;white-space:nowrap}.warm .shop-total{background:#ff9809}.group{margin:10px 12px;border:1px solid #e9f0f7;border-radius:5px;overflow:hidden}h2{font-size:12px;color:#5b0be7;background:linear-gradient(90deg,#f0efff,#fff);padding:7px 9px;margin:0;display:flex;gap:9px;align-items:center}h2 span{font-size:10px;padding:2px 7px;border-radius:20px;background:#eeecff;font-weight:normal}h2 b{margin-left:auto;font-size:11px}.managers h2{color:#04788b;background:linear-gradient(90deg,#e1f8f7,#fff)}.managers h2 span{background:#def7f5}.table-wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:710px;font-size:12px}th{background:#edf5fb;color:#546f88;font-size:10px;font-weight:700;padding:7px 8px;text-align:left;white-space:nowrap}td{border-bottom:1px solid #edf2f7;padding:7px 8px}tbody tr:last-child td{border-bottom:0}tbody tr:nth-child(even){background:#fbfdff}.num,.hours{text-align:right;font-variant-numeric:tabular-nums}.hours{font-weight:800;color:#007faf}.employee{font-weight:600;min-width:145px}.ratio{display:flex;align-items:center;gap:7px;min-width:140px}.track{display:block;height:9px;flex:1;max-width:140px;border-radius:6px;background:#e1ebf4;overflow:hidden}.track i{display:block;height:100%;border-radius:6px}.ratio b{font-size:10px;font-weight:500;color:#54778f;min-width:32px}.empty{text-align:center;padding:40px;color:#7e8ea0}table{table-layout:fixed}th,td{vertical-align:middle}th:nth-child(1),td:nth-child(1){width:5%;text-align:center}th:nth-child(2),td:nth-child(2){width:25%;overflow-wrap:anywhere}th:nth-child(3),td:nth-child(3){width:10%;text-align:center;font-variant-numeric:tabular-nums}.sales th:nth-child(4),.sales td:nth-child(4){width:12%;text-align:right}.sales th:nth-child(5),.sales td:nth-child(5){width:22%}.sales th:nth-child(6),.sales td:nth-child(6){width:14%;text-align:right}.sales th:nth-child(7),.sales td:nth-child(7){width:12%;text-align:right}.managers th:nth-child(4),.managers td:nth-child(4){width:16%}.managers th:nth-child(5),.managers td:nth-child(5){width:12%;text-align:right}.managers th:nth-child(6),.managers td:nth-child(6){width:32%}.ratio{min-width:0}.track{min-width:0}.num,.hours{white-space:nowrap}button:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid #53adff}@media(max-width:850px){header{padding:14px}.motto{display:none}h1{font-size:23px}.content{padding:10px}.stats{gap:6px}.stat{padding:9px 7px;gap:7px}.stat strong{font-size:20px}.stat-icon{width:34px;height:38px;font-size:25px}.unit{display:block;margin:0}.period{margin-left:0}summary strong{font-size:13px}.group{margin:8px}table{font-size:11px}}@media(max-width:540px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}header{gap:9px}.clock{width:43px;height:43px;line-height:31px;font-size:34px}.heading h1{font-size:20px}header button{padding:5px 8px;font-size:11px}summary{flex-wrap:wrap;gap:6px;padding:8px}.shop-total{font-size:10px}h2{flex-wrap:wrap}.toolbar select{flex:1;min-width:100px}.period{width:100%;text-align:center}table{min-width:0;font-size:12px}th:nth-child(3),td:nth-child(3),.sales th:nth-child(5),.sales td:nth-child(5),.managers th:nth-child(6),.managers td:nth-child(6){display:none}.employee{min-width:0}th:nth-child(1),td:nth-child(1){width:9%}th:nth-child(2),td:nth-child(2){width:41%}.sales th:nth-child(4),.sales td:nth-child(4){width:14%}.sales th:nth-child(6),.sales td:nth-child(6){width:18%}.sales th:nth-child(7),.sales td:nth-child(7){width:18%}.managers th:nth-child(4),.managers td:nth-child(4){width:30%}.managers th:nth-child(5),.managers td:nth-child(5){width:20%}} /* V18.02: iPhone — ẩn cột Mã NV và Tỷ lệ so TB, bảng không cuộn ngang */`;
+    /* V18.24: Giờ công hiện bên trong vùng báo cáo như các mục khác (không phủ kín màn hình). CSS gói gọn trong khung #autobi-wt-inline */
+    const scopeCss = (P, text) => text.replace(/([^{}]+)\{([^{}]*)\}/g, (m, sel, body) => {
+        sel = sel.trim();
+        if (!sel || sel.startsWith('@')) return m;
+        return sel.split(',').map(x => { x = x.trim(); if (x === ':host') return P; if (x.startsWith(':host')) return P + x.slice(5); return P + ' ' + x; }).join(',') + '{' + body + '}';
+    });
+    function showInline(cap) {
+        document.getElementById('autobi-wt-screen')?.remove();
+        const host = document.createElement('div');
+        host.id = 'autobi-wt-inline';
+        host.dataset.autobiUi = 'true';
+        cap.innerHTML = '';
+        cap.appendChild(host);
+        document.querySelectorAll('.rpt-nav-item').forEach(x => x.classList.toggle('active', x.dataset.wtMenu === 'true'));
+        let filters = { shop: 'all', role: 'all', metric: 'converted' };
+        const render = () => {
+            const xl = window.__AutoBIExcel && window.__AutoBIExcel.on() ? window.__AutoBIExcel.wtCss : '';
+            host.innerHTML = '<style>' + scopeCss('#autobi-wt-inline', css + xl) + '#autobi-wt-inline main{min-height:0!important}</style><main>' + uiHTML(read(K.result), read(K.status), filters) + '</main>';
+            const q = id => host.querySelector('#' + id);
+            if (q('wt-close')) { q('wt-close').textContent = '\u2190 V\u1EC1 Realtime'; q('wt-close').onclick = () => { const t = document.querySelector('.rpt-nav-item[data-tab="oneshop"]'); if (t) t.click(); else host.remove(); }; }
+            q('wt-open-all')?.addEventListener('click', () => all('details.shop', host).forEach(d => d.open = true));
+            q('wt-close-all')?.addEventListener('click', () => all('details.shop', host).forEach(d => d.open = false));
+            for (const key of ['shop', 'role', 'metric'])
+                q('wt-' + key)?.addEventListener('change', e => { filters[key] = e.target.value; render(); });
+        };
+        render();
+    }
     function show() {
+        const cap = document.getElementById('capture-area');
+        if (cap && cap.isConnected) return showInline(cap);
         document.getElementById('autobi-wt-screen')?.remove();
         const host = document.createElement('section');
         host.id = 'autobi-wt-screen';
@@ -937,7 +968,7 @@ window.__AutoBIWorktime73 = (() => {
         document.body.appendChild(host);
         let filters = { shop: 'all', role: 'all', metric: 'converted' };
         const render = () => {
-            root.innerHTML = '<style>' + css + '</style><main>' + uiHTML(read(K.result), read(K.status), filters) + '</main>';
+            root.innerHTML = '<style>' + css + (window.__AutoBIExcel && window.__AutoBIExcel.on() ? window.__AutoBIExcel.wtCss : '') + '</style><main>' + uiHTML(read(K.result), read(K.status), filters) + '</main>';
             root.getElementById('wt-close').onclick = () => host.remove();
             root.getElementById('wt-open-all')?.addEventListener('click', () => all('details.shop', root).forEach(d => d.open = true));
             root.getElementById('wt-close-all')?.addEventListener('click', () => all('details.shop', root).forEach(d => d.open = false));
@@ -3559,6 +3590,8 @@ window.__AutoBIRun67 = (function () {
                             _0x4d9d89 += '<option value="' + _0x3207f0.url + '" ' + _0xa47f86 + '>\uD83C\uDFA8 ' + _0x3207f0.name + '</option>';
                         });
                         _0x2cbd90.innerHTML = _0x4d9d89;
+                        _0x2cbd90.insertAdjacentHTML('beforeend', '<option value="excel">📊 Bảng Excel</option>'); /* V18.13: theme Bảng Excel có sẵn trong AutoBI */
+                        if (window.__AutoBIExcel && window.__AutoBIExcel.on()) _0x2cbd90.value = 'excel';
                     }
                     let _0x5ded09 = 1;
                     for (let _0x1b2e71 = 2; _0x1b2e71 <= 5; _0x1b2e71++) {
@@ -3728,7 +3761,7 @@ window.__AutoBIRun67 = (function () {
                 _0x52665d();
             };
             const _0x143cef = typeof GM_info !== 'undefined' && GM_info.script ? '' + GM_info.script.name : 'Auto BI';
-            const _0x5cfbbc = '\n                <div class="tgdd-form-row" style="margin-bottom: 15px; align-items: flex-end; gap: 10px;">\n                    <div class="tgdd-form-group" style="flex: 3; margin-bottom: 0;">\n                        <label style="color: #6f42c1; font-weight: bold; font-size: 12px;">\uD83C\uDFA8 Giao di\u1EC7n Theme</label>\n                        <select id="cfg-active-theme" style="border: 1.5px solid #6f42c1; font-weight: bold; color: #6f42c1; background: #faf5ff; padding: 7px; border-radius: 6px; width: 100%;">\n                            <option value="default">\uD83C\uDFA8 M\u1EB7c \u0111\u1ECBnh</option>\n                        </select>\n                    </div>\n                    <div class="tgdd-form-group" style="flex: 1.2; min-width: 80px; margin-bottom: 0;">\n                        <label style="color: #6f42c1; font-weight: bold; font-size: 11px;">Auto F5 (Ph\u00FAt)</label>\n                        <input type="number" id="cfg-auto-f5" value="' + (_0x29c64e.autoF5 || 0) + '" min="0" placeholder="0" style="border: 1.5px solid #6f42c1; text-align: center; font-weight: bold; padding: 6px; border-radius: 6px;">\n                    </div>\n                </div>\n\n                <div class="tgdd-section-title">1. Th\u00F4ng tin Chung</div>\n\n                <div class="tgdd-form-row" style="margin-bottom: 10px;">\n                    <div class="tgdd-form-group" style="flex:1">\n                        <label style="color:#e67e22; font-weight:bold;">ID File Google Sheet L\u1ECBch S\u1EED</label>\n                        <input type="text" id="cfg-history-sheet-id" value="' + (_0x29c64e.historySheetId || '') + '" placeholder="VD: 1iuApMwdKYx..." style="border-color:#e67e22;">\n                    </div>\n                </div>\n\n                <div class="tgdd-form-row" style="align-items: flex-end; margin-bottom: 10px;">\n                    <div class="tgdd-form-group" style="flex: 1; margin-bottom: 0;">\n                        <label style="color:#2e7d32; font-weight:bold;">LINE Bot Access Token</label>\n                        <input type="password" id="cfg-line-token" value="' + (_0x29c64e.lineToken || '') + '" placeholder="Nh\u1EADp Token Bot..." style="width:100%; border:1px solid #4caf50;">\n                    </div>\n                </div>\n\n                <div style="margin-bottom:10px; border:1px dashed #ccc; padding:5px; border-radius:5px; background:#f9f9f9;">\n                    <div style="display:flex; justify-content:space-between; margin-bottom:5px;">\n                        <span style="font-size:11px; font-weight:bold; color:#555;">Danh s\u00E1ch Nh\u00F3m nh\u1EADn tin LINE</span>\n                        <button id="btn-add-line-group" class="tgdd-btn-add" style="padding:2px 8px;">+ Th\u00EAm nh\u00F3m</button>\n                    </div>\n                    <table class="tgdd-input-table" id="tbl-line-groups">\n                        <thead><tr><th>T\u00EAn Nh\u00F3m</th><th>Group ID</th><th style="width:40px">X\u00F3a</th></tr></thead>\n                        <tbody id="tbl-line-group-body"></tbody>\n                    </table>\n                </div>\n\n                <!-- \u00D4 T\u00CAN C\u1EE4M V\u00C0 N\u00DAT "+ TH\u00CAM SHOP" N\u1EB0M C\u1EA0NH NHAU TR\u00CAN C\u00D9NG 1 H\u00C0NG -->\n                <div class="tgdd-form-row" style="margin-bottom: 10px; align-items: flex-end; gap: 10px;">\n                    <div class="tgdd-form-group" style="flex: 1; margin-bottom: 0;">\n                        <label style="font-weight: bold; color: #333;">T\u00EAn C\u1EE5m</label>\n                        <input type="text" id="cfg-cluster" value="' + (_0x29c64e.cluster || '') + '" placeholder="Nh\u1EADp t\u00EAn c\u1EE5m..." style="width: 100%; border: 1px solid #ccc; padding: 7px; border-radius: 6px;">\n                    </div>\n                    <button id="btn-add-shop" class="tgdd-btn-add" style="margin: 0; background: #0284c7; font-weight: bold; padding: 8px 14px; border-radius: 6px; border: none; cursor: pointer; white-space: nowrap; height: 36px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(2, 132, 199, 0.2);">+ Th\u00EAm Shop</button>\n                </div>\n\n                <!-- KHUNG CH\u1EE8A C\u00C1C TH\u1EBA SHOP \u0110\u1ED8NG (SHOP 1..5) -->\n                <div id="cfg-shops-container"></div>\n\n                <div class="tgdd-form-row" style="margin-bottom: 15px;">\n                    <div class="tgdd-form-group" style="flex:1">\n                        <label>Total Target</label>\n                        <input type="text" id="cfg-total-target" readonly value="' + _0x5816a0(_0x29c64e.totalTarget) + '" style="background:#eee; font-weight:bold; color:red;">\n                    </div>\n                    <div class="tgdd-form-group" style="flex:1">\n                        <label>Hi\u1EC7n t\u1EA1i</label>\n                        <input type="number" id="cfg-dp" value="' + (_0x29c64e.dp || '') + '" placeholder="Auto" min="1" max="31" style="text-align:center; color:#d63031; font-weight:bold;">\n                    </div>\n                    <div class="tgdd-form-group" style="flex:1">\n                        <label>Cu\u1ED1i th\u00E1ng</label>\n                        <input type="text" id="cfg-eom" value="' + (_0x29c64e.eom || '') + '" placeholder="Auto" style="text-align:center; color:#007bff; font-weight:bold;">\n                    </div>\n                    <div class="tgdd-form-group" style="flex:1">\n                        <label>Tr\u1EA3 ch\u1EADm %</label>\n                        <input type="text" id="cfg-installment" value="' + (_0x29c64e.installment || 30) + '">\n                    </div>\n                </div>\n\n                <div style="padding: 12px; border: 1.5px dashed #007bff; border-radius: 10px; margin-bottom: 12px; background: rgba(0, 123, 255, 0.02); text-align: left;">\n                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">\n                        <span style="font-size: 12px; font-weight: bold; color: #007bff; text-transform: uppercase;">\uD83D\uDCC8 Quy t\u1EAFc t\u00EDnh \u0111i\u1EC3m n\u0103ng l\u1EF1c</span>\n                        <span id="btn-explain-score-rules" style="font-size: 11.5px; color: #6f42c1; cursor: pointer; font-weight: bold; text-decoration: underline; white-space: nowrap;" title="B\u1EA5m \u0111\u1EC3 xem chi ti\u1EBFt quy t\u1EAFc t\u00EDnh \u0111i\u1EC3m n\u0103ng l\u1EF1c nh\u00E2n vi\u00EAn">\uD83D\uDCA1 Gi\u1EA3i th\u00EDch</span>\n                    </div>\n\n                    <div class="tgdd-form-row" style="margin-bottom: 12px;">\n                        <div class="tgdd-form-group" style="flex:1"><label>DT m\u1ED1c (Tri\u1EC7u)/1 \u0111i\u1EC3m</label><input type="number" id="cfg-rev-point-step" value="' + (_0x29c64e.revPointStep || 20) + '"></div>\n                        <div class="tgdd-form-group" style="flex:1"><label>\u0110i\u1EC3m nh\u1EADn \u0111\u01B0\u1EE3c</label><input type="number" id="cfg-rev-point-value" value="' + (_0x29c64e.revPointValue || 1) + '"></div>\n                    </div>\n                    <div class="tgdd-form-row" style="margin-bottom: 12px;">\n                        <div class="tgdd-form-group" style="flex:1"><label>Tr\u1EEB thi \u0111ua t\u1ED1i \u0111a/nh\u00F3m</label><input type="number" id="cfg-group-min-points" value="' + (_0x29c64e.groupMinPoints || 3) + '"></div>\n                        <div class="tgdd-form-group" style="flex:1"><label>C\u1ED9ng thi \u0111ua t\u1ED1i \u0111a/nh\u00F3m</label><input type="number" id="cfg-group-max-points" value="' + (_0x29c64e.groupMaxPoints || 3) + '"></div>\n                    </div>\n                    <div class="tgdd-form-row">\n                        <div class="tgdd-form-group" style="flex:1"><label>T\u1EC9 l\u1EC7 KH \u0111\u00E1nh gi\u00E1 min</label><input type="number" id="cfg-service-min-rate" value="' + (_0x29c64e.serviceMinRate || 10) + '"></div>\n                        <div class="tgdd-form-group" style="flex:1"><label>C\u1ED9ng \u0111i\u1EC3m PV t\u1ED1i \u0111a</label><input type="number" id="cfg-service-max-points" value="' + (_0x29c64e.serviceMaxPoints || 20) + '"></div>\n                    </div>\n                </div>\n            ';
+            const _0x5cfbbc = '\n                <div class="tgdd-form-row" style="margin-bottom: 15px; align-items: flex-end; gap: 10px;">\n                    <div class="tgdd-form-group" style="flex: 3; margin-bottom: 0;">\n                        <label style="color: #6f42c1; font-weight: bold; font-size: 12px;">\uD83C\uDFA8 Giao di\u1EC7n Theme</label>\n                        <select id="cfg-active-theme" style="border: 1.5px solid #6f42c1; font-weight: bold; color: #6f42c1; background: #faf5ff; padding: 7px; border-radius: 6px; width: 100%;">\n                            <option value="default">\uD83C\uDFA8 M\u1EB7c \u0111\u1ECBnh</option><option value="excel">📊 Bảng Excel</option>\n                        </select>\n                    </div>\n                    <div class="tgdd-form-group" style="flex: 1.2; min-width: 80px; margin-bottom: 0;">\n                        <label style="color: #6f42c1; font-weight: bold; font-size: 11px;">Auto F5 (Ph\u00FAt)</label>\n                        <input type="number" id="cfg-auto-f5" value="' + (_0x29c64e.autoF5 || 0) + '" min="0" placeholder="0" style="border: 1.5px solid #6f42c1; text-align: center; font-weight: bold; padding: 6px; border-radius: 6px;">\n                    </div>\n                </div>\n\n                <div class="tgdd-section-title">1. Th\u00F4ng tin Chung</div>\n\n                <div class="tgdd-form-row" style="margin-bottom: 10px;">\n                    <div class="tgdd-form-group" style="flex:1">\n                        <label style="color:#e67e22; font-weight:bold;">ID File Google Sheet L\u1ECBch S\u1EED</label>\n                        <input type="text" id="cfg-history-sheet-id" value="' + (_0x29c64e.historySheetId || '') + '" placeholder="VD: 1iuApMwdKYx..." style="border-color:#e67e22;">\n                    </div>\n                </div>\n\n                <div class="tgdd-form-row" style="align-items: flex-end; margin-bottom: 10px;">\n                    <div class="tgdd-form-group" style="flex: 1; margin-bottom: 0;">\n                        <label style="color:#2e7d32; font-weight:bold;">LINE Bot Access Token</label>\n                        <input type="password" id="cfg-line-token" value="' + (_0x29c64e.lineToken || '') + '" placeholder="Nh\u1EADp Token Bot..." style="width:100%; border:1px solid #4caf50;">\n                    </div>\n                </div>\n\n                <div style="margin-bottom:10px; border:1px dashed #ccc; padding:5px; border-radius:5px; background:#f9f9f9;">\n                    <div style="display:flex; justify-content:space-between; margin-bottom:5px;">\n                        <span style="font-size:11px; font-weight:bold; color:#555;">Danh s\u00E1ch Nh\u00F3m nh\u1EADn tin LINE</span>\n                        <button id="btn-add-line-group" class="tgdd-btn-add" style="padding:2px 8px;">+ Th\u00EAm nh\u00F3m</button>\n                    </div>\n                    <table class="tgdd-input-table" id="tbl-line-groups">\n                        <thead><tr><th>T\u00EAn Nh\u00F3m</th><th>Group ID</th><th style="width:40px">X\u00F3a</th></tr></thead>\n                        <tbody id="tbl-line-group-body"></tbody>\n                    </table>\n                </div>\n\n                <!-- \u00D4 T\u00CAN C\u1EE4M V\u00C0 N\u00DAT "+ TH\u00CAM SHOP" N\u1EB0M C\u1EA0NH NHAU TR\u00CAN C\u00D9NG 1 H\u00C0NG -->\n                <div class="tgdd-form-row" style="margin-bottom: 10px; align-items: flex-end; gap: 10px;">\n                    <div class="tgdd-form-group" style="flex: 1; margin-bottom: 0;">\n                        <label style="font-weight: bold; color: #333;">T\u00EAn C\u1EE5m</label>\n                        <input type="text" id="cfg-cluster" value="' + (_0x29c64e.cluster || '') + '" placeholder="Nh\u1EADp t\u00EAn c\u1EE5m..." style="width: 100%; border: 1px solid #ccc; padding: 7px; border-radius: 6px;">\n                    </div>\n                    <button id="btn-add-shop" class="tgdd-btn-add" style="margin: 0; background: #0284c7; font-weight: bold; padding: 8px 14px; border-radius: 6px; border: none; cursor: pointer; white-space: nowrap; height: 36px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(2, 132, 199, 0.2);">+ Th\u00EAm Shop</button>\n                </div>\n\n                <!-- KHUNG CH\u1EE8A C\u00C1C TH\u1EBA SHOP \u0110\u1ED8NG (SHOP 1..5) -->\n                <div id="cfg-shops-container"></div>\n\n                <div class="tgdd-form-row" style="margin-bottom: 15px;">\n                    <div class="tgdd-form-group" style="flex:1">\n                        <label>Total Target</label>\n                        <input type="text" id="cfg-total-target" readonly value="' + _0x5816a0(_0x29c64e.totalTarget) + '" style="background:#eee; font-weight:bold; color:red;">\n                    </div>\n                    <div class="tgdd-form-group" style="flex:1">\n                        <label>Hi\u1EC7n t\u1EA1i</label>\n                        <input type="number" id="cfg-dp" value="' + (_0x29c64e.dp || '') + '" placeholder="Auto" min="1" max="31" style="text-align:center; color:#d63031; font-weight:bold;">\n                    </div>\n                    <div class="tgdd-form-group" style="flex:1">\n                        <label>Cu\u1ED1i th\u00E1ng</label>\n                        <input type="text" id="cfg-eom" value="' + (_0x29c64e.eom || '') + '" placeholder="Auto" style="text-align:center; color:#007bff; font-weight:bold;">\n                    </div>\n                    <div class="tgdd-form-group" style="flex:1">\n                        <label>Tr\u1EA3 ch\u1EADm %</label>\n                        <input type="text" id="cfg-installment" value="' + (_0x29c64e.installment || 30) + '">\n                    </div>\n                </div>\n\n                <div style="padding: 12px; border: 1.5px dashed #007bff; border-radius: 10px; margin-bottom: 12px; background: rgba(0, 123, 255, 0.02); text-align: left;">\n                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">\n                        <span style="font-size: 12px; font-weight: bold; color: #007bff; text-transform: uppercase;">\uD83D\uDCC8 Quy t\u1EAFc t\u00EDnh \u0111i\u1EC3m n\u0103ng l\u1EF1c</span>\n                        <span id="btn-explain-score-rules" style="font-size: 11.5px; color: #6f42c1; cursor: pointer; font-weight: bold; text-decoration: underline; white-space: nowrap;" title="B\u1EA5m \u0111\u1EC3 xem chi ti\u1EBFt quy t\u1EAFc t\u00EDnh \u0111i\u1EC3m n\u0103ng l\u1EF1c nh\u00E2n vi\u00EAn">\uD83D\uDCA1 Gi\u1EA3i th\u00EDch</span>\n                    </div>\n\n                    <div class="tgdd-form-row" style="margin-bottom: 12px;">\n                        <div class="tgdd-form-group" style="flex:1"><label>DT m\u1ED1c (Tri\u1EC7u)/1 \u0111i\u1EC3m</label><input type="number" id="cfg-rev-point-step" value="' + (_0x29c64e.revPointStep || 20) + '"></div>\n                        <div class="tgdd-form-group" style="flex:1"><label>\u0110i\u1EC3m nh\u1EADn \u0111\u01B0\u1EE3c</label><input type="number" id="cfg-rev-point-value" value="' + (_0x29c64e.revPointValue || 1) + '"></div>\n                    </div>\n                    <div class="tgdd-form-row" style="margin-bottom: 12px;">\n                        <div class="tgdd-form-group" style="flex:1"><label>Tr\u1EEB thi \u0111ua t\u1ED1i \u0111a/nh\u00F3m</label><input type="number" id="cfg-group-min-points" value="' + (_0x29c64e.groupMinPoints || 3) + '"></div>\n                        <div class="tgdd-form-group" style="flex:1"><label>C\u1ED9ng thi \u0111ua t\u1ED1i \u0111a/nh\u00F3m</label><input type="number" id="cfg-group-max-points" value="' + (_0x29c64e.groupMaxPoints || 3) + '"></div>\n                    </div>\n                    <div class="tgdd-form-row">\n                        <div class="tgdd-form-group" style="flex:1"><label>T\u1EC9 l\u1EC7 KH \u0111\u00E1nh gi\u00E1 min</label><input type="number" id="cfg-service-min-rate" value="' + (_0x29c64e.serviceMinRate || 10) + '"></div>\n                        <div class="tgdd-form-group" style="flex:1"><label>C\u1ED9ng \u0111i\u1EC3m PV t\u1ED1i \u0111a</label><input type="number" id="cfg-service-max-points" value="' + (_0x29c64e.serviceMaxPoints || 20) + '"></div>\n                    </div>\n                </div>\n            ';
             const _0x65aa74 = '\n                <div class="tgdd-section-title" style="display:flex; justify-content:space-between; align-items:center;">\n                    <span>2. Target Thi \u0110ua</span>\n                    <button id="btn-load-groups" class="tgdd-btn-add" style="margin:0; background:#6c757d">Load Nh\u00F3m h\u00E0ng</button>\n                </div>\n                <div style="display:flex; align-items:center; gap:10px; justify-content:space-between; background:#f8f9fa; padding:8px 12px; border:1px solid #ddd; border-radius:6px; margin: 5px 0 10px 0;">\n                    <div style="display:flex; align-items:center; gap:8px;">\n                        <label style="display:flex; align-items:center; gap:5px; font-weight:bold; font-size:12px; color:#d63031; cursor:pointer;"><input type="checkbox" id="cfg-target-bi-check" ' + (_0x29c64e.defaultTargetBI !== false ? 'checked' : '') + '> Target BI</label>\n                        <label style="display:flex; align-items:center; gap:5px; font-weight:bold; font-size:12px; color:#007bff; cursor:pointer;"><input type="checkbox" id="cfg-use-target-rate" ' + (_0x29c64e.useTargetRate ? 'checked' : '') + '> Theo T\u1EC9 l\u1EC7</label>\n                        <input type="text" id="cfg-target-rate" value="' + (_0x29c64e.targetRate || '100') + '" placeholder="120" style="width:50px; padding:4px; font-weight:bold; text-align:center; border:1px solid #ccc; border-radius:4px; font-size:12px;">\n                        <span id="btn-explain-target-rate" style="font-size:11.5px; color:#6f42c1; cursor:pointer; font-weight:bold; text-decoration:underline; white-space:nowrap;" title="B\u1EA5m \u0111\u1EC3 xem gi\u1EA3i th\u00EDch">\uD83D\uDCA1 Gi\u1EA3i th\u00EDch</span>\n                    </div>\n                </div>\n                <div style="width: 100%; overflow-x: auto; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 5px; background: #fff;">\n                    <table class="tgdd-input-table" id="tbl-target-groups" style="min-width: 650px; margin-bottom: 0;">\n                        <thead>\n                            <tr>\n                                <th style="width: 35px; text-align: center;">STT</th>\n                                <th style="width: 140px; text-align: left; padding-left: 8px;">Nh\u00F3m h\u00E0ng</th>\n                                <th style="width: 55px;">H\u1EC7 s\u1ED1</th>\n                                <th style="width: 80px;">Target S1</th>\n                                <th style="width: 80px;">Target S2</th>\n                                <th style="width: 80px;">Target S3</th>\n                                <th style="width: 80px;">Target S4</th>\n                                <th style="width: 80px;">Target S5</th>\n                                <th style="width: 40px;">X\u00F3a</th>\n                            </tr>\n                        </thead>\n                        <tbody id="tbl-target-body"></tbody>\n                    </table>\n                </div>\n            ';
             const _0x68bdb0 = '\n                <div class="tgdd-section-title" style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;">\n                    <span>3. Khai b\u00E1o Nh\u00E2n vi\u00EAn</span>\n                    <div style="display:flex; gap:8px; align-items:center;">\n                        <button id="btn-open-target-calc" class="tgdd-btn-add" style="margin:0; background:#0284c7; font-weight:bold; padding:5px 12px; border-radius:6px; border:none; cursor:pointer;" title="B\u1EA5m \u0111\u1EC3 m\u1EDF c\u00F4ng c\u1EE5 t\u00EDnh to\u00E1n ph\u00E2n b\u1ED5 target cho nh\u00E2n vi\u00EAn">\uD83E\uDDEE T\u00EDnh to\u00E1n Target</button>\n                        <button id="btn-add-staff" class="tgdd-btn-add" style="margin:0; background:#10b981; font-weight:bold; padding:5px 12px; border-radius:6px; border:none; cursor:pointer;">+ Th\u00EAm Nh\u00E2n vi\u00EAn</button>\n                    </div>\n                </div>\n                <div style="width: 100%; overflow-x: auto; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 15px; background: #ffffff; box-shadow: inset 0 1px 3px rgba(0,0,0,0.02);">\n                    <table class="tgdd-input-table" id="tbl-staff" style="min-width: 620px; width: 100%; margin-bottom: 0; table-layout: auto;">\n                        <thead>\n                            <tr style="background:#f1f5f9; color:#334155; font-size:12px;">\n                                <th style="width: 40px; text-align: center; border-bottom: 1.5px solid #cbd5e1;">STT</th>\n                                <th style="min-width: 240px; text-align: left; padding-left: 12px; border-bottom: 1.5px solid #cbd5e1;">H\u1ECD t\u00EAn / User NV</th>\n                                <th style="min-width: 170px; text-align: center; border-bottom: 1.5px solid #cbd5e1;">Si\u00EAu th\u1ECB l\u00E0m vi\u1EC7c</th>\n                                <th style="min-width: 85px; text-align: center; border-bottom: 1.5px solid #cbd5e1;">T\u1EC9 l\u1EC7 (%)</th>\n                                <th style="width: 45px; text-align: center; border-bottom: 1.5px solid #cbd5e1;">X\u00F3a</th>\n                            </tr>\n                        </thead>\n                        <tbody id="tbl-staff-body"></tbody>\n                    </table>\n                </div>\n            ';
             const _0x4a77ca = '\n                <div id="section-schedules" style="display:none;">\n                    <div class="tgdd-section-title" style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;">\n                        <span>4. T\u1EF1 \u0111\u1ED9ng ch\u1EA1y b\u00E1o c\u00E1o theo l\u1ECBch h\u1EB9n</span>\n                        <button id="btn-add-schedule" class="tgdd-btn-add" style="margin:0; background:#0284c7; font-weight:bold; padding:5px 12px; border-radius:6px; border:none; cursor:pointer;">+ Th\u00EAm l\u1ECBch h\u1EB9n</button>\n                    </div>\n\n                    <div class="tgdd-form-group" style="margin-bottom: 10px;">\n                        <label style="color:#0284c7; font-weight:bold;">Link ho\u1EB7c ID Th\u01B0 m\u1EE5c Google Drive \u0111\u1EC3 l\u01B0u \u1EA3nh t\u1EF1 \u0111\u1ED9ng:</label>\n                        <input type="text" id="cfg-image-folder-id" value="' + (_0x29c64e.imageFolderId || '') + '" placeholder="D\u00E1n link th\u01B0 m\u1EE5c Google Drive t\u1EA1i \u0111\u00E2y...">\n                    </div>\n\n                    <table class="tgdd-input-table" id="tbl-schedules">\n                        <thead>\n                            <tr>\n                                <th style="width: 110px;">Khung gi\u1EDD</th>\n                                <th>T\u00F9y ch\u1ECDn ch\u1EA1y & Tab c\u1EA7n ch\u1EE5p g\u1EEDi Drive</th>\n                                <th style="width: 50px;">X\u00F3a</th>\n                            </tr>\n                        </thead>\n                        <tbody id="tbl-schedules-body"></tbody>\n                    </table>\n                </div>\n            ';
@@ -3915,7 +3948,11 @@ window.__AutoBIRun67 = (function () {
                     const _0x560c0c = _0x105ab5 => (document.getElementById(_0x105ab5)?.['value'] || '').trim();
                     const _0x5ff586 = _0x106f5d => UTILS.parseFormattedNumber(document.getElementById(_0x106f5d)?.['value']);
                     const _0x55b101 = _0x392e99 => !!document.getElementById(_0x392e99)?.['checked'];
-                    const _0x5c932d = document.getElementById('cfg-active-theme')?.['value'] || 'default';
+                    const __xlSel = document.getElementById('cfg-active-theme')?.['value'] || 'default'; /* V18.13: Bảng Excel lưu riêng trên máy, không đụng theme tải ngoài */
+                    const __xlChanged = !!window.__AutoBIExcel && (window.__AutoBIExcel.on() !== (__xlSel === 'excel'));
+                    if (window.__AutoBIExcel) window.__AutoBIExcel.set(__xlSel);
+                    if (__xlChanged) setTimeout(() => { try { const __a = document.querySelector('.rpt-nav-item.active'); if (__a) __a.click(); } catch (_) { } }, 50);
+                    const _0x5c932d = __xlSel === 'excel' ? 'default' : __xlSel;
                     const _0x3d64ff = GM_getValue('tgdd_active_theme_url', 'default');
                     let _0x1ebbb8 = false;
                     if (_0x5c932d !== _0x3d64ff) {
@@ -4584,7 +4621,10 @@ window.__AutoBIRun67 = (function () {
             /* V17.51: lỗi vẽ báo cáo thì hiện lỗi + ghi nhật ký, không để trang trắng */
             _0x329bab = '<div style="padding:40px;text-align:center;color:#b42318;font-weight:700;">Lỗi vẽ báo cáo (' + _0x450ffb + '): ' + String(_0x283759 && _0x283759.message || _0x283759).replace(/[<>&]/g, '') + '<br><span style="font-weight:400;color:#475569">Chụp màn hình này gửi người quản lý</span></div>';
             try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Lỗi vẽ tab ' + _0x450ffb + ': ' + String(_0x283759 && _0x283759.message || _0x283759)); } catch (_) { }
-        } const _0x2be4b4 = () => { const _0x54ba72 = _0x2ad4ca.querySelector('#tgdd-rt4-mode-select'); if (_0x54ba72) {
+        } try { /* V18.13: Theme "Bảng Excel" — Realtime V1 / Chi tiết NV vẽ theo mẫu Excel; lỗi thì giữ bảng thường */
+            if (window.__AutoBIExcel && window.__AutoBIExcel.on()) { window.__AutoBIExcel.apply(); const __xl = window.__AutoBIExcel.tab(_0x450ffb, { UI, UTILS }, _0x3aa5c8, _0x37b477, _0x13b9c3, _0x37589a, _0x4df754, _0x19aafa); if (__xl) _0x329bab = __xl; }
+        } catch (__e) { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Theme Bảng Excel lỗi (' + _0x450ffb + '), dùng bảng thường: ' + String(__e && __e.message || __e)); } catch (_) { } }
+        const _0x2be4b4 = () => { const _0x54ba72 = _0x2ad4ca.querySelector('#tgdd-rt4-mode-select'); if (_0x54ba72) {
             _0x54ba72.onchange = _0xcc0800 => { window.tgdd_rt4_mode = _0xcc0800.target.value; _0x5d2d05(); };
         } const _0x5d0422 = document.getElementById('tgdd-weekly-subject-selector'); if (_0x5d0422) {
             _0x5d0422.onchange = _0x9ef9ca => { window.tgdd_weekly_compare_subject = _0x9ef9ca.target.value; _0x5d2d05(); };
@@ -8476,7 +8516,10 @@ window.__AutoBIBiTarget99 = (function () {
     if (!staffList.length) throw new Error('Khai báo chưa có danh sách nhân viên');
     const ymd = v => typeof v === 'number' ? v : Number(String(v).replace(/-/g, ''));
     const from = range ? ymd(range.from) : b.cum.from, to = range ? ymd(range.to) : b.cum.to;
-    const lists = await pall(b.matched, s => api('reports/revenue-consolidated-staff-get', { FROMDATE: from, TODATE: to, VIEWLEVEL: 'STORE', VIEWIDS: String(s.storeId), CHAINIDS: null, MAINGROUPIDS: null, SUBGROUPIDS: null, ORDERBY: 'REVENUE', ORDERDIR: 'DESC', PAGEINDEX: 1, PAGESIZE: 1000 }));
+    const t0s = Date.now(), times = [];
+    const lists = await pall(b.matched, async s => { const t1 = Date.now(); const r = await api('reports/revenue-consolidated-staff-get', { FROMDATE: from, TODATE: to, VIEWLEVEL: 'STORE', VIEWIDS: String(s.storeId), CHAINIDS: null, MAINGROUPIDS: null, SUBGROUPIDS: null, ORDERBY: 'REVENUE', ORDERDIR: 'DESC', PAGEINDEX: 1, PAGESIZE: 1000 }); times.push((s.short || s.name || s.storeId) + ' ' + ((Date.now() - t1) / 1000).toFixed(1) + 's'); return r; });
+    /* V18.32: ghi thời gian BI trả số từng siêu thị (lũy kế tháng hay chậm phía máy chủ BI) */
+    if (Date.now() - t0s > 8000) note('Doanh thu NV ' + (range ? range.from + '→' + range.to : from + '→' + to) + ': BI trả chậm — ' + times.join(' · '));
     const byId = new Map(staffList.map(x => [staffIdOf(x.name), x]));
     const map = {};
     let n = 0;
@@ -8499,8 +8542,23 @@ window.__AutoBIBiTarget99 = (function () {
     return map;
   }
   async function applyStaffRevenue(cfgIn) {
-    const map = await staffRevenueMap(cfgIn, null);
+    /* V18.32: DT NV lũy kế (đến hết hôm qua) không đổi trong ngày → lần chạy sau cùng ngày, cùng ngày lũy kế BI, cùng danh sách NV thì dùng lại (BI trả số này mất ~30s) */
     const b0 = await baseData(cfgIn).catch(() => null); /* V17.41: ghi ngày lũy kế cho NK Bán hàng */
+    const cfgS = cfgIn && Array.isArray(cfgIn.staffList) ? cfgIn : (b0 && b0.cfg) || {};
+    const sig = (cfgS.staffList || []).map(x => x.name + '@' + (x.shopIdx || 1)).sort().join('|') + '#' + (b0 ? b0.storeIds : '');
+    const DAY_KEY = 'autobi_staffrev_day_v1'; /* lưu riêng vì đầu mỗi lượt chạy cache báo cáo được làm mới */
+    let map = null;
+    try {
+      const st = GM_getValue(DAY_KEY, null);
+      if (b0 && b0.cum && st && st.day === vnDay() && st.cumTo === b0.cum.to && st.sig === sig && st.map && Object.keys(st.map).length) {
+        map = st.map;
+        note('Doanh thu NV lũy kế: dùng lại số đã lấy hôm nay lúc ' + new Date(st.at).toTimeString().slice(0, 5) + ' (BI chưa đổ thêm ngày mới)');
+      }
+    } catch (_) { }
+    if (!map) {
+      map = await staffRevenueMap(cfgIn, null);
+      if (b0 && b0.cum) { try { GM_setValue(DAY_KEY, { day: vnDay(), cumTo: b0.cum.to, sig, at: Date.now(), map }); } catch (_) { } }
+    }
     let n = 0;
     writeCache(cache => {
       cache.link6 = cache.link6 || {}; cache.link7 = cache.link7 || {};
@@ -8512,7 +8570,7 @@ window.__AutoBIBiTarget99 = (function () {
         cache.link7[key][name] = { tg: v.dtlk ? Math.round(v.tragop / v.dtlk * 10000) / 100 : 0, dt_sieu_thi: v.dtlk, dt_tragop: v.tragop };
         n++;
       }
-      if (b0 && b0.cum) cache.__apiStaffRev = { at: Date.now(), cumTo: b0.cum.to };
+      if (b0 && b0.cum) cache.__apiStaffRev = { at: Date.now(), cumTo: b0.cum.to, day: vnDay(), sig };
     });
     return n;
   }
@@ -8680,14 +8738,23 @@ window.__AutoBIBiTarget99 = (function () {
   /* link6[shop].competition[tên NV][nhóm] = số đạt (nhóm tiền ×1000, số chính xác, giữ số âm) */
   /* V17.17: Doanh thu nhân viên hôm nay cho Realtime V2: cache.link6rt = { day, data: { shopN: { 'mã - tên': { dtqd, dtlk } } } } */
   async function applyStaffToday(cfgIn) {
-    const b = await baseData(cfgIn);
-    let map = {};
-    try { map = await staffRevenueMap(cfgIn, { from: b.today, to: b.today }); }
-    catch (e) { if (!/không trả nhân viên nào/.test(String(e && e.message))) throw e; }
-    let n = 0;
-    for (const v of Object.values(map)) n += Object.keys(v).length;
-    writeCache(cache => { cache.link6rt = { day: b.today, at: Date.now(), data: map }; });
-    return n;
+    /* V18.33: DT NV hôm nay là phần phụ — BI có lúc trả rất chậm (đã gặp 66s ở 1 shop). Chờ tối đa 12s rồi cho báo cáo chạy tiếp;
+       BI trả xong sau đó thì vẫn ghi số vào bộ nhớ (xem ở lần mở tab sau), không bắt cả lượt đổ số phải chờ */
+    let late = false;
+    const work = (async () => {
+      const b = await baseData(cfgIn);
+      let map = {};
+      try { map = await staffRevenueMap(cfgIn, { from: b.today, to: b.today }); }
+      catch (e) { if (!/không trả nhân viên nào/.test(String(e && e.message))) throw e; }
+      let n = 0;
+      for (const v of Object.values(map)) n += Object.keys(v).length;
+      writeCache(cache => { cache.link6rt = { day: b.today, at: Date.now(), data: map }; });
+      if (late) note('Nhân viên hôm nay: BI đã trả xong (' + n + ' NV) — đã cập nhật số, mở lại tab để xem');
+      return n;
+    })();
+    work.catch(() => { });
+    const cap = new Promise((_, rej) => setTimeout(() => { late = true; rej(new Error('BI trả chậm quá 12s — bỏ qua chờ, số NV hôm nay tự cập nhật khi BI trả xong')); }, 12000));
+    return Promise.race([work, cap]);
   }
   async function applyStaffCompetition(cfgIn) {
     const b = await baseData(cfgIn), month = monthKey(b.today);
@@ -9237,6 +9304,11 @@ window.__AutoBIBiTarget99 = (function () {
       : '<tr><td colspan="7" class="rt2-empty">Khai báo chưa có danh sách nhân viên</td></tr>';
     const tMon = sum('mon'), tTgt = sum('tgt');
 
+    /* V18.13: Theme "Bảng Excel" → Mẫu 2 (Realtime + Lũy kế). V18.16: Tổng cụm = cộng cả các siêu thị (như bảng thường), chọn từng shop để xem riêng */
+    if (window.__AutoBIExcel && window.__AutoBIExcel.on()) {
+      return window.__AutoBIExcel.wrap(window.__AutoBIExcel.rt({ view, title, tc, dp, dim, rt, dayT, rtP, lk, monT, lkP, dk, tg, tgLim, qd, l1, l2, rows, pass, srows, timeP, dkM, lkM, maiOk, compM }));
+    }
+
     /* V18.02: iPhone — giao diện gọn (thẻ Hôm nay + ô số + nhóm hàng hôm nay + DT nhân viên, chạm mở lũy kế) */
     if (mobile && window.__AutoBIPh) {
       const PH = window.__AutoBIPh;
@@ -9387,7 +9459,7 @@ window.__AutoBIBiTarget99 = (function () {
         if (dp > 0 && Math.round(d) >= 100) ok++;
       });
       const parts = String(x.name).split(' - ');
-      return { id: parts.length > 1 ? parts[0] : '', nm: parts.length > 1 ? parts.slice(1).join(' - ') : x.name, shop: cfg[key + 'Short'] || cfg[key] || key, mon, tgt, ht: mon != null && tgt > 0 ? mon / tgt * 100 : null, fc: mon != null && tgt > 0 && dp > 0 ? mon / dp * dim / tgt * 100 : null, ok, cells, rw: rwOf(c, x) };
+      return { id: parts.length > 1 ? parts[0] : '', nm: parts.length > 1 ? parts.slice(1).join(' - ') : x.name, shop: cfg[key + 'Short'] || cfg[key] || key, mon, tgt, ht: mon != null && tgt > 0 ? mon / tgt * 100 : null, fc: mon != null && tgt > 0 && dp > 0 ? mon / dp * dim / tgt * 100 : null, ok, cells, rw: rwOf(c, x), tc: (() => { const t7 = c.link7 && c.link7[key] && c.link7[key][x.name]; if (t7 == null) return null; return typeof t7 === 'object' ? (t7.tg == null ? null : num(t7.tg)) : num(t7); })() }; /* V18.21: tỷ lệ trả chậm NV (link7, như Chi tiết NV) */
     });
     const ss = window.__AutoBIRt2.sortLKStaff || { k: 'fc', d: -1 };
     const sv = v => v == null ? -Infinity : v;
@@ -9431,6 +9503,12 @@ window.__AutoBIBiTarget99 = (function () {
     const mTable = (bg, last) => '<table class="rt2-tbl lk-mx">' + cols + '<thead><tr><th class="l">Nhân viên</th>' + bg.map(g => '<th class="lk-h" title="' + esc(g) + '">' + esc(g) + '</th>').join('') + Array.from({ length: per - bg.length }, () => '<th></th>').join('') + '<th>' + (last ? 'Đạt' : '') + '</th></tr></thead><tbody>' +
       mrows.map(x => '<tr>' + nmCell(x) + bg.map(g => cell(g, x.cells[g])).join('') + Array.from({ length: per - bg.length }, () => '<td></td>').join('') + '<td>' + (last ? '<b class="t-' + (x.ok ? 'ok' : 'low') + '">' + x.ok + '</b>/' + sg.length : '') + '</td></tr>').join('') + '</tbody></table>';
     const mHtml = srows.length && sg.length ? blocks.map((bg, k) => '<div class="rt2-tblw' + (k ? ' lk-blk' : '') + '">' + mTable(bg, k === blocks.length - 1) + '</div>').join('') : '<div class="rt2-empty">Chưa có số thi đua nhân viên</div>';
+
+    /* V18.13: Theme "Bảng Excel" → LK NEW = Mẫu 3 + Tổng hợp NV + ma trận; Chi tiết NV (mode 'staff') = Tổng hợp NV + ma trận. V18.16: Tổng cụm = cộng cả các siêu thị */
+    if (window.__AutoBIExcel && window.__AutoBIExcel.on()) {
+      const XD = { view, title, tc, dp, dim, lk, monT, lkP, dk, tg, tgLim, qd, rows, pass, timeP, srows, sg, mrows, tMon, tTgt, hasRw, tRw };
+      return window.__AutoBIExcel.wrap(window.__AutoBIExcel.mode === 'staff' ? window.__AutoBIExcel.mx(XD) : window.__AutoBIExcel.lk(XD));
+    }
 
     /* V18.02: iPhone — thẻ Lũy kế + ô số + nhóm hàng Chính/Vượt trội 1 dòng + NV 1 dòng, chạm mở chi tiết */
     if (mobile && window.__AutoBIPh) {
@@ -12587,7 +12665,7 @@ window.__AutoBIRunPick = (() => {
       let t = '<div class="nv2-nhc" data-capture-id="nh' + gi + '" data-table-name="' + esc(x.g) + '"><div class="gh"><div class="n">' + (x.tier ? '<small class="' + (x.tier === "chinh" ? "" : "v") + '">' + (x.tier === "chinh" ? "Nhóm chính" : "Nhóm vượt trội") + "</small>" : "") + esc(x.g) + '</div><div class="big"><span>Dự kiến ' + (M.multi ? "cụm" : "shop") + '</span><b class="nv2-pp ' + lv(cu.pct) + '">' + cu.pct + "%</b></div></div>";
       t += '<table class="nv2-nh num"><colgroup><col style="width:41%"><col style="width:26%"><col style="width:33%"></colgroup><thead><tr><th class="l">Nhân viên</th><th>Thực hiện / Target</th><th>Dự kiến</th></tr></thead><tbody>';
       M.shops.forEach((sh, si) => {
-        sh.staff.slice().sort((a, b) => idxOf(a.name) - idxOf(b.name)).forEach((o) => {
+        sh.staff.slice().sort((a, b) => num((b.g[x.g] || {}).pct) - num((a.g[x.g] || {}).pct) || idxOf(a.name) - idxOf(b.name)).forEach((o) => { /* V18.25: NV trong từng siêu thị xếp theo Dự kiến nhóm này cao → thấp */
           const v = o.g[x.g] || { t: 0, a: 0, pct: 0 };
           t += line(x, "", esc(o.nm), o.code, v.t, v.a, v.pct);
         });
@@ -12750,7 +12828,7 @@ window.__AutoBIRunPick = (() => {
       return (
         '<tr class="' + (par ? "par" : "") + '"><td class="l" style="padding-left:' + (par ? 12 : 12 + 18 * Math.max(1, x.level)) + 'px">' + (par && x.code ? esc(x.code) + " · " : "") + esc(x.label) + "</td><td>" + nd(x.sl) + "</td><td><b>" + nd(x.dtqd) + '</b></td><td class="l"><div class="nv2-sh"><div class="b"><i style="width:' + Math.min(100, Math.max(0, num(z.sh) * 2)).toFixed(1) + '%"></i></div><b style="width:46px;text-align:right">' + (z.sh === null ? "—" : vn(z.sh, 1) + "%") + "</b></div></td>" +
         (hasTg ? "<td>" + (num(x.tg_ratio) > 0 ? vn(num(x.tg_ratio), 1) + "%" : "—") + "</td>" : "") +
-        "<td>" + (z.ck === null ? "—" : vn(z.ck)) + '</td><td><b class="' + gcol + '">' + (x.growth === null || x.growth === undefined || !isFinite(x.growth) ? "—" : (x.growth > 0 ? "+" : "") + vn(x.growth, 1) + "%") + "</b></td>" +
+        "<td>" + (z.ck === null ? "—" : vn(z.ck)) + '</td><td class="' + (x.growth == null || !isFinite(x.growth) ? '' : x.growth >= 0 ? 'xg' : x.growth > -10 ? 'xy' : 'xr') + '"><b class="' + gcol + '">' + (x.growth === null || x.growth === undefined || !isFinite(x.growth) ? "—" : (x.growth > 0 ? "+" : "") + vn(x.growth, 1) + "%") + "</b></td>" +
         '<td><div class="nv2-div"><div class="n"><i style="width:' + (d < 0 ? Math.min(100, (-d / maxD) * 100) : 0).toFixed(1) + '%"></i></div><div class="z"></div><div class="p"><i style="width:' + (d > 0 ? Math.min(100, (d / maxD) * 100) : 0).toFixed(1) + '%"></i></div><b class="' + gcol + '" style="width:46px;text-align:right">' + (d === null ? "—" : sgn(d)) + "</b></div></td></tr>"
       );
     };
@@ -13575,4 +13653,400 @@ window.__AutoBIRunPick = (() => {
   window.__AutoBIPhFit = phFit;
   window.__AutoBIModalFit = fitModal;
   try { if (typeof unsafeWindow !== "undefined") { unsafeWindow.__AutoBIPhFit = phFit; unsafeWindow.__AutoBIModalFit = fitModal; } } catch (_) {}
+})();
+
+/* ==== V18.13: Theme "Bảng Excel" (__AutoBIExcel) — chọn ở Cấu hình hệ thống › Giao diện Theme.
+   Bật theme: báo cáo hiện kiểu bảng phẳng như file Excel đổ số (viền rõ, tô màu nguyên ô ≥100 xanh / 80–99 vàng / <80 đỏ nhạt).
+   - Realtime V1 + Realtime V2 → Mẫu 2 (khối thông tin shop + bảng Realtime và bảng Lũy kế cạnh nhau). V18.14: bỏ bảng DT nhân viên, số DT to hơn, 2 bảng cách xa nhau; nút Realtime V2 ẩn khi bật theme
+   - LK NEW → Mẫu 3 (lũy kế gọn) + Tổng hợp NV + Mẫu 1 (ma trận Nhóm hàng × NV)
+   - Chi tiết NV → Tổng hợp NV + Mẫu 1
+   - Tổng cụm: cộng cả các siêu thị (V18.16); chọn từng shop ở ô chọn để xem riêng
+   - Các tab còn lại: giữ bố cục, đổi kiểu sang bảng phẳng Excel bằng CSS
+   Số liệu lấy y nguyên từ hàm vẽ Realtime V2 / LK NEW (__AutoBIRt2) — module này chỉ vẽ, không tính lại, không gọi API.
+   Khóa lưu: GM 'autobi_ui_theme' = 'excel' | 'default' (theo từng máy). ==== */
+(function () {
+  'use strict';
+  if (location.hostname !== 'baocao.dienmayxanh.com') return;
+  const KEY = 'autobi_ui_theme';
+  const num = v => { const n = Number(v); return isFinite(n) ? n : 0; };
+  const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  const nf = (v, d) => { const x = num(v); if (d == null) d = Math.abs(x - Math.round(x)) > 0.05 && Math.abs(x) < 1000 ? 1 : 0; return x.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }); };
+  const rp = p => p < 100 && Math.round(p) >= 100 ? 99 : Math.round(p);
+  const pc = p => rp(num(p)) + '%';
+  const lv = p => p >= 100 ? 'g' : p >= 80 ? 'y' : 'r';
+  const pad = n => String(n).padStart(2, '0');
+  const trf = v => v == null ? '—' : (num(v) / 1e6).toFixed(1) + ' Tr';
+  const on = () => { try { return GM_getValue(KEY, 'default') === 'excel'; } catch (_) { return false; } };
+  const uid = s => String(s || '').replace(/[^a-z0-9]/gi, '').toLowerCase() || 'x';
+  const cumName = t => { const x = String(t || '').replace(/^Cụm:\s*/, '').trim(); return !x || /^TỔNG CỤM$/i.test(x) ? 'Tổng cụm' : 'Tổng cụm: ' + x; };
+  const shortNm = n => { const w = String(n || '').trim().split(/\s+/); if (w.length < 3) return w.join(' '); return /^(Văn|Thị)$/i.test(w[w.length - 2]) ? w[w.length - 1] : w.slice(-2).join(' '); }; /* tên gọn tiêu đề cột: 'Lê Thị Loan' → 'Loan', 'Nguyễn Văn Tuấn Anh' → 'Tuấn Anh' */
+
+  const CSS = `
+  .abx{font-family:Arial,Helvetica,sans-serif;color:#1b1b1b;background:#fff;font-variant-numeric:tabular-nums;display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start;padding:14px;box-sizing:border-box;text-align:left}
+  .abx *{box-sizing:border-box}
+  .abx-blk{background:#fff}
+  .abx-ttl{text-align:center;font-weight:700;font-size:16px;color:#1d7a3a;margin:0 0 6px}
+  .abx-ttl.b{color:#1f6fb2}
+  .abx-sub{text-align:center;font-weight:700;font-size:13px;color:#1d7a3a;margin:0 0 8px}
+  .abx-note{font-size:11px;color:#555;margin-top:6px}
+  .abx table{border-collapse:collapse;font-size:12.5px}
+  .abx th,.abx td{border:1px solid #8f9aa7;padding:5px 7px;white-space:nowrap}
+  .abx th{font-weight:700;text-align:center;color:#fff;background:#2f5597}
+  .abx th.or{background:#c55a11}.abx th.sk{background:#9dc3e6;color:#1b1b1b}.abx th.gr{background:#2b5a2b}.abx th.ye{background:#ffff00;color:#1b1b1b}.abx th.bl{background:#5b9bd5}
+  .abx td{text-align:right;background:#fff}
+  .abx td.l{text-align:left;font-weight:700}.abx td.c{text-align:center}
+  .abx .g{background:#c6efce!important;color:#006100!important;font-weight:700}
+  .abx .y{background:#ffeb9c!important;color:#7a4a00!important;font-weight:700}
+  .abx .r{background:#ffc7ce!important;color:#9c0006!important;font-weight:700}
+  .abx .z{background:#e8b4b0!important;color:#7a150b!important;font-weight:700}
+  .abx .ng{color:#c00000}
+  .abx tr.sec td{background:#d9e2f3;color:#1f3864;font-weight:700;text-align:center;letter-spacing:.5px}
+  .abx tr.sec.v td{background:#e4dff0;color:#5b2a86}
+  .abx tr.tot td{background:#dcead3;font-weight:700}
+  .abx tr.yl td{background:#ffff00;font-weight:700;text-align:center}
+  .abx-info{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid #8f9aa7;font-size:15px;margin-bottom:14px}
+  .abx-info b.bg{font-size:21px;font-weight:900}.abx-info b.md{font-size:17px;font-weight:900}
+  .abx-info>div{border:1px solid #8f9aa7;padding:7px 9px;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap}
+  .abx-info>div.s2,.abx-info>div.k{justify-content:flex-start}
+  .abx-info .s2{grid-column:span 2;text-align:left}
+  .abx-info .k{font-weight:700;text-align:left}
+  .abx-two{display:flex;gap:28px;align-items:flex-start}
+  .abx-col{display:flex;flex-direction:column;gap:14px;flex:none}
+  .abx-mx th{white-space:normal;min-width:0;line-height:1.2;vertical-align:middle;overflow-wrap:anywhere}
+  .abx-mx td{overflow:hidden;text-overflow:ellipsis}
+  .abx-mx td{text-align:center}
+  .abx-mx td.l{text-align:left}
+  /* ---- Các tab chưa có mẫu riêng: đổi sang kiểu bảng phẳng ---- */
+  body.abx-on #capture-area .nv2,body.abx-on #capture-area .rt2,body.abx-on #capture-area .nk-root{background:#fff!important;font-family:Arial,Helvetica,sans-serif!important}
+  body.abx-on #capture-area .nv2-hd{background:#fff!important;color:#1f6fb2!important;border-radius:0!important;border:none!important;border-bottom:3px solid #2f5597!important}
+  body.abx-on #capture-area .nv2-hd .nv2-kick{color:#1d7a3a!important}
+  body.abx-on #capture-area .nv2-hd .nv2-ttl small,body.abx-on #capture-area .nv2-hd .nv2-time span{color:#475569!important}
+  body.abx-on #capture-area .nv2-kpi,body.abx-on #capture-area .nv2-box,body.abx-on #capture-area .nv2-warn,body.abx-on #capture-area .nv2-pc,body.abx-on #capture-area .rt2-card,body.abx-on #capture-area .rt2-kpi,body.abx-on #capture-area .rt2-mini{border-radius:0!important;box-shadow:none!important;border:1px solid #8f9aa7!important}
+  body.abx-on #capture-area .rt2-hero{background:#fff!important;color:#1b1b1b!important}
+  body.abx-on #capture-area .rt2-hero .rt2-lbl{color:#1f6fb2!important}
+  body.abx-on #capture-area .nv2-bh{background:#2f5597!important;border-bottom:none!important}
+  body.abx-on #capture-area .nv2-bh .t,body.abx-on #capture-area .nv2-bh .n{color:#fff!important}
+  body.abx-on #capture-area .nv2 table,body.abx-on #capture-area .rt2-tbl,body.abx-on #capture-area .nk-root table{border-collapse:collapse!important;border-spacing:0!important}
+  body.abx-on #capture-area .nv2 th,body.abx-on #capture-area .rt2-tbl th,body.abx-on #capture-area .nk-root th{background:#2f5597!important;color:#fff!important;border:1px solid #6b7785!important;text-align:center!important}
+  body.abx-on #capture-area .nv2 td,body.abx-on #capture-area .rt2-tbl td,body.abx-on #capture-area .nk-root td{border:1px solid #8f9aa7!important;border-radius:0!important}
+  body.abx-on #capture-area .nv2 .h4,body.abx-on #capture-area .lk-ok{background:#c6efce!important;color:#006100!important}
+  body.abx-on #capture-area .nv2 .h3,body.abx-on #capture-area .lk-mid{background:#ffeb9c!important;color:#7a4a00!important}
+  body.abx-on #capture-area .nv2 .h2,body.abx-on #capture-area .lk-low{background:#ffc7ce!important;color:#9c0006!important}
+  body.abx-on #capture-area .nv2 .h1{background:#e8b4b0!important;color:#7a150b!important}
+  body.abx-on #capture-area .nv2-bar,body.abx-on #capture-area .nv2-bar i,body.abx-on #capture-area .rt2-bar,body.abx-on #capture-area .rt2-bar i,body.abx-on #capture-area .nv2-pbar,body.abx-on #capture-area .nv2-pbar i{border-radius:0!important}
+  body.abx-on .rpt-nav-item[data-tab="rt2"]{display:none!important} /* V18.14: theme Excel ẩn Realtime V2 (trùng Realtime V1) */
+  body.abx-on #capture-area .nv2-tab,body.abx-on #capture-area .nv2-btn{border-radius:2px!important}
+  /* ---- V18.15: Realtime V1 / LK NEW kiểu bảng chung ---- */
+  .abx table.abx-rt{border-collapse:collapse}
+  .abx td.gap,.abx th.gap{border:none!important;padding:0!important;background:#fff!important}
+  .abx td.i{font-size:15px;font-weight:700;text-align:center;padding:7px 8px}
+  .abx td.i b{font-size:20px;font-weight:900}
+  .abx td.il{text-align:left}
+  .abx td.cnt{font-size:14px;font-weight:900}
+  .abx td.rw{text-align:center;font-size:14px;font-weight:700;color:#006100} /* V18.28: Tổng thưởng ra giữa, chữ to hơn */
+  .abx .cr{color:#c00000}.abx .cg2{color:#1d7a3a}.abx .cb{color:#2f5597}.abx .co{color:#c55a11}
+  .abx .bgR{background:#ff0000!important;color:#fff!important}.abx .bgG{background:#0f8f5f!important;color:#fff!important}.abx .bgY{background:#ffff00!important}
+  /* ---- V18.15: Sức khỏe ST / Năng lực NV / Chi tiết NV (Theo NH) / Realtime khác: thẻ thành ô bảng, bỏ thanh, tô màu ô ---- */
+  body.abx-on #capture-area .nv2{background:#fff!important}
+  body.abx-on #capture-area .nv2-hd .nv2-ttl{color:#1f6fb2!important}
+  body.abx-on #capture-area .nv2-kpis{gap:0!important;border:1px solid #8f9aa7}
+  body.abx-on #capture-area .nv2-kpi,body.abx-on #capture-area .nv2-hero{border-radius:0!important;box-shadow:none!important;border:1px solid #8f9aa7!important;padding:0!important;gap:0!important;background:#fff!important;color:#1b1b1b!important;justify-content:flex-start!important}
+  body.abx-on #capture-area .nv2-kpi>.l,body.abx-on #capture-area .nv2-hero>.l{background:#d9e2f3!important;color:#1f3864!important;text-align:center;padding:6px 8px;font-size:12px!important;font-weight:700;text-transform:uppercase}
+  body.abx-on #capture-area .nv2-kpi>.v,body.abx-on #capture-area .nv2-hero>.big{text-align:center;padding:8px 8px 4px;font-size:24px!important;justify-content:center}
+  body.abx-on #capture-area .nv2-hero>.big b,body.abx-on #capture-area .nv2-hero>.big span{color:#1b1b1b!important}
+  body.abx-on #capture-area .nv2-kpi>.s,body.abx-on #capture-area .nv2-hero>.s{text-align:center;padding:2px 8px 8px;color:#444!important}
+  body.abx-on #capture-area .nv2-hero>.s b{color:#006100!important}
+  body.abx-on #capture-area .nv2-kpi>.ln{padding:4px 10px}
+  body.abx-on #capture-area .nv2-kpi .nv2-bar,body.abx-on #capture-area .nv2-hero .nv2-mk,body.abx-on #capture-area .nv2-dots{display:none!important}
+  body.abx-on #capture-area .nv2-mv{gap:28px!important}
+  body.abx-on #capture-area .nv2-mv>div{border:1px solid #8f9aa7!important;border-radius:0!important;background:#fff!important;padding:0!important}
+  body.abx-on #capture-area .nv2-mv>div>b:first-child{display:block;background:#2f5597;color:#fff!important;padding:6px 10px}
+  body.abx-on #capture-area .nv2-mv .r{border-top:1px solid #8f9aa7;padding:4px 10px}
+  body.abx-on #capture-area .nv2-sh .b,body.abx-on #capture-area .nv2-div .n,body.abx-on #capture-area .nv2-div .p,body.abx-on #capture-area .nv2-div .z,body.abx-on #capture-area .nv2-ht,body.abx-on #capture-area .nv2-cb .nv2-mk{display:none!important}
+  body.abx-on #capture-area .nv2-div,body.abx-on #capture-area .nv2-sh{justify-content:flex-end}
+  body.abx-on #capture-area .nv2 tr.par td{background:#f2f2f2!important;font-weight:700}
+  body.abx-on #capture-area td.xg{background:#c6efce!important}body.abx-on #capture-area td.xy{background:#ffeb9c!important}body.abx-on #capture-area td.xr{background:#ffc7ce!important}
+  body.abx-on #capture-area td.xg b{color:#006100!important}body.abx-on #capture-area td.xy b{color:#7a4a00!important}body.abx-on #capture-area td.xr b{color:#9c0006!important}
+  body.abx-on #capture-area .nv2-dk,body.abx-on #capture-area .nv2-pp{background:transparent!important;border-radius:0!important}
+  body.abx-on #capture-area td:has(> .nv2-dk.h4),body.abx-on #capture-area td:has(.nv2-pp.h4){background:#c6efce!important}
+  body.abx-on #capture-area td:has(> .nv2-dk.h3),body.abx-on #capture-area td:has(.nv2-pp.h3){background:#ffeb9c!important}
+  body.abx-on #capture-area td:has(> .nv2-dk.h2),body.abx-on #capture-area td:has(.nv2-pp.h2){background:#ffc7ce!important}
+  body.abx-on #capture-area td:has(> .nv2-dk.h1),body.abx-on #capture-area td:has(.nv2-pp.h1){background:#e8b4b0!important}
+  body.abx-on #capture-area td:has(.nv2-ht i.d4){background:#c6efce!important;color:#006100}
+  body.abx-on #capture-area td:has(.nv2-ht i.d2){background:#ffc7ce!important;color:#9c0006}
+  body.abx-on #capture-area .nv2-nhc{border-radius:0!important;box-shadow:none!important;border:1px solid #8f9aa7!important}
+  body.abx-on #capture-area .nv2-nhc .gh{background:#1f3864!important;color:#fff!important}
+  body.abx-on #capture-area .nv2-nhc .gh *{color:#fff!important}
+  body.abx-on #capture-area .nv2-nhc .gh .nv2-pp{color:#1b1b1b!important;padding:1px 8px}
+  body.abx-on #capture-area .nv2-nhc .gh .nv2-pp.h4{background:#c6efce!important}body.abx-on #capture-area .nv2-nhc .gh .nv2-pp.h3{background:#ffeb9c!important}body.abx-on #capture-area .nv2-nhc .gh .nv2-pp.h2,body.abx-on #capture-area .nv2-nhc .gh .nv2-pp.h1{background:#ffc7ce!important}
+  body.abx-on #capture-area .nv2-nh tr.shop td{background:#d9e2f3!important;color:#1f3864;font-weight:700}
+  body.abx-on #capture-area .nv2-nh tr.tot td{background:#ffff00!important;font-weight:900}
+  body.abx-on #capture-area .nv2-chipb,body.abx-on #capture-area .nv2-pick .lb{border-radius:0!important}
+  body.abx-on #capture-area .nv2-chipb.on{background:#2f5597!important;border-color:#2f5597!important;color:#fff!important}
+  body.abx-on #capture-area .nv2-leg span{border-radius:0!important}
+  /* ---- V18.18: Sức khỏe ST gọn (khung 980px, số DT 1 dòng, dòng bảng thấp, cột tự co) ---- */
+  body.abx-on #capture-area .nv2:has(.nv2-hs){width:980px!important;padding:12px 14px 16px!important}
+  body.abx-on #capture-area .nv2:has(.nv2-hs) .nv2-hd{padding:6px 4px 8px!important;margin-bottom:10px!important}
+  body.abx-on #capture-area .nv2:has(.nv2-hs) .nv2-ttl{font-size:19px!important}
+  body.abx-on #capture-area .nv2:has(.nv2-hs) .nv2-kpis{margin-bottom:10px!important}
+  body.abx-on #capture-area .nv2:has(.nv2-hs) .nv2-kpi>.l,body.abx-on #capture-area .nv2:has(.nv2-hs) .nv2-hero>.l{padding:4px 6px!important;font-size:11px!important}
+  body.abx-on #capture-area .nv2:has(.nv2-hs) .nv2-kpi>.v{font-size:21px!important;padding:5px 6px 2px!important;white-space:nowrap}
+  body.abx-on #capture-area .nv2:has(.nv2-hs) .nv2-hero>.big{flex-wrap:nowrap!important;white-space:nowrap;padding:5px 6px 2px!important;gap:4px!important;align-items:baseline}
+  body.abx-on #capture-area .nv2:has(.nv2-hs) .nv2-hero>.big b{font-size:22px!important}
+  body.abx-on #capture-area .nv2:has(.nv2-hs) .nv2-hero>.big span{font-size:13px!important}
+  body.abx-on #capture-area .nv2:has(.nv2-hs) .nv2-kpi>.s,body.abx-on #capture-area .nv2:has(.nv2-hs) .nv2-hero>.s{padding:1px 6px 6px!important;font-size:11px!important;line-height:1.3}
+  body.abx-on #capture-area .nv2:has(.nv2-hs) .nv2-kpi>.ln{padding:2px 8px!important;font-size:12px!important}
+  body.abx-on #capture-area .nv2:has(.nv2-hs) .nv2-kpi>.ln b{font-size:20px!important}
+  body.abx-on #capture-area .nv2:has(.nv2-hs) .nv2-mv{margin-bottom:10px!important;gap:16px!important}
+  body.abx-on #capture-area .nv2:has(.nv2-hs) .nv2-mv>div>b:first-child{padding:4px 10px!important;font-size:13px!important}
+  body.abx-on #capture-area .nv2:has(.nv2-hs) .nv2-mv .r{padding:2px 10px!important;font-size:12.5px}
+  body.abx-on #capture-area .nv2:has(.nv2-hs) .nv2-box{margin-bottom:8px!important}
+  body.abx-on #capture-area .nv2:has(.nv2-hs) .nv2-bh{padding:6px 10px!important}
+  body.abx-on #capture-area .nv2:has(.nv2-hs) .nv2-bh .t{font-size:14px!important}
+  body.abx-on #capture-area .nv2-hs th{width:auto!important;padding:4px 8px!important;font-size:11.5px!important}
+  body.abx-on #capture-area .nv2-hs td{padding:2px 8px!important;font-size:12.5px!important;line-height:1.35}
+  body.abx-on #capture-area .nv2-hs .nv2-sh,body.abx-on #capture-area .nv2-hs .nv2-div{gap:0!important}
+  body.abx-on #capture-area .nv2-hs .nv2-sh b,body.abx-on #capture-area .nv2-hs .nv2-div b{width:auto!important}
+  body.abx-on #capture-area .nv2:has(.nv2-hs) .nv2-leg{padding:5px 10px!important}
+  /* ---- V18.19: Năng lực NV gọn (khung 980px, thẻ thấp, dòng bảng thấp, cột tự co) ---- */
+  body.abx-on #capture-area .nv2:has(.nv2-ht){width:980px!important;padding:12px 14px 16px!important}
+  body.abx-on #capture-area .nv2:has(.nv2-ht) .nv2-hd{padding:6px 4px 8px!important;margin-bottom:10px!important}
+  body.abx-on #capture-area .nv2:has(.nv2-ht) .nv2-ttl{font-size:19px!important}
+  body.abx-on #capture-area .nv2:has(.nv2-ht) .nv2-tabs{margin-bottom:8px!important}
+  body.abx-on #capture-area .nv2:has(.nv2-ht) .nv2-tab,body.abx-on #capture-area .nv2:has(.nv2-ht) .nv2-btn,body.abx-on #capture-area .nv2:has(.nv2-ht) .nv2-sel{height:30px!important;font-size:12px!important}
+  body.abx-on #capture-area .nv2:has(.nv2-ht) .nv2-kpis{margin-bottom:10px!important}
+  body.abx-on #capture-area .nv2:has(.nv2-ht) .nv2-kpi>.l{padding:4px 6px!important;font-size:11px!important}
+  body.abx-on #capture-area .nv2:has(.nv2-ht) .nv2-kpi>.v{font-size:21px!important;padding:5px 6px 2px!important;white-space:nowrap}
+  body.abx-on #capture-area .nv2:has(.nv2-ht) .nv2-kpi>.v small{font-size:13px!important}
+  body.abx-on #capture-area .nv2:has(.nv2-ht) .nv2-kpi>.s{padding:1px 6px 6px!important;font-size:11px!important;line-height:1.3}
+  body.abx-on #capture-area .nv2:has(.nv2-ht) .nv2-box{margin-bottom:8px!important}
+  body.abx-on #capture-area .nv2:has(.nv2-ht) .nv2-bh{padding:6px 10px!important}
+  body.abx-on #capture-area .nv2:has(.nv2-ht) .nv2-bh .t{font-size:14px!important}body.abx-on #capture-area .nv2:has(.nv2-ht) .nv2-bh .n{font-size:11px!important}
+  body.abx-on #capture-area .nv2:has(.nv2-ht) .nv2-t th{width:auto!important;padding:4px 8px!important;font-size:11.5px!important}
+  body.abx-on #capture-area .nv2:has(.nv2-ht) .nv2-t td{padding:2px 8px!important;font-size:12.5px!important;line-height:1.35}
+  body.abx-on #capture-area .nv2:has(.nv2-ht) .nv2-t td b{font-size:12.5px}
+  body.abx-on #capture-area .nv2:has(.nv2-ht) .nv2-t .nv2-chip,body.abx-on #capture-area .nv2:has(.nv2-ht) .nv2-t [class*="chip"]{font-size:10.5px!important;padding:0 6px!important;border-radius:0!important}
+  body.abx-on #capture-area .nv2:has(.nv2-ht) .nv2-leg{padding:5px 10px!important;font-size:11px!important}
+  /* ---- V18.26: Chi tiết NV › Theo NH — bỏ ô Dự kiến cụm trên đầu thẻ + dòng TỔNG CỤM, tên nhóm ra giữa ---- */
+  body.abx-on #capture-area .nv2-nhc .gh{justify-content:center!important;text-align:center!important}
+  body.abx-on #capture-area .nv2-nhc .gh .n{flex:1 1 auto;text-align:center!important;display:flex;flex-direction:column;align-items:center}
+  body.abx-on #capture-area .nv2-nhc .gh .big{display:none!important}
+  body.abx-on #capture-area .nv2-nh tr.tot{display:none!important}
+  /* ---- V18.27: ô % ra giữa + to hơn (Theo NH: Dự kiến · Năng lực NV: % Hoàn thành, Dự kiến) ---- */
+  body.abx-on #capture-area .nv2-nh td:has(.nv2-pp){text-align:center!important}
+  body.abx-on #capture-area .nv2-nh .nv2-cb{justify-content:center!important;gap:0!important}
+  body.abx-on #capture-area .nv2-nh .nv2-pp{font-size:14.5px!important;font-weight:900!important;min-width:0!important;padding:0!important}
+  body.abx-on #capture-area td:has(.nv2-ht){text-align:center!important}
+  body.abx-on #capture-area td:has(.nv2-ht)>div{justify-content:center!important;gap:0!important}
+  body.abx-on #capture-area td:has(.nv2-ht) b{font-size:14.5px!important;font-weight:900!important;min-width:0!important}
+  body.abx-on #capture-area td:has(> .nv2-dk){text-align:center!important}
+  body.abx-on #capture-area .nv2-dk{font-size:14.5px!important;font-weight:900!important;min-width:0!important;padding:0!important}
+  /* ---- V18.15: NK Bán hàng ---- */
+  body.abx-on #capture-area .nk-root{background:#fff!important}
+  body.abx-on #capture-area .nk-kicker{color:#1d7a3a!important}
+  body.abx-on #capture-area .nk-title{color:#1f6fb2!important}
+  body.abx-on #capture-area .nk-card{border-radius:0!important;border:1px solid #8f9aa7!important}
+  body.abx-on #capture-area .nk-pills button,body.abx-on #capture-area .nk-tools button,body.abx-on #capture-area .nk-pick button,body.abx-on #capture-area .nk-msg-h button,body.abx-on #capture-area .nk-lock button{border-radius:0!important;border-color:#8f9aa7!important}
+  body.abx-on #capture-area .nk-pills button.on{background:#2f5597!important;border-color:#2f5597!important}
+  body.abx-on #capture-area .nk-pick{border-radius:0!important;border:1px solid #8f9aa7}
+  body.abx-on #capture-area .nk-tbl th{white-space:normal!important}
+  body.abx-on #capture-area .nk-tbl th.nvh{background:#2f5597!important;color:#fff!important}
+  body.abx-on #capture-area .nk-dt td{background:#fff2cc!important;font-weight:700}
+  body.abx-on #capture-area .nk-off td{background:#f7f7f7!important;color:#9aa3ad!important}
+  body.abx-on #capture-area .nk-days td{background:#fff!important}
+  body.abx-on #capture-area .nk-sec td{border-left:1px solid #8f9aa7!important}
+  body.abx-on #capture-area .nk-sec.m td{background:#d9e2f3!important;color:#1f3864!important}
+  body.abx-on #capture-area .nk-sec.v td{background:#e4dff0!important;color:#5b2a86!important}
+  body.abx-on #capture-area .nk-in{border-radius:0!important;border-color:#8f9aa7!important;background:#fff!important}`;
+
+  let cssEl = null;
+  function apply() {
+    try {
+      if (!cssEl || !document.getElementById('autobi-excel-css')) { cssEl = document.createElement('style'); cssEl.id = 'autobi-excel-css'; cssEl.textContent = CSS; (document.head || document.documentElement).appendChild(cssEl); }
+      if (document.body) document.body.classList.toggle('abx-on', on());
+    } catch (_) { }
+  }
+  function set(v) { try { GM_setValue(KEY, v === 'excel' ? 'excel' : 'default'); } catch (_) { } apply(); }
+  const style = () => '<style>' + CSS + '</style>';
+
+  /* Chia nhóm Chính / Vượt trội (không phân loại → bảng phẳng). V18.15: dải khối ghi số nhóm đạt thẳng dưới cột cuối (vd 6/11) */
+  function tiered(rows, key, cols, rowFn, okFn) {
+    const s = a => a.slice().sort((x, y) => num(y[key]) - num(x[key]));
+    const band = (cls, name, a) => '<tr class="sec' + cls + '"><td colspan="' + (okFn ? cols - 1 : cols) + '">' + name + '</td>' + (okFn ? '<td class="c cnt">' + a.filter(okFn).length + '/' + a.length + '</td>' : '') + '</tr>';
+    if (!rows.some(x => x.tier)) return s(rows).map(rowFn).join('');
+    const C = s(rows.filter(x => x.tier === 'chinh')), V = s(rows.filter(x => x.tier !== 'chinh'));
+    let h = '';
+    if (C.length) h += band('', 'NHÓM CHÍNH', C) + C.map(rowFn).join('');
+    if (V.length) h += band(' v', 'NHÓM VƯỢT TRỘI', V) + V.map(rowFn).join('');
+    return h;
+  }
+
+  /* ---------- Mẫu 2: Realtime V1 (V18.15 theo phác thảo đã chốt) ----------
+     Một bảng chung: nửa trái = số hôm nay + bảng Realtime, nửa phải = số tháng + bảng Lũy kế, giữa có khoảng trắng.
+     Hai bên cùng thứ tự nhóm (xếp theo Dự kiến lũy kế) nên mỗi nhóm nằm ngang hàng. */
+  function rt(D) {
+    const id = uid(D.view);
+    const now = new Date();
+    const time = D.tc.isPastMonth ? 'Hết tháng ' + D.tc.month + '/' + D.tc.year : pad(now.getHours()) + ':' + pad(now.getMinutes()) + ' - ' + pad(now.getDate()) + '/' + pad(now.getMonth() + 1) + '/' + now.getFullYear();
+    const l2 = D.l2 || {};
+    const qdLK = num(l2.dtlk) > 0 ? D.lk / num(l2.dtlk) * 100 : 0;
+    const tgLK = num(l2.tg);
+    const G = '<td class="gap"></td>';
+    const rows = (D.rows || []).map(x => Object.assign({}, x, { pNow: num(x.tL) > 0 ? x.rL / x.tL * 100 : 0 }));
+    /* V18.20: cột cuối + ô dự kiến bên trên = ☀️ DK mai (lũy kế + realtime hôm nay); chưa có số hôm nay thì DK mai = Dự kiến */
+    rows.forEach(x => { x.dm = x.dm != null && isFinite(x.dm) ? x.dm : x.d; });
+    const dkM = D.dkM != null && isFinite(D.dkM) ? D.dkM : D.dk;
+    const passLK = rows.filter(x => x.dm >= 100).length;
+    const curCls = p => p >= D.timeP ? 'g' : p >= D.timeP * 0.8 ? 'y' : 'r';
+    const info =
+      '<tr>' + '<td class="i il">Time:</td><td class="i cr" colspan="3">' + time + '</td>' + G + '<td class="i cr" colspan="2">Target QĐ: <b>' + nf(D.monT) + '</b></td><td class="i cg2" colspan="3">Thực hiện QĐ: <b>' + nf(D.lk) + '</b></td></tr>' +
+      '<tr>' + '<td class="i bgR" colspan="2">Mục tiêu ngày</td><td class="i bgG" colspan="2">Thực hiện</td>' + G + '<td class="i co" colspan="2">Hoàn thành: <b>' + pc(D.lkP) + '</b></td><td class="i cb" colspan="3">Còn lại: <b>' + nf(Math.max(0, D.monT - D.lk)) + '</b></td></tr>' +
+      '<tr>' + '<td class="i cr" colspan="2"><b>' + nf(D.dayT) + '</b> Triệu</td><td class="i cb" colspan="2"><b>' + nf(D.rt) + '</b> Triệu</td>' + G + '<td class="i il" colspan="3">☀️ Dự kiến ngày mai:' + (D.maiOk ? '' : ' <span style="font-size:11px;font-weight:400;color:#666">(chưa có số hôm nay)</span>') + '</td><td class="i co" colspan="2"><b>' + pc(dkM) + '</b></td></tr>' +
+      '<tr>' + '<td class="i cg2">Hoàn thành</td><td class="i cb"><b>' + pc(D.rtP) + '</b></td><td class="i">%QĐ</td><td class="i cb"><b>' + Math.round(D.qd) + '%</b></td>' + G + '<td class="i il" colspan="3">Lũy kế Doanh thu thực:</td><td class="i" colspan="2"><b>' + nf(l2.dtlk) + '</b></td></tr>' +
+      '<tr>' + '<td class="i cr" colspan="2">Mục tiêu trả chậm:</td><td class="i cr bgY" colspan="2"><b>' + D.tgLim + '%</b></td>' + G + '<td class="i il" colspan="3">%Quy đổi/thực:</td><td class="i co" colspan="2"><b>' + Math.round(qdLK) + '%</b></td></tr>' +
+      '<tr>' + '<td class="i cr" colspan="2">Realtime:</td><td class="i" colspan="2"><b>' + Math.round(D.tg) + '%</b></td>' + G + '<td class="i il cr" colspan="3">Lũy kế trả chậm:</td><td class="i" colspan="2"><b>' + Math.round(tgLK) + '%</b></td></tr>';
+    const row = x => {
+      const has = x.r !== 0;
+      return '<tr><td class="l ' + lv(x.dm) + '">' + esc(x.name) + '</td><td>' + nf(x.t) + '</td><td' + (x.r < 0 ? ' class="ng"' : '') + '>' + (has ? nf(x.r) : '-') + '</td><td class="c ' + (has ? lv(x.p) : '') + '">' + (has ? pc(x.p) : '-') + '</td>' + G +
+        '<td class="l ' + lv(x.dm) + '">' + esc(x.name) + '</td><td>' + nf(x.tL) + '</td><td' + (x.rL < 0 ? ' class="ng"' : '') + '>' + nf(x.rL) + '</td><td class="c ' + lv(x.dm) + '">' + pc(x.pNow) + '</td><td class="c ' + lv(x.dm) + '" title="Dự kiến (hết hôm qua): ' + pc(x.d) + (x.rr ? ' · hôm nay +' + nf(x.rr) : '') + '">' + pc(x.dm) + '</td></tr>';
+    };
+    const band = (cls, name, a) => '<tr class="sec' + cls + '"><td colspan="3">' + name + '</td><td class="c cnt">' + a.filter(x => x.r !== 0 && x.p >= 100).length + '/' + a.length + '</td>' + G + '<td colspan="4">' + name + '</td><td class="c cnt">' + a.filter(x => x.dm >= 100).length + '/' + a.length + '</td></tr>';
+    const srt = a => a.slice().sort((x, y) => y.dm - x.dm);
+    let body = '';
+    if (!rows.length) body = '<tr><td colspan="4" class="c">Chưa có số thi đua — bấm Bắt Đầu Chạy</td>' + G + '<td colspan="5" class="c">Chưa có số thi đua</td></tr>';
+    else if (!rows.some(x => x.tier)) body = srt(rows).map(row).join('');
+    else {
+      const C = srt(rows.filter(x => x.tier === 'chinh')), V = srt(rows.filter(x => x.tier !== 'chinh'));
+      if (C.length) body += band('', 'NHÓM CHÍNH', C) + C.map(row).join('');
+      if (V.length) body += band(' v', 'NHÓM VƯỢT TRỘI', V) + V.map(row).join('');
+    }
+    const cols = '<colgroup><col style="width:140px"><col style="width:66px"><col style="width:74px"><col style="width:58px"><col style="width:18px"><col style="width:140px"><col style="width:72px"><col style="width:80px"><col style="width:78px"><col style="width:74px"></colgroup>';
+    return '<div class="abx-blk"><div class="abx-ttl">' + (D.view === 'total' ? esc(cumName(D.title)) : 'Shop: ' + esc(D.title)) + '</div>' +
+      '<table class="abx-rt" data-capture-id="xlrt-' + id + '" data-table-name="Doanh thu siêu thị + nhóm hàng">' + cols + '<tbody>' + info +
+      '<tr><td class="gap" colspan="10" style="height:10px"></td></tr>' +
+      '<tr><th class="ye" colspan="2">Realtime: ' + rows.length + ' Nhóm</th><th class="ye">Đạt:</th><th class="ye">' + D.pass + '</th>' + '<th class="gap"></th>' + '<th class="bl" colspan="2">Lũy kế: ' + rows.length + ' Nhóm</th><th class="bl" colspan="2">Đạt</th><th class="bl">' + passLK + '</th></tr>' +
+      '<tr><th class="or">Nhóm hàng</th><th class="or">Target</th><th class="or">Thực hiện</th><th class="or">Tỉ lệ</th><th class="gap"></th><th>Nhóm hàng</th><th>Target</th><th>Thực hiện</th><th>% Hiện tại</th><th>☀️ DK mai ▼</th></tr>' +
+      body + '</tbody></table><div class="abx-note">Tiền: triệu · Lũy kế đến hết ' + pad(D.dp) + '/' + pad(D.tc.month) + ' · ☀️ DK mai = lũy kế + realtime hôm nay · màu: ≥100% xanh · 80–99% vàng · &lt;80% đỏ</div></div>';
+  }
+
+  /* ---------- Tổng hợp NV + Mẫu 1: ma trận Nhóm hàng × NV ---------- */
+  function staffTbl(D, id) {
+    const sr = (D.srows || []).slice().sort((x, y) => (y.fc == null ? -1e9 : y.fc) - (x.fc == null ? -1e9 : x.fc) || num(y.mon) - num(x.mon));
+    if (!sr.length) return '';
+    const n = (D.sg || []).length;
+    return '<table style="width:100%" data-capture-id="xlnv-' + id + '-th" data-table-name="Tổng hợp nhân viên"><thead><tr><th>Hạng</th><th>Nhân viên</th><th>Mục tiêu</th><th>DT QĐ</th><th>% HT</th><th>Dự kiến</th><th>Trả chậm</th><th>NH đạt</th>' + (D.hasRw ? '<th>Tổng thưởng</th>' : '') + '</tr></thead><tbody>' +
+      sr.map((x, k) => '<tr><td class="c">' + (k + 1) + '</td><td class="l">' + esc(x.nm) + (D.view === 'total' && x.shop ? ' <span style="font-weight:400;color:#555">· ' + esc(x.shop) + '</span>' : '') + '</td><td>' + (x.tgt > 0 ? nf(x.tgt) : '—') + '</td><td' + (num(x.mon) < 0 ? ' class="ng"' : '') + '>' + (x.mon == null ? '—' : nf(x.mon, 1)) + '</td><td class="c">' + (x.ht == null ? '—' : Math.round(x.ht) + '%') + '</td><td class="c ' + (x.fc == null ? '' : lv(x.fc)) + '">' + (x.fc == null ? '—' : Math.round(x.fc) + '%') + '</td><td class="c ' + (x.tc == null ? '' : x.tc >= D.tgLim ? 'g' : 'r') + '">' + (x.tc == null ? '—' : Math.round(x.tc) + '%') + '</td><td class="c ' + (n ? lv(x.ok / n * 100) : '') + '">' + x.ok + '/' + n + '</td>' + (D.hasRw ? '<td class="rw">' + trf(x.rw) + '</td>' : '') + '</tr>').join('') +
+      '<tr class="tot"><td></td><td class="l">Tổng</td><td>' + nf(D.tTgt) + '</td><td>' + nf(D.tMon, 1) + '</td><td class="c">' + (D.tTgt > 0 ? Math.round(D.tMon / D.tTgt * 100) + '%' : '—') + '</td><td class="c">' + (D.tTgt > 0 && D.dp > 0 ? Math.round(D.tMon / D.dp * D.dim / D.tTgt * 100) + '%' : '—') + '</td><td class="c ' + (D.tg >= D.tgLim ? 'g' : 'r') + '">' + Math.round(num(D.tg)) + '%</td><td class="c">' + D.pass + '/' + (D.rows || []).length + '</td>' + (D.hasRw ? '<td class="rw">' + trf(D.tRw) + '</td>' : '') + '</tr></tbody></table>';
+  }
+  function matrix(D, id, noShop) { /* V18.29: noShop = bỏ cột Cả shop (LK NEW đã có bảng lũy kế bên cạnh) */
+    const sg = D.sg || [], mr = D.mrows || [];
+    if (!sg.length || !mr.length) return '<div class="abx-note">Chưa có số thi đua nhân viên</div>';
+    const shopD = {}, tierG = {}; (D.rows || []).forEach(x => { shopD[x.name] = x.d; tierG[x.name] = x.tier; });
+    const cell = (v, g) => { if (!v) return '<td>—</td>'; const p = Math.round(num(v.d)); return '<td class="' + (p === 0 ? 'z' : lv(v.d)) + '" title="' + esc(g) + ': ' + nf(v.a) + ' / ' + nf(v.t) + '">' + p + '%</td>'; };
+    const line = g => '<tr><td class="l">' + esc(g) + '</td>' + mr.map(x => cell(x.cells && x.cells[g], g)).join('') + (noShop ? '' : '<td class="' + lv(num(shopD[g])) + '">' + (shopD[g] == null ? '—' : pc(shopD[g])) + '</td>') + '</tr>';
+    const ncol = mr.length + (noShop ? 1 : 2);
+    const srt = a => a.slice().sort((a1, b1) => num(shopD[b1]) - num(shopD[a1]));
+    let body;
+    if (!sg.some(g => tierG[g])) body = srt(sg).map(line).join('');
+    else {
+      const C = srt(sg.filter(g => tierG[g] === 'chinh')), V = srt(sg.filter(g => tierG[g] !== 'chinh'));
+      body = (C.length ? '<tr class="sec"><td colspan="' + ncol + '">NHÓM CHÍNH</td></tr>' + C.map(line).join('') : '') + (V.length ? '<tr class="sec v"><td colspan="' + ncol + '">NHÓM VƯỢT TRỘI</td></tr>' + V.map(line).join('') : '');
+    }
+    const nc = mr.length + (noShop ? 0 : 1); /* V18.30: các cột NV chia đều */
+    return '<table class="abx-mx" style="table-layout:fixed;width:100%" data-capture-id="xlnv-' + id + '-mx" data-table-name="Thi đua nhóm hàng × nhân viên"><colgroup><col style="width:150px">' + Array.from({ length: nc }, () => '<col>').join('') + '</colgroup><thead><tr><th class="gr" style="text-align:left">Nhóm hàng</th>' + mr.map(x => '<th class="gr" title="' + esc(x.nm) + '">' + esc(shortNm(x.nm)) + '</th>').join('') + (noShop ? '' : '<th class="gr">Cả shop</th>') + '</tr></thead><tbody>' + body +
+      '<tr class="tot"><td class="l">Số nhóm đạt</td>' + mr.map(x => '<td class="c">' + x.ok + '/' + sg.length + '</td>').join('') + (noShop ? '' : '<td class="c">' + D.pass + '/' + (D.rows || []).length + '</td>') + '</tr></tbody></table>';
+  }
+
+  /* ---------- Mẫu 3: Lũy kế gọn (LK NEW) — V18.15: dòng Doanh thu / Trả chậm số to, dải khối có số nhóm đạt ---------- */
+  function lkTbl(D, id) {
+    const rows = D.rows || [];
+    const tgOk = D.tg >= D.tgLim;
+    const gRow = x => '<tr><td class="l ' + lv(x.d) + '">' + esc(x.name) + '</td><td>' + nf(x.t) + '</td><td' + (x.r < 0 ? ' class="ng"' : '') + '>' + nf(x.r) + '</td><td class="c ' + lv(x.d) + '">' + pc(x.p) + '</td><td class="c ' + lv(x.d) + '">' + pc(x.d) + '</td></tr>';
+    return '<table class="abx-rt" data-capture-id="xllk-' + id + '-lk" data-table-name="Báo cáo lũy kế"><thead><tr><th rowspan="2" style="min-width:150px">Nhóm hàng</th><th colspan="4">' + esc(D.title) + '</th></tr><tr><th class="sk">Target</th><th class="sk">Thực hiện</th><th class="sk">Tỉ lệ (hiện tại)</th><th class="sk">Dự kiến ▼</th></tr></thead><tbody>' +
+      '<tr><td class="i">Doanh thu</td><td class="i"><b>' + nf(D.monT) + '</b></td><td class="i cb"><b>' + nf(D.lk) + '</b></td><td class="i"><b>' + pc(D.lkP) + '</b></td><td class="i ' + lv(D.dk) + '"><b>' + pc(D.dk) + '</b></td></tr>' +
+      '<tr><td class="i">Trả chậm</td><td class="i"><b>' + D.tgLim + '%</b></td><td class="i"><b>' + Math.round(D.tg) + '%</b></td><td class="i ' + (tgOk ? 'g' : 'r') + '" colspan="2">' + (tgOk ? 'Đạt' : 'Chưa đạt') + '</td></tr>' +
+      '<tr class="yl"><td>SL Nhóm</td><td>' + rows.length + '</td><td colspan="2">Đạt:</td><td class="cnt">' + D.pass + '</td></tr>' +
+      (rows.length ? tiered(rows, 'd', 5, gRow, x => x.d >= 100) : '<tr><td colspan="5" class="c">Chưa có số thi đua lũy kế — bấm Bắt Đầu Chạy</td></tr>') + '</tbody></table>';
+  }
+  function head(D, kind) { return '<div class="abx-ttl b">' + (D.view === 'total' ? esc(cumName(D.title).toUpperCase()) : 'SHOP: ' + esc(String(D.title).toUpperCase())) + '</div><div class="abx-sub">' + kind + ' · số đến hết ' + pad(D.dp) + '/' + pad(D.tc.month) + '/' + D.tc.year + '</div>'; }
+  /* V18.31: bảng Tổng hợp NV và ma trận cùng bề ngang (trên dưới cân nhau), cột NV chia đều */
+  const colW = (D, noShop) => Math.max(660, 150 + ((D.mrows || []).length + (noShop ? 0 : 1)) * 90);
+  function lk(D) {
+    const id = uid(D.view);
+    return '<div class="abx-blk">' + head(D, 'BÁO CÁO LŨY KẾ') + '<div class="abx-two" style="flex-wrap:wrap">' + lkTbl(D, id) + '<div class="abx-col" style="width:' + colW(D, true) + 'px">' + staffTbl(D, id) + matrix(D, id, true) + '</div></div><div class="abx-note">Tiền: triệu · Dự kiến = lũy kế ÷ ngày đã qua × số ngày tháng ÷ target · màu: ≥100% xanh · 80–99% vàng · &lt;80% đỏ</div></div>';
+  }
+  function mx(D) {
+    const id = uid(D.view);
+    return '<div class="abx-blk">' + head(D, 'CHI TIẾT NHÂN VIÊN') + '<div class="abx-col" style="width:' + colW(D, false) + 'px">' + staffTbl(D, id) + matrix(D, id) + '</div><div class="abx-note">% = dự kiến cuối tháng của từng NV theo mục tiêu phân bổ ở Khai báo · cột "Cả shop" = dự kiến của siêu thị</div></div>';
+  }
+  const wrap = parts => style() + '<div class="abx">' + parts + '</div>';
+
+  /* ---------- Cửa vào từ bảng điều phối tab (lõi) ---------- */
+  let mode = '';
+  function tab(name, h, c, groups, cfg, view, useBi, timeArg) {
+    if (!on() || !window.__AutoBIRt2) return null;
+    if (name === 'oneshop') return window.__AutoBIRt2.render(h, c, groups, cfg, view, useBi, timeArg);
+    if (name === 'bcstaff' && !window.tgdd_theo_nh_enabled) { mode = 'staff'; try { return window.__AutoBIRt2.renderLK(h, c, groups, cfg, view, useBi, timeArg); } finally { mode = ''; } }
+    return null;
+  }
+
+  /* V18.15: Giờ công & Năng suất (khung riêng, shadow DOM) — CSS kiểu Excel chèn vào khung khi bật theme */
+  const wtCss = `
+  main{background:#fff!important;font-family:Arial,Helvetica,sans-serif}
+  header{background:#fff!important;color:#1b1b1b!important;border-bottom:3px solid #375623;padding:12px 20px!important}
+  header:after,.clock,.motto{display:none!important}
+  header small{color:#1d7a3a!important}header h1{color:#375623!important;font-size:22px!important}header h1 em{color:#375623!important}header p{color:#444!important}
+  #wt-close{border-radius:0!important;border:1px solid #8f9aa7!important;background:#fff!important;color:#1b1b1b!important}
+  .notice{border-radius:0!important}
+  .stats{gap:0!important;border:1px solid #8f9aa7}
+  .stat{border-radius:0!important;box-shadow:none!important;border:1px solid #8f9aa7!important;background:#fff!important;display:block!important;padding:0!important;text-align:center}
+  .stat-icon{display:none!important}
+  .stat small{display:block;background:#d9e2f3;color:#1f3864!important;font-weight:700;padding:6px;text-transform:uppercase}
+  .stat strong{display:inline-block;font-size:22px!important;color:#1b1b1b!important;padding:8px 4px}
+  .stat .unit{color:#555!important}
+  .toolbar button,.toolbar select,.toolbar .period{border-radius:0!important}
+  details.shop{border-radius:0!important;border:1px solid #8f9aa7!important;box-shadow:none!important;background:#fff!important}
+  details.shop>summary{background:#1f3864!important;color:#fff!important;border-radius:0!important}
+  details.shop.warm>summary{background:#c55a11!important}
+  details.shop>summary *{color:#fff!important}
+  .shop-total{background:transparent!important;border:1px solid #fff!important;border-radius:0!important}
+  .group{border-radius:0!important;background:#fff!important}
+  .group h2{background:#e4dff0!important;color:#5b2a86!important;border-radius:0!important}
+  table{border-collapse:collapse!important}
+  th{background:#2f5597!important;color:#fff!important;border:1px solid #6b7785!important;text-align:center!important}
+  td{border:1px solid #8f9aa7!important}
+  .ratio .track{display:none!important}
+  td:has(.ratio.xg){background:#c6efce!important}td:has(.ratio.xy){background:#ffeb9c!important}td:has(.ratio.xr){background:#ffc7ce!important}
+  .ratio.xg b{color:#006100}.ratio.xy b{color:#7a4a00}.ratio.xr b{color:#9c0006}
+  .ratio{justify-content:center}
+  /* V18.22: gọn như các mục khác — khung 980px, tiêu đề giữa, dòng thấp, chữ 12.5px */
+  main{max-width:980px!important;margin:10px auto!important;border:1px solid #8f9aa7;min-height:0!important}
+  header{justify-content:center;text-align:center;padding:10px 16px 8px!important;position:relative}
+  header .heading{flex:0 1 auto!important}
+  header small{font-size:11px!important}header h1{font-size:19px!important;margin:2px 0!important}header p{font-size:11px!important;margin-top:2px!important}
+  #wt-close{position:absolute;right:12px;top:10px;padding:4px 10px!important;font-size:12px!important}
+  .content{padding:10px 14px 14px!important}
+  .notice{padding:5px 10px!important;margin-bottom:8px!important;font-size:12px!important}
+  .stats{margin:0 0 10px!important}
+  .stat small{padding:4px 6px!important;font-size:11px!important}
+  .stat strong{font-size:20px!important;padding:5px 4px!important}
+  .toolbar{gap:6px!important;margin-bottom:6px!important}
+  .toolbar button,.toolbar select,.toolbar .period{height:28px!important;padding:0 8px!important;font-size:12px!important}
+  .hint{font-size:11px!important;margin:4px 0 8px!important}
+  details.shop{margin-bottom:10px!important}
+  details.shop>summary{padding:6px 10px!important;font-size:13px!important}
+  .store{display:none!important}
+  .shop-total{font-size:11.5px!important;padding:1px 8px!important}
+  .group{padding:6px 8px!important;margin:0!important}
+  .group h2{padding:4px 10px!important;font-size:12px!important;margin:0 0 4px!important}
+  .group h2 span{font-size:11px!important}
+  th{padding:4px 8px!important;font-size:11.5px!important}
+  td{padding:2px 8px!important;font-size:12.5px!important;line-height:1.35}
+  .hours{color:#1b1b1b!important}
+  .employee{font-weight:700}
+  .ratio b{font-size:12.5px!important}
+  .foot{font-size:11px!important;margin:6px 0 0!important}`;
+  window.__AutoBIExcel = { on, set, apply, tab, rt, lk, mx, wrap, wtCss, get mode() { return mode; } };
+  try { if (typeof unsafeWindow !== 'undefined') unsafeWindow.__AutoBIExcel = window.__AutoBIExcel; } catch (_) { }
+  if (document.body) apply(); else document.addEventListener('DOMContentLoaded', apply);
 })();
