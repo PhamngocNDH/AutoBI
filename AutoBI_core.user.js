@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.53
+// @name         AutoBI Core V18.54
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.53
+// @version      18.54
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -11586,7 +11586,7 @@ window.__AutoBIRunPick = (() => {
       set(KB, 'A' + r, x.code ? String(x.code) : null); set(KB, 'B' + r, x.name); set(KB, 'C' + r, x.code ? x.shop : null); set(KB, 'D' + r, x.code && x.rate > 0 ? x.rate : null);
     }
     const dump = (ws, rows) => {
-      for (let r = 1; r <= Math.max(rows.length, 60); r++) for (let c = 1; c <= 8; c++) ws.getCell(r, c).value = null;
+      for (let r = 1; r <= 1500; r++) for (let c = 1; c <= 8; c++) ws.getCell(r, c).value = null; /* V18.54: xóa hết 1500 dòng A–H trước khi đổ — tránh số cũ còn sót khi lượt sau ít nhóm/NV hơn */
       rows.forEach((row, i) => row.forEach((v, j) => { if (v !== '' && v != null) ws.getCell(i + 1, j + 1).value = v; }));
     };
     const r2 = v => Math.round(num(v) * 100) / 100;
@@ -11597,10 +11597,10 @@ window.__AutoBIRunPick = (() => {
       const per = shopsOn.map((s, i) => g.per[P.shops.indexOf(s)] || {});
       lkRows.push([g.key, unit, 'TARGET', '% HT THÁNG', '% DỰ BÁO', 'HẠNG VÙNG', 'TOP/BOTTOM VÙNG'], ['TỔNG', r2(per.reduce((a, p) => a + num(p.r), 0)), r2(per.reduce((a, p) => a + num(p.t), 0))]);
       shopsOn.forEach((s, i) => lkRows.push([s.bi, r2(per[i].r), r2(per[i].t)]));
-      lkRows.push([]);
+      /* V18.54: bỏ dòng trống phân cách khối — mẫu cũ cột K đứt tại dòng trống, cột M trống, nhóm về 0 */
       rtRows.push([g.key, unit + ' (RT)', 'TARGET', '% HT NGÀY', '% DỰ BÁO', 'HẠNG VÙNG', 'TOP/BOTTOM VÙNG'], ['TỔNG', r2(per.reduce((a, p) => a + num(p.rr), 0)), r2(per.reduce((a, p) => a + num(p.tr), 0))]);
       shopsOn.forEach((s, i) => rtRows.push([s.bi, r2(per[i].rr), r2(per[i].tr)]));
-      rtRows.push([]);
+      /* V18.54: bỏ dòng trống phân cách khối — như lkRows */
     });
     shopsOn.forEach(s => {
       const mem = P.staff.filter(x => x.shop === P.shops.indexOf(s) + 1);
@@ -11608,7 +11608,7 @@ window.__AutoBIRunPick = (() => {
         const vals = mem.map(x => r2(x.cells && x.cells[g.name]));
         nvRows.push([g.key, g.money ? 'DOANH THU' : 'SỐ LƯỢNG', 'HẠNG TRONG ST', 'TOP/BOTTOM ST', 'BỘ PHẬN'], ['TỔNG', r2(vals.reduce((a, v) => a + v, 0))]);
         mem.forEach((x, i) => { if (vals[i]) nvRows.push([x.code + ' - ' + x.name, vals[i]]); });
-        nvRows.push([]);
+        /* V18.54: bỏ dòng trống phân cách khối — như lkRows */
       });
     });
     const H = ['NHÂN VIÊN', 'SỐ LƯỢNG', 'DOANH THU', '% TỈ TRỌNG', 'TB 3 THÁNG', '% TT'];
