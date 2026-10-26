@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.43
+// @name         AutoBI Core V18.50
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.43
+// @version      18.50
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -11133,9 +11133,9 @@ window.__AutoBIRunPick = (() => {
       list.map((b, i) => '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f1f5f9;"><span style="flex:1;font-size:13px;font-weight:700;color:#0f1b2d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + esc(b.name) + '">' + esc(b.name) + '</span>' +
         '<button type="button" data-i="' + i + '" data-a="copy" style="min-height:34px;padding:0 12px;border:0;border-radius:17px;background:#0b4fb3;color:#fff;font-weight:800;font-size:12.5px;cursor:pointer;">📋 Chép ảnh</button>' +
         '<button type="button" data-i="' + i + '" data-a="save" style="min-height:34px;padding:0 10px;border:1px solid #cbd5e1;border-radius:17px;background:#fff;color:#334155;font-weight:700;font-size:12.5px;cursor:pointer;">⬇ Tải</button></div>').join('');
-    /* V18.43: Xuất Excel đầy đủ (Realtime · Lũy kế · Chi tiết NV · Data, có công thức) — chỉ ở tab LK NEW + theme Excel */
-    if (document.body.classList.contains('abx-on') && window.__AutoBIXlsx && document.querySelector('.rpt-nav-item.active[data-tab="lknew"]'))
-      sec.insertAdjacentHTML('beforeend', '<div style="display:flex;align-items:center;gap:8px;padding:7px 0 2px;"><span style="flex:1;font-size:13px;font-weight:700;color:#1d7a3a;line-height:1.3">Xuất Excel đầy đủ<br><span style="font-weight:600;color:#64748b;font-size:11.5px">Realtime · Lũy kế · Chi tiết NV · Data — có công thức</span></span>' +
+    /* V18.43: Xuất Excel đầy đủ (Realtime · Lũy kế · Chi tiết NV · Data, có công thức) — chỉ ở tab LK NEW. V18.44: cả giao diện mặc định */
+    if (window.__AutoBIXlsx && document.querySelector('.rpt-nav-item.active[data-tab="lknew"]'))
+      sec.insertAdjacentHTML('beforeend', '<div style="display:flex;align-items:center;gap:8px;padding:7px 0 2px;"><span style="flex:1;font-size:13px;font-weight:700;color:#1d7a3a;line-height:1.3">Xuất file đổ số (Excel)<br><span style="font-weight:600;color:#64748b;font-size:11.5px">Realtime · Lũy kế · Chi tiết NV — khai báo + số điền sẵn, hôm sau đổ tay tiếp được</span></span>' +
         '<button type="button" data-a="xlsx" style="min-height:34px;padding:0 14px;border:0;border-radius:17px;background:#1d7a3a;color:#fff;font-weight:800;font-size:12.5px;cursor:pointer;">📊 Xuất Excel</button></div>');
     sec.addEventListener('click', e => {
       const btn = e.target.closest('button[data-a]'); if (!btn) return;
@@ -11317,22 +11317,22 @@ window.__AutoBIRunPick = (() => {
   function sheetRT(wb, R, L, X) {
     const ws = wb.addWorksheet('Realtime', { views: [{ showGridLines: false }] });
     const { P, G, S } = X;
-    [20, 10, 11, 9, 2.5, 20, 11, 12, 11, 11].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
-    box(ws, 1, 1, 1, 10, '=' + DP(P, 'title'), { font: { color: '1D7A3A', bold: true, size: 14 }, al: 'center', border: false });
+    [20, 10, 11, 9, 2.5, 20, 11, 13, 10, 10, 20].forEach /* V18.47: thêm cột DK (J), ☀️ DK mai sang K */((w, i) => { ws.getColumn(i + 1).width = w; });
+    box(ws, 1, 1, 1, 11, '=' + DP(P, 'title'), { font: { color: '1D7A3A', bold: true, size: 14 }, al: 'center', border: false });
     const I = (r, c1, c2, v, st, fmt) => box(ws, r, c1, r, c2, v, Object.assign({ al: 'center', font: { bold: true, size: 11 } }, st || {}), fmt);
     const red = { font: { color: 'C00000', bold: true, size: 11 } }, blue = { font: { color: '1F4E9C', bold: true, size: 11 } }, grn = { font: { color: '1D7A3A', bold: true, size: 11 } }, org = { font: { color: 'C55A11', bold: true, size: 11 } };
     let r = 3;
-    I(r, 1, 1, 'Time:', { al: 'left' }); I(r, 2, 4, '=' + DP(P, 'at'), red); I(r, 6, 6, 'Target QĐ', red); I(r, 7, 7, '=' + DP(P, 'monT'), red, N0); I(r, 8, 8, 'Thực hiện QĐ', grn); I(r, 9, 10, '=' + DP(P, 'lk'), grn, N0); r++;
+    I(r, 1, 1, 'Time:', { al: 'left' }); I(r, 2, 4, '=' + DP(P, 'at'), red); I(r, 6, 6, 'Target QĐ', red); I(r, 7, 7, '=' + DP(P, 'monT'), red, N0); I(r, 8, 8, 'Thực hiện QĐ', grn); I(r, 9, 11, '=' + DP(P, 'lk'), grn, N0); r++;
     I(r, 1, 2, 'Mục tiêu ngày', { fill: F('FF0000'), font: { color: 'FFFFFF', bold: true, size: 11 } }); I(r, 3, 4, 'Thực hiện', { fill: F('0E8F5B'), font: { color: 'FFFFFF', bold: true, size: 11 } });
-    I(r, 6, 6, 'Hoàn thành', org); I(r, 7, 7, '=' + pctF('I3', 'G3'), org, PCT); I(r, 8, 8, 'Còn lại', blue); I(r, 9, 10, '=MAX(0,G3-I3)', blue, N0); r++;
+    I(r, 6, 6, 'Hoàn thành', org); I(r, 7, 7, '=' + pctF('I3', 'G3'), org, PCT); I(r, 8, 8, 'Còn lại', blue); I(r, 9, 11, '=MAX(0,G3-I3)', blue, N0); r++;
     I(r, 1, 2, '=' + DP(P, 'dayT'), red, '#,##0 "Triệu"'); I(r, 3, 4, '=' + DP(P, 'rt'), blue, '#,##0.0 "Triệu"');
-    I(r, 6, 8, '☀️ Dự kiến ngày mai', { al: 'left' }); I(r, 9, 10, '=' + maiF(DP(P, 'lk'), DP(P, 'rt'), DP(P, 'monT'), 'CoRT'), org, PCT); r++;
+    I(r, 6, 8, '☀️ Dự kiến ngày mai', { al: 'left' }); I(r, 9, 11, '=' + maiF(DP(P, 'lk'), DP(P, 'rt'), DP(P, 'monT'), 'CoRT'), org, PCT); r++;
     I(r, 1, 1, 'Hoàn thành', grn); I(r, 2, 2, '=' + pctF('C5', 'A5'), blue, PCT); I(r, 3, 3, '%QĐ'); I(r, 4, 4, '=IFERROR(' + DP(P, 'rt') + '/' + DP(P, 'rtThuc') + ',0)', blue, PCT);
-    I(r, 6, 8, 'Lũy kế Doanh thu thực', { al: 'left' }); I(r, 9, 10, '=' + DP(P, 'lkThuc'), {}, N0); r++;
+    I(r, 6, 8, 'Lũy kế Doanh thu thực', { al: 'left' }); I(r, 9, 11, '=' + DP(P, 'lkThuc'), {}, N0); r++;
     I(r, 1, 2, 'Mục tiêu trả chậm', red); I(r, 3, 4, '=MucTieuTC', Object.assign({ fill: F('FFFF00') }, red), PCT);
-    I(r, 6, 8, '%Quy đổi/thực', { al: 'left' }); I(r, 9, 10, '=IFERROR(' + DP(P, 'lk') + '/' + DP(P, 'lkThuc') + ',0)', org, PCT); r++;
+    I(r, 6, 8, '%Quy đổi/thực', { al: 'left' }); I(r, 9, 11, '=IFERROR(' + DP(P, 'lk') + '/' + DP(P, 'lkThuc') + ',0)', org, PCT); r++;
     I(r, 1, 2, 'Realtime trả chậm', red); I(r, 3, 4, '=' + DP(P, 'tgRT'), {}, PCT);
-    I(r, 6, 8, 'Lũy kế trả chậm', Object.assign({ al: 'left' }, red)); I(r, 9, 10, '=' + DP(P, 'tgLK'), {}, PCT);
+    I(r, 6, 8, 'Lũy kế trả chậm', Object.assign({ al: 'left' }, red)); I(r, 9, 11, '=' + DP(P, 'tgLK'), {}, PCT);
     ws.addConditionalFormatting({ ref: 'C8', rules: [{ type: 'expression', priority: 1, formulae: ['AND(ISNUMBER(C8),C8>=MucTieuTC)'], style: dxf('C6EFCE', '006100') }, { type: 'expression', priority: 2, formulae: ['ISNUMBER(C8)'], style: dxf('FFC7CE', '9C0006') }] });
     ws.addConditionalFormatting({ ref: 'I8', rules: [{ type: 'expression', priority: 1, formulae: ['AND(ISNUMBER(I8),I8>=MucTieuTC)'], style: dxf('C6EFCE', '006100') }, { type: 'expression', priority: 2, formulae: ['ISNUMBER(I8)'], style: dxf('FFC7CE', '9C0006') }] });
     heat(ws, 'B6', 'B6'); heat(ws, 'G4', 'G4', null, 'NgayQua/SoNgay'); heat(ws, 'I5', 'I5');
@@ -11342,7 +11342,7 @@ window.__AutoBIRunPick = (() => {
     const list = X.groups.map(g => Object.assign({}, g, { dm: (R && (R.rows || []).find(q => q.name === g.name) || {}).dm }));
     const hRow = r; r += 2;
     put(ws, r - 1, 1, 'Nhóm hàng', K.or); put(ws, r - 1, 2, 'Target', K.or); put(ws, r - 1, 3, 'Thực hiện', K.or); put(ws, r - 1, 4, 'Tỉ lệ', K.or);
-    ['Nhóm hàng', 'Target', 'Thực hiện', '% Hiện tại', '☀️ DK mai'].forEach((h, i) => put(ws, r - 1, 6 + i, h, K.th));
+    ['Nhóm hàng', 'Target', 'Thực hiện', '% Hiện tại', 'DK', '☀️ DK mai'].forEach((h, i) => put(ws, r - 1, 6 + i, h, K.th));
     const top = r;
     tiers(list, 'dm').forEach(([name, cls, a]) => {
       const bandR = name ? r++ : 0;
@@ -11353,42 +11353,43 @@ window.__AutoBIRunPick = (() => {
         put(ws, r, 4, '=IF(C' + r + '=0,"-",' + pctF('C' + r, 'B' + r) + ')', K.c, PCT);
         put(ws, r, 6, '=' + D_(gr, 1), K.l); put(ws, r, 7, '=' + D_(gr, 5), {}, N1); put(ws, r, 8, '=' + D_(gr, 6), {}, N1);
         put(ws, r, 9, '=' + pctF('H' + r, 'G' + r), K.c, PCT);
-        put(ws, r, 10, '=' + maiF('H' + r, 'IF(CoRTNhom=1,C' + r + ',0)', 'G' + r, 'CoRTNhom'), K.c, PCT);
+        put(ws, r, 10, '=' + fcF('H' + r, 'G' + r), K.c, PCT);
+        put(ws, r, 11, '=' + maiF('H' + r, 'IF(CoRTNhom=1,C' + r + ',0)', 'G' + r, 'CoRTNhom'), K.c, PCT);
         r++;
       });
       if (bandR) {
         const e = r - 1;
         box(ws, bandR, 1, bandR, 3, name, K[cls]); put(ws, bandR, 4, '=COUNTIFS(C' + s + ':C' + e + ',"<>0",D' + s + ':D' + e + ',' + OK + ')&"/' + a.length + '"', K[cls]);
-        box(ws, bandR, 6, bandR, 9, name, K[cls]); put(ws, bandR, 10, '=COUNTIF(J' + s + ':J' + e + ',' + OK + ')&"/' + a.length + '"', K[cls]);
+        box(ws, bandR, 6, bandR, 9, name, K[cls]); put(ws, bandR, 10, '=COUNTIF(J' + s + ':J' + e + ',' + OK + ')&"/' + a.length + '"', K[cls]); put(ws, bandR, 11, '=COUNTIF(K' + s + ':K' + e + ',' + OK + ')&"/' + a.length + '"', K[cls]);
       }
     });
     const bot = r - 1;
     if (bot >= top) {
-      heat(ws, 'D' + top + ':D' + bot, 'D' + top); heat(ws, 'I' + top + ':I' + bot, 'I' + top, null, 'NgayQua/SoNgay'); heat(ws, 'J' + top + ':J' + bot, 'J' + top);
-      heat(ws, 'A' + top + ':A' + bot, 'A' + top, '$J' + top); heat(ws, 'F' + top + ':F' + bot, 'F' + top, '$J' + top);
+      heat(ws, 'D' + top + ':D' + bot, 'D' + top); heat(ws, 'I' + top + ':I' + bot, 'I' + top, null, 'NgayQua/SoNgay'); heat(ws, 'J' + top + ':J' + bot, 'J' + top); heat(ws, 'K' + top + ':K' + bot, 'K' + top);
+      heat(ws, 'A' + top + ':A' + bot, 'A' + top, '$K' + top); heat(ws, 'F' + top + ':F' + bot, 'F' + top, '$K' + top);
     }
     box(ws, hRow, 1, hRow, 2, 'Realtime: ' + list.length + ' Nhóm', K.ye); put(ws, hRow, 3, 'Đạt:', K.ye);
     put(ws, hRow, 4, '=COUNTIFS(C' + top + ':C' + bot + ',"<>0",D' + top + ':D' + bot + ',' + OK + ')', K.ye);
-    box(ws, hRow, 6, hRow, 7, 'Lũy kế: ' + list.length + ' Nhóm', K.bl); box(ws, hRow, 8, hRow, 9, 'Đạt', K.bl); put(ws, hRow, 10, '=COUNTIF(J' + top + ':J' + bot + ',' + OK + ')', K.bl);
+    box(ws, hRow, 6, hRow, 7, 'Lũy kế: ' + list.length + ' Nhóm', K.bl); box(ws, hRow, 8, hRow, 9, 'Đạt', K.bl); put(ws, hRow, 10, '=COUNTIF(J' + top + ':J' + bot + ',' + OK + ')', K.bl); put(ws, hRow, 11, '=COUNTIF(K' + top + ':K' + bot + ',' + OK + ')', K.bl);
     r += 1;
 
     /* doanh thu nhân viên */
     if (S.length) {
-      box(ws, r, 1, r, 4, 'DOANH THU NV HÔM NAY', K.gr); box(ws, r, 6, r, 10, 'LŨY KẾ THÁNG', K.gr); r++;
-      box(ws, r, 1, r, 2, 'Nhân viên', K.th); box(ws, r, 3, r, 4, 'Hôm nay', K.or); ['Lũy kế', 'Mục tiêu', '% HT'].forEach((h, i) => put(ws, r, 6 + i, h, K.th)); box(ws, r, 9, r, 10, 'Dự kiến', K.th); r++;
+      box(ws, r, 1, r, 4, 'DOANH THU NV HÔM NAY', K.gr); box(ws, r, 6, r, 11, 'LŨY KẾ THÁNG', K.gr); r++;
+      box(ws, r, 1, r, 2, 'Nhân viên', K.th); box(ws, r, 3, r, 4, 'Hôm nay', K.or); put(ws, r, 6, 'Lũy kế', K.th); box(ws, r, 7, r, 8, 'Mục tiêu', K.th); box(ws, r, 9, r, 10, '% HT', K.th); put(ws, r, 11, 'Dự kiến', K.th); r++;
       const s0 = r;
       S.slice().sort((x, y) => num(y.day) - num(x.day) || num(y.mon) - num(x.mon)).forEach(x => {
         box(ws, r, 1, r, 2, '=' + D_(x.row, 3) + '&" · "&' + D_(x.row, 4), K.l); box(ws, r, 3, r, 4, '=' + D_(x.row, 7), { al: 'right', font: { bold: true } }, N1);
-        put(ws, r, 6, '=' + D_(x.row, 6), {}, N1); put(ws, r, 7, '=' + D_(x.row, 5), {}, N0); put(ws, r, 8, '=' + pctF('F' + r, 'G' + r), K.c, PCT); box(ws, r, 9, r, 10, '=' + fcF('F' + r, 'G' + r), K.c, PCT);
+        put(ws, r, 6, '=' + D_(x.row, 6), {}, N1); box(ws, r, 7, r, 8, '=' + D_(x.row, 5), {}, N0); box(ws, r, 9, r, 10, '=' + pctF('F' + r, 'G' + r), K.c, PCT); put(ws, r, 11, '=' + fcF('F' + r, 'G' + r), K.c, PCT);
         r++;
       });
       const e0 = r - 1;
       box(ws, r, 1, r, 2, 'Tổng', Object.assign({}, K.tot, { al: 'left' })); box(ws, r, 3, r, 4, '=SUM(C' + s0 + ':C' + e0 + ')', K.tot, N1);
-      put(ws, r, 6, '=SUM(F' + s0 + ':F' + e0 + ')', K.tot, N1); put(ws, r, 7, '=SUM(G' + s0 + ':G' + e0 + ')', K.tot, N0); put(ws, r, 8, '=' + pctF('F' + r, 'G' + r), Object.assign({}, K.tot, { al: 'center' }), PCT); box(ws, r, 9, r, 10, '=' + fcF('F' + r, 'G' + r), Object.assign({}, K.tot, { al: 'center' }), PCT);
-      heat(ws, 'H' + s0 + ':H' + e0, 'H' + s0, null, 'NgayQua/SoNgay'); heat(ws, 'I' + s0 + ':I' + e0, 'I' + s0);
+      put(ws, r, 6, '=SUM(F' + s0 + ':F' + e0 + ')', K.tot, N1); box(ws, r, 7, r, 8, '=SUM(G' + s0 + ':G' + e0 + ')', K.tot, N0); box(ws, r, 9, r, 10, '=' + pctF('F' + r, 'G' + r), Object.assign({}, K.tot, { al: 'center' }), PCT); put(ws, r, 11, '=' + fcF('F' + r, 'G' + r), Object.assign({}, K.tot, { al: 'center' }), PCT);
+      heat(ws, 'I' + s0 + ':I' + e0, 'I' + s0, null, 'NgayQua/SoNgay'); heat(ws, 'K' + s0 + ':K' + e0, 'K' + s0);
       r += 2;
     }
-    put(ws, r, 1, 'Tiền: triệu · Lũy kế đến hết ngày ở ô Data "Ngày đã qua" · ☀️ DK mai = (lũy kế + realtime hôm nay) ÷ (ngày đã qua + 1) × số ngày ÷ target · % HT NV so với tiến độ thời gian', { border: false, al: 'left', font: { size: 9, color: '555555' } });
+    put(ws, r, 1, 'Tiền: triệu · Lũy kế đến hết ngày ở ô Data "Ngày đã qua" · DK = lũy kế ÷ ngày đã qua × số ngày ÷ target · ☀️ DK mai = (lũy kế + realtime hôm nay) ÷ (ngày đã qua + 1) × số ngày ÷ target · % HT NV so với tiến độ thời gian', { border: false, al: 'left', font: { size: 9, color: '555555' } });
   }
 
   /* ================= SHEET LŨY KẾ ================= */
@@ -11540,6 +11541,178 @@ window.__AutoBIRunPick = (() => {
     });
   }
 
+  /* ---------- V18.48: Xuất Excel = mẫu "File đổ số tay" (AutoBI_mau_do_tay.xlsx trên repo) điền sẵn ----------
+     AutoBI điền Khai báo (siêu thị, target, nhóm thi đua, NV + % phân bổ), Nhập số (DT, trả chậm) và các sheet Dán
+     theo đúng dạng "Chép bảng" của BI → file giống hệt file anh em làm tay; hôm sau dán số mới vào chính file đó là chạy.
+     Tiền: nhóm DT đổi nghìn → triệu như BI. Mẫu chừa tối đa 4 siêu thị · 20 nhóm · 45 NV. */
+  const TPL_URL = 'https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_mau_do_tay.xlsx';
+  const LIM = { S: 4, G: 20, N: 45 }; /* V18.49: mẫu chừa 4 siêu thị */
+  function fetchTpl() {
+    return new Promise((resolve, reject) => {
+      const ver = (() => { try { return GM_info.script.version; } catch (_) { return String(Date.now()); } })();
+      const url = TPL_URL + '?v=' + encodeURIComponent(ver);
+      try {
+        GM_xmlhttpRequest({
+          method: 'GET', url, responseType: 'arraybuffer', timeout: 30000,
+          onload: r => (r.status === 200 && r.response && r.response.byteLength > 1000) ? resolve(r.response) : reject(new Error('Không tải được mẫu file đổ tay (mã ' + r.status + ') — kiểm tra đã up AutoBI_mau_do_tay.xlsx lên GitHub chưa')),
+          onerror: () => reject(new Error('Không tải được mẫu file đổ tay')), ontimeout: () => reject(new Error('Tải mẫu file đổ tay quá lâu'))
+        });
+      } catch (e) { reject(e); }
+    });
+  }
+  function fillDoTay(wb, P) {
+    const sh = n => { const w = wb.getWorksheet(n); if (!w) throw new Error('Mẫu thiếu sheet "' + n + '"'); return w; };
+    const KB = sh('Khai báo'), NS = sh('Nhập số');
+    const set = (ws, ref, v) => { ws.getCell(ref).value = (v === undefined || v === '') ? null : v; };
+    set(KB, 'B3', P.title); set(KB, 'B4', P.month); set(KB, 'B7', P.tgLim);
+    /* Ngày đã qua / số ngày: để công thức tự tính theo hôm nay nếu trùng (để hôm sau đổ tay khỏi sửa), khác thì ghi số */
+    const now = new Date();
+    if (P.dp !== Math.max(1, now.getDate() - 1)) set(KB, 'B5', P.dp);
+    if (P.dim !== new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()) set(KB, 'B6', P.dim);
+    for (let i = 0; i < LIM.S; i++) {
+      const s = P.shops[i] || {}, r = 12 + i;
+      set(KB, 'B' + r, s.short); set(KB, 'C' + r, s.bi); set(KB, 'D' + r, s.monT || null); set(KB, 'E' + r, s.dayT || null);
+      const n = 4 + i;
+      ['lk', 'lkThuc', 'tcLK', 'rt', 'rtThuc', 'tcRT'].forEach((k, j) => set(NS, String.fromCharCode(66 + j) + n, s.bi ? (s[k] || 0) : null));
+    }
+    for (let g = 0; g < LIM.G; g++) {
+      const d = P.groups[g] || {}, r = 18 + g;
+      set(KB, 'A' + r, d.name); set(KB, 'B' + r, d.key); set(KB, 'C' + r, d.name ? d.tier : null);
+      for (let i = 0; i < LIM.S; i++) set(KB, String.fromCharCode(68 + i) + r, d.name && d.per && d.per[i] && d.per[i].t > 0 ? Math.round(d.per[i].t * 100) / 100 : null);
+      set(KB, 'H' + r, null);
+    }
+    for (let n = 0; n < LIM.N; n++) {
+      const x = P.staff[n] || {}, r = 46 + n;
+      set(KB, 'A' + r, x.code ? String(x.code) : null); set(KB, 'B' + r, x.name); set(KB, 'C' + r, x.code ? x.shop : null); set(KB, 'D' + r, x.code && x.rate > 0 ? x.rate : null);
+    }
+    const dump = (ws, rows) => {
+      for (let r = 1; r <= Math.max(rows.length, 60); r++) for (let c = 1; c <= 8; c++) ws.getCell(r, c).value = null;
+      rows.forEach((row, i) => row.forEach((v, j) => { if (v !== '' && v != null) ws.getCell(i + 1, j + 1).value = v; }));
+    };
+    const r2 = v => Math.round(num(v) * 100) / 100;
+    const shopsOn = P.shops.filter(s => s && s.bi);
+    const lkRows = [], rtRows = [], nvRows = [];
+    P.groups.forEach(g => {
+      const unit = g.money ? 'DOANH THU' : 'SỐ LƯỢNG';
+      const per = shopsOn.map((s, i) => g.per[P.shops.indexOf(s)] || {});
+      lkRows.push([g.key, unit, 'TARGET', '% HT THÁNG', '% DỰ BÁO', 'HẠNG VÙNG', 'TOP/BOTTOM VÙNG'], ['TỔNG', r2(per.reduce((a, p) => a + num(p.r), 0)), r2(per.reduce((a, p) => a + num(p.t), 0))]);
+      shopsOn.forEach((s, i) => lkRows.push([s.bi, r2(per[i].r), r2(per[i].t)]));
+      lkRows.push([]);
+      rtRows.push([g.key, unit + ' (RT)', 'TARGET', '% HT NGÀY', '% DỰ BÁO', 'HẠNG VÙNG', 'TOP/BOTTOM VÙNG'], ['TỔNG', r2(per.reduce((a, p) => a + num(p.rr), 0)), r2(per.reduce((a, p) => a + num(p.tr), 0))]);
+      shopsOn.forEach((s, i) => rtRows.push([s.bi, r2(per[i].rr), r2(per[i].tr)]));
+      rtRows.push([]);
+    });
+    shopsOn.forEach(s => {
+      const mem = P.staff.filter(x => x.shop === P.shops.indexOf(s) + 1);
+      P.groups.forEach(g => {
+        const vals = mem.map(x => r2(x.cells && x.cells[g.name]));
+        nvRows.push([g.key, g.money ? 'DOANH THU' : 'SỐ LƯỢNG', 'HẠNG TRONG ST', 'TOP/BOTTOM ST', 'BỘ PHẬN'], ['TỔNG', r2(vals.reduce((a, v) => a + v, 0))]);
+        mem.forEach((x, i) => { if (vals[i]) nvRows.push([x.code + ' - ' + x.name, vals[i]]); });
+        nvRows.push([]);
+      });
+    });
+    const H = ['NHÂN VIÊN', 'SỐ LƯỢNG', 'DOANH THU', '% TỈ TRỌNG', 'TB 3 THÁNG', '% TT'];
+    dump(sh('Dán TĐ lũy kế'), lkRows); dump(sh('Dán TĐ realtime'), P.hasRT ? rtRows : []); dump(sh('Dán TĐ nhân viên'), nvRows);
+    dump(sh('Dán DT nhân viên'), [H].concat(P.staff.filter(x => x.mon != null).map(x => [x.code + ' - ' + x.name, null, r2(x.mon)])));
+    dump(sh('Dán DT NV realtime'), [H].concat(P.staff.filter(x => x.day != null).map(x => [x.code + ' - ' + x.name, null, r2(x.day)])));
+    ['Realtime', 'Lũy kế', 'Chi tiết NV'].forEach(n => { const w = wb.getWorksheet(n); if (w) w.getCell('B2').value = 'Tổng cụm'; });
+    /* V18.50: ẩn dòng/cột chừa sẵn mà cụm không dùng (mẫu chừa 20 nhóm · 20 NV hiện trên bảng) → file gọn, không khoảng trống.
+       Công thức vẫn còn: thêm nhóm/NV sau này thì bỏ ẩn dòng (chuột phải → Hiện) là số tự lên. Vị trí dòng theo mẫu AutoBI_mau_do_tay.xlsx */
+    const nG = Math.min(LIM.G, P.groups.length), nV = Math.min(20, P.staff.length), G0 = LIM.G, MX = 20;
+    const hideR = (ws, rows) => rows.forEach(r => { try { ws.getRow(r).hidden = true; } catch (_) { } });
+    const range = (a, b) => { const o = []; for (let i = a; i <= b; i++) o.push(i); return o; };
+    const RTs = wb.getWorksheet('Realtime'), LKs = wb.getWorksheet('Lũy kế'), CTs = wb.getWorksheet('Chi tiết NV');
+    if (RTs) {
+      const H0 = 10, S0 = H0 + 1 + G0 + 2;
+      hideR(RTs, range(H0 + 2 + nG, H0 + 1 + G0));                 /* nhóm thừa */
+      hideR(RTs, range(S0 + 2 + Math.min(LIM.N, P.staff.length), S0 + 1 + LIM.N)); /* NV thừa */
+    }
+    if (LKs) {
+      const M0 = 4 + MX + 2, used = new Set();
+      /* bảng nhóm (trái), Tổng hợp NV và ma trận (phải) dùng chung dòng → chỉ ẩn dòng không bảng nào dùng */
+      range(5, 9).forEach(r => used.add(r)); range(10, 9 + nG).forEach(r => used.add(r)); range(5, 4 + nV).forEach(r => used.add(r));
+      range(M0, M0 + nG).forEach(r => used.add(r)); used.add(M0 + G0 + 1);
+      hideR(LKs, range(5, M0 + G0).filter(r => !used.has(r)));
+      for (let j = nV; j < MX; j++) { const c = 11 + j; if (c > 14) try { LKs.getColumn(c).hidden = true; } catch (_) { } } /* cột NV thừa (sau cột N) */
+    }
+    if (CTs) {
+      const CH = 6 + G0, PER = 4, rowsOfCards = Math.max(1, Math.ceil(nV / PER));
+      for (let b = 0; b < Math.ceil(MX / PER); b++) {
+        const r0 = 4 + b * (CH + 1);
+        if (b >= rowsOfCards) hideR(CTs, range(r0, r0 + CH));        /* hàng thẻ thừa */
+        else hideR(CTs, range(r0 + 6 + nG, r0 + CH - 1));             /* dòng nhóm thừa trong thẻ */
+      }
+    }
+    wb.calcProperties = Object.assign({}, wb.calcProperties || {}, { fullCalcOnLoad: true });
+  }
+  /* Gom số từng siêu thị từ bộ dữ liệu AutoBI đang có (dựng lại Realtime + Lũy kế theo từng shop, không gọi BI) */
+  function packDoTay() {
+    const E = window.__AutoBIExcel, x = E && E.ctx;
+    if (!x || !E.collect) throw new Error('Chưa có số — mở tab LK NEW rồi thử lại');
+    const cfg = x.cfg || {}, groupsCfg = x.groups || [];
+    const idxs = [1, 2, 3, 4, 5].filter(i => String(cfg['shop' + i] || '').trim()).slice(0, LIM.S);
+    if (!idxs.length) throw new Error('Khai báo chưa có siêu thị');
+    const per = idxs.map(i => E.collect('shop' + i));
+    const L0 = per.find(p => p.lk) ? per.find(p => p.lk).lk : null;
+    if (!L0) throw new Error('Chưa có số Lũy kế — bấm chạy báo cáo trước');
+    const tot = E.collect('total');
+    const k1000 = (name, v, money) => money ? num(v) / 1000 : num(v);
+    const isMoney = n => { try { return !!(L0.isMoney && L0.isMoney(n)); } catch (_) { return false; } };
+    const fullOf = n => { const g = groupsCfg.find(o => o.short === n); const f = String((g && g.full) || '').replace(/^T\d+\s*-\s*/i, '').trim(); return f || n; };
+    const order = ((tot.lk && tot.lk.rows) || L0.rows || []).map(r => r.name);
+    const tierOf = n => { const r = ((tot.lk && tot.lk.rows) || L0.rows || []).find(o => o.name === n); return r && r.tier && r.tier !== 'chinh' ? 'Vượt trội' : 'Chính'; };
+    const groups = order.slice(0, LIM.G).map(n => {
+      const money = isMoney(n);
+      return {
+        name: n, key: fullOf(n), tier: tierOf(n), money,
+        per: per.map(p => {
+          const a = ((p.lk && p.lk.rows) || []).find(o => o.name === n) || {}, b = ((p.rt && p.rt.rows) || []).find(o => o.name === n) || {};
+          return { t: k1000(n, a.t, money), r: k1000(n, a.r, money), tr: k1000(n, b.t, money), rr: k1000(n, b.r, money) };
+        })
+      };
+    });
+    const staff = [];
+    (cfg.staffList || []).forEach(s => {
+      const i = Number(s.shopIdx) || 1, pi = idxs.indexOf(i);
+      if (pi < 0 || staff.length >= LIM.N) return;
+      const parts = String(s.name || '').split(' - '), code = parts.length > 1 ? parts[0].trim() : '', nm = parts.length > 1 ? parts.slice(1).join(' - ').trim() : String(s.name || '').trim();
+      const p = per[pi], shopShort = cfg['shop' + i + 'Short'] || cfg['shop' + i];
+      const a = ((p.lk && p.lk.srows) || []).find(o => o.nm === nm && (!code || o.id === code)) || {};
+      const b = ((p.rt && p.rt.srows) || []).find(o => o.nm === nm) || {};
+      const cells = {}; Object.keys(a.cells || {}).forEach(g => { cells[g] = k1000(g, a.cells[g].a, isMoney(g)); });
+      staff.push({ code: code || nm, name: nm, shop: pi + 1, rate: parseFloat(s.rate) || 0, mon: a.mon, day: b.day, cells, shopShort });
+    });
+    const d = new Date(), tc = L0.tc || {};
+    const shops = idxs.map((i, k) => {
+      const p = per[k], R = p.rt || {}, L = p.lk || {};
+      return {
+        short: cfg['shop' + i + 'Short'] || cfg['shop' + i], bi: String(cfg['shop' + i]).trim(), monT: num(L.monT), dayT: num(R.dayT),
+        lk: num(L.lk), lkThuc: num((R.l2 || {}).dtlk), tcLK: num(L.tg) / 100, rt: num(R.rt), rtThuc: num((R.l1 || {}).dtlk), tcRT: num(R.tg) / 100
+      };
+    });
+    return {
+      title: cfg.cluster && String(cfg.cluster).trim() ? 'Cụm ' + String(cfg.cluster).trim() : (shops.map(s => s.short).join(' + ')),
+      month: pad(tc.month || d.getMonth() + 1) + '/' + (tc.year || d.getFullYear()), dp: num(L0.dp), dim: num(L0.dim), tgLim: num(L0.tgLim) / 100,
+      shops, groups, staff, hasRT: per.some(p => p.rt && (((p.rt.rows || []).some(o => num(o.r) !== 0)) || num(p.rt.rt) > 0))
+    };
+  }
+  async function exportDoTay() {
+    let XL = null; try { XL = typeof ExcelJS !== 'undefined' ? ExcelJS : null; } catch (_) { }
+    if (!XL) { try { XL = window.ExcelJS || (typeof unsafeWindow !== 'undefined' && unsafeWindow.ExcelJS) || null; } catch (_) { } }
+    if (!XL || !XL.Workbook) throw new Error('Chưa tải được thư viện ExcelJS — cập nhật lại AutoBI.user.js trong Tampermonkey');
+    const P = packDoTay();
+    const buf = await fetchTpl();
+    const wb = new XL.Workbook();
+    await wb.xlsx.load(buf);
+    fillDoTay(wb, P);
+    const out = await wb.xlsx.writeBuffer();
+    const d = new Date();
+    const file = ('AutoBI_' + clean(P.title) + '_' + pad(d.getDate()) + '-' + pad(d.getMonth() + 1) + '_' + pad(d.getHours()) + 'h' + pad(d.getMinutes())).replace(/[^a-z0-9_-]+/gi, '_').replace(/_+/g, '_').replace(/^_|_$/g, '').slice(0, 90) + '.xlsx';
+    const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const u = URL.createObjectURL(blob), a = document.createElement('a'); a.href = u; a.download = file; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 5000);
+    return { file, rt: P.hasRT };
+  }
+
   async function exportAll() {
     let XL = null; try { XL = typeof ExcelJS !== 'undefined' ? ExcelJS : null; } catch (_) { }
     if (!XL) { try { XL = window.ExcelJS || (typeof unsafeWindow !== 'undefined' && unsafeWindow.ExcelJS) || null; } catch (_) { } }
@@ -11565,12 +11738,16 @@ window.__AutoBIRunPick = (() => {
   function run(btn) {
     const old = btn ? btn.textContent : ''; if (btn) { btn.textContent = '⏳'; btn.disabled = true; }
     setTimeout(() => {
-      exportAll().then(x => toast('📊 Đã xuất Excel: ' + x.file + (x.rt ? '' : ' (chưa có số Realtime — sheet Realtime để 0)')))
+      exportDoTay().then(x => toast('📊 Đã xuất file đổ số: ' + x.file + (x.rt ? '' : ' (chưa có số Realtime hôm nay)')))
+        .catch(e => { /* V18.48: không tải được mẫu file đổ tay → xuất bản cũ (V18.43) */
+          try { console.warn('[AutoBI] File đổ tay lỗi, xuất bản cũ', e); } catch (_) { }
+          return exportAll().then(x => toast('⚠️ ' + (e && e.message) + ' — đã xuất bản Excel thường: ' + x.file));
+        })
         .catch(e => toast('❌ Xuất Excel lỗi: ' + (e && e.message)))
         .finally(() => { if (btn) { btn.textContent = old; btn.disabled = false; } });
     }, 30);
   }
-  window.__AutoBIXlsx = { exportAll, run };
+  window.__AutoBIXlsx = { exportAll, exportDoTay, packDoTay, fillDoTay, run };
 })();
 
 /* ================================================================
@@ -13747,6 +13924,22 @@ window.__AutoBIRunPick = (() => {
       if (me.rate && parseFloat(me.rate) > 0) return Math.round((T * parseFloat(me.rate)) / 100);
       return noR.length ? Math.round(Math.max(0, T - used) / noR.length) : 0;
     };
+    /* V18.45: target nhóm hàng theo Khai báo như LK NEW / Realtime (getFinalGroupTarget, không lấy target BI — V18.10);
+       % tuần = lũy kế nhóm trong bản lưu ÷ ngày đã qua × số ngày ÷ target đó (trước đây lấy pd của BI tính trên target BI → lệch LK NEW) */
+    const HU = h.UI && h.UI.HTML;
+    const finalT = (F, g, key) => {
+      const bT = fl(F, "link4_smart|||" + g + "|||" + key + "|||t");
+      try { if (HU && HU.getFinalGroupTarget) return num(HU.getFinalGroupTarget(bT, g, key, cfg, groups, false, false)); } catch (_) { }
+      return bT;
+    };
+    const mates = staffList.filter((s) => s.shopIdx == idx);
+    const meObj = () => mates.find((s) => UTILS.matchStaffNameSafe(s.name, sName)) || staffList.find((s) => s.name === sName) || { rate: "" };
+    const personalT = (F, g) => {
+      const T = finalT(F, g, vk), money = isMoneyOf(gObj(g));
+      try { if (HU && HU.calculateStaffPersonalTarget) return num(HU.calculateStaffPersonalTarget(T, meObj(), mates, money)); } catch (_) { }
+      return staffShare(T);
+    };
+    const pdOf = (r, T, dp) => (dp >= 1 ? (T > 0 ? (((r / dp) * dim) / T) * 100 : r > 0 ? 100 : 0) : 0);
     const grpT0 = (F, g) => {
       const money = isMoneyOf(gObj(g));
       let t = fl(F, "link4_smart|||" + g + "|||" + vk + "|||t");
@@ -13763,23 +13956,22 @@ window.__AutoBIRunPick = (() => {
       if (isShop) {
         const r = fl(F, "link2|||" + vk + "|||r"),
           dt = fl(F, "link2|||" + vk + "|||dtlk");
-        const t = fl(F, "link2|||" + vk + "|||t") || num(vk === "total" ? cfg.totalTarget : cfg["target" + idx]);
+        const t = num(vk === "total" ? cfg.totalTarget : cfg["target" + idx]) || fl(F, "link2|||" + vk + "|||t"); /* V18.45: target Khai báo trước (như LK NEW) */
         const dkv = fl(F, "link2|||" + vk + "|||dk");
         const rev = dp >= 1 && t > 0 ? Math.round((((r / dp) * dim) / t) * 1000) / 10 : dkv;
         const g = {};
-        gl.forEach((x) => (g[x] = fl(F, "link4_smart|||" + x + "|||" + vk + "|||pd")));
+        gl.forEach((x) => (g[x] = pdOf(fl(F, "link4_smart|||" + x + "|||" + vk + "|||r"), finalT(F, x, vk), dp)));
         return { r, t, rev, hq: dt > 0 ? (r / dt) * 100 : 0, tc: fl(F, "link2|||" + vk + "|||tg"), g, dp };
       }
       const r = UTILS.getSafeFlatVal(F, "link6|||" + vk + "|||revenue|||", "|||dtqd", sName, 3);
       const dt = UTILS.getSafeFlatVal(F, "link6|||" + vk + "|||revenue|||", "|||dtlk", sName, 3);
-      const shopT = fl(F, "link2|||" + vk + "|||t") || num(cfg["target" + idx]);
+      const shopT = num(cfg["target" + idx]) || fl(F, "link2|||" + vk + "|||t");
       const t = staffShare(shopT);
       const g = {};
       gl.forEach((x) => {
-        const o = grpT0(F, x);
-        const tt = staffShare(o.t) * o.mult;
+        const tt = personalT(F, x);
         const rr = UTILS.getSafeFlatVal(F, "link6|||" + vk + "|||competition|||", "|||" + x, sName, 3);
-        g[x] = tt > 0 ? (((rr / Math.max(1, dp)) * dim) / tt) * 100 : rr > 0 ? 100 : 0;
+        g[x] = pdOf(rr, tt, dp);
       });
       return { r, t, rev: t > 0 ? (((r / Math.max(1, dp)) * dim) / t) * 100 : 0, hq: dt > 0 ? (r / dt) * 100 : 0, tc: num(UTILS.getSafeFlatVal(F, "link7|||" + vk + "|||", "", sName, 2)), g, dp };
     };
@@ -13808,8 +14000,7 @@ window.__AutoBIRunPick = (() => {
     /* bảng nhóm hàng */
     const rows = gl.map((g, i) => {
       const go = gObj(g);
-      const o = grpT0(L, g);
-      const T = Math.round((isShop ? o.t : staffShare(o.t)) * o.mult);
+      const T = Math.round(isShop ? finalT(L, g, vk) : personalT(L, g));
       const R = isShop ? fl(L, "link4_smart|||" + g + "|||" + vk + "|||r") : UTILS.getSafeFlatVal(L, "link6|||" + vk + "|||competition|||", "|||" + g, sName, 3);
       const wk = S.map((s) => (s ? s.g[g] || 0 : null));
       const a = wk[W - 1],
@@ -14153,7 +14344,8 @@ window.__AutoBIRunPick = (() => {
   const lv = p => p >= 100 ? 'g' : p >= 80 ? 'y' : 'r';
   const pad = n => String(n).padStart(2, '0');
   const trf = v => v == null ? '—' : (num(v) / 1e6).toFixed(1) + ' Tr';
-  const on = () => { try { return GM_getValue(KEY, 'default') === 'excel'; } catch (_) { return false; } };
+  let forceOn = false; /* V18.44: Xuất Excel ở giao diện mặc định — bật tạm để dựng bộ số, không đổi giao diện */
+  const on = () => { if (forceOn) return true; try { return GM_getValue(KEY, 'default') === 'excel'; } catch (_) { return false; } };
   const uid = s => String(s || '').replace(/[^a-z0-9]/gi, '').toLowerCase() || 'x';
   const cumName = t => { const x = String(t || '').replace(/^Cụm:\s*/, '').trim(); return !x || /^TỔNG CỤM$/i.test(x) ? 'Tổng cụm' : 'Tổng cụm: ' + x; };
   /* V18.35: chỉ giữ tên cuối ("Ninh Hồng Chuyên" → "Chuyên"); 2 NV trùng tên cuối thì thêm chữ cái tên đệm ("T.Anh", "V.Anh") */
@@ -14392,35 +14584,36 @@ window.__AutoBIRunPick = (() => {
     rows.forEach(x => { x.dm = x.dm != null && isFinite(x.dm) ? x.dm : x.d; });
     const dkM = D.dkM != null && isFinite(D.dkM) ? D.dkM : D.dk;
     const passLK = rows.filter(x => x.dm >= 100).length;
+    const passD = rows.filter(x => x.d >= 100).length;
     const curCls = p => p >= D.timeP ? 'g' : p >= D.timeP * 0.8 ? 'y' : 'r';
     const info =
-      '<tr>' + '<td class="i il">Time:</td><td class="i cr" colspan="3">' + time + '</td>' + G + '<td class="i cr" colspan="2">Target QĐ: <b>' + nf(D.monT) + '</b></td><td class="i cg2" colspan="3">Thực hiện QĐ: <b>' + nf(D.lk) + '</b></td></tr>' +
-      '<tr>' + '<td class="i bgR" colspan="2">Mục tiêu ngày</td><td class="i bgG" colspan="2">Thực hiện</td>' + G + '<td class="i co" colspan="2">Hoàn thành: <b>' + pc(D.lkP) + '</b></td><td class="i cb" colspan="3">Còn lại: <b>' + nf(Math.max(0, D.monT - D.lk)) + '</b></td></tr>' +
-      '<tr>' + '<td class="i cr" colspan="2"><b>' + nf(D.dayT) + '</b> Triệu</td><td class="i cb" colspan="2"><b>' + nf(D.rt) + '</b> Triệu</td>' + G + '<td class="i il" colspan="3">☀️ Dự kiến ngày mai:' + (D.maiOk ? '' : ' <span style="font-size:11px;font-weight:400;color:#666">(chưa có số hôm nay)</span>') + '</td><td class="i co" colspan="2"><b>' + pc(dkM) + '</b></td></tr>' +
-      '<tr>' + '<td class="i cg2">Hoàn thành</td><td class="i cb"><b>' + pc(D.rtP) + '</b></td><td class="i">%QĐ</td><td class="i cb"><b>' + Math.round(D.qd) + '%</b></td>' + G + '<td class="i il" colspan="3">Lũy kế Doanh thu thực:</td><td class="i" colspan="2"><b>' + nf(l2.dtlk) + '</b></td></tr>' +
-      '<tr>' + '<td class="i cr" colspan="2">Mục tiêu trả chậm:</td><td class="i cr bgY" colspan="2"><b>' + D.tgLim + '%</b></td>' + G + '<td class="i il" colspan="3">%Quy đổi/thực:</td><td class="i co" colspan="2"><b>' + Math.round(qdLK) + '%</b></td></tr>' +
-      '<tr>' + '<td class="i cr" colspan="2">Realtime:</td><td class="i" colspan="2"><b>' + Math.round(D.tg) + '%</b></td>' + G + '<td class="i il cr" colspan="3">Lũy kế trả chậm:</td><td class="i" colspan="2"><b>' + Math.round(tgLK) + '%</b></td></tr>';
+      '<tr>' + '<td class="i il">Time:</td><td class="i cr" colspan="3">' + time + '</td>' + G + '<td class="i cr" colspan="3">Target QĐ: <b>' + nf(D.monT) + '</b></td><td class="i cg2" colspan="3">Thực hiện QĐ: <b>' + nf(D.lk) + '</b></td></tr>' +
+      '<tr>' + '<td class="i bgR" colspan="2">Mục tiêu ngày</td><td class="i bgG" colspan="2">Thực hiện</td>' + G + '<td class="i co" colspan="3">Hoàn thành: <b>' + pc(D.lkP) + '</b></td><td class="i cb" colspan="3">Còn lại: <b>' + nf(Math.max(0, D.monT - D.lk)) + '</b></td></tr>' +
+      '<tr>' + '<td class="i cr" colspan="2"><b>' + nf(D.dayT) + '</b> Triệu</td><td class="i cb" colspan="2"><b>' + nf(D.rt) + '</b> Triệu</td>' + G + '<td class="i il" colspan="3">☀️ Dự kiến ngày mai:' + (D.maiOk ? '' : ' <span style="font-size:11px;font-weight:400;color:#666">(chưa có số hôm nay)</span>') + '</td><td class="i co" colspan="3"><b>' + pc(dkM) + '</b></td></tr>' +
+      '<tr>' + '<td class="i cg2">Hoàn thành</td><td class="i cb"><b>' + pc(D.rtP) + '</b></td><td class="i">%QĐ</td><td class="i cb"><b>' + Math.round(D.qd) + '%</b></td>' + G + '<td class="i il" colspan="3">Lũy kế Doanh thu thực:</td><td class="i" colspan="3"><b>' + nf(l2.dtlk) + '</b></td></tr>' +
+      '<tr>' + '<td class="i cr" colspan="2">Mục tiêu trả chậm:</td><td class="i cr bgY" colspan="2"><b>' + D.tgLim + '%</b></td>' + G + '<td class="i il" colspan="3">%Quy đổi/thực:</td><td class="i co" colspan="3"><b>' + Math.round(qdLK) + '%</b></td></tr>' +
+      '<tr>' + '<td class="i cr" colspan="2">Realtime:</td><td class="i" colspan="2"><b>' + Math.round(D.tg) + '%</b></td>' + G + '<td class="i il cr" colspan="3">Lũy kế trả chậm:</td><td class="i" colspan="3"><b>' + Math.round(tgLK) + '%</b></td></tr>';
     const row = x => {
       const has = x.r !== 0;
       return '<tr><td class="l ' + lv(x.dm) + '">' + esc(x.name) + '</td><td>' + nf(x.t) + '</td><td' + (x.r < 0 ? ' class="ng"' : '') + '>' + (has ? nf(x.r) : '-') + '</td><td class="c ' + (has ? lv(x.p) : '') + '">' + (has ? pc(x.p) : '-') + '</td>' + G +
-        '<td class="l ' + lv(x.dm) + '">' + esc(x.name) + '</td><td>' + nf(x.tL) + '</td><td' + (x.rL < 0 ? ' class="ng"' : '') + '>' + nf(x.rL) + '</td><td class="c ' + lv(x.dm) + '">' + pc(x.pNow) + '</td><td class="c ' + lv(x.dm) + '" title="Dự kiến (hết hôm qua): ' + pc(x.d) + (x.rr ? ' · hôm nay +' + nf(x.rr) : '') + '">' + pc(x.dm) + '</td></tr>';
+        '<td class="l ' + lv(x.dm) + '">' + esc(x.name) + '</td><td>' + nf(x.tL) + '</td><td' + (x.rL < 0 ? ' class="ng"' : '') + '>' + nf(x.rL) + '</td><td class="c ' + lv(x.dm) + '">' + pc(x.pNow) + '</td><td class="c ' + lv(x.d) + '" title="Dự kiến = lũy kế đến hết hôm qua ÷ ngày đã qua × số ngày tháng ÷ target">' + pc(x.d) + '</td><td class="c ' + lv(x.dm) + '" title="Dự kiến (hết hôm qua): ' + pc(x.d) + (x.rr ? ' · hôm nay +' + nf(x.rr) : '') + '">' + pc(x.dm) + '</td></tr>';
     };
-    const band = (cls, name, a) => '<tr class="sec' + cls + '"><td colspan="3">' + name + '</td><td class="c cnt">' + a.filter(x => x.r !== 0 && x.p >= 100).length + '/' + a.length + '</td>' + G + '<td colspan="4">' + name + '</td><td class="c cnt">' + a.filter(x => x.dm >= 100).length + '/' + a.length + '</td></tr>';
+    const band = (cls, name, a) => '<tr class="sec' + cls + '"><td colspan="3">' + name + '</td><td class="c cnt">' + a.filter(x => x.r !== 0 && x.p >= 100).length + '/' + a.length + '</td>' + G + '<td colspan="4">' + name + '</td><td class="c cnt">' + a.filter(x => x.d >= 100).length + '/' + a.length + '</td><td class="c cnt">' + a.filter(x => x.dm >= 100).length + '/' + a.length + '</td></tr>';
     const srt = a => a.slice().sort((x, y) => y.dm - x.dm);
     let body = '';
-    if (!rows.length) body = '<tr><td colspan="4" class="c">Chưa có số thi đua — bấm Bắt Đầu Chạy</td>' + G + '<td colspan="5" class="c">Chưa có số thi đua</td></tr>';
+    if (!rows.length) body = '<tr><td colspan="4" class="c">Chưa có số thi đua — bấm Bắt Đầu Chạy</td>' + G + '<td colspan="6" class="c">Chưa có số thi đua</td></tr>';
     else if (!rows.some(x => x.tier)) body = srt(rows).map(row).join('');
     else {
       const C = srt(rows.filter(x => x.tier === 'chinh')), V = srt(rows.filter(x => x.tier !== 'chinh'));
       if (C.length) body += band('', 'NHÓM CHÍNH', C) + C.map(row).join('');
       if (V.length) body += band(' v', 'NHÓM VƯỢT TRỘI', V) + V.map(row).join('');
     }
-    const cols = '<colgroup><col style="width:140px"><col style="width:66px"><col style="width:74px"><col style="width:58px"><col style="width:18px"><col style="width:140px"><col style="width:72px"><col style="width:80px"><col style="width:78px"><col style="width:74px"></colgroup>';
+    const cols = '<colgroup><col style="width:140px"><col style="width:66px"><col style="width:76px"><col style="width:70px"><col style="width:18px"><col style="width:140px"><col style="width:72px"><col style="width:80px"><col style="width:86px"><col style="width:86px"><col style="width:86px"></colgroup>'; /* V18.46: thêm cột DK (dự kiến hết hôm qua) trước ☀️ DK mai */
     return '<div class="abx-blk"' + '' + '><div class="abx-ttl">' + (D.view === 'total' ? esc(cumName(D.title)) : 'Shop: ' + esc(D.title)) + '</div>' +
-      '<table class="abx-rt" data-capture-id="xlrt-' + id + '" data-table-name="Doanh thu siêu thị + nhóm hàng">' + cols + '<tbody>' + info +
-      '<tr><td class="gap" colspan="10" style="height:10px"></td></tr>' +
-      '<tr><th class="ye" colspan="2">Realtime: ' + rows.length + ' Nhóm</th><th class="ye">Đạt:</th><th class="ye">' + D.pass + '</th>' + '<th class="gap"></th>' + '<th class="bl" colspan="2">Lũy kế: ' + rows.length + ' Nhóm</th><th class="bl" colspan="2">Đạt</th><th class="bl">' + passLK + '</th></tr>' +
-      '<tr><th class="or">Nhóm hàng</th><th class="or">Target</th><th class="or">Thực hiện</th><th class="or">Tỉ lệ</th><th class="gap"></th><th>Nhóm hàng</th><th>Target</th><th>Thực hiện</th><th>% Hiện tại</th><th>☀️ DK mai ▼</th></tr>' +
+      '<table class="abx-rt" style="table-layout:fixed;width:920px" data-capture-id="xlrt-' + id + '" data-table-name="Doanh thu siêu thị + nhóm hàng">' + cols + '<tbody>' + info +
+      '<tr><td class="gap" colspan="11" style="height:10px"></td></tr>' +
+      '<tr><th class="ye" colspan="2">Realtime: ' + rows.length + ' Nhóm</th><th class="ye">Đạt:</th><th class="ye">' + D.pass + '</th>' + '<th class="gap"></th>' + '<th class="bl" colspan="2">Lũy kế: ' + rows.length + ' Nhóm</th><th class="bl" colspan="2">Đạt</th><th class="bl" title="Đạt theo DK">' + passD + '</th><th class="bl" title="Đạt theo ☀️ DK mai">' + passLK + '</th></tr>' +
+      '<tr><th class="or">Nhóm hàng</th><th class="or">Target</th><th class="or">Thực hiện</th><th class="or">Tỉ lệ</th><th class="gap"></th><th>Nhóm hàng</th><th>Target</th><th>Thực hiện</th><th>% Hiện tại</th><th>DK</th><th style="padding-left:2px;padding-right:2px">☀️ DK mai ▼</th></tr>' +
       body + '</tbody></table>' + (D.view === 'total' ? rtStaff(D, id) : '') + '<div class="abx-note">Tiền: triệu · Lũy kế đến hết ' + pad(D.dp) + '/' + pad(D.tc.month) + ' · ☀️ DK mai = lũy kế + realtime hôm nay · màu: ≥100% xanh · 80–99% vàng · &lt;80% đỏ</div></div>';
   }
   /* V18.41: Realtime V1 — Tổng cụm thêm bảng Doanh thu nhân viên (hôm nay + lũy kế tháng); xem từng siêu thị thì không hiện */
@@ -14434,18 +14627,19 @@ window.__AutoBIRunPick = (() => {
     const tMon = sum('mon'), tTgt = sum('tgt');
     const htCls = p => p >= D.timeP ? 'g' : p >= D.timeP * 0.8 ? 'y' : 'r';
     /* V18.42: cùng 10 cột với bảng trên (nửa trái hôm nay | khoảng trắng | nửa phải tháng) → thẳng cột trên màn hình và khi xuất Excel */
-    const cols = '<colgroup><col style="width:140px"><col style="width:66px"><col style="width:74px"><col style="width:58px"><col style="width:18px"><col style="width:140px"><col style="width:72px"><col style="width:80px"><col style="width:78px"><col style="width:74px"></colgroup>';
+    /* V18.46: cả 2 bảng cố định 920px (table-layout:fixed) → khoảng trắng giữa thẳng hàng; nửa trái thẳng cột với bảng nhóm hàng, nửa phải 4 cột chia đều */
+    const cols = '<colgroup><col style="width:140px"><col style="width:66px"><col style="width:76px"><col style="width:70px"><col style="width:18px"><col style="width:137px"><col style="width:138px"><col style="width:137px"><col style="width:138px"></colgroup>';
     const G = '<td class="gap"></td>';
-    return '<div style="height:14px"></div><table class="abx-rt" style="width:0;min-width:100%" data-capture-id="xlrtnv-' + id + '" data-table-name="Doanh thu nhân viên">' + cols +
-      '<thead><tr><th class="gr" colspan="4">DOANH THU NV HÔM NAY' + (hasDay ? '' : ' <span style="font-weight:400">(chưa có số)</span>') + '</th><th class="gap"></th><th class="gr" colspan="5">LŨY KẾ THÁNG</th></tr>' +
-      '<tr><th colspan="2">Nhân viên</th><th class="or" colspan="2">Hôm nay ▼</th><th class="gap"></th><th>Lũy kế</th><th>Mục tiêu</th><th>% HT</th><th colspan="2">Dự kiến</th></tr></thead><tbody>' +
+    return '<div style="height:14px"></div><table class="abx-rt" style="table-layout:fixed;width:920px" data-capture-id="xlrtnv-' + id + '" data-table-name="Doanh thu nhân viên">' + cols +
+      '<thead><tr><th class="gr" colspan="4">DOANH THU NV HÔM NAY' + (hasDay ? '' : ' <span style="font-weight:400">(chưa có số)</span>') + '</th><th class="gap"></th><th class="gr" colspan="4">LŨY KẾ THÁNG</th></tr>' +
+      '<tr><th colspan="2">Nhân viên</th><th class="or" colspan="2">Hôm nay ▼</th><th class="gap"></th><th>Lũy kế</th><th>Mục tiêu</th><th>% HT</th><th>Dự kiến</th></tr></thead><tbody>' +
       sr.map((x, k) => '<tr><td class="l" colspan="2">' + (k + 1) + '. ' + esc(shortNm(x.nm)) + (x.shop ? ' <span style="font-weight:400;color:#555">· ' + esc(x.shop) + '</span>' : '') + '</td>' +
         '<td colspan="2"' + (num(x.day) < 0 ? ' class="ng"' : '') + ' style="font-weight:700">' + (x.day == null ? '—' : nf(x.day, 1)) + '</td>' + G +
         '<td' + (num(x.mon) < 0 ? ' class="ng"' : '') + '>' + (x.mon == null ? '—' : nf(x.mon, 1)) + '</td><td>' + (x.tgt > 0 ? nf(x.tgt) : '—') + '</td>' +
         '<td class="c ' + (x.ht == null ? '' : htCls(x.ht)) + '">' + (x.ht == null ? '—' : Math.round(x.ht) + '%') + '</td>' +
-        '<td colspan="2" class="c ' + (x.fc == null ? '' : lv(x.fc)) + '">' + (x.fc == null ? '—' : Math.round(x.fc) + '%') + '</td></tr>').join('') +
+        '<td class="c ' + (x.fc == null ? '' : lv(x.fc)) + '">' + (x.fc == null ? '—' : Math.round(x.fc) + '%') + '</td></tr>').join('') +
       '<tr class="tot"><td class="l" colspan="2">Tổng</td><td colspan="2">' + (hasDay ? nf(sum('day'), 1) : '—') + '</td>' + G + '<td>' + nf(tMon, 1) + '</td><td>' + nf(tTgt) + '</td>' +
-        '<td class="c">' + (tTgt > 0 ? Math.round(tMon / tTgt * 100) + '%' : '—') + '</td><td colspan="2" class="c">' + (tTgt > 0 && D.dp > 0 ? Math.round(tMon / D.dp * D.dim / tTgt * 100) + '%' : '—') + '</td></tr></tbody></table>';
+        '<td class="c">' + (tTgt > 0 ? Math.round(tMon / tTgt * 100) + '%' : '—') + '</td><td class="c">' + (tTgt > 0 && D.dp > 0 ? Math.round(tMon / D.dp * D.dim / tTgt * 100) + '%' : '—') + '</td></tr></tbody></table>';
   }
 
   /* ---------- Tổng hợp NV + Mẫu 1: ma trận Nhóm hàng × NV ---------- */
@@ -14601,14 +14795,15 @@ window.__AutoBIRunPick = (() => {
   .ratio b{font-size:12.5px!important}
   .foot{font-size:11px!important;margin:6px 0 0!important}`;
   /* V18.43: dựng lại bộ số Realtime + Lũy kế cùng view đang xem (không gọi BI, chỉ tính lại từ dữ liệu đã có) */
-  function collect() {
+  function collect(viewArg) { /* V18.48: viewArg = 'total' | 'shop1'… (mặc định view đang xem) */
     const E = window.__AutoBIExcel, x = E && E.ctx, R2 = window.__AutoBIRt2;
     if (!x || !R2) return { rt: last.rt, lk: last.lk };
+    const v = viewArg || x.view;
     const out = {};
-    E.busy = true;
-    try { delete last.rt; R2.render(x.h, x.c, x.groups, x.cfg, x.view, x.useBi, x.timeArg); out.rt = last.rt; } catch (e) { try { console.warn('[AutoBI] Xuất Excel: dựng Realtime lỗi', e); } catch (_) { } }
-    try { delete last.lk; R2.renderLK(x.h, x.c, x.groups, x.cfg, x.view, x.useBi, x.timeArg); out.lk = last.lk; } catch (e) { try { console.warn('[AutoBI] Xuất Excel: dựng Lũy kế lỗi', e); } catch (_) { } }
-    E.busy = false;
+    E.busy = true; forceOn = true;
+    try { delete last.rt; R2.render(x.h, x.c, x.groups, x.cfg, v, x.useBi, x.timeArg); out.rt = last.rt; } catch (e) { try { console.warn('[AutoBI] Xuất Excel: dựng Realtime lỗi', e); } catch (_) { } }
+    try { delete last.lk; R2.renderLK(x.h, x.c, x.groups, x.cfg, v, x.useBi, x.timeArg); out.lk = last.lk; } catch (e) { try { console.warn('[AutoBI] Xuất Excel: dựng Lũy kế lỗi', e); } catch (_) { } }
+    E.busy = false; forceOn = false;
     return out;
   }
   window.__AutoBIExcel = { on, set, apply, tab, rt, lk, mx, wrap, wtCss, collect, ctx: null, busy: false, get mode() { return mode; } };
