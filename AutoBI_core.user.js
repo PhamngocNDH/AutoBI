@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.33
+// @name         AutoBI Core V18.40
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.33
+// @version      18.40
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -8800,7 +8800,14 @@ window.__AutoBIBiTarget99 = (function () {
   /* Trả chậm: link7[shop] {_SHOP_DT,_SHOP_HC,_SHOP_FE,_SHOP_TOTAL_}, link2[shop].tg — như __AutoBIInstallment41.save */
   async function applyInstallment(cfgIn) {
     const b = await baseData(cfgIn), month = monthKey(b.today);
-    const rows = await api('reports/tra-cham-matrix-get', { VIEWLEVEL: 'STORE', RSMIDS: null, AMIDS: null, STOREIDS: b.storeIds, MONTHKEY: month });
+    /* V18.38: Trả chậm lũy kế (tra-cham-matrix-get, BI có lúc mất ~60s) không đổi trong ngày → cùng ngày + cùng ngày lũy kế BI + cùng siêu thị thì dùng lại */
+    const TG_KEY = 'autobi_tracham_day_v1';
+    let rows = null;
+    try { const m = GM_getValue(TG_KEY, null); if (m && m.day === b.today && m.cumTo === b.cum.to && m.storeIds === b.storeIds && Array.isArray(m.rows) && m.rows.length) { rows = m.rows; note('Trả chậm lũy kế: dùng lại số đã lấy hôm nay lúc ' + new Date(m.at).toTimeString().slice(0, 5)); } } catch (_) { }
+    if (!rows) {
+      rows = await api('reports/tra-cham-matrix-get', { VIEWLEVEL: 'STORE', RSMIDS: null, AMIDS: null, STOREIDS: b.storeIds, MONTHKEY: month });
+      if (rows.length) { try { GM_setValue(TG_KEY, { day: b.today, cumTo: b.cum.to, storeIds: b.storeIds, at: Date.now(), rows }); } catch (_) { } }
+    }
     const known = new Set(['group_id', 'group_name', 'revenue_tg', 'ratio_tg', 'total_revenue_tg', 'revenue_store', 'installment_ratio']);
     const partnerOf = r => { const k = Object.keys(r).filter(x => !known.has(x)); const name = k.map(x => r[x]).find(v => typeof v === 'string' && /[a-zA-ZÀ-ỹ]/.test(v)); return String(name || ''); };
     let n = 0;
@@ -8867,6 +8874,15 @@ window.__AutoBIBiTarget99 = (function () {
     return { tl: v(at('Điểm tích lũy', 1)), tn: v(at('Thưởng nóng', 3)), total: v(at('Điểm thực lãnh', 7)) };
   }
   async function applyReward(cfgIn) {
+    /* V18.36: Thưởng NV là phần phụ — newinsite có lúc rất chậm (lần đầu mỗi sáng phải lấy mới từng NV). Lấy song song 3 NV/lượt,
+       chờ tối đa 25s rồi cho báo cáo chạy tiếp; lấy xong sau đó vẫn lưu để lần sau dùng lại */
+    let late = false;
+    const work = applyRewardCore(cfgIn, () => late);
+    work.catch(() => { });
+    const cap = new Promise((_, rej) => setTimeout(() => { late = true; rej(new Error('newinsite trả chậm quá 25s — bỏ qua chờ, số thưởng tự cập nhật khi lấy xong')); }, 25000));
+    return Promise.race([work, cap]);
+  }
+  async function applyRewardCore(cfgIn, isLate) {
     const b = await baseData(cfgIn);
     const staffList = Array.isArray(b.cfg.staffList) ? b.cfg.staffList : [];
     if (!staffList.length) throw new Error('Khai báo chưa có danh sách nhân viên');
@@ -8875,18 +8891,27 @@ window.__AutoBIBiTarget99 = (function () {
     const same = memo && memo.from === from && memo.to === to && memo.day === b.today && memo.data;
     const data = {};
     let fetched = 0, reused = 0;
+    const todo = [];
     for (const st of staffList) {
       if (same && memo.data[st.name]) { data[st.name] = memo.data[st.name]; reused++; continue; }
       const id = staffIdOf(st.name);
       if (!/^\d+$/.test(id)) { note('Thưởng NV: bỏ qua "' + st.name + '" (không có mã NV)'); continue; }
-      try { data[st.name] = await nisReward(id, from, to); fetched++; }
-      catch (e) { if (e && e.code === 'NIS_LOGIN') throw e; note('Thưởng NV: ' + st.name + ' lỗi (' + (e && e.message || e) + ')'); }
+      todo.push([st, id]);
+    }
+    let loginErr = null;
+    for (let k = 0; k < todo.length; k += 3) {
+      await Promise.all(todo.slice(k, k + 3).map(async ([st, id]) => {
+        try { data[st.name] = await nisReward(id, from, to); fetched++; }
+        catch (e) { if (e && e.code === 'NIS_LOGIN') loginErr = e; else note('Thưởng NV: ' + st.name + ' lỗi (' + (e && e.message || e) + ')'); }
+      }));
+      if (loginErr) throw loginErr;
     }
     if (!Object.keys(data).length) throw new Error('newinsite không trả số nhân viên nào');
     const out = { from, to, day: b.today, at: Date.now(), data };
     GM_setValue(REWARD_KEY, out);
     writeCache(cache => { cache.link10_reward = out; });
     if (reused) note('Thưởng NV: dùng lại số đã lấy hôm nay (' + reused + ' NV)' + (fetched ? ', lấy mới ' + fetched + ' NV' : ''));
+    if (isLate && isLate()) note('Thưởng NV: newinsite đã trả xong (' + Object.keys(data).length + ' NV) — đã lưu, mở lại tab để xem');
     return Object.keys(data).length;
   }
 
@@ -9032,7 +9057,13 @@ window.__AutoBIBiTarget99 = (function () {
     if (steps.includes(0)) tasks.push(['Thưởng nhân viên', 0, () => applyReward(config)]); /* V17.33: phụ — lỗi chỉ ghi nhật ký, không chạy lại bước */
     if (steps.includes(17)) tasks.push(['CRM Phục vụ nhân viên', 17, () => applyCrmStaff(config)]);
     if (steps.includes(18)) tasks.push(['CRM Điểm phục vụ', 18, () => applyCrmStore(config)]);
-    const results = await Promise.all(tasks.map(([label, , fn]) => timed(label, fn)));
+    /* V18.36: nhật ký tiến độ — phần chậm (>3s) xong thì ghi ngay; cứ 15s ghi các phần còn đang chờ để biết lượt đổ đang kẹt ở đâu */
+    const pending = new Set(tasks.map(t => t[0]));
+    const tick = setInterval(() => { if (pending.size) note('Đang chờ BI: ' + [...pending].join(', ') + ' (' + Math.round((Date.now() - t0) / 1000) + 's)'); }, 15000);
+    let results;
+    try {
+      results = await Promise.all(tasks.map(([label, , fn]) => timed(label, fn).then(r => { pending.delete(label); if (r.ms > 3000) note((r.ok ? '✓ ' : '✗ ') + label + ' xong sau ' + (r.ms / 1000).toFixed(1) + 's'); return r; })));
+    } finally { clearInterval(tick); }
     const auth = results.find(r => !r.ok && r.error && r.error.code === 'AUTH');
     if (auth) throw auth.error;
     /* V17.10: CRM gọi chéo không có phiên (Safari iPhone) → mở trang CRM lấy số rồi quay lại chạy tiếp lượt này (mỗi lượt 1 lần) */
@@ -9506,7 +9537,7 @@ window.__AutoBIBiTarget99 = (function () {
 
     /* V18.13: Theme "Bảng Excel" → LK NEW = Mẫu 3 + Tổng hợp NV + ma trận; Chi tiết NV (mode 'staff') = Tổng hợp NV + ma trận. V18.16: Tổng cụm = cộng cả các siêu thị */
     if (window.__AutoBIExcel && window.__AutoBIExcel.on()) {
-      const XD = { view, title, tc, dp, dim, lk, monT, lkP, dk, tg, tgLim, qd, rows, pass, timeP, srows, sg, mrows, tMon, tTgt, hasRw, tRw };
+      const XD = { view, title, tc, dp, dim, lk, monT, lkP, dk, tg, tgLim, qd, rows, pass, timeP, srows, sg, mrows, tMon, tTgt, hasRw, tRw, isMoney };
       return window.__AutoBIExcel.wrap(window.__AutoBIExcel.mode === 'staff' ? window.__AutoBIExcel.mx(XD) : window.__AutoBIExcel.lk(XD));
     }
 
@@ -10993,7 +11024,24 @@ window.__AutoBIRunPick = (() => {
       else if (r1 && shown(r1)) out.push({ name: 'Doanh thu siêu thị (tổng quan)', els: [r1], root, head: true });
       cards.forEach(c => { if (c === g && r1) return; out.push({ name: firstText(c.querySelector('.rt2-lbl')) || 'Bảng', els: [c], root, head: true }); });
     }
-    a.querySelectorAll('[data-capture-id]').forEach(t => { if (shown(t) && !t.closest('.rt2')) out.push({ name: t.getAttribute('data-table-name') || ('Bảng ' + t.getAttribute('data-capture-id')), els: [t], root: null, head: false }); });
+    /* V18.40: theme Excel — Tổng hợp nhân viên (xlnv-*-th) + Thi đua nhóm hàng × nhân viên (xlnv-*-mx) cùng shop ghép thành 1 ảnh */
+    const used = new Set();
+    a.querySelectorAll('[data-capture-id]').forEach(t => {
+      if (used.has(t) || !shown(t) || t.closest('.rt2')) return;
+      const cid = t.getAttribute('data-capture-id') || '';
+      const m = cid.match(/^(xlnv-.*)-(th|mx)$/);
+      if (m) {
+        const mate = a.querySelector('[data-capture-id="' + m[1] + '-' + (m[2] === 'th' ? 'mx' : 'th') + '"]');
+        if (mate && shown(mate) && !used.has(mate)) {
+          const th = m[2] === 'th' ? t : mate, mx = m[2] === 'th' ? mate : t;
+          used.add(th); used.add(mx);
+          out.push({ name: 'Tổng hợp NV + Thi đua nhóm hàng × NV', els: [th, mx], root: null, head: false, stack: true });
+          return;
+        }
+      }
+      used.add(t);
+      out.push({ name: t.getAttribute('data-table-name') || ('Bảng ' + cid), els: [t], root: null, head: false });
+    });
     if (shown(a)) out.push({ name: 'Cả trang đang xem', els: [a], root: null, head: false, whole: true });
     return out;
   }
@@ -11026,6 +11074,9 @@ window.__AutoBIRunPick = (() => {
     const wrap = document.createElement('div');
     if (b.root) wrap.className = b.root.className + (b.stack ? ' rt2-m' : ''); else { const nv = b.els[0] && b.els[0].closest && b.els[0].closest('.nv2'); if (nv) { wrap.className = nv.className; const hd = nv.querySelector('.nv2-hd'); if (hd && !b.els.some(e => e.querySelector && e.querySelector('.nv2-hd'))) wrap.appendChild(hd.cloneNode(true)); } } /* V17.77: khối của giao diện mới (.nv2) giữ màu khi chụp từng mục */
     wrap.style.cssText = 'margin:0;padding:0;max-width:none;width:100%;';
+    /* V18.39: bảng theme Excel (.abx) — màu/khung đều nằm dưới lớp .abx nên bản sao phải giữ lớp này, nếu không ảnh ra bảng trắng không màu */
+    const ax = !b.root && b.els[0] && b.els[0].closest && b.els[0].closest('.abx');
+    if (ax) { wrap.className = ax.className; wrap.style.cssText = 'margin:0;padding:0;max-width:none;width:100%;display:block;gap:0;'; box.style.background = '#fff'; }
     if (b.head && b.root) { const hd = b.root.querySelector('.rt2-hd'); if (hd) wrap.appendChild(hd.cloneNode(true)); }
     b.els.forEach(e => { const c = e.cloneNode(true); c.style.width = '100%'; c.style.boxSizing = 'border-box'; c.style.margin = '0 0 10px 0'; wrap.appendChild(c); });
     box.appendChild(wrap);
@@ -11037,7 +11088,7 @@ window.__AutoBIRunPick = (() => {
       if (typeof html2canvas !== 'function') return reject(new Error('Chưa tải được thư viện chụp ảnh'));
       const st = stage(b);
       setTimeout(() => {
-        html2canvas(st.el, { scale: 2, useCORS: true, backgroundColor: '#f4f6f8', logging: false, onclone: d => { try { const c = d.getElementById('capture-area'); if (c) c.style.setProperty('--ph-z', '1'); } catch (_) { } } })
+        html2canvas(st.el, { scale: 2, useCORS: true, backgroundColor: st.el.style.background === 'rgb(255, 255, 255)' || st.el.style.background === '#fff' ? '#fff' : '#f4f6f8', logging: false, onclone: d => { try { const c = d.getElementById('capture-area'); if (c) c.style.setProperty('--ph-z', '1'); } catch (_) { } } })
           .then(cv => { st.done(); cv.toBlob(bl => bl ? resolve(bl) : reject(new Error('Không tạo được ảnh')), 'image/png'); })
           .catch(e => { st.done(); reject(e); });
       }, b.whole ? 450 : 60);
@@ -13679,7 +13730,10 @@ window.__AutoBIRunPick = (() => {
   const on = () => { try { return GM_getValue(KEY, 'default') === 'excel'; } catch (_) { return false; } };
   const uid = s => String(s || '').replace(/[^a-z0-9]/gi, '').toLowerCase() || 'x';
   const cumName = t => { const x = String(t || '').replace(/^Cụm:\s*/, '').trim(); return !x || /^TỔNG CỤM$/i.test(x) ? 'Tổng cụm' : 'Tổng cụm: ' + x; };
-  const shortNm = n => { const w = String(n || '').trim().split(/\s+/); if (w.length < 3) return w.join(' '); return /^(Văn|Thị)$/i.test(w[w.length - 2]) ? w[w.length - 1] : w.slice(-2).join(' '); }; /* tên gọn tiêu đề cột: 'Lê Thị Loan' → 'Loan', 'Nguyễn Văn Tuấn Anh' → 'Tuấn Anh' */
+  /* V18.35: chỉ giữ tên cuối ("Ninh Hồng Chuyên" → "Chuyên"); 2 NV trùng tên cuối thì thêm chữ cái tên đệm ("T.Anh", "V.Anh") */
+  let nameDup = {};
+  const setNames = list => { nameDup = {}; (list || []).forEach(n => { const w = String(n || '').trim().split(/\s+/), l = w[w.length - 1] || ''; nameDup[l] = (nameDup[l] || 0) + 1; }); };
+  const shortNm = n => { const w = String(n || '').trim().split(/\s+/); const l = w[w.length - 1] || ''; return nameDup[l] > 1 && w.length > 1 ? w[w.length - 2].charAt(0).toUpperCase() + '.' + l : l; };
 
   const CSS = `
   .abx{font-family:Arial,Helvetica,sans-serif;color:#1b1b1b;background:#fff;font-variant-numeric:tabular-nums;display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start;padding:14px;box-sizing:border-box;text-align:left}
@@ -13712,6 +13766,19 @@ window.__AutoBIRunPick = (() => {
   .abx-info .k{font-weight:700;text-align:left}
   .abx-two{display:flex;gap:28px;align-items:flex-start}
   .abx-col{display:flex;flex-direction:column;gap:14px;flex:none}
+  .abx-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:start}
+  .abx-card{border:1px solid #8f9aa7;background:#fff;min-width:0}
+  .abx-ch{background:#1f3864;color:#fff;padding:6px 8px;display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+  .abx-ch b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.abx-ch b small{font-size:10.5px;font-weight:400;color:#c9d6ee}.abx-ch span{font-size:11.5px;color:#dbe5f5;white-space:nowrap}
+  .abx-kp{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-bottom:1px solid #8f9aa7}
+  .abx-kp>div{text-align:center;padding:0 2px 4px;border-right:1px solid #8f9aa7}.abx-kp>div:last-child{border-right:none}
+  .abx-kp i{display:block;font-style:normal;font-size:10px;color:#1f3864;background:#d9e2f3;margin:0 -2px 3px;padding:2px 0;font-weight:700}
+  .abx-kp b{font-size:15px}
+  .abx table.abx-ct{width:100%;table-layout:fixed;border-collapse:collapse}
+  .abx table.abx-ct th,.abx table.abx-ct td{padding:3px 6px;font-size:12px;overflow:hidden;text-overflow:ellipsis}
+  .abx table.abx-ct tr.sec td{font-size:11px;padding:2px 6px}
+  .abx .at span{color:#777;font-weight:400}
+  .abx-push{padding:5px 8px;font-size:11.5px;background:#fff2cc;border-top:1px solid #8f9aa7;line-height:1.4}
   .abx-mx th{white-space:normal;min-width:0;line-height:1.2;vertical-align:middle;overflow-wrap:anywhere}
   .abx-mx td{overflow:hidden;text-overflow:ellipsis}
   .abx-mx td{text-align:center}
@@ -13935,7 +14002,7 @@ window.__AutoBIRunPick = (() => {
     if (!sr.length) return '';
     const n = (D.sg || []).length;
     return '<table style="width:100%" data-capture-id="xlnv-' + id + '-th" data-table-name="Tổng hợp nhân viên"><thead><tr><th>Hạng</th><th>Nhân viên</th><th>Mục tiêu</th><th>DT QĐ</th><th>% HT</th><th>Dự kiến</th><th>Trả chậm</th><th>NH đạt</th>' + (D.hasRw ? '<th>Tổng thưởng</th>' : '') + '</tr></thead><tbody>' +
-      sr.map((x, k) => '<tr><td class="c">' + (k + 1) + '</td><td class="l">' + esc(x.nm) + (D.view === 'total' && x.shop ? ' <span style="font-weight:400;color:#555">· ' + esc(x.shop) + '</span>' : '') + '</td><td>' + (x.tgt > 0 ? nf(x.tgt) : '—') + '</td><td' + (num(x.mon) < 0 ? ' class="ng"' : '') + '>' + (x.mon == null ? '—' : nf(x.mon, 1)) + '</td><td class="c">' + (x.ht == null ? '—' : Math.round(x.ht) + '%') + '</td><td class="c ' + (x.fc == null ? '' : lv(x.fc)) + '">' + (x.fc == null ? '—' : Math.round(x.fc) + '%') + '</td><td class="c ' + (x.tc == null ? '' : x.tc >= D.tgLim ? 'g' : 'r') + '">' + (x.tc == null ? '—' : Math.round(x.tc) + '%') + '</td><td class="c ' + (n ? lv(x.ok / n * 100) : '') + '">' + x.ok + '/' + n + '</td>' + (D.hasRw ? '<td class="rw">' + trf(x.rw) + '</td>' : '') + '</tr>').join('') +
+      sr.map((x, k) => '<tr><td class="c">' + (k + 1) + '</td><td class="l">' + esc(shortNm(x.nm)) + (D.view === 'total' && x.shop ? ' <span style="font-weight:400;color:#555">· ' + esc(x.shop) + '</span>' : '') + '</td><td>' + (x.tgt > 0 ? nf(x.tgt) : '—') + '</td><td' + (num(x.mon) < 0 ? ' class="ng"' : '') + '>' + (x.mon == null ? '—' : nf(x.mon, 1)) + '</td><td class="c">' + (x.ht == null ? '—' : Math.round(x.ht) + '%') + '</td><td class="c ' + (x.fc == null ? '' : lv(x.fc)) + '">' + (x.fc == null ? '—' : Math.round(x.fc) + '%') + '</td><td class="c ' + (x.tc == null ? '' : x.tc >= D.tgLim ? 'g' : 'r') + '">' + (x.tc == null ? '—' : Math.round(x.tc) + '%') + '</td><td class="c ' + (n ? lv(x.ok / n * 100) : '') + '">' + x.ok + '/' + n + '</td>' + (D.hasRw ? '<td class="rw">' + trf(x.rw) + '</td>' : '') + '</tr>').join('') +
       '<tr class="tot"><td></td><td class="l">Tổng</td><td>' + nf(D.tTgt) + '</td><td>' + nf(D.tMon, 1) + '</td><td class="c">' + (D.tTgt > 0 ? Math.round(D.tMon / D.tTgt * 100) + '%' : '—') + '</td><td class="c">' + (D.tTgt > 0 && D.dp > 0 ? Math.round(D.tMon / D.dp * D.dim / D.tTgt * 100) + '%' : '—') + '</td><td class="c ' + (D.tg >= D.tgLim ? 'g' : 'r') + '">' + Math.round(num(D.tg)) + '%</td><td class="c">' + D.pass + '/' + (D.rows || []).length + '</td>' + (D.hasRw ? '<td class="rw">' + trf(D.tRw) + '</td>' : '') + '</tr></tbody></table>';
   }
   function matrix(D, id, noShop) { /* V18.29: noShop = bỏ cột Cả shop (LK NEW đã có bảng lũy kế bên cạnh) */
@@ -13973,11 +14040,42 @@ window.__AutoBIRunPick = (() => {
   const colW = (D, noShop) => Math.max(660, 150 + ((D.mrows || []).length + (noShop ? 0 : 1)) * 90);
   function lk(D) {
     const id = uid(D.view);
-    return '<div class="abx-blk">' + head(D, 'BÁO CÁO LŨY KẾ') + '<div class="abx-two" style="flex-wrap:wrap">' + lkTbl(D, id) + '<div class="abx-col" style="width:' + colW(D, true) + 'px">' + staffTbl(D, id) + matrix(D, id, true) + '</div></div><div class="abx-note">Tiền: triệu · Dự kiến = lũy kế ÷ ngày đã qua × số ngày tháng ÷ target · màu: ≥100% xanh · 80–99% vàng · &lt;80% đỏ</div></div>';
+    setNames((D.srows || []).map(x => x.nm));
+    return '<div class="abx-blk">' + head(D, 'BÁO CÁO LŨY KẾ') + '<div class="abx-two" style="flex-wrap:wrap">' + lkTbl(D, id) + '<div class="abx-col" style="width:' + colW(D, false) + 'px">' + staffTbl(D, id) + matrix(D, id) + '</div></div>' /* V18.34: LK NEW hiện lại cột Cả shop */ + '<div class="abx-note">Tiền: triệu · Dự kiến = lũy kế ÷ ngày đã qua × số ngày tháng ÷ target · màu: ≥100% xanh · 80–99% vàng · &lt;80% đỏ</div></div>';
   }
+  /* V18.35: Chi tiết NV (theme Excel) — mỗi NV 1 thẻ, xếp theo Hạng: đầu thẻ (hạng · tên · DT QĐ/mục tiêu), 4 ô (Dự kiến, Trả chậm, NH đạt, Thưởng),
+     bảng nhóm hàng của NV (Thực hiện / Target · DK, chia Chính/Vượt trội, cao → thấp), dòng "Cần đẩy" (3 nhóm 50–99% gần đạt nhất) */
   function mx(D) {
     const id = uid(D.view);
-    return '<div class="abx-blk">' + head(D, 'CHI TIẾT NHÂN VIÊN') + '<div class="abx-col" style="width:' + colW(D, false) + 'px">' + staffTbl(D, id) + matrix(D, id) + '</div><div class="abx-note">% = dự kiến cuối tháng của từng NV theo mục tiêu phân bổ ở Khai báo · cột "Cả shop" = dự kiến của siêu thị</div></div>';
+    setNames((D.srows || []).map(x => x.nm));
+    const sg = D.sg || [], n = sg.length;
+    const tierG = {}; (D.rows || []).forEach(x => { tierG[x.name] = x.tier; });
+    const money = g => { try { return !!(D.isMoney && D.isMoney(g)); } catch (_) { return false; } };
+    const gv = (g, v) => { v = num(v); if (!money(g)) return nf(v, Math.abs(v - Math.round(v)) > 0.05 ? 1 : 0); return Math.abs(v) < 1000 ? Math.round(v) + 'k' : nf(v / 1000, 1); };
+    const sr = (D.srows || []).slice().sort((x, y) => (y.fc == null ? -1e9 : y.fc) - (x.fc == null ? -1e9 : x.fc) || num(y.mon) - num(x.mon));
+    if (!sr.length) return '<div class="abx-blk">' + head(D, 'CHI TIẾT NHÂN VIÊN') + '<div class="abx-note">Khai báo chưa có danh sách nhân viên</div></div>';
+    const hasTier = sg.some(g => tierG[g]);
+    const card = (x, k) => {
+      const rows = sg.map(g => { const v = (x.cells && x.cells[g]) || { a: 0, t: 0, d: 0 }; return { g, a: v.a, t: v.t, d: num(v.d), tier: tierG[g] }; });
+      const srt = a => a.slice().sort((p, q) => q.d - p.d);
+      const line = r => '<tr><td class="l">' + esc(r.g) + '</td><td class="num at"><b>' + gv(r.g, r.a) + '</b> <span>/ ' + gv(r.g, r.t) + '</span></td><td class="c ' + (Math.round(r.d) === 0 ? 'z' : lv(r.d)) + '">' + rp(r.d) + '%</td></tr>';
+      let body = '';
+      if (!hasTier) body = srt(rows).map(line).join('');
+      else {
+        const C = srt(rows.filter(r => r.tier === 'chinh')), V = srt(rows.filter(r => r.tier !== 'chinh'));
+        if (C.length) body += '<tr class="sec"><td colspan="3">NHÓM CHÍNH</td></tr>' + C.map(line).join('');
+        if (V.length) body += '<tr class="sec v"><td colspan="3">NHÓM VƯỢT TRỘI</td></tr>' + V.map(line).join('');
+      }
+      const push = rows.filter(r => r.d >= 50 && r.d < 100).sort((p, q) => q.d - p.d).slice(0, 3).map(r => esc(r.g) + ' ' + rp(r.d) + '%').join(' · ') || '—';
+      const kp = (lab, val, cls, st) => '<div class="' + (cls || '') + '"><i>' + lab + '</i><b' + (st ? ' style="' + st + '"' : '') + '>' + val + '</b></div>';
+      return '<div class="abx-card" data-capture-id="xlnvc-' + id + '-' + k + '" data-table-name="NV ' + esc(shortNm(x.nm)) + '">' +
+        '<div class="abx-ch"><b>' + (k + 1) + '. ' + esc(shortNm(x.nm)) + (D.view === 'total' && x.shop ? ' <small>· ' + esc(x.shop) + '</small>' : '') + '</b><span>' + (x.mon == null ? '—' : nf(x.mon, 1)) + ' / ' + (x.tgt > 0 ? nf(x.tgt) : '—') + ' tr</span></div>' +
+        '<div class="abx-kp">' + kp('DỰ KIẾN', x.fc == null ? '—' : Math.round(x.fc) + '%', x.fc == null ? '' : lv(x.fc)) + kp('TRẢ CHẬM', x.tc == null ? '—' : Math.round(x.tc) + '%', x.tc == null ? '' : x.tc >= D.tgLim ? 'g' : 'r') + kp('NH ĐẠT', x.ok + '/' + n, n ? lv(x.ok / n * 100) : '') +
+          (D.hasRw ? kp('THƯỞNG', trf(x.rw), '', 'color:#006100') : kp('% HT', x.ht == null ? '—' : Math.round(x.ht) + '%', '')) + '</div>' +
+        '<table class="abx-ct"><colgroup><col style="width:40%"><col style="width:42%"><col style="width:18%"></colgroup><thead><tr><th>Nhóm hàng</th><th>TH / Target</th><th>DK</th></tr></thead><tbody>' + body + '</tbody></table></div>'; /* V18.37: bỏ dòng Cần đẩy */
+    };
+    return '<div class="abx-blk" style="width:1210px">' + head(D, 'CHI TIẾT NHÂN VIÊN') + '<div class="abx-cards">' + sr.map(card).join('') + '</div>' +
+      '<div class="abx-note">Mỗi NV 1 thẻ, xếp theo Hạng (Dự kiến DT) · nhóm trong thẻ xếp theo DK cao → thấp · tiền: triệu (dưới 1 tr ghi k), số lượng: cái</div></div>';
   }
   const wrap = parts => style() + '<div class="abx">' + parts + '</div>';
 
