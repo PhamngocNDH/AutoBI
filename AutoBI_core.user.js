@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.40
+// @name         AutoBI Core V18.43
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.40
+// @version      18.43
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -31,6 +31,7 @@
 // @grant        unsafeWindow
 // @require      https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js
+// @require      https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js
 // ==/UserScript==
 /* V17.40: chặn trình duyệt TỰ DỊCH trang (Chrome Google Dịch, Safari Dịch). Bị dịch thì tên nhóm "Camera" thành "Máy ảnh",
    "Cáp - Sạc" thành "chồng -"… và Khai báo lưu luôn tên đã dịch → lệch target. Trang BI vốn tiếng Việt nên tắt dịch không mất gì. */
@@ -9416,6 +9417,7 @@ window.__AutoBIBiTarget99 = (function () {
 
   /* ==== V17.21: LK NEW (tab 'lknew') — báo cáo lũy kế buổi sáng, cùng giao diện Realtime V2. Chỉ đọc cache: link2, link4_smart, link6 (revenue, competition), staffReal. ==== */
   function renderLK(h, c, groups, cfg, view, useBi, timeArg) {
+    try { if (window.__AutoBIExcel && !window.__AutoBIExcel.busy) window.__AutoBIExcel.ctx = { h, c, groups, cfg, view, useBi, timeArg }; } catch (_) { } /* V18.43: nhớ bộ số để Xuất Excel dựng lại Realtime + Lũy kế */
     const { UI, UTILS } = h;
     c = c || {}; cfg = cfg || {}; groups = groups || [];
     const mobile = UTILS.isMobile();
@@ -11131,9 +11133,14 @@ window.__AutoBIRunPick = (() => {
       list.map((b, i) => '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f1f5f9;"><span style="flex:1;font-size:13px;font-weight:700;color:#0f1b2d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + esc(b.name) + '">' + esc(b.name) + '</span>' +
         '<button type="button" data-i="' + i + '" data-a="copy" style="min-height:34px;padding:0 12px;border:0;border-radius:17px;background:#0b4fb3;color:#fff;font-weight:800;font-size:12.5px;cursor:pointer;">📋 Chép ảnh</button>' +
         '<button type="button" data-i="' + i + '" data-a="save" style="min-height:34px;padding:0 10px;border:1px solid #cbd5e1;border-radius:17px;background:#fff;color:#334155;font-weight:700;font-size:12.5px;cursor:pointer;">⬇ Tải</button></div>').join('');
+    /* V18.43: Xuất Excel đầy đủ (Realtime · Lũy kế · Chi tiết NV · Data, có công thức) — chỉ ở tab LK NEW + theme Excel */
+    if (document.body.classList.contains('abx-on') && window.__AutoBIXlsx && document.querySelector('.rpt-nav-item.active[data-tab="lknew"]'))
+      sec.insertAdjacentHTML('beforeend', '<div style="display:flex;align-items:center;gap:8px;padding:7px 0 2px;"><span style="flex:1;font-size:13px;font-weight:700;color:#1d7a3a;line-height:1.3">Xuất Excel đầy đủ<br><span style="font-weight:600;color:#64748b;font-size:11.5px">Realtime · Lũy kế · Chi tiết NV · Data — có công thức</span></span>' +
+        '<button type="button" data-a="xlsx" style="min-height:34px;padding:0 14px;border:0;border-radius:17px;background:#1d7a3a;color:#fff;font-weight:800;font-size:12.5px;cursor:pointer;">📊 Xuất Excel</button></div>');
     sec.addEventListener('click', e => {
       const btn = e.target.closest('button[data-a]'); if (!btn) return;
       e.preventDefault(); e.stopPropagation();
+      if (btn.dataset.a === 'xlsx') { window.__AutoBIXlsx.run(btn); return; }
       const b = list[Number(btn.dataset.i)]; if (!b) return;
       /* đóng hộp trước khi chụp mục "Cả trang" để không dính lớp mờ */
       if (b.whole) closeModal();
@@ -11145,6 +11152,425 @@ window.__AutoBIRunPick = (() => {
   const start = () => { try { mo.observe(document.body, { childList: true, subtree: true, characterData: true }); } catch (_) { } };
   if (document.body) start(); else document.addEventListener('DOMContentLoaded', start, { once: true });
   window.__AutoBIShot = { blocks, inject };
+})();
+
+/* ==== V18.43: Xuất Excel đầy đủ (__AutoBIXlsx) — chỉ ở tab LK NEW + theme Excel, nút "📊 Xuất Excel" trong hộp Tùy chọn.
+   1 file gồm 4 sheet: Realtime · Lũy kế · Chi tiết NV · Data.
+   - Data: số lấy được (tham số ngày, doanh thu, nhóm hàng, nhân viên, NV × nhóm hàng).
+   - 3 sheet báo cáo dùng CÔNG THỨC tham chiếu Data (%, Dự kiến, DK mai, tổng, số nhóm đạt, hạng) → sửa số ở Data là tự tính lại.
+   - Màu ≥100% xanh / 80–99% vàng / <80% đỏ / 0% đỏ đậm bằng định dạng có điều kiện → màu đổi theo số.
+   Số lấy từ bộ dữ liệu đang vẽ báo cáo (__AutoBIExcel.collect), không gọi BI. Cần thư viện ExcelJS (@require). ==== */
+(function () {
+  'use strict';
+  if (window.top !== window.self || window.__AutoBIXlsx) return;
+  const toast = m => { try { if (window.UI && window.UI.showToast) return window.UI.showToast(m, 6000); } catch (_) { } try { console.log('[AutoBI] ' + m); } catch (_) { } };
+  const num = v => { const n = Number(v); return isFinite(n) ? n : 0; };
+  const pad = n => String(n).padStart(2, '0');
+  const clean = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
+  const shortNm = (n, dup) => { const w = String(n || '').trim().split(/\s+/); const l = w[w.length - 1] || ''; return dup[l] > 1 && w.length > 1 ? w[w.length - 2].charAt(0).toUpperCase() + '.' + l : l; };
+
+  /* ---------- kiểu ô ---------- */
+  const A = c => 'FF' + c;
+  const BD = { style: 'thin', color: { argb: A('8F9AA7') } };
+  const BOX = { top: BD, left: BD, bottom: BD, right: BD };
+  const F = c => ({ type: 'pattern', pattern: 'solid', fgColor: { argb: A(c) } });
+  const K = {
+    th: { fill: F('2F5597'), font: { color: 'FFFFFF', bold: true }, al: 'center' },
+    or: { fill: F('C55A11'), font: { color: 'FFFFFF', bold: true }, al: 'center' },
+    sk: { fill: F('9DC3E6'), font: { color: '1B1B1B', bold: true }, al: 'center' },
+    gr: { fill: F('2B5A2B'), font: { color: 'FFFFFF', bold: true }, al: 'center' },
+    ye: { fill: F('FFFF00'), font: { color: '1B1B1B', bold: true }, al: 'center' },
+    bl: { fill: F('5B9BD5'), font: { color: 'FFFFFF', bold: true }, al: 'center' },
+    nv: { fill: F('1F3864'), font: { color: 'FFFFFF', bold: true, size: 11 }, al: 'left' },
+    lab: { fill: F('D9E2F3'), font: { color: '1F3864', bold: true, size: 8 }, al: 'center' },
+    sec: { fill: F('D9E2F3'), font: { color: '1F3864', bold: true }, al: 'center' },
+    secv: { fill: F('E4DFF0'), font: { color: '5B2A86', bold: true }, al: 'center' },
+    tot: { fill: F('DCEAD3'), font: { bold: true }, al: 'right' },
+    l: { font: { bold: true }, al: 'left' },
+    n: { al: 'right' }, c: { al: 'center' }
+  };
+  function put(ws, r, c, v, st, fmt) {
+    const cell = ws.getCell(r, c);
+    if (typeof v === 'string' && v.charAt(0) === '=') cell.value = { formula: v.slice(1) };
+    else if (v !== undefined && v !== null) cell.value = v;
+    st = st || {};
+    const f = st.font || {};
+    cell.font = { name: 'Arial', size: f.size || 10, bold: !!f.bold, color: { argb: A(f.color || '1B1B1B') } };
+    if (st.fill) cell.fill = st.fill;
+    cell.alignment = { horizontal: st.al || 'right', vertical: 'middle', wrapText: !!st.wrap };
+    if (st.border !== false) cell.border = BOX;
+    if (fmt) cell.numFmt = fmt;
+    return cell;
+  }
+  function box(ws, r1, c1, r2, c2, v, st, fmt) {
+    for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) put(ws, r, c, (r === r1 && c === c1) ? v : null, st, fmt);
+    if (r2 > r1 || c2 > c1) ws.mergeCells(r1, c1, r2, c2);
+  }
+  const col = c => { let s = ''; while (c > 0) { const m = (c - 1) % 26; s = String.fromCharCode(65 + m) + s; c = Math.floor((c - 1) / 26); } return s; };
+  const ref = (r, c, abs) => abs ? '$' + col(c) + '$' + r : col(c) + r;
+  const D_ = (r, c) => 'Data!$' + col(c) + '$' + r;
+  const PCT = '0%', N0 = '#,##0', N1 = '#,##0.0';
+  /* màu theo % (định dạng có điều kiện) — cell là ô góc trên-trái của vùng; base = mốc (mặc định 1 = 100%) */
+  const dxf = (bg, fg) => ({ fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: A(bg) } }, font: { color: { argb: A(fg) }, bold: true } });
+  function heat(ws, rng, cell, by, base) {
+    const x = by || cell, b = base || '1';
+    ws.addConditionalFormatting({
+      ref: rng, rules: [
+        { type: 'expression', priority: 1, stopIfTrue: true, formulae: ['AND(ISNUMBER(' + x + '),ROUND(' + x + ',2)=0)'], style: dxf('E8B4B0', '7A150B') },
+        { type: 'expression', priority: 2, stopIfTrue: true, formulae: ['AND(ISNUMBER(' + x + '),' + x + '>=' + b + ')'], style: dxf('C6EFCE', '006100') },
+        { type: 'expression', priority: 3, stopIfTrue: true, formulae: ['AND(ISNUMBER(' + x + '),' + x + '>=' + b + '*0.8)'], style: dxf('FFEB9C', '7A4A00') },
+        { type: 'expression', priority: 4, stopIfTrue: true, formulae: ['ISNUMBER(' + x + ')'], style: dxf('FFC7CE', '9C0006') }
+      ]
+    });
+  }
+  /* công thức */
+  const pctF = (a, t) => 'IF(' + t + '>0,' + a + '/' + t + ',IF(' + a + '>0,1,0))';
+  const fcF = (a, t) => 'IFERROR(IF(' + t + '>0,' + a + '/NgayQua*SoNgay/' + t + ',IF(' + a + '>0,1,0)),0)';
+  const maiF = (a, rr, t, flag) => 'IFERROR(IF(' + flag + '=1,IF(' + t + '>0,(' + a + '+' + rr + ')/(NgayQua+1)*SoNgay/' + t + ',IF(' + a + '+' + rr + '>0,1,0)),' + fcF(a, t) + '),0)';
+  const OK = '">=0.995"'; /* đạt = làm tròn ≥ 100% (như ô NH ĐẠT trên AutoBI) */
+
+  /* ---------- chia nhóm Chính / Vượt trội ---------- */
+  function tiers(list, key) {
+    const s = a => a.slice().sort((x, y) => num(y[key]) - num(x[key]));
+    if (!list.some(x => x.tier)) return [['', '', s(list)]];
+    return [['NHÓM CHÍNH', 'sec', s(list.filter(x => x.tier === 'chinh'))], ['NHÓM VƯỢT TRỘI', 'secv', s(list.filter(x => x.tier !== 'chinh'))]].filter(b => b[2].length);
+  }
+
+  /* ================= SHEET DATA ================= */
+  function sheetData(wb, R, L) {
+    const ws = wb.addWorksheet('Data', { views: [{ showGridLines: true }] });
+    const tc = L.tc || R.tc || {};
+    const now = new Date();
+    let r = 1;
+    box(ws, r, 1, r, 4, 'THAM SỐ (sửa ở đây → các sheet tự tính lại)', K.th); r++;
+    const P = {};
+    const par = (key, name, lab, v, fmt) => { put(ws, r, 1, lab, K.l); put(ws, r, 2, v, { al: 'right', fill: F('FFF2CC') }, fmt); P[key] = r; if (name) wb.definedNames.add('Data!$B$' + r, name); r++; };
+    par('title', '', 'Báo cáo', (L.view === 'total' ? 'Tổng cụm: ' : 'Shop: ') + String(L.title || '').replace(/^Cụm:\s*/, ''));
+    par('month', '', 'Tháng', pad(tc.month) + '/' + tc.year);
+    par('dp', 'NgayQua', 'Ngày đã qua (lũy kế đến hết ngày)', num(L.dp));
+    par('dim', 'SoNgay', 'Số ngày trong tháng', num(L.dim));
+    par('mai', 'CoRT', 'Có doanh thu realtime hôm nay (1 = có)', R && R.maiOk ? 1 : 0);
+    par('maiG', 'CoRTNhom', 'Có số nhóm hàng hôm nay (1 = có)', R && R.compM ? 1 : 0);
+    par('tgLim', 'MucTieuTC', 'Mục tiêu trả chậm', num(L.tgLim) / 100, PCT);
+    par('at', '', 'Xuất lúc', pad(now.getHours()) + ':' + pad(now.getMinutes()) + ' ' + pad(now.getDate()) + '/' + pad(now.getMonth() + 1) + '/' + now.getFullYear());
+    r++;
+    box(ws, r, 1, r, 4, 'DOANH THU (triệu)', K.th); r++;
+    const l1 = (R && R.l1) || {}, l2 = (R && R.l2) || {};
+    par('dayT', '', 'Target ngày', R ? num(R.dayT) : 0, N0);
+    par('rt', '', 'Realtime hôm nay (QĐ)', R ? num(R.rt) : 0, N1);
+    par('rtThuc', '', 'Realtime hôm nay (thực)', num(l1.dtlk), N1);
+    par('monT', '', 'Target tháng', num(L.monT), N0);
+    par('lk', '', 'Lũy kế QĐ (đến hết ngày đã qua)', num(L.lk), N0);
+    par('lkThuc', '', 'Lũy kế doanh thu thực', num(l2.dtlk), N0);
+    par('tgRT', '', 'Trả chậm realtime', R ? num(R.tg) / 100 : 0, PCT);
+    par('tgLK', '', 'Trả chậm lũy kế', num(L.tg) / 100, PCT);
+    r++;
+
+    /* nhóm hàng */
+    const rtRows = {}; ((R && R.rows) || []).forEach(x => { rtRows[x.name] = x; });
+    const groups = (L.rows || []).map(x => { const q = rtRows[x.name] || {}; return { name: x.name, tier: x.tier, t: num(q.t), r: num(q.r), tL: num(x.t), rL: num(x.r), money: !!(L.isMoney && L.isMoney(x.name)) }; });
+    ((R && R.rows) || []).forEach(q => { if (!groups.some(g => g.name === q.name)) groups.push({ name: q.name, tier: q.tier, t: num(q.t), r: num(q.r), tL: num(q.tL), rL: num(q.rL), money: !!(L.isMoney && L.isMoney(q.name)) }); });
+    box(ws, r, 1, r, 7, 'NHÓM HÀNG THI ĐUA', K.th); r++;
+    ['Nhóm hàng', 'Loại', 'Target ngày', 'Realtime hôm nay', 'Target tháng', 'Lũy kế', 'Đơn vị'].forEach((h, i) => put(ws, r, i + 1, h, K.sk)); r++;
+    const G = {};
+    groups.forEach(g => {
+      put(ws, r, 1, g.name, K.l); put(ws, r, 2, g.tier === 'chinh' ? 'Chính' : g.tier ? 'Vượt trội' : '', K.c);
+      put(ws, r, 3, g.t, {}, N1); put(ws, r, 4, g.r, {}, N1); put(ws, r, 5, g.tL, {}, N1); put(ws, r, 6, g.rL, {}, N1); put(ws, r, 7, g.money ? 'tiền' : 'cái', K.c);
+      G[g.name] = Object.assign(g, { row: r }); r++;
+    });
+    r++;
+
+    /* nhân viên */
+    const rtS = {}; ((R && R.srows) || []).forEach(x => { rtS[x.nm + '|' + x.shop] = x; });
+    const S = (L.srows || []).map(x => Object.assign({}, x, { day: (rtS[x.nm + '|' + x.shop] || {}).day }));
+    const dup = {}; S.forEach(x => { const w = String(x.nm || '').trim().split(/\s+/); const l = w[w.length - 1] || ''; dup[l] = (dup[l] || 0) + 1; });
+    box(ws, r, 1, r, 9, 'NHÂN VIÊN', K.th); r++;
+    ['Mã NV', 'Họ tên', 'Tên gọn', 'Shop', 'Mục tiêu tháng', 'Lũy kế DT QĐ', 'Hôm nay (QĐ)', 'Trả chậm', 'Tổng thưởng (đ)'].forEach((h, i) => put(ws, r, i + 1, h, K.sk)); r++;
+    S.forEach(x => {
+      x.short = shortNm(x.nm, dup);
+      put(ws, r, 1, x.id || '', K.c); put(ws, r, 2, x.nm, K.l); put(ws, r, 3, x.short, K.l); put(ws, r, 4, x.shop || '', { al: 'left' });
+      put(ws, r, 5, num(x.tgt), {}, N0); put(ws, r, 6, x.mon == null ? null : num(x.mon), {}, N1); put(ws, r, 7, x.day == null ? null : num(x.day), {}, N1);
+      put(ws, r, 8, x.tc == null ? null : num(x.tc) / 100, {}, PCT); put(ws, r, 9, x.rw == null ? null : num(x.rw), {}, N0);
+      x.row = r; r++;
+    });
+    r++;
+
+    /* NV × nhóm hàng */
+    const sg = L.sg || [];
+    box(ws, r, 1, r, 5, 'NHÂN VIÊN × NHÓM HÀNG (thực hiện lũy kế / target cá nhân)', K.th); r++;
+    ['Tên gọn', 'Shop', 'Nhóm hàng', 'Thực hiện', 'Target'].forEach((h, i) => put(ws, r, i + 1, h, K.sk)); r++;
+    S.forEach(x => {
+      x.cellRow = {};
+      sg.forEach(g => {
+        const v = (x.cells && x.cells[g]) || { a: 0, t: 0 };
+        put(ws, r, 1, x.short, K.l); put(ws, r, 2, x.shop || '', { al: 'left' }); put(ws, r, 3, g, { al: 'left' });
+        put(ws, r, 4, num(v.a), {}, N1); put(ws, r, 5, num(v.t), {}, N1);
+        x.cellRow[g] = r; r++;
+      });
+    });
+    [34, 16, 12, 16, 14, 14, 13, 11, 16].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+    return { P, G, S, sg, groups };
+  }
+  const DP = (P, k) => D_(P[k], 2);
+
+  /* ================= SHEET REALTIME ================= */
+  function sheetRT(wb, R, L, X) {
+    const ws = wb.addWorksheet('Realtime', { views: [{ showGridLines: false }] });
+    const { P, G, S } = X;
+    [20, 10, 11, 9, 2.5, 20, 11, 12, 11, 11].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+    box(ws, 1, 1, 1, 10, '=' + DP(P, 'title'), { font: { color: '1D7A3A', bold: true, size: 14 }, al: 'center', border: false });
+    const I = (r, c1, c2, v, st, fmt) => box(ws, r, c1, r, c2, v, Object.assign({ al: 'center', font: { bold: true, size: 11 } }, st || {}), fmt);
+    const red = { font: { color: 'C00000', bold: true, size: 11 } }, blue = { font: { color: '1F4E9C', bold: true, size: 11 } }, grn = { font: { color: '1D7A3A', bold: true, size: 11 } }, org = { font: { color: 'C55A11', bold: true, size: 11 } };
+    let r = 3;
+    I(r, 1, 1, 'Time:', { al: 'left' }); I(r, 2, 4, '=' + DP(P, 'at'), red); I(r, 6, 6, 'Target QĐ', red); I(r, 7, 7, '=' + DP(P, 'monT'), red, N0); I(r, 8, 8, 'Thực hiện QĐ', grn); I(r, 9, 10, '=' + DP(P, 'lk'), grn, N0); r++;
+    I(r, 1, 2, 'Mục tiêu ngày', { fill: F('FF0000'), font: { color: 'FFFFFF', bold: true, size: 11 } }); I(r, 3, 4, 'Thực hiện', { fill: F('0E8F5B'), font: { color: 'FFFFFF', bold: true, size: 11 } });
+    I(r, 6, 6, 'Hoàn thành', org); I(r, 7, 7, '=' + pctF('I3', 'G3'), org, PCT); I(r, 8, 8, 'Còn lại', blue); I(r, 9, 10, '=MAX(0,G3-I3)', blue, N0); r++;
+    I(r, 1, 2, '=' + DP(P, 'dayT'), red, '#,##0 "Triệu"'); I(r, 3, 4, '=' + DP(P, 'rt'), blue, '#,##0.0 "Triệu"');
+    I(r, 6, 8, '☀️ Dự kiến ngày mai', { al: 'left' }); I(r, 9, 10, '=' + maiF(DP(P, 'lk'), DP(P, 'rt'), DP(P, 'monT'), 'CoRT'), org, PCT); r++;
+    I(r, 1, 1, 'Hoàn thành', grn); I(r, 2, 2, '=' + pctF('C5', 'A5'), blue, PCT); I(r, 3, 3, '%QĐ'); I(r, 4, 4, '=IFERROR(' + DP(P, 'rt') + '/' + DP(P, 'rtThuc') + ',0)', blue, PCT);
+    I(r, 6, 8, 'Lũy kế Doanh thu thực', { al: 'left' }); I(r, 9, 10, '=' + DP(P, 'lkThuc'), {}, N0); r++;
+    I(r, 1, 2, 'Mục tiêu trả chậm', red); I(r, 3, 4, '=MucTieuTC', Object.assign({ fill: F('FFFF00') }, red), PCT);
+    I(r, 6, 8, '%Quy đổi/thực', { al: 'left' }); I(r, 9, 10, '=IFERROR(' + DP(P, 'lk') + '/' + DP(P, 'lkThuc') + ',0)', org, PCT); r++;
+    I(r, 1, 2, 'Realtime trả chậm', red); I(r, 3, 4, '=' + DP(P, 'tgRT'), {}, PCT);
+    I(r, 6, 8, 'Lũy kế trả chậm', Object.assign({ al: 'left' }, red)); I(r, 9, 10, '=' + DP(P, 'tgLK'), {}, PCT);
+    ws.addConditionalFormatting({ ref: 'C8', rules: [{ type: 'expression', priority: 1, formulae: ['AND(ISNUMBER(C8),C8>=MucTieuTC)'], style: dxf('C6EFCE', '006100') }, { type: 'expression', priority: 2, formulae: ['ISNUMBER(C8)'], style: dxf('FFC7CE', '9C0006') }] });
+    ws.addConditionalFormatting({ ref: 'I8', rules: [{ type: 'expression', priority: 1, formulae: ['AND(ISNUMBER(I8),I8>=MucTieuTC)'], style: dxf('C6EFCE', '006100') }, { type: 'expression', priority: 2, formulae: ['ISNUMBER(I8)'], style: dxf('FFC7CE', '9C0006') }] });
+    heat(ws, 'B6', 'B6'); heat(ws, 'G4', 'G4', null, 'NgayQua/SoNgay'); heat(ws, 'I5', 'I5');
+    r += 2;
+
+    /* nhóm hàng: trái realtime | phải lũy kế + DK mai */
+    const list = X.groups.map(g => Object.assign({}, g, { dm: (R && (R.rows || []).find(q => q.name === g.name) || {}).dm }));
+    const hRow = r; r += 2;
+    put(ws, r - 1, 1, 'Nhóm hàng', K.or); put(ws, r - 1, 2, 'Target', K.or); put(ws, r - 1, 3, 'Thực hiện', K.or); put(ws, r - 1, 4, 'Tỉ lệ', K.or);
+    ['Nhóm hàng', 'Target', 'Thực hiện', '% Hiện tại', '☀️ DK mai'].forEach((h, i) => put(ws, r - 1, 6 + i, h, K.th));
+    const top = r;
+    tiers(list, 'dm').forEach(([name, cls, a]) => {
+      const bandR = name ? r++ : 0;
+      const s = r;
+      a.forEach(g => {
+        const gr = G[g.name].row;
+        put(ws, r, 1, '=' + D_(gr, 1), K.l); put(ws, r, 2, '=' + D_(gr, 3), {}, N1); put(ws, r, 3, '=' + D_(gr, 4), {}, N1);
+        put(ws, r, 4, '=IF(C' + r + '=0,"-",' + pctF('C' + r, 'B' + r) + ')', K.c, PCT);
+        put(ws, r, 6, '=' + D_(gr, 1), K.l); put(ws, r, 7, '=' + D_(gr, 5), {}, N1); put(ws, r, 8, '=' + D_(gr, 6), {}, N1);
+        put(ws, r, 9, '=' + pctF('H' + r, 'G' + r), K.c, PCT);
+        put(ws, r, 10, '=' + maiF('H' + r, 'IF(CoRTNhom=1,C' + r + ',0)', 'G' + r, 'CoRTNhom'), K.c, PCT);
+        r++;
+      });
+      if (bandR) {
+        const e = r - 1;
+        box(ws, bandR, 1, bandR, 3, name, K[cls]); put(ws, bandR, 4, '=COUNTIFS(C' + s + ':C' + e + ',"<>0",D' + s + ':D' + e + ',' + OK + ')&"/' + a.length + '"', K[cls]);
+        box(ws, bandR, 6, bandR, 9, name, K[cls]); put(ws, bandR, 10, '=COUNTIF(J' + s + ':J' + e + ',' + OK + ')&"/' + a.length + '"', K[cls]);
+      }
+    });
+    const bot = r - 1;
+    if (bot >= top) {
+      heat(ws, 'D' + top + ':D' + bot, 'D' + top); heat(ws, 'I' + top + ':I' + bot, 'I' + top, null, 'NgayQua/SoNgay'); heat(ws, 'J' + top + ':J' + bot, 'J' + top);
+      heat(ws, 'A' + top + ':A' + bot, 'A' + top, '$J' + top); heat(ws, 'F' + top + ':F' + bot, 'F' + top, '$J' + top);
+    }
+    box(ws, hRow, 1, hRow, 2, 'Realtime: ' + list.length + ' Nhóm', K.ye); put(ws, hRow, 3, 'Đạt:', K.ye);
+    put(ws, hRow, 4, '=COUNTIFS(C' + top + ':C' + bot + ',"<>0",D' + top + ':D' + bot + ',' + OK + ')', K.ye);
+    box(ws, hRow, 6, hRow, 7, 'Lũy kế: ' + list.length + ' Nhóm', K.bl); box(ws, hRow, 8, hRow, 9, 'Đạt', K.bl); put(ws, hRow, 10, '=COUNTIF(J' + top + ':J' + bot + ',' + OK + ')', K.bl);
+    r += 1;
+
+    /* doanh thu nhân viên */
+    if (S.length) {
+      box(ws, r, 1, r, 4, 'DOANH THU NV HÔM NAY', K.gr); box(ws, r, 6, r, 10, 'LŨY KẾ THÁNG', K.gr); r++;
+      box(ws, r, 1, r, 2, 'Nhân viên', K.th); box(ws, r, 3, r, 4, 'Hôm nay', K.or); ['Lũy kế', 'Mục tiêu', '% HT'].forEach((h, i) => put(ws, r, 6 + i, h, K.th)); box(ws, r, 9, r, 10, 'Dự kiến', K.th); r++;
+      const s0 = r;
+      S.slice().sort((x, y) => num(y.day) - num(x.day) || num(y.mon) - num(x.mon)).forEach(x => {
+        box(ws, r, 1, r, 2, '=' + D_(x.row, 3) + '&" · "&' + D_(x.row, 4), K.l); box(ws, r, 3, r, 4, '=' + D_(x.row, 7), { al: 'right', font: { bold: true } }, N1);
+        put(ws, r, 6, '=' + D_(x.row, 6), {}, N1); put(ws, r, 7, '=' + D_(x.row, 5), {}, N0); put(ws, r, 8, '=' + pctF('F' + r, 'G' + r), K.c, PCT); box(ws, r, 9, r, 10, '=' + fcF('F' + r, 'G' + r), K.c, PCT);
+        r++;
+      });
+      const e0 = r - 1;
+      box(ws, r, 1, r, 2, 'Tổng', Object.assign({}, K.tot, { al: 'left' })); box(ws, r, 3, r, 4, '=SUM(C' + s0 + ':C' + e0 + ')', K.tot, N1);
+      put(ws, r, 6, '=SUM(F' + s0 + ':F' + e0 + ')', K.tot, N1); put(ws, r, 7, '=SUM(G' + s0 + ':G' + e0 + ')', K.tot, N0); put(ws, r, 8, '=' + pctF('F' + r, 'G' + r), Object.assign({}, K.tot, { al: 'center' }), PCT); box(ws, r, 9, r, 10, '=' + fcF('F' + r, 'G' + r), Object.assign({}, K.tot, { al: 'center' }), PCT);
+      heat(ws, 'H' + s0 + ':H' + e0, 'H' + s0, null, 'NgayQua/SoNgay'); heat(ws, 'I' + s0 + ':I' + e0, 'I' + s0);
+      r += 2;
+    }
+    put(ws, r, 1, 'Tiền: triệu · Lũy kế đến hết ngày ở ô Data "Ngày đã qua" · ☀️ DK mai = (lũy kế + realtime hôm nay) ÷ (ngày đã qua + 1) × số ngày ÷ target · % HT NV so với tiến độ thời gian', { border: false, al: 'left', font: { size: 9, color: '555555' } });
+  }
+
+  /* ================= SHEET LŨY KẾ ================= */
+  function sheetLK(wb, R, L, X) {
+    const ws = wb.addWorksheet('Lũy kế', { views: [{ showGridLines: false }] });
+    const { P, G, S, sg } = X;
+    box(ws, 1, 1, 1, 12, '=UPPER(' + DP(P, 'title') + ')', { font: { color: '1F6FB2', bold: true, size: 14 }, al: 'center', border: false });
+    box(ws, 2, 1, 2, 12, '="BÁO CÁO LŨY KẾ · số đến hết "&TEXT(NgayQua,"00")&"/"&' + DP(P, 'month'), { font: { color: '1D7A3A', bold: true }, al: 'center', border: false });
+    /* --- bảng trái: doanh thu + nhóm hàng --- */
+    [20, 11, 11, 11, 11, 2.5].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+    let r = 4;
+    box(ws, r, 1, r + 1, 1, 'Nhóm hàng', K.th); box(ws, r, 2, r, 5, '=' + DP(P, 'title'), K.th);
+    ['Target', 'Thực hiện', 'Tỉ lệ (hiện tại)', 'Dự kiến'].forEach((h, i) => put(ws, r + 1, 2 + i, h, K.sk)); r += 2;
+    const big = { font: { bold: true, size: 12 }, al: 'center' };
+    put(ws, r, 1, 'Doanh thu', big); put(ws, r, 2, '=' + DP(P, 'monT'), big, N0); put(ws, r, 3, '=' + DP(P, 'lk'), big, N0); put(ws, r, 4, '=' + pctF('C' + r, 'B' + r), big, PCT); put(ws, r, 5, '=' + fcF('C' + r, 'B' + r), big, PCT);
+    heat(ws, 'E' + r, 'E' + r); r++;
+    put(ws, r, 1, 'Trả chậm', big); put(ws, r, 2, '=MucTieuTC', big, PCT); put(ws, r, 3, '=' + DP(P, 'tgLK'), big, PCT); box(ws, r, 4, r, 5, '=IF(C' + r + '>=B' + r + ',"Đạt","Chưa đạt")', big);
+    ws.addConditionalFormatting({ ref: 'D' + r, rules: [{ type: 'expression', priority: 1, formulae: ['$C' + r + '>=$B' + r], style: dxf('C6EFCE', '006100') }, { type: 'expression', priority: 2, formulae: ['$C' + r + '<$B' + r], style: dxf('FFC7CE', '9C0006') }] });
+    r++;
+    const slR = r++;
+    const top = r, rowOf = {};
+    tiers(X.groups.map(g => Object.assign({}, g, { d: num(g.tL) > 0 && num(L.dp) > 0 ? g.rL / L.dp * L.dim / g.tL : 0 })), 'd').forEach(([name, cls, a]) => {
+      const bandR = name ? r++ : 0, s = r;
+      a.forEach(g => {
+        const gr = G[g.name].row;
+        put(ws, r, 1, '=' + D_(gr, 1), K.l); put(ws, r, 2, '=' + D_(gr, 5), {}, N1); put(ws, r, 3, '=' + D_(gr, 6), {}, N1);
+        put(ws, r, 4, '=' + pctF('C' + r, 'B' + r), K.c, PCT); put(ws, r, 5, '=' + fcF('C' + r, 'B' + r), K.c, PCT);
+        rowOf[g.name] = r; r++;
+      });
+      if (bandR) { box(ws, bandR, 1, bandR, 4, name, K[cls]); put(ws, bandR, 5, '=COUNTIF(E' + s + ':E' + (r - 1) + ',' + OK + ')&"/' + a.length + '"', K[cls]); }
+    });
+    const bot = r - 1;
+    put(ws, slR, 1, 'SL Nhóm', K.ye); put(ws, slR, 2, X.groups.length, K.ye); box(ws, slR, 3, slR, 4, 'Đạt:', K.ye); put(ws, slR, 5, '=COUNTIF(E' + top + ':E' + bot + ',' + OK + ')', K.ye);
+    if (bot >= top) { heat(ws, 'E' + top + ':E' + bot, 'E' + top); heat(ws, 'A' + top + ':A' + bot, 'A' + top, '$E' + top); heat(ws, 'D' + top + ':D' + bot, 'D' + top, '$E' + top); }
+
+    /* --- bên phải: Tổng hợp NV (trên) + ma trận Nhóm hàng × NV (dưới), bắt đầu cột G --- */
+    const c0 = 7;
+    if (!S.length) return { rowOf };
+    const order = S.slice().sort((x, y) => num(y.fc) - num(x.fc) || num(y.mon) - num(x.mon));
+    const nS = order.length;
+    /* ma trận đặt trước để Tổng hợp NV tham chiếu số nhóm đạt */
+    const mTop = 4 + nS + 4;
+    let m = mTop;
+    const mc = c0 + 1; /* cột Nhóm hàng của ma trận = cột Nhân viên (rộng) của bảng trên */
+    put(ws, m, mc, 'Nhóm hàng', Object.assign({}, K.gr, { al: 'left' }));
+    order.forEach((x, k) => put(ws, m, mc + 1 + k, x.short, K.gr)); put(ws, m, mc + 1 + nS, 'Cả shop', K.gr); m++;
+    const mStart = m;
+    const lastC = mc + 1 + nS;
+    tiers(X.groups.filter(g => sg.includes(g.name)).map(g => Object.assign({}, g, { d: num(g.tL) > 0 && num(L.dp) > 0 ? g.rL / L.dp * L.dim / g.tL : 0 })), 'd').forEach(([name, cls, a]) => {
+      if (name) { box(ws, m, mc, m, lastC, name, K[cls]); m++; }
+      a.forEach(g => {
+        put(ws, m, mc, '=' + D_(G[g.name].row, 1), K.l);
+        order.forEach((x, k) => { const dr = x.cellRow[g.name]; put(ws, m, mc + 1 + k, '=' + fcF(D_(dr, 4), D_(dr, 5)), K.c, PCT); });
+        put(ws, m, lastC, rowOf[g.name] ? '=E' + rowOf[g.name] : 0, K.c, PCT);
+        m++;
+      });
+    });
+    const mEnd = m - 1;
+    put(ws, m, mc, 'Số nhóm đạt', Object.assign({}, K.tot, { al: 'left' }));
+    for (let k = 0; k <= nS; k++) { const cc = col(mc + 1 + k); put(ws, m, mc + 1 + k, '=COUNTIF(' + cc + mStart + ':' + cc + mEnd + ',' + OK + ')', Object.assign({}, K.tot, { al: 'center' }), '0"/' + sg.length + '"'); }
+    const okRow = m;
+    if (mEnd >= mStart) heat(ws, col(mc + 1) + mStart + ':' + col(lastC) + mEnd, col(mc + 1) + mStart);
+
+    /* Tổng hợp NV */
+    let t = 4;
+    const H = ['Hạng', 'Nhân viên', 'Mục tiêu', 'DT QĐ', '% HT', 'Dự kiến', 'Trả chậm', 'NH đạt', 'Tổng thưởng'];
+    H.forEach((h, i) => put(ws, t, c0 + i, h, K.th)); t++;
+    const s0 = t, e0 = t + nS - 1;
+    const cc = i => col(c0 + i);
+    order.forEach((x, k) => {
+      put(ws, t, c0, '=IFERROR(RANK(' + cc(5) + t + ',$' + cc(5) + '$' + s0 + ':$' + cc(5) + '$' + e0 + '),"")', K.c);
+      put(ws, t, c0 + 1, '=' + D_(x.row, 3) + '&" · "&' + D_(x.row, 4), K.l);
+      put(ws, t, c0 + 2, '=' + D_(x.row, 5), {}, N0); put(ws, t, c0 + 3, '=' + D_(x.row, 6), {}, N1);
+      put(ws, t, c0 + 4, '=' + pctF(cc(3) + t, cc(2) + t), K.c, PCT); put(ws, t, c0 + 5, '=' + fcF(cc(3) + t, cc(2) + t), K.c, PCT);
+      put(ws, t, c0 + 6, '=IF(' + D_(x.row, 8) + '="","—",' + D_(x.row, 8) + ')', K.c, PCT);
+      put(ws, t, c0 + 7, '=' + col(c0 + 2 + k) + okRow, K.c, '0"/' + sg.length + '"');
+      put(ws, t, c0 + 8, '=IF(' + D_(x.row, 9) + '="","—",' + D_(x.row, 9) + '/1000000)', { al: 'right', font: { bold: true, color: '006100' } }, '0.0 "Tr"');
+      t++;
+    });
+    put(ws, t, c0, '', K.tot); put(ws, t, c0 + 1, 'Tổng', Object.assign({}, K.tot, { al: 'left' }));
+    put(ws, t, c0 + 2, '=SUM(' + cc(2) + s0 + ':' + cc(2) + e0 + ')', K.tot, N0); put(ws, t, c0 + 3, '=SUM(' + cc(3) + s0 + ':' + cc(3) + e0 + ')', K.tot, N1);
+    put(ws, t, c0 + 4, '=' + pctF(cc(3) + t, cc(2) + t), Object.assign({}, K.tot, { al: 'center' }), PCT); put(ws, t, c0 + 5, '=' + fcF(cc(3) + t, cc(2) + t), Object.assign({}, K.tot, { al: 'center' }), PCT);
+    put(ws, t, c0 + 6, '=' + DP(P, 'tgLK'), Object.assign({}, K.tot, { al: 'center' }), PCT);
+    put(ws, t, c0 + 7, '=' + col(lastC) + okRow, Object.assign({}, K.tot, { al: 'center' }), '0"/' + sg.length + '"');
+    put(ws, t, c0 + 8, '=SUM(' + cc(8) + s0 + ':' + cc(8) + e0 + ')', K.tot, '0.0 "Tr"');
+    heat(ws, cc(5) + s0 + ':' + cc(5) + t, cc(5) + s0);
+    /* NH đạt: tô theo tỉ lệ nhóm đạt */
+    ws.addConditionalFormatting({ ref: cc(7) + s0 + ':' + cc(7) + t, rules: [
+      { type: 'expression', priority: 1, stopIfTrue: true, formulae: [cc(7) + s0 + '/' + Math.max(1, sg.length) + '>=1'], style: dxf('C6EFCE', '006100') },
+      { type: 'expression', priority: 2, stopIfTrue: true, formulae: [cc(7) + s0 + '/' + Math.max(1, sg.length) + '>=0.8'], style: dxf('FFEB9C', '7A4A00') },
+      { type: 'expression', priority: 3, stopIfTrue: true, formulae: ['ISNUMBER(' + cc(7) + s0 + ')'], style: dxf('FFC7CE', '9C0006') }] });
+    ws.addConditionalFormatting({ ref: cc(6) + s0 + ':' + cc(6) + t, rules: [
+      { type: 'expression', priority: 1, stopIfTrue: true, formulae: ['AND(ISNUMBER(' + cc(6) + s0 + '),' + cc(6) + s0 + '>=MucTieuTC)'], style: dxf('C6EFCE', '006100') },
+      { type: 'expression', priority: 2, stopIfTrue: true, formulae: ['ISNUMBER(' + cc(6) + s0 + ')'], style: dxf('FFC7CE', '9C0006') }] });
+    [6, 24, 10, 10, 8, 9, 9, 8, 11].forEach((w, i) => { const cl = ws.getColumn(c0 + i); cl.width = Math.max(cl.width || 0, w); });
+    for (let k = 0; k <= nS; k++) { const cl = ws.getColumn(c0 + 2 + k); cl.width = Math.max(cl.width || 0, 9); }
+    ws.getColumn(c0 + 1).width = 24;
+    put(ws, Math.max(bot, okRow) + 2, 1, 'Tiền: triệu · Dự kiến = lũy kế ÷ ngày đã qua × số ngày tháng ÷ target · nhóm đạt khi Dự kiến ≥ 100% · sửa số ở sheet Data', { border: false, al: 'left', font: { size: 9, color: '555555' } });
+    return { rowOf };
+  }
+
+  /* ================= SHEET CHI TIẾT NV ================= */
+  function sheetNV(wb, R, L, X) {
+    const ws = wb.addWorksheet('Chi tiết NV', { views: [{ showGridLines: false }] });
+    const { P, S, sg, groups } = X;
+    const order = S.slice().sort((x, y) => num(y.fc) - num(x.fc) || num(y.mon) - num(x.mon));
+    const PER = 4, W = [17, 9, 9, 8];
+    for (let k = 0; k < PER; k++) { W.forEach((w, i) => { ws.getColumn(k * 5 + 1 + i).width = w; }); ws.getColumn(k * 5 + 5).width = 2.5; }
+    box(ws, 1, 1, 1, PER * 5 - 1, '=UPPER(' + DP(P, 'title') + ')', { font: { color: '1F6FB2', bold: true, size: 14 }, al: 'center', border: false });
+    box(ws, 2, 1, 2, PER * 5 - 1, '="CHI TIẾT NHÂN VIÊN · số đến hết "&TEXT(NgayQua,"00")&"/"&' + DP(P, 'month'), { font: { color: '1D7A3A', bold: true }, al: 'center', border: false });
+    const tierOf = {}; groups.forEach(g => { tierOf[g.name] = g.tier; });
+    let rowTop = 4, rowMax = 4;
+    order.forEach((x, k) => {
+      if (k && k % PER === 0) { rowTop = rowMax + 2; }
+      const c = (k % PER) * 5 + 1, cc = i => col(c + i);
+      let r = rowTop;
+      box(ws, r, c, r, c + 3, (k + 1) + '. ' + x.short + ' · ' + (x.shop || ''), K.nv); r++;
+      ['DỰ KIẾN', 'TRẢ CHẬM', 'NH ĐẠT', 'THƯỞNG'].forEach((h, i) => put(ws, r, c + i, h, K.lab)); r++;
+      const kv = r; r++;
+      ['DT QĐ', 'MỤC TIÊU', '% HT', ''].forEach((h, i) => put(ws, r, c + i, h, K.lab)); r++;
+      const kv2 = r; r++;
+      put(ws, kv2, c, '=' + D_(x.row, 6), { al: 'center', font: { bold: true } }, N1); put(ws, kv2, c + 1, '=' + D_(x.row, 5), { al: 'center', font: { bold: true } }, N0);
+      put(ws, kv2, c + 2, '=' + pctF(cc(0) + kv2, cc(1) + kv2), { al: 'center', font: { bold: true } }, PCT); put(ws, kv2, c + 3, '', {});
+      ['Nhóm hàng', 'TH', 'Target', 'DK'].forEach((h, i) => put(ws, r, c + i, h, K.th)); r++;
+      const s0 = r;
+      const rows = sg.map(g => { const v = (x.cells && x.cells[g]) || { d: 0 }; return { name: g, tier: tierOf[g], d: num(v.d) }; });
+      tiers(rows, 'd').forEach(([name, cls, a]) => {
+        const bandR = name ? r++ : 0, s = r;
+        a.forEach(g => {
+          const dr = x.cellRow[g.name];
+          put(ws, r, c, '=' + D_(dr, 3), K.l); put(ws, r, c + 1, '=' + D_(dr, 4), {}, N1); put(ws, r, c + 2, '=' + D_(dr, 5), {}, N1);
+          put(ws, r, c + 3, '=' + fcF(cc(1) + r, cc(2) + r), K.c, PCT); r++;
+        });
+        if (bandR) { box(ws, bandR, c, bandR, c + 2, name, K[cls]); put(ws, bandR, c + 3, '=COUNTIF(' + cc(3) + s + ':' + cc(3) + (r - 1) + ',' + OK + ')&"/' + a.length + '"', K[cls]); }
+      });
+      const e0 = r - 1;
+      put(ws, kv, c, '=' + fcF(cc(0) + kv2, cc(1) + kv2), { al: 'center', font: { bold: true, size: 12 } }, PCT);
+      put(ws, kv, c + 1, '=IF(' + D_(x.row, 8) + '="","—",' + D_(x.row, 8) + ')', { al: 'center', font: { bold: true, size: 12 } }, PCT);
+      put(ws, kv, c + 2, '=COUNTIF(' + cc(3) + s0 + ':' + cc(3) + e0 + ',' + OK + ')', { al: 'center', font: { bold: true, size: 12 } }, '0"/' + sg.length + '"');
+      put(ws, kv, c + 3, '=IF(' + D_(x.row, 9) + '="","—",' + D_(x.row, 9) + '/1000000)', { al: 'center', font: { bold: true, size: 12, color: '006100' } }, '0.0 "Tr"');
+      heat(ws, cc(0) + kv, cc(0) + kv); heat(ws, cc(2) + kv2, cc(2) + kv2, null, 'NgayQua/SoNgay');
+      ws.addConditionalFormatting({ ref: cc(1) + kv, rules: [{ type: 'expression', priority: 1, stopIfTrue: true, formulae: ['AND(ISNUMBER(' + cc(1) + kv + '),' + cc(1) + kv + '>=MucTieuTC)'], style: dxf('C6EFCE', '006100') }, { type: 'expression', priority: 2, formulae: ['ISNUMBER(' + cc(1) + kv + ')'], style: dxf('FFC7CE', '9C0006') }] });
+      ws.addConditionalFormatting({ ref: cc(2) + kv, rules: [
+        { type: 'expression', priority: 1, stopIfTrue: true, formulae: [cc(2) + kv + '/' + Math.max(1, sg.length) + '>=1'], style: dxf('C6EFCE', '006100') },
+        { type: 'expression', priority: 2, stopIfTrue: true, formulae: [cc(2) + kv + '/' + Math.max(1, sg.length) + '>=0.8'], style: dxf('FFEB9C', '7A4A00') },
+        { type: 'expression', priority: 3, formulae: ['ISNUMBER(' + cc(2) + kv + ')'], style: dxf('FFC7CE', '9C0006') }] });
+      if (e0 >= s0) heat(ws, cc(3) + s0 + ':' + cc(3) + e0, cc(3) + s0);
+      rowMax = Math.max(rowMax, r - 1);
+    });
+  }
+
+  async function exportAll() {
+    let XL = null; try { XL = typeof ExcelJS !== 'undefined' ? ExcelJS : null; } catch (_) { }
+    if (!XL) { try { XL = window.ExcelJS || (typeof unsafeWindow !== 'undefined' && unsafeWindow.ExcelJS) || null; } catch (_) { } }
+    if (!XL || !XL.Workbook) throw new Error('Chưa tải được thư viện ExcelJS — cập nhật lại AutoBI.user.js trong Tampermonkey');
+    const X0 = window.__AutoBIExcel && window.__AutoBIExcel.collect ? window.__AutoBIExcel.collect() : {};
+    const L = X0.lk, R = X0.rt;
+    if (!L) throw new Error('Chưa có số Lũy kế — mở tab LK NEW rồi thử lại');
+    const wb = new XL.Workbook();
+    wb.creator = 'AutoBI'; wb.calcProperties.fullCalcOnLoad = true;
+    /* thứ tự sheet: Realtime · Lũy kế · Chi tiết NV · Data (Data tạo trước để có địa chỉ, đổi thứ tự sau) */
+    const X = sheetData(wb, R, L);
+    sheetRT(wb, R, L, X); sheetLK(wb, R, L, X); sheetNV(wb, R, L, X);
+    const ids = ['Realtime', 'Lũy kế', 'Chi tiết NV', 'Data'];
+    wb.worksheets.forEach(w => { w.orderNo = ids.indexOf(w.name); });
+    wb.views = [{ activeTab: 0 }];
+    const buf = await wb.xlsx.writeBuffer();
+    const d = new Date();
+    const file = ('AutoBI_' + clean(String(L.title || '').replace(/^Cụm:\s*/, '')) + '_' + pad(d.getDate()) + '-' + pad(d.getMonth() + 1) + '_' + pad(d.getHours()) + 'h' + pad(d.getMinutes())).replace(/[^a-z0-9_-]+/gi, '_').replace(/_+/g, '_').replace(/^_|_$/g, '').slice(0, 90) + '.xlsx';
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const u = URL.createObjectURL(blob), a = document.createElement('a'); a.href = u; a.download = file; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 5000);
+    return { file, rt: !!R };
+  }
+  function run(btn) {
+    const old = btn ? btn.textContent : ''; if (btn) { btn.textContent = '⏳'; btn.disabled = true; }
+    setTimeout(() => {
+      exportAll().then(x => toast('📊 Đã xuất Excel: ' + x.file + (x.rt ? '' : ' (chưa có số Realtime — sheet Realtime để 0)')))
+        .catch(e => toast('❌ Xuất Excel lỗi: ' + (e && e.message)))
+        .finally(() => { if (btn) { btn.textContent = old; btn.disabled = false; } });
+    }, 30);
+  }
+  window.__AutoBIXlsx = { exportAll, run };
 })();
 
 /* ================================================================
@@ -13951,7 +14377,9 @@ window.__AutoBIRunPick = (() => {
   /* ---------- Mẫu 2: Realtime V1 (V18.15 theo phác thảo đã chốt) ----------
      Một bảng chung: nửa trái = số hôm nay + bảng Realtime, nửa phải = số tháng + bảng Lũy kế, giữa có khoảng trắng.
      Hai bên cùng thứ tự nhóm (xếp theo Dự kiến lũy kế) nên mỗi nhóm nằm ngang hàng. */
+  const last = {}; /* V18.43: bộ số gần nhất của từng mẫu (cho Xuất Excel) */
   function rt(D) {
+    last.rt = D;
     const id = uid(D.view);
     const now = new Date();
     const time = D.tc.isPastMonth ? 'Hết tháng ' + D.tc.month + '/' + D.tc.year : pad(now.getHours()) + ':' + pad(now.getMinutes()) + ' - ' + pad(now.getDate()) + '/' + pad(now.getMonth() + 1) + '/' + now.getFullYear();
@@ -13988,12 +14416,36 @@ window.__AutoBIRunPick = (() => {
       if (V.length) body += band(' v', 'NHÓM VƯỢT TRỘI', V) + V.map(row).join('');
     }
     const cols = '<colgroup><col style="width:140px"><col style="width:66px"><col style="width:74px"><col style="width:58px"><col style="width:18px"><col style="width:140px"><col style="width:72px"><col style="width:80px"><col style="width:78px"><col style="width:74px"></colgroup>';
-    return '<div class="abx-blk"><div class="abx-ttl">' + (D.view === 'total' ? esc(cumName(D.title)) : 'Shop: ' + esc(D.title)) + '</div>' +
+    return '<div class="abx-blk"' + '' + '><div class="abx-ttl">' + (D.view === 'total' ? esc(cumName(D.title)) : 'Shop: ' + esc(D.title)) + '</div>' +
       '<table class="abx-rt" data-capture-id="xlrt-' + id + '" data-table-name="Doanh thu siêu thị + nhóm hàng">' + cols + '<tbody>' + info +
       '<tr><td class="gap" colspan="10" style="height:10px"></td></tr>' +
       '<tr><th class="ye" colspan="2">Realtime: ' + rows.length + ' Nhóm</th><th class="ye">Đạt:</th><th class="ye">' + D.pass + '</th>' + '<th class="gap"></th>' + '<th class="bl" colspan="2">Lũy kế: ' + rows.length + ' Nhóm</th><th class="bl" colspan="2">Đạt</th><th class="bl">' + passLK + '</th></tr>' +
       '<tr><th class="or">Nhóm hàng</th><th class="or">Target</th><th class="or">Thực hiện</th><th class="or">Tỉ lệ</th><th class="gap"></th><th>Nhóm hàng</th><th>Target</th><th>Thực hiện</th><th>% Hiện tại</th><th>☀️ DK mai ▼</th></tr>' +
-      body + '</tbody></table><div class="abx-note">Tiền: triệu · Lũy kế đến hết ' + pad(D.dp) + '/' + pad(D.tc.month) + ' · ☀️ DK mai = lũy kế + realtime hôm nay · màu: ≥100% xanh · 80–99% vàng · &lt;80% đỏ</div></div>';
+      body + '</tbody></table>' + (D.view === 'total' ? rtStaff(D, id) : '') + '<div class="abx-note">Tiền: triệu · Lũy kế đến hết ' + pad(D.dp) + '/' + pad(D.tc.month) + ' · ☀️ DK mai = lũy kế + realtime hôm nay · màu: ≥100% xanh · 80–99% vàng · &lt;80% đỏ</div></div>';
+  }
+  /* V18.41: Realtime V1 — Tổng cụm thêm bảng Doanh thu nhân viên (hôm nay + lũy kế tháng); xem từng siêu thị thì không hiện */
+  function rtStaff(D, id) {
+    const sv = v => v == null ? -Infinity : v;
+    const sr = (D.srows || []).slice().sort((x, y) => sv(y.day) - sv(x.day) || sv(y.mon) - sv(x.mon));
+    if (!sr.length) return '';
+    setNames(sr.map(x => x.nm));
+    const hasDay = sr.some(x => x.day != null);
+    const sum = k => sr.reduce((a, x) => a + num(x[k]), 0);
+    const tMon = sum('mon'), tTgt = sum('tgt');
+    const htCls = p => p >= D.timeP ? 'g' : p >= D.timeP * 0.8 ? 'y' : 'r';
+    /* V18.42: cùng 10 cột với bảng trên (nửa trái hôm nay | khoảng trắng | nửa phải tháng) → thẳng cột trên màn hình và khi xuất Excel */
+    const cols = '<colgroup><col style="width:140px"><col style="width:66px"><col style="width:74px"><col style="width:58px"><col style="width:18px"><col style="width:140px"><col style="width:72px"><col style="width:80px"><col style="width:78px"><col style="width:74px"></colgroup>';
+    const G = '<td class="gap"></td>';
+    return '<div style="height:14px"></div><table class="abx-rt" style="width:0;min-width:100%" data-capture-id="xlrtnv-' + id + '" data-table-name="Doanh thu nhân viên">' + cols +
+      '<thead><tr><th class="gr" colspan="4">DOANH THU NV HÔM NAY' + (hasDay ? '' : ' <span style="font-weight:400">(chưa có số)</span>') + '</th><th class="gap"></th><th class="gr" colspan="5">LŨY KẾ THÁNG</th></tr>' +
+      '<tr><th colspan="2">Nhân viên</th><th class="or" colspan="2">Hôm nay ▼</th><th class="gap"></th><th>Lũy kế</th><th>Mục tiêu</th><th>% HT</th><th colspan="2">Dự kiến</th></tr></thead><tbody>' +
+      sr.map((x, k) => '<tr><td class="l" colspan="2">' + (k + 1) + '. ' + esc(shortNm(x.nm)) + (x.shop ? ' <span style="font-weight:400;color:#555">· ' + esc(x.shop) + '</span>' : '') + '</td>' +
+        '<td colspan="2"' + (num(x.day) < 0 ? ' class="ng"' : '') + ' style="font-weight:700">' + (x.day == null ? '—' : nf(x.day, 1)) + '</td>' + G +
+        '<td' + (num(x.mon) < 0 ? ' class="ng"' : '') + '>' + (x.mon == null ? '—' : nf(x.mon, 1)) + '</td><td>' + (x.tgt > 0 ? nf(x.tgt) : '—') + '</td>' +
+        '<td class="c ' + (x.ht == null ? '' : htCls(x.ht)) + '">' + (x.ht == null ? '—' : Math.round(x.ht) + '%') + '</td>' +
+        '<td colspan="2" class="c ' + (x.fc == null ? '' : lv(x.fc)) + '">' + (x.fc == null ? '—' : Math.round(x.fc) + '%') + '</td></tr>').join('') +
+      '<tr class="tot"><td class="l" colspan="2">Tổng</td><td colspan="2">' + (hasDay ? nf(sum('day'), 1) : '—') + '</td>' + G + '<td>' + nf(tMon, 1) + '</td><td>' + nf(tTgt) + '</td>' +
+        '<td class="c">' + (tTgt > 0 ? Math.round(tMon / tTgt * 100) + '%' : '—') + '</td><td colspan="2" class="c">' + (tTgt > 0 && D.dp > 0 ? Math.round(tMon / D.dp * D.dim / tTgt * 100) + '%' : '—') + '</td></tr></tbody></table>';
   }
 
   /* ---------- Tổng hợp NV + Mẫu 1: ma trận Nhóm hàng × NV ---------- */
@@ -14039,6 +14491,7 @@ window.__AutoBIRunPick = (() => {
   /* V18.31: bảng Tổng hợp NV và ma trận cùng bề ngang (trên dưới cân nhau), cột NV chia đều */
   const colW = (D, noShop) => Math.max(660, 150 + ((D.mrows || []).length + (noShop ? 0 : 1)) * 90);
   function lk(D) {
+    last.lk = D;
     const id = uid(D.view);
     setNames((D.srows || []).map(x => x.nm));
     return '<div class="abx-blk">' + head(D, 'BÁO CÁO LŨY KẾ') + '<div class="abx-two" style="flex-wrap:wrap">' + lkTbl(D, id) + '<div class="abx-col" style="width:' + colW(D, false) + 'px">' + staffTbl(D, id) + matrix(D, id) + '</div></div>' /* V18.34: LK NEW hiện lại cột Cả shop */ + '<div class="abx-note">Tiền: triệu · Dự kiến = lũy kế ÷ ngày đã qua × số ngày tháng ÷ target · màu: ≥100% xanh · 80–99% vàng · &lt;80% đỏ</div></div>';
@@ -14046,6 +14499,7 @@ window.__AutoBIRunPick = (() => {
   /* V18.35: Chi tiết NV (theme Excel) — mỗi NV 1 thẻ, xếp theo Hạng: đầu thẻ (hạng · tên · DT QĐ/mục tiêu), 4 ô (Dự kiến, Trả chậm, NH đạt, Thưởng),
      bảng nhóm hàng của NV (Thực hiện / Target · DK, chia Chính/Vượt trội, cao → thấp), dòng "Cần đẩy" (3 nhóm 50–99% gần đạt nhất) */
   function mx(D) {
+    last.lk = D;
     const id = uid(D.view);
     setNames((D.srows || []).map(x => x.nm));
     const sg = D.sg || [], n = sg.length;
@@ -14063,8 +14517,10 @@ window.__AutoBIRunPick = (() => {
       if (!hasTier) body = srt(rows).map(line).join('');
       else {
         const C = srt(rows.filter(r => r.tier === 'chinh')), V = srt(rows.filter(r => r.tier !== 'chinh'));
-        if (C.length) body += '<tr class="sec"><td colspan="3">NHÓM CHÍNH</td></tr>' + C.map(line).join('');
-        if (V.length) body += '<tr class="sec v"><td colspan="3">NHÓM VƯỢT TRỘI</td></tr>' + V.map(line).join('');
+        /* V18.41: dải Chính / Vượt trội ghi số nhóm đạt của NV (cùng cách đếm với ô NH ĐẠT) */
+        const okN = a => a.filter(r => Math.round(r.d) >= 100).length + '/' + a.length;
+        if (C.length) body += '<tr class="sec"><td colspan="2">NHÓM CHÍNH</td><td class="c cnt">' + okN(C) + '</td></tr>' + C.map(line).join('');
+        if (V.length) body += '<tr class="sec v"><td colspan="2">NHÓM VƯỢT TRỘI</td><td class="c cnt">' + okN(V) + '</td></tr>' + V.map(line).join('');
       }
       const push = rows.filter(r => r.d >= 50 && r.d < 100).sort((p, q) => q.d - p.d).slice(0, 3).map(r => esc(r.g) + ' ' + rp(r.d) + '%').join(' · ') || '—';
       const kp = (lab, val, cls, st) => '<div class="' + (cls || '') + '"><i>' + lab + '</i><b' + (st ? ' style="' + st + '"' : '') + '>' + val + '</b></div>';
@@ -14144,7 +14600,18 @@ window.__AutoBIRunPick = (() => {
   .employee{font-weight:700}
   .ratio b{font-size:12.5px!important}
   .foot{font-size:11px!important;margin:6px 0 0!important}`;
-  window.__AutoBIExcel = { on, set, apply, tab, rt, lk, mx, wrap, wtCss, get mode() { return mode; } };
+  /* V18.43: dựng lại bộ số Realtime + Lũy kế cùng view đang xem (không gọi BI, chỉ tính lại từ dữ liệu đã có) */
+  function collect() {
+    const E = window.__AutoBIExcel, x = E && E.ctx, R2 = window.__AutoBIRt2;
+    if (!x || !R2) return { rt: last.rt, lk: last.lk };
+    const out = {};
+    E.busy = true;
+    try { delete last.rt; R2.render(x.h, x.c, x.groups, x.cfg, x.view, x.useBi, x.timeArg); out.rt = last.rt; } catch (e) { try { console.warn('[AutoBI] Xuất Excel: dựng Realtime lỗi', e); } catch (_) { } }
+    try { delete last.lk; R2.renderLK(x.h, x.c, x.groups, x.cfg, x.view, x.useBi, x.timeArg); out.lk = last.lk; } catch (e) { try { console.warn('[AutoBI] Xuất Excel: dựng Lũy kế lỗi', e); } catch (_) { } }
+    E.busy = false;
+    return out;
+  }
+  window.__AutoBIExcel = { on, set, apply, tab, rt, lk, mx, wrap, wtCss, collect, ctx: null, busy: false, get mode() { return mode; } };
   try { if (typeof unsafeWindow !== 'undefined') unsafeWindow.__AutoBIExcel = window.__AutoBIExcel; } catch (_) { }
   if (document.body) apply(); else document.addEventListener('DOMContentLoaded', apply);
 })();
