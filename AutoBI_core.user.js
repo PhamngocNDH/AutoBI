@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.50
+// @name         AutoBI Core V18.53
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.50
+// @version      18.53
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -11618,21 +11618,20 @@ window.__AutoBIRunPick = (() => {
     ['Realtime', 'Lũy kế', 'Chi tiết NV'].forEach(n => { const w = wb.getWorksheet(n); if (w) w.getCell('B2').value = 'Tổng cụm'; });
     /* V18.50: ẩn dòng/cột chừa sẵn mà cụm không dùng (mẫu chừa 20 nhóm · 20 NV hiện trên bảng) → file gọn, không khoảng trống.
        Công thức vẫn còn: thêm nhóm/NV sau này thì bỏ ẩn dòng (chuột phải → Hiện) là số tự lên. Vị trí dòng theo mẫu AutoBI_mau_do_tay.xlsx */
-    const nG = Math.min(LIM.G, P.groups.length), nV = Math.min(20, P.staff.length), G0 = LIM.G, MX = 20;
+    const nG = Math.min(LIM.G, P.groups.length), nV = Math.min(20, P.staff.length), G0 = LIM.G + 2, MX = 20; /* V18.52: thân bảng nhóm có 2 dải Chính / Vượt trội → chừa G + 2 dòng */
+    const gs = P.groups.slice(0, LIM.G), nU = nG + (gs.some(g => g.tier !== 'Vượt trội') ? 1 : 0) + (gs.some(g => g.tier === 'Vượt trội') ? 1 : 0);
     const hideR = (ws, rows) => rows.forEach(r => { try { ws.getRow(r).hidden = true; } catch (_) { } });
     const range = (a, b) => { const o = []; for (let i = a; i <= b; i++) o.push(i); return o; };
     const RTs = wb.getWorksheet('Realtime'), LKs = wb.getWorksheet('Lũy kế'), CTs = wb.getWorksheet('Chi tiết NV');
     if (RTs) {
       const H0 = 10, S0 = H0 + 1 + G0 + 2;
-      hideR(RTs, range(H0 + 2 + nG, H0 + 1 + G0));                 /* nhóm thừa */
+      hideR(RTs, range(H0 + 2 + nU, H0 + 1 + G0));                 /* nhóm thừa */
       hideR(RTs, range(S0 + 2 + Math.min(LIM.N, P.staff.length), S0 + 1 + LIM.N)); /* NV thừa */
     }
     if (LKs) {
-      const M0 = 4 + MX + 2, used = new Set();
-      /* bảng nhóm (trái), Tổng hợp NV và ma trận (phải) dùng chung dòng → chỉ ẩn dòng không bảng nào dùng */
-      range(5, 9).forEach(r => used.add(r)); range(10, 9 + nG).forEach(r => used.add(r)); range(5, 4 + nV).forEach(r => used.add(r));
-      range(M0, M0 + nG).forEach(r => used.add(r)); used.add(M0 + G0 + 1);
-      hideR(LKs, range(5, M0 + G0).filter(r => !used.has(r)));
+      /* V18.51: bên phải là vùng tự dồn (bảng NV → ma trận ngay dưới) từ dòng 4 đến 4 + 20 + 20 + 3; bên trái bảng nhóm dòng 4 → 9 + số nhóm */
+      const RN = 4 + MX + G0 + 3, lastUsed = Math.max(9 + nU, 4 + nV + nU + 3);
+      hideR(LKs, range(lastUsed + 1, RN));
       for (let j = nV; j < MX; j++) { const c = 11 + j; if (c > 14) try { LKs.getColumn(c).hidden = true; } catch (_) { } } /* cột NV thừa (sau cột N) */
     }
     if (CTs) {
@@ -11640,7 +11639,7 @@ window.__AutoBIRunPick = (() => {
       for (let b = 0; b < Math.ceil(MX / PER); b++) {
         const r0 = 4 + b * (CH + 1);
         if (b >= rowsOfCards) hideR(CTs, range(r0, r0 + CH));        /* hàng thẻ thừa */
-        else hideR(CTs, range(r0 + 6 + nG, r0 + CH - 1));             /* dòng nhóm thừa trong thẻ */
+        else hideR(CTs, range(r0 + 6 + nU, r0 + CH - 1));             /* dòng nhóm thừa trong thẻ */
       }
     }
     wb.calcProperties = Object.assign({}, wb.calcProperties || {}, { fullCalcOnLoad: true });
