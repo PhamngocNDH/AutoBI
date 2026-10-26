@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.54
+// @name         AutoBI Core V18.56
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.54
+// @version      18.56
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -11513,7 +11513,7 @@ window.__AutoBIRunPick = (() => {
       const kv2 = r; r++;
       put(ws, kv2, c, '=' + D_(x.row, 6), { al: 'center', font: { bold: true } }, N1); put(ws, kv2, c + 1, '=' + D_(x.row, 5), { al: 'center', font: { bold: true } }, N0);
       put(ws, kv2, c + 2, '=' + pctF(cc(0) + kv2, cc(1) + kv2), { al: 'center', font: { bold: true } }, PCT); put(ws, kv2, c + 3, '', {});
-      ['Nhóm hàng', 'TH', 'Target', 'DK'].forEach((h, i) => put(ws, r, c + i, h, K.th)); r++;
+      ['Nhóm hàng', 'HT', 'Target', 'DK'].forEach((h, i) => put(ws, r, c + i, h, K.th)); r++;
       const s0 = r;
       const rows = sg.map(g => { const v = (x.cells && x.cells[g]) || { d: 0 }; return { name: g, tier: tierOf[g], d: num(v.d) }; });
       tiers(rows, 'd').forEach(([name, cls, a]) => {
@@ -11603,9 +11603,11 @@ window.__AutoBIRunPick = (() => {
       /* V18.54: bỏ dòng trống phân cách khối — như lkRows */
     });
     shopsOn.forEach(s => {
-      const mem = P.staff.filter(x => x.shop === P.shops.indexOf(s) + 1);
+      const si = P.shops.indexOf(s) + 1;
+      /* V18.55: NV làm chéo shop — lấy cells của shop này (cellsByShop), không chỉ NV của shop nhà */
+      const mem = P.staff.filter(x => x.shop === si || (x.cellsByShop && x.cellsByShop[si]));
       P.groups.forEach(g => {
-        const vals = mem.map(x => r2(x.cells && x.cells[g.name]));
+        const vals = mem.map(x => r2((x.cellsByShop && x.cellsByShop[si] && x.cellsByShop[si][g.name]) || (x.shop === si && x.cells && x.cells[g.name])));
         nvRows.push([g.key, g.money ? 'DOANH THU' : 'SỐ LƯỢNG', 'HẠNG TRONG ST', 'TOP/BOTTOM ST', 'BỘ PHẬN'], ['TỔNG', r2(vals.reduce((a, v) => a + v, 0))]);
         mem.forEach((x, i) => { if (vals[i]) nvRows.push([x.code + ' - ' + x.name, vals[i]]); });
         /* V18.54: bỏ dòng trống phân cách khối — như lkRows */
@@ -11679,7 +11681,18 @@ window.__AutoBIRunPick = (() => {
       const a = ((p.lk && p.lk.srows) || []).find(o => o.nm === nm && (!code || o.id === code)) || {};
       const b = ((p.rt && p.rt.srows) || []).find(o => o.nm === nm) || {};
       const cells = {}; Object.keys(a.cells || {}).forEach(g => { cells[g] = k1000(g, a.cells[g].a, isMoney(g)); });
-      staff.push({ code: code || nm, name: nm, shop: pi + 1, rate: parseFloat(s.rate) || 0, mon: a.mon, day: b.day, cells, shopShort });
+      /* V18.55: NV làm chéo shop — cells theo từng shop (bán ở shop nào thì có dòng ở shop đó).
+         cells giữ nguyên = shop nhà (tương thích code cũ); mon/day giữ nguyên (báo cáo đã gộp 2 shop). */
+      const cellsByShop = {};
+      per.forEach((pp, k) => {
+        const r = ((pp.lk && pp.lk.srows) || []).find(o => o.nm === nm && (!code || o.id === code));
+        if (!r || !r.cells) return;
+        const cs = {};
+        Object.keys(r.cells).forEach(g => { cs[g] = k1000(g, r.cells[g].a, isMoney(g)); });
+        if (Object.keys(cs).some(g => num(cs[g]))) cellsByShop[k + 1] = cs;
+      });
+      if (!cellsByShop[pi + 1]) cellsByShop[pi + 1] = cells;
+      staff.push({ code: code || nm, name: nm, shop: pi + 1, rate: parseFloat(s.rate) || 0, mon: a.mon, day: b.day, cells, cellsByShop, shopShort });
     });
     const d = new Date(), tc = L0.tc || {};
     const shops = idxs.map((i, k) => {
@@ -14721,7 +14734,7 @@ window.__AutoBIRunPick = (() => {
         '<div class="abx-ch"><b>' + (k + 1) + '. ' + esc(shortNm(x.nm)) + (D.view === 'total' && x.shop ? ' <small>· ' + esc(x.shop) + '</small>' : '') + '</b><span>' + (x.mon == null ? '—' : nf(x.mon, 1)) + ' / ' + (x.tgt > 0 ? nf(x.tgt) : '—') + ' tr</span></div>' +
         '<div class="abx-kp">' + kp('DỰ KIẾN', x.fc == null ? '—' : Math.round(x.fc) + '%', x.fc == null ? '' : lv(x.fc)) + kp('TRẢ CHẬM', x.tc == null ? '—' : Math.round(x.tc) + '%', x.tc == null ? '' : x.tc >= D.tgLim ? 'g' : 'r') + kp('NH ĐẠT', x.ok + '/' + n, n ? lv(x.ok / n * 100) : '') +
           (D.hasRw ? kp('THƯỞNG', trf(x.rw), '', 'color:#006100') : kp('% HT', x.ht == null ? '—' : Math.round(x.ht) + '%', '')) + '</div>' +
-        '<table class="abx-ct"><colgroup><col style="width:40%"><col style="width:42%"><col style="width:18%"></colgroup><thead><tr><th>Nhóm hàng</th><th>TH / Target</th><th>DK</th></tr></thead><tbody>' + body + '</tbody></table></div>'; /* V18.37: bỏ dòng Cần đẩy */
+        '<table class="abx-ct"><colgroup><col style="width:40%"><col style="width:42%"><col style="width:18%"></colgroup><thead><tr><th>Nhóm hàng</th><th>HT / Target</th><th>DK</th></tr></thead><tbody>' + body + '</tbody></table></div>'; /* V18.37: bỏ dòng Cần đẩy */
     };
     return '<div class="abx-blk" style="width:1210px">' + head(D, 'CHI TIẾT NHÂN VIÊN') + '<div class="abx-cards">' + sr.map(card).join('') + '</div>' +
       '<div class="abx-note">Mỗi NV 1 thẻ, xếp theo Hạng (Dự kiến DT) · nhóm trong thẻ xếp theo DK cao → thấp · tiền: triệu (dưới 1 tr ghi k), số lượng: cái</div></div>';
