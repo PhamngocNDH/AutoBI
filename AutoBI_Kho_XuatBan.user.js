@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AutoBI - Kho & Xuất Bán
 // @namespace    https://github.com/PhamngocNDH/AutoBI/kho-xuatban-test
-// @version      2.9.2
+// @version      2.9.3
 // @description  Đổ tồn kho (BI 4286) và xuất bán (BI 77) theo cụm siêu thị cho máy tính: lấy thẳng dữ liệu BI có điều tốc, sổ ngày, bộ chọn tồn kho, Excel.
 // @author       AutoBI / 38967 - Mr Phạm
 // @homepageURL  https://github.com/PhamngocNDH/AutoBI
@@ -45,7 +45,7 @@
  */
 (function () {
     'use strict';
-    const VERSION = '2.9.2';
+    const VERSION = '2.9.3';
     const UPDATE_URL = 'https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_Kho_XuatBan.user.js';
     const SALES_SCHEMA = 5;                             // 5 (V2.9) = mọi hình thức bán (gồm trả góp) + dòng dịch vụ bảo hiểm; 4 = tất cả ngành + Loại hàng + Kho xuất; ngày lưu bằng bản cũ sẽ được lấy lại
     const PREFIX = 'autobi_kxb_test_v1_';               // giữ khóa cũ để không mất khai báo shop
@@ -1673,10 +1673,10 @@ tr{break-inside:avoid;page-break-inside:avoid}
         const wrap = el('div', undefined, parent, 'kxb-twrap');
         const bar = el('div', undefined, wrap, 'kxb-tbar');
         const info = el('span', title, bar, 'kxb-muted');
-        const totalRow = total && rows.length ? rows[rows.length - 1] : null, base = totalRow ? rows.slice(0, -1) : rows;
+        const nTot = total === true ? 1 : Math.max(0, Number(total) || 0), totalRows = nTot && rows.length > nTot ? rows.slice(-nTot) : [], base = totalRows.length ? rows.slice(0, -totalRows.length) : rows;
         let order = base.map((_, i) => i), sortCol = -1, sortDir = 0, page = 0;
         const copyBtn = el('button', '📋 Chép bảng', bar, 'mini'); copyBtn.type = 'button'; copyBtn.title = 'Chép bảng (đúng thứ tự đang xem) để dán vào Excel / Zalo';
-        copyBtn.onclick = safely(() => copyText(toTsv(headers, [...order.map(i => base[i]), ...(totalRow ? [totalRow] : [])]), `Đã chép ${fmt(base.length)} dòng — dán vào Excel bằng Ctrl+V`));
+        copyBtn.onclick = safely(() => copyText(toTsv(headers, [...order.map(i => base[i]), ...totalRows]), `Đã chép ${fmt(base.length)} dòng — dán vào Excel bằng Ctrl+V`));
         const box = el('div', undefined, wrap, 'kxb-table');
         const t = el('table', undefined, box), tr = el('tr', undefined, el('thead', undefined, t));
         const ths = headers.map((h, i) => {
@@ -1708,7 +1708,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
                 const line = el('tr', undefined, body, rowClass ? rowClass(oi) || '' : ''); base[oi].forEach((c, i) => el('td', String(c ?? ''), line, num.includes(i) ? 'n' : ''));
                 if (onRow) { line.classList.add('click'); line.title = rowTitle || 'Bấm để mở thẻ nhân viên'; line.onclick = () => onRow(oi); }
             });
-            if (totalRow && (page + 1) * pageSize >= base.length) { const line = el('tr', undefined, body, 'tot'); totalRow.forEach((c, i) => el('td', String(c ?? ''), line, num.includes(i) ? 'n' : '')); }
+            if (totalRows.length && (page + 1) * pageSize >= base.length) totalRows.forEach(tRow => { const line = el('tr', undefined, body, 'tot'); tRow.forEach((c, i) => el('td', String(c ?? ''), line, num.includes(i) ? 'n' : '')); });
             if (pager) {
                 pager.replaceChildren();
                 const prev = el('button', '← Trước', pager); prev.disabled = page === 0; prev.onclick = () => { page--; draw(); };
@@ -2155,7 +2155,8 @@ tr{break-inside:avoid;page-break-inside:avoid}
             const m = staffMatrix(s);
             table(pane, ['Siêu thị', 'Nhân viên (người tạo)', ...m.brands, 'Tổng SL', '% shop', 'Doanh thu'],
                 [...m.rows.map(x => [shopName(x.staff.shop), x.staff.label, ...x.cells.map(v => v ? fmt(v) : ''), fmt(x.staff.quantity), pct(x.staff.pctShop), mil(x.staff.revenue)]),
-                 ['Tổng', '', ...s.brands.map(b => fmt(b.quantity)), fmt(s.quantity), '', mil(s.revenue)]], { num: n(2, m.brands.length + 3), total: true, title: '👤 Bấm vào một nhân viên để mở thẻ nhân viên', onRow: i => openStaffCard(m.rows[i].staff.shop, m.rows[i].staff.label) });
+                 ['Tổng', '', ...s.brands.map(b => fmt(b.quantity)), fmt(s.quantity), '', mil(s.revenue)],
+                 ['Tổng doanh thu', '', ...s.brands.map(b => mil(b.revenue)), '', '', mil(s.revenue)]], { num: n(2, m.brands.length + 3), total: 2, title: '👤 Bấm vào một nhân viên để mở thẻ nhân viên', onRow: i => openStaffCard(m.rows[i].staff.shop, m.rows[i].staff.label) });
         }
         if (view.salesTab === 'attach') {
             // Chọn nhóm hàng tính là "kèm" (để trống = mọi dòng không phải điện thoại trong cùng đơn)
@@ -3020,7 +3021,8 @@ tr{break-inside:avoid;page-break-inside:avoid}
             const m = staffMatrix(s);
             sheet('NhanVien_x_Hang', [['Nhân viên × hãng (SL) · ' + title], [], ['Siêu thị', 'Nhân viên (người tạo)', ...m.brands, 'Tổng SL', '% shop', 'Doanh thu (đ)'],
                 ...m.rows.map(x => [shopName(x.staff.shop), x.staff.label, ...x.cells, x.staff.quantity, x.staff.pctShop / 100, x.staff.revenue]),
-                ['Tổng', '', ...s.brands.map(b => b.quantity), s.quantity, '', s.revenue]], [14, 28, ...m.brands.map(() => 9), 8, 8, 15]);
+                ['Tổng', '', ...s.brands.map(b => b.quantity), s.quantity, '', s.revenue],
+                ['Tổng doanh thu (đ)', '', ...s.brands.map(b => b.revenue), '', '', s.revenue]], [14, 28, ...m.brands.map(() => 9), 8, 8, 15]);
             const att = attachData(r.allLines.filter(l => view.salesShops.has(l.shop)));
             sheet('BanKem', [['Bán kèm theo nhân viên (đơn có điện thoại; kèm = ' + ((config.attachGroups || []).length ? config.attachGroups.join(', ') : 'mọi nhóm không phải điện thoại') + ') · ' + title], [], ['Siêu thị', 'Nhân viên', 'Đơn ĐT', 'SL ĐT', 'Có kèm', 'Tỷ lệ kèm', 'SL kèm', 'DT kèm (đ)'],
                 ...att.staff.map(x => [shopName(x.shop), x.label, x.phoneOrders, x.phoneQty, x.attached, x.rate / 100, x.attachQty, x.attachRev]),
