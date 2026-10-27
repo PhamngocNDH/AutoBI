@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.56
+// @name         AutoBI Core V18.64
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.56
+// @version      18.64
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -11058,21 +11058,41 @@ window.__AutoBIRunPick = (() => {
     ca.style.setProperty('--ph-z', '1'); ca.dataset.noz = '1';
     return () => { try { delete ca.dataset.noz; ca.style.setProperty('--ph-z', oz); } catch (_) { } };
   }
+  /* V18.57: bề ngang gốc — khung báo cáo bị thu nhỏ (transform: scale) cho vừa màn hình nên getBoundingClientRect ra số nhỏ hơn → ảnh bị cắt mất bên phải */
+  const natW = e => { try { return Math.max(e.offsetWidth || 0, e.scrollWidth || 0) || e.getBoundingClientRect().width; } catch (_) { return 0; } };
   function merge(list, name) {
     const root = (list.find(b => b.root) || {}).root || null;
     const rz = noZoom();
-    const narrow = list.filter(b => !b.wide).map(b => Math.max(...b.els.map(e => e.getBoundingClientRect().width)));
+    const narrow = list.filter(b => !b.wide).map(b => Math.max(...b.els.map(natW)));
     rz();
     const w = narrow.length ? Math.max(560, ...narrow) : 620;
     return { name: name || list.map(b => b.name.split(' (')[0]).join(' + '), els: [].concat(...list.map(b => b.els)), root, head: list.some(b => b.head), w, stack: true };
   }
+  /* V18.60: "Cả trang" ở theme Bảng Excel — chụp tại chỗ bị lệch/cụt ~25px bên phải (khung báo cáo đang thu nhỏ + căn giữa, trang BI ép box-sizing).
+     Dựng bản sao riêng ở góc trang: rộng đúng theo nội dung (max-content, lề nằm ngoài). Màu/khung theme Excel nằm dưới lớp .abx (không cần id) → màn hình không nháy. */
+  function wholeStage(src) {
+    try {
+      if (!src || !src.querySelector('.abx')) return null; /* tab khác (có biểu đồ canvas…) giữ cách chụp cũ */
+      const box = document.createElement('div');
+      box.className = String(src.className || '').replace(/\breport-[\w-]+/g, ''); /* V18.64: bỏ lớp hiệu ứng trượt/hiện dần (report-slide…) — từng làm ảnh nhạt màu, lệch */
+      box.style.cssText = 'position:fixed;left:0;top:0;z-index:-1;pointer-events:none;margin:0;transform:none;background:#fff;color:#1b1b1b;padding:48px;';
+      [['box-sizing', 'content-box'], ['width', 'max-content'], ['min-width', '0'], ['max-width', 'none'], ['margin', '0'], ['transform', 'none']].forEach(([k, v]) => box.style.setProperty(k, v, 'important'));
+      [...src.childNodes].forEach(n => box.appendChild(n.cloneNode(true)));
+      box.dataset.abshot = '1';
+      document.body.appendChild(box);
+      return { el: box, trim: true, done: () => { try { box.remove(); } catch (_) { } } };
+    } catch (_) { return null; }
+  }
   function stage(b) {
-    if (b.whole) return { el: b.els[0], done: () => { } }; /* V18.07: cả trang → bỏ phóng trong bản sao của html2canvas (onclone), màn hình không co */
+    if (b.whole) { const ws = wholeStage(b.els[0]); if (ws) return ws; return { el: b.els[0], done: () => { } }; } /* V18.07: cả trang → bỏ phóng trong bản sao của html2canvas (onclone), màn hình không co */
     const rz = noZoom();
-    let w = b.w || Math.max(...b.els.map(e => e.getBoundingClientRect().width));
+    let w = b.w || Math.max(...b.els.map(natW));
     rz();
     const box = document.createElement('div');
-    box.style.cssText = 'position:fixed;left:0;top:0;z-index:-1;pointer-events:none;background:#f4f6f8;padding:14px;box-sizing:content-box;width:' + Math.ceil(w) + 'px;';
+    box.id = 'ab-shot-box'; /* V18.58: để bản sao (onclone) đo lại bề ngang */
+    box.dataset.abshot = '1';
+    box.style.cssText = 'position:fixed;left:0;top:0;z-index:-1;pointer-events:none;background:#f4f6f8;padding:48px;box-sizing:content-box;width:' + Math.ceil(w) + 'px;';
+    box.style.setProperty('box-sizing', 'content-box', 'important'); /* V18.59: trang BI ép mọi div 'box-sizing:border-box !important' → lề 14px ăn vào bề ngang bảng → cụt ~28px bên phải */
     const wrap = document.createElement('div');
     if (b.root) wrap.className = b.root.className + (b.stack ? ' rt2-m' : ''); else { const nv = b.els[0] && b.els[0].closest && b.els[0].closest('.nv2'); if (nv) { wrap.className = nv.className; const hd = nv.querySelector('.nv2-hd'); if (hd && !b.els.some(e => e.querySelector && e.querySelector('.nv2-hd'))) wrap.appendChild(hd.cloneNode(true)); } } /* V17.77: khối của giao diện mới (.nv2) giữ màu khi chụp từng mục */
     wrap.style.cssText = 'margin:0;padding:0;max-width:none;width:100%;';
@@ -11083,17 +11103,46 @@ window.__AutoBIRunPick = (() => {
     b.els.forEach(e => { const c = e.cloneNode(true); c.style.width = '100%'; c.style.boxSizing = 'border-box'; c.style.margin = '0 0 10px 0'; wrap.appendChild(c); });
     box.appendChild(wrap);
     document.body.appendChild(box);
-    return { el: box, done: () => box.remove() };
+    /* V18.57: bảng rộng hơn khung (chữ/số không co được) → nới khung cho đủ, không cắt 2 bên */
+    try { const need = Math.max(wrap.scrollWidth || 0, ...[...wrap.children].map(c => Math.max(c.scrollWidth || 0, c.offsetWidth || 0))); if (need > wrap.clientWidth + 1) box.style.setProperty('width', Math.ceil(need) + 'px', 'important'); } catch (_) { }
+    return { el: box, trim: true, done: () => box.remove() };
   }
+  /* V18.61: trên máy thật html2canvas có lúc vẽ lệch nội dung ~25px (cụt 1 bên, dư 1 bên) — không tái hiện được ở máy thử.
+     Cách chắc ăn: chụp với lề rộng 48px quanh bảng rồi tự cắt khoảng trống thừa, chừa lề đều 4 phía → lệch bao nhiêu cũng không mất chữ. */
+  function trimCanvas(cv, pad) {
+    /* V18.62: chỉ đọc 4 dải mép (không đọc cả ảnh) → nhanh, không làm đứng máy */
+    try {
+      const W = cv.width, H = cv.height, x = cv.getContext('2d'), S = Math.min(240, Math.floor(W / 2), Math.floor(H / 2));
+      const c0 = x.getImageData(0, 0, 1, 1).data, br = c0[0], bg = c0[1], bb = c0[2];
+      const hit = (d, k) => Math.abs(d[k] - br) + Math.abs(d[k + 1] - bg) + Math.abs(d[k + 2] - bb) > 24;
+      const colScan = (x0, fromLeft) => { const d = x.getImageData(x0, 0, S, H).data; for (let n = 0; n < S; n++) { const c = fromLeft ? n : S - 1 - n; for (let y = 0; y < H; y += 2) if (hit(d, (y * S + c) * 4)) return n; } return -1; };
+      const rowScan = (y0, fromTop) => { const d = x.getImageData(0, y0, W, S).data; for (let n = 0; n < S; n++) { const r = fromTop ? n : S - 1 - n; for (let i = 0; i < W; i += 2) if (hit(d, (r * W + i) * 4)) return n; } return -1; };
+      const l0 = colScan(0, true), r0 = colScan(W - S, false), t0 = rowScan(0, true), b0 = rowScan(H - S, false);
+      const l = l0 < 0 ? 0 : Math.max(0, l0 - pad), r = r0 < 0 ? W : Math.min(W, W - r0 + pad), t = t0 < 0 ? 0 : Math.max(0, t0 - pad), b = b0 < 0 ? H : Math.min(H, H - b0 + pad);
+      if (r - l < 10 || b - t < 10) return cv;
+      const o = document.createElement('canvas'); o.width = r - l; o.height = b - t;
+      const ox = o.getContext('2d'); ox.fillStyle = 'rgb(' + br + ',' + bg + ',' + bb + ')'; ox.fillRect(0, 0, o.width, o.height);
+      ox.drawImage(cv, l, t, r - l, b - t, 0, 0, r - l, b - t);
+      return o;
+    } catch (_) { return cv; }
+  }
+  /* V18.62: html2canvas sao chép CẢ trang BI + báo cáo trước khi chụp → nặng, máy đứng vài giây. Khung chụp riêng (st.trim) chỉ cần chính nó + CSS → bỏ qua phần còn lại */
+  const KEEP = { HEAD: 1, STYLE: 1, LINK: 1, META: 1, TITLE: 1, HTML: 1, BODY: 1 };
+  /* V18.64: trả tỉ lệ 2 cho mọi ảnh (1.5 ở bản 18.63 bị mờ) */
+  const onlyBox = box => el => { try { if (KEEP[el.tagName] || el === box || box.contains(el) || el.contains(box)) return false; if (el.closest && el.closest('head')) return false; return true; } catch (_) { return false; } };
   function shoot(b) {
     return new Promise((resolve, reject) => {
       if (typeof html2canvas !== 'function') return reject(new Error('Chưa tải được thư viện chụp ảnh'));
       const st = stage(b);
       setTimeout(() => {
-        html2canvas(st.el, { scale: 2, useCORS: true, backgroundColor: st.el.style.background === 'rgb(255, 255, 255)' || st.el.style.background === '#fff' ? '#fff' : '#f4f6f8', logging: false, onclone: d => { try { const c = d.getElementById('capture-area'); if (c) c.style.setProperty('--ph-z', '1'); } catch (_) { } } })
-          .then(cv => { st.done(); cv.toBlob(bl => bl ? resolve(bl) : reject(new Error('Không tạo được ảnh')), 'image/png'); })
+        html2canvas(st.el, { scale: 2, useCORS: true, ignoreElements: st.trim ? onlyBox(st.el) : undefined, backgroundColor: st.el.style.background === 'rgb(255, 255, 255)' || st.el.style.background === '#fff' ? '#fff' : '#f4f6f8', logging: false, onclone: d => { try { const c = d.getElementById('capture-area'); if (c) { c.style.setProperty('--ph-z', '1'); if (b.whole) { c.style.transform = 'none'; c.style.margin = '0'; } } } catch (_) { }
+          /* V18.58: iPhone (Safari) tự phóng chữ trong bản sao → bảng rộng hơn lúc đo → ảnh cụt bên phải. Khóa cỡ chữ + đo lại ngay trong bản sao, nới khung cho đủ */
+          /* V18.64: bản sao khởi động lại hiệu ứng hiện dần (fade) của báo cáo → chụp ngay thì ảnh bị nhạt màu. Tắt hiệu ứng trong khung chụp */
+          try { const sx = d.createElement('style'); sx.textContent = '[data-abshot],[data-abshot] *{animation:none!important;transition:none!important}[data-abshot]{opacity:1!important}'; (d.head || d.documentElement).appendChild(sx); } catch (_) { }
+          try { const bx = d.getElementById('ab-shot-box'); const wr = bx && bx.firstElementChild; if (wr) { const need = Math.max(wr.scrollWidth || 0, ...[...wr.children].map(x => Math.max(x.scrollWidth || 0, x.offsetWidth || 0, Math.ceil(x.getBoundingClientRect().width)))); bx.style.setProperty('box-sizing', 'content-box', 'important'); if (need > wr.clientWidth + 1) bx.style.setProperty('width', Math.ceil(need) + 'px', 'important'); } } catch (_) { } } }) /* V18.57: cả trang → bỏ thu nhỏ trong bản sao, không cắt mép */
+          .then(cv => { st.done(); if (st.trim) cv = trimCanvas(cv, 28); cv.toBlob(bl => bl ? resolve(bl) : reject(new Error('Không tạo được ảnh')), 'image/png'); })
           .catch(e => { st.done(); reject(e); });
-      }, b.whole ? 450 : 60);
+      }, b.whole && !st.trim ? 450 : 30); /* V18.63: khung chụp riêng không cần chờ hộp Tùy chọn đóng → bắt đầu ngay */
     });
   }
   const fileName = b => ('AutoBI_' + (shopTitle() || 'bao-cao') + '_' + b.name).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').replace(/[^a-z0-9]+/gi, '_').replace(/^_|_$/g, '').slice(0, 80) + '.png';
@@ -11151,7 +11200,7 @@ window.__AutoBIRunPick = (() => {
   const mo = new MutationObserver(() => { try { inject(); } catch (_) { } });
   const start = () => { try { mo.observe(document.body, { childList: true, subtree: true, characterData: true }); } catch (_) { } };
   if (document.body) start(); else document.addEventListener('DOMContentLoaded', start, { once: true });
-  window.__AutoBIShot = { blocks, inject };
+  window.__AutoBIShot = { blocks, inject, shoot };
 })();
 
 /* ==== V18.43: Xuất Excel đầy đủ (__AutoBIXlsx) — chỉ ở tab LK NEW + theme Excel, nút "📊 Xuất Excel" trong hộp Tùy chọn.
@@ -11376,17 +11425,23 @@ window.__AutoBIRunPick = (() => {
     /* doanh thu nhân viên */
     if (S.length) {
       box(ws, r, 1, r, 4, 'DOANH THU NV HÔM NAY', K.gr); box(ws, r, 6, r, 11, 'LŨY KẾ THÁNG', K.gr); r++;
-      box(ws, r, 1, r, 2, 'Nhân viên', K.th); box(ws, r, 3, r, 4, 'Hôm nay', K.or); put(ws, r, 6, 'Lũy kế', K.th); box(ws, r, 7, r, 8, 'Mục tiêu', K.th); box(ws, r, 9, r, 10, '% HT', K.th); put(ws, r, 11, 'Dự kiến', K.th); r++;
+      box(ws, r, 1, r, 2, 'Nhân viên', K.th); box(ws, r, 3, r, 4, 'Hôm nay', K.or); box(ws, r, 6, r, 7, 'Nhân viên', K.th); put(ws, r, 8, 'Lũy kế', K.th); put(ws, r, 9, 'Mục tiêu', K.th); put(ws, r, 10, '% HT', K.th); put(ws, r, 11, 'Dự kiến ▼', K.th); r++;
+      /* V18.57: 2 nửa xếp riêng như màn hình — trái theo Hôm nay, phải theo Dự kiến */
       const s0 = r;
-      S.slice().sort((x, y) => num(y.day) - num(x.day) || num(y.mon) - num(x.mon)).forEach(x => {
+      const sv_ = v => v == null ? -Infinity : num(v), cmp_ = (a, b) => (a === b ? 0 : a > b ? -1 : 1);
+      const SM = S.slice().sort((x, y) => cmp_(sv_(x.fc), sv_(y.fc)) || cmp_(sv_(x.mon), sv_(y.mon)));
+      const SD = SM; /* V18.60: 2 nửa cùng thứ tự Lũy kế */
+      SD.forEach((x, k) => {
+        const y = SM[k];
         box(ws, r, 1, r, 2, '=' + D_(x.row, 3) + '&" · "&' + D_(x.row, 4), K.l); box(ws, r, 3, r, 4, '=' + D_(x.row, 7), { al: 'right', font: { bold: true } }, N1);
-        put(ws, r, 6, '=' + D_(x.row, 6), {}, N1); box(ws, r, 7, r, 8, '=' + D_(x.row, 5), {}, N0); box(ws, r, 9, r, 10, '=' + pctF('F' + r, 'G' + r), K.c, PCT); put(ws, r, 11, '=' + fcF('F' + r, 'G' + r), K.c, PCT);
+        box(ws, r, 6, r, 7, '=' + D_(y.row, 3) + '&" · "&' + D_(y.row, 4), K.l);
+        put(ws, r, 8, '=' + D_(y.row, 6), {}, N1); put(ws, r, 9, '=' + D_(y.row, 5), {}, N0); put(ws, r, 10, '=' + pctF('H' + r, 'I' + r), K.c, PCT); put(ws, r, 11, '=' + fcF('H' + r, 'I' + r), K.c, PCT);
         r++;
       });
       const e0 = r - 1;
       box(ws, r, 1, r, 2, 'Tổng', Object.assign({}, K.tot, { al: 'left' })); box(ws, r, 3, r, 4, '=SUM(C' + s0 + ':C' + e0 + ')', K.tot, N1);
-      put(ws, r, 6, '=SUM(F' + s0 + ':F' + e0 + ')', K.tot, N1); box(ws, r, 7, r, 8, '=SUM(G' + s0 + ':G' + e0 + ')', K.tot, N0); box(ws, r, 9, r, 10, '=' + pctF('F' + r, 'G' + r), Object.assign({}, K.tot, { al: 'center' }), PCT); put(ws, r, 11, '=' + fcF('F' + r, 'G' + r), Object.assign({}, K.tot, { al: 'center' }), PCT);
-      heat(ws, 'I' + s0 + ':I' + e0, 'I' + s0, null, 'NgayQua/SoNgay'); heat(ws, 'K' + s0 + ':K' + e0, 'K' + s0);
+      box(ws, r, 6, r, 7, 'Tổng', Object.assign({}, K.tot, { al: 'left' })); put(ws, r, 8, '=SUM(H' + s0 + ':H' + e0 + ')', K.tot, N1); put(ws, r, 9, '=SUM(I' + s0 + ':I' + e0 + ')', K.tot, N0); put(ws, r, 10, '=' + pctF('H' + r, 'I' + r), Object.assign({}, K.tot, { al: 'center' }), PCT); put(ws, r, 11, '=' + fcF('H' + r, 'I' + r), Object.assign({}, K.tot, { al: 'center' }), PCT);
+      heat(ws, 'J' + s0 + ':J' + e0, 'J' + s0, null, 'NgayQua/SoNgay'); heat(ws, 'K' + s0 + ':K' + e0, 'K' + s0);
       r += 2;
     }
     put(ws, r, 1, 'Tiền: triệu · Lũy kế đến hết ngày ở ô Data "Ngày đã qua" · DK = lũy kế ÷ ngày đã qua × số ngày ÷ target · ☀️ DK mai = (lũy kế + realtime hôm nay) ÷ (ngày đã qua + 1) × số ngày ÷ target · % HT NV so với tiến độ thời gian', { border: false, al: 'left', font: { size: 9, color: '555555' } });
@@ -14436,8 +14491,8 @@ window.__AutoBIRunPick = (() => {
   /* ---- V18.15: Realtime V1 / LK NEW kiểu bảng chung ---- */
   .abx table.abx-rt{border-collapse:collapse}
   .abx td.gap,.abx th.gap{border:none!important;padding:0!important;background:#fff!important}
-  .abx td.i{font-size:15px;font-weight:700;text-align:center;padding:7px 8px}
-  .abx td.i b{font-size:20px;font-weight:900}
+  .abx td.i{font-size:13px;font-weight:700;text-align:center;padding:5px 6px}
+  .abx td.i b{font-size:16px;font-weight:900} /* V18.57: số Doanh thu nhỏ lại (cũ 15/20px) — ô Thực hiện QĐ không bị cắt */
   .abx td.il{text-align:left}
   .abx td.cnt{font-size:14px;font-weight:900}
   .abx td.rw{text-align:center;font-size:14px;font-weight:700;color:#006100} /* V18.28: Tổng thưởng ra giữa, chữ to hơn */
@@ -14628,29 +14683,35 @@ window.__AutoBIRunPick = (() => {
       '<tr><th class="or">Nhóm hàng</th><th class="or">Target</th><th class="or">Thực hiện</th><th class="or">Tỉ lệ</th><th class="gap"></th><th>Nhóm hàng</th><th>Target</th><th>Thực hiện</th><th>% Hiện tại</th><th>DK</th><th style="padding-left:2px;padding-right:2px">☀️ DK mai ▼</th></tr>' +
       body + '</tbody></table>' + (D.view === 'total' ? rtStaff(D, id) : '') + '<div class="abx-note">Tiền: triệu · Lũy kế đến hết ' + pad(D.dp) + '/' + pad(D.tc.month) + ' · ☀️ DK mai = lũy kế + realtime hôm nay · màu: ≥100% xanh · 80–99% vàng · &lt;80% đỏ</div></div>';
   }
-  /* V18.41: Realtime V1 — Tổng cụm thêm bảng Doanh thu nhân viên (hôm nay + lũy kế tháng); xem từng siêu thị thì không hiện */
+  /* V18.41: Realtime V1 — Tổng cụm thêm bảng Doanh thu nhân viên (hôm nay + lũy kế tháng); xem từng siêu thị thì không hiện
+     V18.57: 2 nửa sắp xếp RIÊNG — trái: Hôm nay cao → thấp; phải (Lũy kế tháng): có cột tên NV, xếp theo Dự kiến cao → thấp */
   function rtStaff(D, id) {
-    const sv = v => v == null ? -Infinity : v;
-    const sr = (D.srows || []).slice().sort((x, y) => sv(y.day) - sv(x.day) || sv(y.mon) - sv(x.mon));
-    if (!sr.length) return '';
-    setNames(sr.map(x => x.nm));
-    const hasDay = sr.some(x => x.day != null);
-    const sum = k => sr.reduce((a, x) => a + num(x[k]), 0);
+    const sv = v => v == null ? -Infinity : num(v);
+    const cmp = (a, b) => (a === b ? 0 : a > b ? -1 : 1);
+    const all = D.srows || [];
+    if (!all.length) return '';
+    const sm = all.slice().sort((x, y) => cmp(sv(x.fc), sv(y.fc)) || cmp(sv(x.mon), sv(y.mon)));
+    const sd = sm; /* V18.60: nửa trái (Hôm nay) theo cùng thứ tự Lũy kế → mỗi NV nằm cùng 1 hàng 2 bên */
+    setNames(all.map(x => x.nm));
+    const hasDay = all.some(x => x.day != null);
+    const sum = k => all.reduce((a, x) => a + num(x[k]), 0);
     const tMon = sum('mon'), tTgt = sum('tgt');
     const htCls = p => p >= D.timeP ? 'g' : p >= D.timeP * 0.8 ? 'y' : 'r';
-    /* V18.42: cùng 10 cột với bảng trên (nửa trái hôm nay | khoảng trắng | nửa phải tháng) → thẳng cột trên màn hình và khi xuất Excel */
-    /* V18.46: cả 2 bảng cố định 920px (table-layout:fixed) → khoảng trắng giữa thẳng hàng; nửa trái thẳng cột với bảng nhóm hàng, nửa phải 4 cột chia đều */
-    const cols = '<colgroup><col style="width:140px"><col style="width:66px"><col style="width:76px"><col style="width:70px"><col style="width:18px"><col style="width:137px"><col style="width:138px"><col style="width:137px"><col style="width:138px"></colgroup>';
+    /* nửa trái thẳng cột với bảng nhóm hàng; nửa phải 5 cột (tên + 4 số) */
+    const cols = '<colgroup><col style="width:140px"><col style="width:66px"><col style="width:76px"><col style="width:70px"><col style="width:18px"><col style="width:202px"><col style="width:87px"><col style="width:87px"><col style="width:87px"><col style="width:87px"></colgroup>';
     const G = '<td class="gap"></td>';
+    const nm = (x, k) => (k + 1) + '. ' + esc(shortNm(x.nm)) + (x.shop ? ' <span style="font-weight:400;color:#555">· ' + esc(x.shop) + '</span>' : '');
     return '<div style="height:14px"></div><table class="abx-rt" style="table-layout:fixed;width:920px" data-capture-id="xlrtnv-' + id + '" data-table-name="Doanh thu nhân viên">' + cols +
-      '<thead><tr><th class="gr" colspan="4">DOANH THU NV HÔM NAY' + (hasDay ? '' : ' <span style="font-weight:400">(chưa có số)</span>') + '</th><th class="gap"></th><th class="gr" colspan="4">LŨY KẾ THÁNG</th></tr>' +
-      '<tr><th colspan="2">Nhân viên</th><th class="or" colspan="2">Hôm nay ▼</th><th class="gap"></th><th>Lũy kế</th><th>Mục tiêu</th><th>% HT</th><th>Dự kiến</th></tr></thead><tbody>' +
-      sr.map((x, k) => '<tr><td class="l" colspan="2">' + (k + 1) + '. ' + esc(shortNm(x.nm)) + (x.shop ? ' <span style="font-weight:400;color:#555">· ' + esc(x.shop) + '</span>' : '') + '</td>' +
+      '<thead><tr><th class="gr" colspan="4">DOANH THU NV HÔM NAY' + (hasDay ? '' : ' <span style="font-weight:400">(chưa có số)</span>') + '</th><th class="gap"></th><th class="gr" colspan="5">LŨY KẾ THÁNG</th></tr>' +
+      '<tr><th colspan="2">Nhân viên</th><th class="or" colspan="2">Hôm nay</th><th class="gap"></th><th>Nhân viên</th><th>Lũy kế</th><th>Mục tiêu</th><th>% HT</th><th>Dự kiến ▼</th></tr></thead><tbody>' +
+      sd.map((x, k) => { const y = sm[k];
+        return '<tr><td class="l" colspan="2" style="overflow:hidden;text-overflow:ellipsis">' + nm(x, k) + '</td>' +
         '<td colspan="2"' + (num(x.day) < 0 ? ' class="ng"' : '') + ' style="font-weight:700">' + (x.day == null ? '—' : nf(x.day, 1)) + '</td>' + G +
-        '<td' + (num(x.mon) < 0 ? ' class="ng"' : '') + '>' + (x.mon == null ? '—' : nf(x.mon, 1)) + '</td><td>' + (x.tgt > 0 ? nf(x.tgt) : '—') + '</td>' +
-        '<td class="c ' + (x.ht == null ? '' : htCls(x.ht)) + '">' + (x.ht == null ? '—' : Math.round(x.ht) + '%') + '</td>' +
-        '<td class="c ' + (x.fc == null ? '' : lv(x.fc)) + '">' + (x.fc == null ? '—' : Math.round(x.fc) + '%') + '</td></tr>').join('') +
-      '<tr class="tot"><td class="l" colspan="2">Tổng</td><td colspan="2">' + (hasDay ? nf(sum('day'), 1) : '—') + '</td>' + G + '<td>' + nf(tMon, 1) + '</td><td>' + nf(tTgt) + '</td>' +
+        '<td class="l" style="overflow:hidden;text-overflow:ellipsis">' + nm(y, k) + '</td>' +
+        '<td' + (num(y.mon) < 0 ? ' class="ng"' : '') + '>' + (y.mon == null ? '—' : nf(y.mon, 1)) + '</td><td>' + (y.tgt > 0 ? nf(y.tgt) : '—') + '</td>' +
+        '<td class="c ' + (y.ht == null ? '' : htCls(y.ht)) + '">' + (y.ht == null ? '—' : Math.round(y.ht) + '%') + '</td>' +
+        '<td class="c ' + (y.fc == null ? '' : lv(y.fc)) + '">' + (y.fc == null ? '—' : Math.round(y.fc) + '%') + '</td></tr>'; }).join('') +
+      '<tr class="tot"><td class="l" colspan="2">Tổng</td><td colspan="2">' + (hasDay ? nf(sum('day'), 1) : '—') + '</td>' + G + '<td class="l">Tổng</td><td>' + nf(tMon, 1) + '</td><td>' + nf(tTgt) + '</td>' +
         '<td class="c">' + (tTgt > 0 ? Math.round(tMon / tTgt * 100) + '%' : '—') + '</td><td class="c">' + (tTgt > 0 && D.dp > 0 ? Math.round(tMon / D.dp * D.dim / tTgt * 100) + '%' : '—') + '</td></tr></tbody></table>';
   }
 
