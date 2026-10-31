@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.78
+// @name         AutoBI Core V18.79
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.78
+// @version      18.79
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -10967,8 +10967,9 @@ window.__AutoBIRunPick = (() => {
       });
       if (mode === 'lk' || mode === 'rt') chips.innerHTML = '<button type="button" class="arp-c' + (crm ? ' on' : '') + '" data-c="crm">' + (crm ? ico.ok : '+') + ' Phục vụ CRM</button>';
       else if (mode === 'all') chips.innerHTML = '<span class="arp-note">Gồm lũy kế, giờ công và lưu Sheet lịch sử; CRM khi chạy trước 8h hoặc sau 18h</span>';
-      else if (mode === 'anh') chips.innerHTML = '<button type="button" class="arp-c" data-c="anhcfg">⚙ Link / mã nhận</button><span class="arp-note">Lũy kế: DT, thi đua, NV (gửi từ trang Đọc ảnh BI)</span>'; /* V18.65 */
+      else if (mode === 'anh') chips.innerHTML = ''; /* V18.79: link + mã tự lấy theo portal nên bỏ "⚙ Link / mã nhận" (admin vẫn đổi được ở menu Tampermonkey) */
       else chips.innerHTML = '<span class="arp-note">Chạy riêng giờ công, không lấy doanh thu</span>';
+      const lab = box.querySelector('.arp-l'); if (lab) lab.style.display = chips.innerHTML ? '' : 'none'; chips.style.display = chips.innerHTML ? '' : 'none'; /* V18.79: không có gì thì ẩn cả dòng "Lấy thêm" */
       run.style.background = m.c;
       run.innerHTML = ico.play + ' ' + m.run;
     }
