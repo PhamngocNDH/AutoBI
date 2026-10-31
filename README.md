@@ -2,7 +2,7 @@
 
 Kho lưu AutoBI của 38967 - Mr Phạm.
 
-Bản hiện tại: **18.68**
+Bản hiện tại: **18.69**
 
 Link cài cố định: [AutoBI.user.js](https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI.user.js)
 
@@ -29,3 +29,8 @@ Link cài cố định: [AutoBI.user.js](https://raw.githubusercontent.com/Phamn
 - Thêm **trả chậm từng NV** (Báo cáo trả chậm → Nhân viên) → `link7`; khớp theo họ tên trong Khai báo. Cần thấy cột DT siêu thị (hoặc %) mới tính được tỷ lệ.
 - Sửa lỗi **"Không thể lưu dữ liệu!"**: lưu Sheet bị chặn vì nhật ký phiên chạy BI cũ còn lỗi (403); số nạp từ ảnh nay lưu được. Cloud trả lỗi khác thì hiện nguyên lý do.
 - Trang Đọc ảnh BI 1.5: ẩn dòng phiên bản/model AI, ẩn khung Xuất Excel đổ tay, đọc thêm màn Realtime + Báo cáo trả chậm.
+
+## Thay đổi 18.69 — gộp số ảnh theo phần trong ngày
+
+- Trang Đọc ảnh BI 1.6: mỗi lần **Gửi sang AutoBI** không còn ghi đè cả gói. Phần nào gói mới có (DT siêu thị, thi đua siêu thị, thi đua NV, DT NV, trả chậm NV — riêng lũy kế và realtime) thì thay; phần không có thì giữ số đã gửi trước **trong cùng ngày**. Sáng đổ lũy kế, trưa đổ realtime, ca chiều đổ cả hai đều được. Sang ngày mới bỏ hết số cũ.
+- AutoBI khi Nạp số từ ảnh hiện giờ của từng phần, vd "Lũy kế 08:15 · Realtime 12:30".

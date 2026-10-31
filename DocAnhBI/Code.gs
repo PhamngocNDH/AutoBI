@@ -13,7 +13,7 @@
  *  3. Lần sau sửa code: Quản lý các lần triển khai → bút chì → Phiên bản mới (giữ nguyên URL)
  */
 
-var DAB_VERSION = '1.5';
+var DAB_VERSION = '1.6';
 
 /* v1.1: AutoBI lấy số đã đọc: GET <url /exec>?action=lay&ma=<mã nhận>&key=<AUTOBI_KEY nếu có cài> */
 function doGet(e) {
@@ -40,12 +40,50 @@ function luuKetQua(ma, json) {
   JSON.parse(json);
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
+  var goi;
   try {
-    var it = DriveApp.getFilesByName(tenFile_(ma));
-    if (it.hasNext()) it.next().setContent(json);
-    else DriveApp.createFile(tenFile_(ma), json, MimeType.PLAIN_TEXT);
+    var it = DriveApp.getFilesByName(tenFile_(ma)), f = it.hasNext() ? it.next() : null, cu = null;
+    if (f) { try { cu = JSON.parse(f.getBlob().getDataAsString()); } catch (e) { cu = null; } }
+    goi = gopGoi_(cu, JSON.parse(json));
+    var txt = JSON.stringify(goi);
+    if (f) f.setContent(txt); else DriveApp.createFile(tenFile_(ma), txt, MimeType.PLAIN_TEXT);
   } finally { lock.releaseLock(); }
-  return { ok: true, at: Date.now() };
+  return { ok: true, at: Date.now(), atLK: goi.atLK || null, atRT: goi.atRT || null };
+}
+
+/* v1.6: GỘP THEO PHẦN TRONG CÙNG NGÀY — sáng gửi lũy kế, trưa gửi realtime, ca chiều gửi cả hai… phần nào gói mới có thì thay,
+   phần nào không có thì giữ của lần gửi trước (chỉ khi cùng ngày giờ VN; sang ngày mới thì bỏ hết số cũ). */
+var PHAN_LK_ = ['tdST', 'tdNV', 'dtNV', 'tcNV'], PHAN_RT_ = ['tdSTRT', 'dtNVRT', 'tcNVRT'];
+var SH_LK_ = ['lkQD', 'lkThuc', 'lkTC', 'lkTraGop', 'target', 'pvB', 'pvK'], SH_RT_ = ['rtQD', 'rtThuc', 'rtTC', 'rtTraGop', 'rtTarget', 'rtPvB', 'rtPvK'];
+function vnNgay_(t) { return Utilities.formatDate(new Date(Number(t) || Date.now()), 'Asia/Ho_Chi_Minh', 'yyyyMMdd'); }
+function coGi_(o, f) { return f.some(function (k) { return o && o[k] !== null && o[k] !== undefined; }); }
+function coPhan_(g, phan, sh) {
+  return phan.some(function (k) { return (g[k] || []).length; }) || (g.shops || []).some(function (s) { return coGi_(s, sh); });
+}
+function gopGoi_(cu, moi) {
+  var coLK = coPhan_(moi, PHAN_LK_, SH_LK_), coRT = coPhan_(moi, PHAN_RT_, SH_RT_);
+  if (!cu || cu.v !== 1 || vnNgay_(cu.at) !== vnNgay_(moi.at)) {
+    moi.atLK = coLK ? moi.at : null; moi.atRT = coRT ? moi.at : null; return moi;
+  }
+  var out = JSON.parse(JSON.stringify(moi));
+  PHAN_LK_.concat(PHAN_RT_).forEach(function (k) { if (!(moi[k] || []).length && (cu[k] || []).length) out[k] = cu[k]; });
+  var byMa = {};
+  (cu.shops || []).forEach(function (s) { byMa[s.ma] = s; });
+  out.shops = (out.shops || []).map(function (s) {
+    var o = byMa[s.ma];
+    if (o) {
+      [SH_LK_, SH_RT_].forEach(function (f) { if (!coGi_(s, f)) f.forEach(function (k) { if (o[k] !== null && o[k] !== undefined) s[k] = o[k]; }); });
+      if (!s.bi && o.bi) s.bi = o.bi; if (!s.gon && o.gon) s.gon = o.gon;
+      delete byMa[s.ma];
+    }
+    return s;
+  });
+  Object.keys(byMa).forEach(function (m) { out.shops.push(byMa[m]); });
+  out.atLK = coLK ? moi.at : (cu.atLK || null);
+  out.atRT = coRT ? moi.at : (cu.atRT || null);
+  if (!out.ngayQua) out.ngayQua = cu.ngayQua || null;
+  if (!out.soNgay) out.soNgay = cu.soNgay || null;
+  return out;
 }
 
 function layKetQua_(p) {

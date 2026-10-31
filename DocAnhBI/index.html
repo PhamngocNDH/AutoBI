@@ -136,8 +136,9 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}tr.hd td{background:#f0f
     var goi = DAB.goiAutoBI(S, shops());
     if (!goi.shops.length && !goi.tdST.length && !goi.tdSTRT.length && !goi.dtNV.length && !goi.dtNVRT.length && !goi.tcNV.length && !goi.tcNVRT.length) return toast('Chưa có số để gửi');
     var bt = $('gui'); bt.disabled = true; $('guiTT').textContent = 'Đang gửi…';
-    google.script.run.withSuccessHandler(function () {
-      var d = new Date(); $('guiTT').textContent = '✓ Đã gửi lúc ' + ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) + ' — ' + goi.shops.length + ' siêu thị · ' + goi.tdST.length + ' CT siêu thị · ' + goi.tdNV.length + ' CT NV · ' + goi.dtNV.length + ' NV' + (goi.tdSTRT.length || goi.dtNVRT.length ? ' · realtime ' + goi.tdSTRT.length + ' CT, ' + goi.dtNVRT.length + ' NV' : '') + (goi.tcNV.length ? ' · trả chậm ' + goi.tcNV.length + ' NV' : '');
+    google.script.run.withSuccessHandler(function (res) {
+      var hm = function (t) { var x = new Date(t); return ('0' + x.getHours()).slice(-2) + ':' + ('0' + x.getMinutes()).slice(-2); };
+      var d = new Date(); $('guiTT').textContent = (res && (res.atLK || res.atRT) ? '✓ Trên Cloud: ' + [res.atLK ? 'Lũy kế ' + hm(res.atLK) : '', res.atRT ? 'Realtime ' + hm(res.atRT) : ''].filter(Boolean).join(' · ') + ' — lần này ' : '') + '✓ Đã gửi lúc ' + ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) + ' — ' + goi.shops.length + ' siêu thị · ' + goi.tdST.length + ' CT siêu thị · ' + goi.tdNV.length + ' CT NV · ' + goi.dtNV.length + ' NV' + (goi.tdSTRT.length || goi.dtNVRT.length ? ' · realtime ' + goi.tdSTRT.length + ' CT, ' + goi.dtNVRT.length + ' NV' : '') + (goi.tcNV.length ? ' · trả chậm ' + goi.tcNV.length + ' NV' : '');
       bt.disabled = false; toast('Đã gửi — mở AutoBI bấm Nạp số từ ảnh');
     }).withFailureHandler(function (er) { $('guiTT').textContent = '✗ ' + ((er && er.message) || er); bt.disabled = false; })
       .luuKetQua(ma, JSON.stringify(goi));

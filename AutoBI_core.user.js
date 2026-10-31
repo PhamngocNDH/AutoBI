@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.68
+// @name         AutoBI Core V18.69
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.68
+// @version      18.69
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -15160,8 +15160,11 @@ window.__AutoBIRunPick = (() => {
   }
 
   function tom(log, goi) {
-    const d = new Date(goi.at || Date.now());
-    const parts = ['Số ảnh lúc ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ' ' + pad(d.getDate()) + '/' + pad(d.getMonth() + 1),
+    const d = new Date(goi.at || Date.now()), hm = t => { const x = new Date(t); return pad(x.getHours()) + ':' + pad(x.getMinutes()); };
+    /* V18.69: gói số gộp theo phần trong ngày (trang Đọc ảnh 1.6) → hiện giờ của từng phần */
+    const when = goi.atLK || goi.atRT ? [goi.atLK ? 'Lũy kế ' + hm(goi.atLK) : '', goi.atRT ? 'Realtime ' + hm(goi.atRT) : ''].filter(Boolean).join(' · ') + ' ' + pad(d.getDate()) + '/' + pad(d.getMonth() + 1)
+      : 'Số ảnh lúc ' + hm(goi.at || Date.now()) + ' ' + pad(d.getDate()) + '/' + pad(d.getMonth() + 1);
+    const parts = [when,
       log.shops.length + ' siêu thị', log.groups + ' nhóm thi đua', log.staff + ' NV'].concat(log.rt || log.rtGroups ? ['realtime ' + (log.rt || 0) + ' siêu thị · ' + (log.rtGroups || 0) + ' nhóm'] : []).concat(log.tc ? ['trả chậm ' + log.tc + ' NV'] : []);
     const warn = [];
     if (log.shopMiss.length) warn.push('siêu thị không khớp Khai báo: ' + log.shopMiss.join(', '));
