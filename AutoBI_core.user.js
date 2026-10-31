@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.73
+// @name         AutoBI Core V18.74
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.73
+// @version      18.74
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -15289,7 +15289,7 @@ window.__AutoBIRunPick = (() => {
     return t;
   }
 
-  /* V18.71: lõi gộp số DAB — chép nguyên từ DocAnhBI/logic.html; sửa ở đó thì chép lại vào đây */
+  /* V18.71: lõi gộp số DAB — chép nguyên từ DocAnhBI/logic.html; sửa ở đó thì chép lại vào đây (V18.74: bản 1.10) */
 /* DocAnhBI — lõi gộp số từ ảnh (thuần JS, không phụ thuộc giao diện).
    Đầu vào: mảng kết quả đọc từng ảnh (JSON do AI trả về, theo thứ tự ảnh).
    Đầu ra: các bảng đúng dạng "Chép bảng" của mẫu AutoBI_mau_do_tay.xlsx (cột A–H) + danh sách cảnh báo. */
@@ -15307,6 +15307,8 @@ const DAB = (function () {
   function keyCT(t) { return clean(t).replace(/^T\d+\s*-\s*/i, ''); }
   function codeOf(s) { var m = /^(\d+)\s*-/.exec(clean(s)); return m ? m[1] : ''; }
   function isNV(s) { return !!codeOf(s); }
+  /* v1.10: khóa siêu thị = phần tên sau dấu " - " cuối, bỏ dấu ("ĐMM_NDI_HHA - Hải Anh" = "Hải Anh") */
+  function shopKey(s) { var t = clean(s).split(' - ').pop(); return 'st:' + t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/[^a-z0-9]+/g, ''); }
   function modeOf(x, prev) {
     var m = x && x.che_do;
     if (m === 'realtime' || m === 'luy_ke') return m;
@@ -15351,6 +15353,18 @@ const DAB = (function () {
           if (num(b.tong_target) !== null) g.tongT = num(b.tong_target);
           rows.forEach(function (r) {
             var ten = clean(r.ten), v = num(r.gia_tri), t = num(r.target);
+            /* v1.10: bảng SIÊU THỊ — mỗi siêu thị 1 dòng/chương trình: trùng tên (kể cả ghi khác kiểu) thì gộp, số khác nhau giữ làm phương án để khớp TỔNG */
+            if (cap === 'st') {
+              var ks = shopKey(ten);
+              if (g.seen[ks] !== undefined) {
+                var os = g.rows[g.seen[ks]];
+                if (ten.length > os.ten.length) os.ten = ten;
+                if (os.t === null && t !== null) os.t = t;
+                if (v !== os.v) { os.alts = os.alts || [os.v]; if (os.alts.indexOf(v) < 0) os.alts.push(v); os.v = v; }
+                return;
+              }
+              g.seen[ks] = g.rows.length; g.rows.push({ ten: ten, v: v, t: t }); return;
+            }
             /* trùng do ảnh chụp chồng: cùng người/shop + cùng số. NV làm chéo shop có 2 dòng khác số → giữ cả 2 */
             var k = (codeOf(ten) || ten.toLowerCase()) + '|' + v;
             if (g.seen[k] !== undefined) {
@@ -15428,16 +15442,44 @@ const DAB = (function () {
       ['st', 'nv'].forEach(function (cap) {
         S.tdOrder[m][cap].forEach(function (k) {
           var g = S.td[m][cap][k];
-          var sum = r2(g.rows.reduce(function (a, r) { return a + r.v; }, 0));
+          var tong0 = function () { return r2(g.rows.reduce(function (a, r) { return a + r.v; }, 0)); };
+          var tol = Math.max(0.02, 0.006 * g.rows.length), ten = (m === 'realtime' ? 'RT · ' : '') + (cap === 'nv' ? 'NV · ' : 'ST · ') + k;
+          /* v1.10: tự gỡ dòng trùng do chụp 2 lần đọc ra 2 số khác nhau — chỉ khi chọn lại thì khớp đúng TỔNG */
+          if (g.tong !== null && Math.abs(r2(g.tong - tong0())) > tol) {
+            if (cap === 'st') {
+              var co = g.rows.filter(function (r) { return r.alts && r.alts.length > 1; }).slice(0, 6);
+              if (co.length) {
+                var n = 1; co.forEach(function (r) { n *= r.alts.length; }); n = Math.min(n, 729);
+                for (var i = 0; i < n; i++) {
+                  var x = i; co.forEach(function (r) { r.v = r.alts[x % r.alts.length]; x = Math.floor(x / r.alts.length); });
+                  if (Math.abs(r2(g.tong - tong0())) <= tol) { S.canhBao.push({ muc: ten, noi: 'Ảnh chụp 2 lần đọc ra 2 số khác nhau — đã tự chọn số khớp TỔNG' }); break; }
+                }
+                if (Math.abs(r2(g.tong - tong0())) > tol) co.forEach(function (r) { r.v = r.alts[r.alts.length - 1]; });
+              }
+              /* dòng tổng vùng/cụm bị đọc lẫn vào danh sách siêu thị: bỏ đúng dòng đó thì khớp TỔNG */
+              if (tong0() > g.tong + tol) for (var q = 0; q < g.rows.length; q++) {
+                if (Math.abs(r2(g.tong - (tong0() - g.rows[q].v))) <= tol) { S.canhBao.push({ muc: ten, noi: 'Bỏ dòng ' + g.rows[q].ten + ' (' + g.rows[q].v + ') — giống dòng tổng, bỏ thì khớp TỔNG' }); g.rows.splice(q, 1); break; }
+              }
+            } else if (tong0() > g.tong) {
+              var dem = {}; g.rows.forEach(function (r) { var c = codeOf(r.ten) || r.ten; dem[c] = (dem[c] || 0) + 1; });
+              for (var j = 0; j < g.rows.length; j++) {
+                var c2 = codeOf(g.rows[j].ten) || g.rows[j].ten;
+                if (dem[c2] > 1 && Math.abs(r2(g.tong - (tong0() - g.rows[j].v))) <= tol) {
+                  S.canhBao.push({ muc: ten, noi: 'Bỏ 1 dòng trùng của ' + g.rows[j].ten + ' (' + g.rows[j].v + ') — chụp 2 lần đọc ra 2 số khác nhau, bỏ dòng này thì khớp TỔNG' });
+                  g.rows.splice(j, 1); break;
+                }
+              }
+            }
+          }
+          var sum = tong0();
           g.sum = sum;
           if (g.tong === null) { g.trangThai = 'chua_ro'; return; }
-          var tol = Math.max(0.02, 0.006 * g.rows.length);
           var thieu = r2(g.tong - sum);
           if (Math.abs(thieu) <= tol) { g.trangThai = 'du'; return; }
           g.trangThai = thieu > 0 ? 'thieu' : 'thua';
           g.lech = thieu;
           S.canhBao.push({
-            muc: (m === 'realtime' ? 'RT · ' : '') + (cap === 'nv' ? 'NV · ' : 'ST · ') + k,
+            muc: ten,
             noi: thieu > 0 ? 'Còn thiếu ' + thieu + ' (đã đọc ' + sum + ' / TỔNG ' + g.tong + ') — chụp thêm phần cuối bảng'
                            : 'Dư ' + (-thieu) + ' so với TỔNG ' + g.tong + ' — có thể đọc sai 1 số, kiểm lại'
           });
@@ -15701,7 +15743,7 @@ const DAB = (function () {
       /* Còn thiếu màn nào (theo Khai báo) */
       const thieu = [], cfg = readConfig(), sh = shopsOf(cfg);
       const coLK = S.tdOrder.luy_ke.st.length || S.dtNVOrder.luy_ke.length || sh.some(x => x.code && S.dtShop[x.code] && S.dtShop[x.code].lkQD != null);
-      const coRT = S.tdOrder.realtime.st.length || S.dtNVOrder.realtime.length || sh.some(x => x.code && S.dtShop[x.code] && S.dtShop[x.code].rtQD != null);
+      const coRT = S.tdOrder.realtime.st.length || S.dtNVOrder.realtime.length; /* V18.74: chỉ có DT siêu thị realtime thì không đòi đủ bộ realtime */
       [['lk', 'Lũy kế', coLK], ['rt', 'Realtime', coRT]].forEach(([pre, ten, co1]) => {
         if (!co1) return;
         const m = pre === 'rt' ? 'realtime' : 'luy_ke';
