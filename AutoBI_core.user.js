@@ -14971,7 +14971,8 @@ window.__AutoBIRunPick = (() => {
   function settings(ask) {
     let s = GM_getValue(SET_KEY, null) || {};
     if (!ask && !s.url) {
-      const uid = String(window.__AutoBIAuthUid || (page && page.__AutoBIAuthUid) || '').replace(/\D/g, '');
+      let uid = String(window.__AutoBIAuthUid || (page && page.__AutoBIAuthUid) || '').replace(/\D/g, '');
+      if (!uid) { try { const u = JSON.parse(sessionStorage.getItem('userinfor') || 'null'); uid = String((u && u.username) || '').replace(/\D/g, ''); } catch (_) { } } /* V18.67: mã NV trên portal */
       if (uid) { s = { url: DEFAULT_URL, ma: uid, key: s.key || '' }; GM_setValue(SET_KEY, s); }
     }
     if (ask || !s.url || !s.ma) {

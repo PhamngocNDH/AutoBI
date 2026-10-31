@@ -2,7 +2,7 @@
 
 Kho lưu AutoBI của 38967 - Mr Phạm.
 
-Bản hiện tại: **18.66**
+Bản hiện tại: **18.67**
 
 Link cài cố định: [AutoBI.user.js](https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI.user.js)
 
@@ -15,3 +15,10 @@ Link cài cố định: [AutoBI.user.js](https://raw.githubusercontent.com/Phamn
 ## Thay đổi 18.66 — sửa đơn vị Nạp số từ ảnh
 
 - Doanh thu siêu thị và DT QĐ nhân viên nạp từ ảnh bị nhân thêm 1.000.000 (LK NEW ra Thực hiện 5,095,000,000, tỉ lệ 109381709%). Nay giữ đúng đơn vị triệu như AutoBI vẫn dùng; thi đua nhóm hàng không đổi.
+
+## Thay đổi 18.67 — chuyển sang portal, tắt trên BI
+
+- AutoBI **không chạy trên baocao.dienmayxanh.com nữa** (không gọi API BI). Bật trên **portal.thegioididong.com**; CRM giữ nguyên.
+- Nhận nhân viên trên portal từ thông tin đăng nhập của portal (mã NV + họ tên) → kiểm quyền như cũ.
+- Cụm nút nổi (▶ Chạy · ⋯ Menu) chuyển sang **góc dưới bên trái**. Nút "Trang chủ" / Dừng quay về portal.
+- Khung Chạy báo cáo trên portal chỉ còn **Nạp số từ ảnh** + **Xem lại** (các chế độ cần BI đã ẩn).
