@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.75
+// @name         AutoBI Core V18.76
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.75
+// @version      18.76
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -15712,7 +15712,7 @@ const DAB = (function () {
       + '<div class="row"><button class="bt" data-k="pick">＋ Chọn ảnh</button><button class="bt p" data-k="read" disabled>Đọc ảnh</button></div>'
       + '<div class="th"></div><div class="tt"></div><div class="sum"></div>'
       + '<div class="row"><button class="bt p" data-k="nap" disabled>Nạp số và xem</button></div>'
-      + '<div class="row" style="justify-content:space-between"><button class="lk" data-k="clear">Xóa ảnh hôm nay</button><button class="lk" data-k="old">Lấy số đã gửi từ trang Đọc ảnh</button></div></div>';
+      + '<div class="row"><button class="lk" data-k="clear">Xóa ảnh hôm nay</button></div></div>'; /* V18.76: bỏ nút lấy số từ trang Đọc ảnh */
     document.body.appendChild(el);
     const $ = k => el.querySelector(k), inp = $('input[type=file]');
     P = { s, items: loadKq(), busy: false, S: null };
@@ -15755,7 +15755,7 @@ const DAB = (function () {
       });
       /* V18.73: đọc bằng máy nào (Gemini / Mistral) */
       const mdl = {}; P.items.forEach(a => { if (a.tt === 'ok') (a.kq || []).forEach(r => { const m = String((r && r._model) || '?'); const k = /mistral|ministral/i.test(m) ? 'Mistral' : /gemini/i.test(m) ? 'Gemini' : m; mdl[k] = (mdl[k] || 0) + 1; }); });
-      co.push('đọc bằng ' + Object.keys(mdl).map(k => k + ' ' + mdl[k]).join(' · '));
+      P.mdl = mdl; /* V18.76: không hiện chip "đọc bằng" (giữ chuột lên ảnh vẫn thấy model) */
       $('.sum').innerHTML = '<div>' + co.map(t => '<span class="chip">' + escH(t) + '</span>').join('') + (du ? '<span class="chip g">' + du + ' bảng khớp TỔNG</span>' : '') + (lech ? '<span class="chip r">' + lech + ' bảng lệch</span>' : '') + '</div>'
         + (thieu.length || S.canhBao.length ? '<div class="wr">' + (thieu.length ? '<div><b>Chưa thấy ảnh:</b> ' + thieu.map(escH).join(' · ') + '</div>' : '') + S.canhBao.map(c => '<div>• <b>' + escH(c.muc) + '</b>: ' + escH(c.noi) + '</div>').join('') + '</div>' : '');
     };
@@ -15829,6 +15829,8 @@ const DAB = (function () {
     U.HTML.__anhTime = true;
     return true;
   }
+  /* V18.76: trên portal ẩn Sức khỏe ST và Giờ công & Năng suất ở thanh dưới (ảnh BI không có số cho 2 mục này) */
+  try { GM_addStyle('.rpt-nav-item[data-tab="health"],.rpt-nav-item[data-wt-menu]{display:none!important}'); } catch (_) { }
   if (!patchTime()) { let n = 0; const iv = setInterval(() => { if (patchTime() || ++n > 120) clearInterval(iv); }, 500); }
 
   window.__AutoBIAnh = { run, open, settings, build, toast, _shopsOf: shopsOf, _DAB: DAB, _kq: () => loadKq() }; /* V18.73: _kq() xem kết quả đọc hôm nay (gỡ lỗi) */
