@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.74
+// @name         AutoBI Core V18.75
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.74
+// @version      18.75
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -11397,15 +11397,16 @@ window.__AutoBIRunPick = (() => {
     const I = (r, c1, c2, v, st, fmt) => box(ws, r, c1, r, c2, v, Object.assign({ al: 'center', font: { bold: true, size: 11 } }, st || {}), fmt);
     const red = { font: { color: 'C00000', bold: true, size: 11 } }, blue = { font: { color: '1F4E9C', bold: true, size: 11 } }, grn = { font: { color: '1D7A3A', bold: true, size: 11 } }, org = { font: { color: 'C55A11', bold: true, size: 11 } };
     let r = 3;
-    I(r, 1, 1, 'Time:', { al: 'left' }); I(r, 2, 4, '=' + DP(P, 'at'), red); I(r, 6, 6, 'Target QĐ', red); I(r, 7, 7, '=' + DP(P, 'monT'), red, N0); I(r, 8, 8, 'Thực hiện QĐ', grn); I(r, 9, 11, '=' + DP(P, 'lk'), grn, N0); r++;
+    I(r, 1, 1, 'Time:', { al: 'left' }); I(r, 2, 4, '=' + DP(P, 'at'), red); I(r, 6, 6, 'Target', red); I(r, 7, 7, '=' + DP(P, 'monT'), red, N0); I(r, 8, 8, 'Thực hiện', grn); I(r, 9, 11, '=' + DP(P, 'lk'), grn, N0); r++;
     I(r, 1, 2, 'Mục tiêu ngày', { fill: F('FF0000'), font: { color: 'FFFFFF', bold: true, size: 11 } }); I(r, 3, 4, 'Thực hiện', { fill: F('0E8F5B'), font: { color: 'FFFFFF', bold: true, size: 11 } });
     I(r, 6, 6, 'Hoàn thành', org); I(r, 7, 7, '=' + pctF('I3', 'G3'), org, PCT); I(r, 8, 8, 'Còn lại', blue); I(r, 9, 11, '=MAX(0,G3-I3)', blue, N0); r++;
     I(r, 1, 2, '=' + DP(P, 'dayT'), red, '#,##0 "Triệu"'); I(r, 3, 4, '=' + DP(P, 'rt'), blue, '#,##0.0 "Triệu"');
     I(r, 6, 8, '☀️ Dự kiến ngày mai', { al: 'left' }); I(r, 9, 11, '=' + maiF(DP(P, 'lk'), DP(P, 'rt'), DP(P, 'monT'), 'CoRT'), org, PCT); r++;
-    I(r, 1, 1, 'Hoàn thành', grn); I(r, 2, 2, '=' + pctF('C5', 'A5'), blue, PCT); I(r, 3, 3, '%QĐ'); I(r, 4, 4, '=IFERROR(' + DP(P, 'rt') + '/' + DP(P, 'rtThuc') + ',0)', blue, PCT);
-    I(r, 6, 8, 'Lũy kế Doanh thu thực', { al: 'left' }); I(r, 9, 11, '=' + DP(P, 'lkThuc'), {}, N0); r++;
+    /* V18.74: bỏ các ô quy đổi/thực (%QĐ, DT thực, %Quy đổi/thực) — thay bằng Thời gian qua + Dự kiến hết hôm qua */
+    I(r, 1, 1, 'Hoàn thành', grn); I(r, 2, 4, '=' + pctF('C5', 'A5'), blue, PCT);
+    I(r, 6, 8, 'Thời gian qua', { al: 'left' }); I(r, 9, 11, '=IFERROR(NgayQua/SoNgay,0)', {}, PCT); r++;
     I(r, 1, 2, 'Mục tiêu trả chậm', red); I(r, 3, 4, '=MucTieuTC', Object.assign({ fill: F('FFFF00') }, red), PCT);
-    I(r, 6, 8, '%Quy đổi/thực', { al: 'left' }); I(r, 9, 11, '=IFERROR(' + DP(P, 'lk') + '/' + DP(P, 'lkThuc') + ',0)', org, PCT); r++;
+    I(r, 6, 8, 'Dự kiến (hết hôm qua)', { al: 'left' }); I(r, 9, 11, '=' + fcF(DP(P, 'lk'), DP(P, 'monT')), org, PCT); r++;
     I(r, 1, 2, 'Realtime trả chậm', red); I(r, 3, 4, '=' + DP(P, 'tgRT'), {}, PCT);
     I(r, 6, 8, 'Lũy kế trả chậm', Object.assign({ al: 'left' }, red)); I(r, 9, 11, '=' + DP(P, 'tgLK'), {}, PCT);
     ws.addConditionalFormatting({ ref: 'C8', rules: [{ type: 'expression', priority: 1, formulae: ['AND(ISNUMBER(C8),C8>=MucTieuTC)'], style: dxf('C6EFCE', '006100') }, { type: 'expression', priority: 2, formulae: ['ISNUMBER(C8)'], style: dxf('FFC7CE', '9C0006') }] });
@@ -14669,7 +14670,6 @@ window.__AutoBIRunPick = (() => {
     const now = new Date();
     const time = D.tc.isPastMonth ? 'Hết tháng ' + D.tc.month + '/' + D.tc.year : pad(now.getHours()) + ':' + pad(now.getMinutes()) + ' - ' + pad(now.getDate()) + '/' + pad(now.getMonth() + 1) + '/' + now.getFullYear();
     const l2 = D.l2 || {};
-    const qdLK = num(l2.dtlk) > 0 ? D.lk / num(l2.dtlk) * 100 : 0;
     const tgLK = num(l2.tg);
     const G = '<td class="gap"></td>';
     const rows = (D.rows || []).map(x => Object.assign({}, x, { pNow: num(x.tL) > 0 ? x.rL / x.tL * 100 : 0 }));
@@ -14680,11 +14680,12 @@ window.__AutoBIRunPick = (() => {
     const passD = rows.filter(x => x.d >= 100).length;
     const curCls = p => p >= D.timeP ? 'g' : p >= D.timeP * 0.8 ? 'y' : 'r';
     const info =
-      '<tr>' + '<td class="i il">Time:</td><td class="i cr" colspan="3">' + time + '</td>' + G + '<td class="i cr" colspan="3">Target QĐ: <b>' + nf(D.monT) + '</b></td><td class="i cg2" colspan="3">Thực hiện QĐ: <b>' + nf(D.lk) + '</b></td></tr>' +
+      '<tr>' + '<td class="i il">Time:</td><td class="i cr" colspan="3">' + time + '</td>' + G + '<td class="i cr" colspan="3">Target: <b>' + nf(D.monT) + '</b></td><td class="i cg2" colspan="3">Thực hiện: <b>' + nf(D.lk) + '</b></td></tr>' +
       '<tr>' + '<td class="i bgR" colspan="2">Mục tiêu ngày</td><td class="i bgG" colspan="2">Thực hiện</td>' + G + '<td class="i co" colspan="3">Hoàn thành: <b>' + pc(D.lkP) + '</b></td><td class="i cb" colspan="3">Còn lại: <b>' + nf(Math.max(0, D.monT - D.lk)) + '</b></td></tr>' +
       '<tr>' + '<td class="i cr" colspan="2"><b>' + nf(D.dayT) + '</b> Triệu</td><td class="i cb" colspan="2"><b>' + nf(D.rt) + '</b> Triệu</td>' + G + '<td class="i il" colspan="3">☀️ Dự kiến ngày mai:' + (D.maiOk ? '' : ' <span style="font-size:11px;font-weight:400;color:#666">(chưa có số hôm nay)</span>') + '</td><td class="i co" colspan="3"><b>' + pc(dkM) + '</b></td></tr>' +
-      '<tr>' + '<td class="i cg2">Hoàn thành</td><td class="i cb"><b>' + pc(D.rtP) + '</b></td><td class="i">%QĐ</td><td class="i cb"><b>' + Math.round(D.qd) + '%</b></td>' + G + '<td class="i il" colspan="3">Lũy kế Doanh thu thực:</td><td class="i" colspan="3"><b>' + nf(l2.dtlk) + '</b></td></tr>' +
-      '<tr>' + '<td class="i cr" colspan="2">Mục tiêu trả chậm:</td><td class="i cr bgY" colspan="2"><b>' + D.tgLim + '%</b></td>' + G + '<td class="i il" colspan="3">%Quy đổi/thực:</td><td class="i co" colspan="3"><b>' + Math.round(qdLK) + '%</b></td></tr>' +
+      /* V18.74: bỏ %QĐ, Lũy kế DT thực, %Quy đổi/thực → Thời gian qua + Dự kiến (hết hôm qua) */
+      '<tr>' + '<td class="i cg2" colspan="2">Hoàn thành</td><td class="i cb" colspan="2"><b>' + pc(D.rtP) + '</b></td>' + G + '<td class="i il" colspan="3">Thời gian qua:</td><td class="i" colspan="3"><b>' + pc(D.timeP) + '</b> <span style="font-size:11px;font-weight:400;color:#666">(' + D.dp + '/' + D.dim + ' ngày)</span></td></tr>' +
+      '<tr>' + '<td class="i cr" colspan="2">Mục tiêu trả chậm:</td><td class="i cr bgY" colspan="2"><b>' + D.tgLim + '%</b></td>' + G + '<td class="i il" colspan="3">Dự kiến (hết hôm qua):</td><td class="i co" colspan="3"><b>' + pc(D.dk) + '</b></td></tr>' +
       '<tr>' + '<td class="i cr" colspan="2">Realtime:</td><td class="i" colspan="2"><b>' + Math.round(D.tg) + '%</b></td>' + G + '<td class="i il cr" colspan="3">Lũy kế trả chậm:</td><td class="i" colspan="3"><b>' + Math.round(tgLK) + '%</b></td></tr>';
     const row = x => {
       const has = x.r !== 0;
@@ -15167,7 +15168,7 @@ window.__AutoBIRunPick = (() => {
     });
     if (Object.keys(l7).length) cache.link7 = l7;
     if (!cache.link2 && !cache.link4_smart && !cache.link1 && !cache.link3_smart) throw new Error('Gói số không có Doanh thu / Thi đua nào khớp Khai báo (kiểm mã kho, tên siêu thị)');
-    cache.__anh = { at: goi.at, nap: Date.now(), ngayQua: goi.ngayQua || null, canhBao: (goi.canhBao || []).length };
+    cache.__anh = { at: goi.at, nap: Date.now(), ngayQua: goi.ngayQua || null, soNgay: goi.soNgay || null, canhBao: (goi.canhBao || []).length };
     return { cache, log };
   }
 
@@ -15802,6 +15803,33 @@ const DAB = (function () {
     });
     paint();
   }
+
+  /* V18.74: SỐ NGÀY THEO ẢNH — số nạp từ ảnh thì "ngày đã qua / số ngày tháng" lấy theo ảnh ("đến hết 30/10, 31 ngày"),
+     không theo hôm nay. Từng lỗi: mùng 1/11 nạp số tháng 10 → tính 1/30 ngày → Dự kiến 1955%. Ảnh chụp số tháng trước
+     (ngày hôm nay ≤ ngày đã qua trong ảnh) thì tháng của số = tháng trước. Đang chọn tháng khác ở Cấu hình thì giữ nguyên. */
+  function patchTime() {
+    const U = window.__AutoBIUI || (page && page.__AutoBIUI);
+    if (!U || !U.HTML || typeof U.HTML.resolveTimeContext !== 'function') return false;
+    if (U.HTML.__anhTime) return true;
+    const orig = U.HTML.resolveTimeContext;
+    U.HTML.resolveTimeContext = function (cfg) {
+      const r = orig.apply(this, arguments);
+      try {
+        if ((GM_getValue('tgdd_custom_report_month', 'current') || 'current') !== 'current') return r;
+        const c = GM_getValue(CACHE_KEY, null), a = c && c.__anh, dpI = num(a && a.ngayQua);
+        if (!a || dpI < 1 || dpI > 31) return r;
+        const now = new Date(), dimI = num(a.soNgay) >= 28 ? num(a.soNgay) : r.daysInMonth;
+        let m = now.getMonth() + 1, y = now.getFullYear();
+        if (now.getDate() <= dpI) { m--; if (!m) { m = 12; y--; } }
+        const cur = m === now.getMonth() + 1, dd = pad(dpI) + '/' + pad(m) + '/' + y;
+        return Object.assign({}, r, { month: m, year: y, daysInMonth: dimI, daysPassed: Math.min(dpI, dimI), isPastMonth: !cur,
+          dateStr: cur ? r.dateStr : 'Hết ngày ' + dd, realtimeStr: cur ? r.realtimeStr : 'Dữ liệu đến hết ' + dd });
+      } catch (_) { return r; }
+    };
+    U.HTML.__anhTime = true;
+    return true;
+  }
+  if (!patchTime()) { let n = 0; const iv = setInterval(() => { if (patchTime() || ++n > 120) clearInterval(iv); }, 500); }
 
   window.__AutoBIAnh = { run, open, settings, build, toast, _shopsOf: shopsOf, _DAB: DAB, _kq: () => loadKq() }; /* V18.73: _kq() xem kết quả đọc hôm nay (gỡ lỗi) */
   try { if (typeof unsafeWindow !== 'undefined') unsafeWindow.__AutoBIAnh = window.__AutoBIAnh; } catch (_) { }
