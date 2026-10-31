@@ -13,11 +13,12 @@
  *  3. Lần sau sửa code: Quản lý các lần triển khai → bút chì → Phiên bản mới (giữ nguyên URL)
  */
 
-var DAB_VERSION = '1.6';
+var DAB_VERSION = '1.7';
 
 /* v1.1: AutoBI lấy số đã đọc: GET <url /exec>?action=lay&ma=<mã nhận>&key=<AUTOBI_KEY nếu có cài> */
 function doGet(e) {
   var p = (e && e.parameter) || {};
+  if (p.action === 'quyen') return json_(kiemQuyen_(p.ma, ''));
   if (p.action === 'lay') return layKetQua_(p);
   return HtmlService.createTemplateFromFile('index').evaluate()
     .setTitle('Đọc ảnh BI')
@@ -29,11 +30,58 @@ function include(name) {
   return HtmlService.createHtmlOutputFromFile(name).getContent();
 }
 
+/* v1.7: KIỂM QUYỀN theo danh sách AutoBI (tab Auth — Cloud kiểm quyền của AutoBI). Mã không có / hết hạn → chặn đọc ảnh, gửi, lấy số.
+   Tắt tạm: Thuộc tính tập lệnh AUTH_CHECK = off. Kết quả nhớ 30 phút (bị chặn: 5 phút) để không gọi Cloud quyền mỗi ảnh. */
+var AUTH_API_ = 'https://script.google.com/macros/s/AKfycbzSGNHjQ81dzQJcvk9m1lubSDvkn2bQ2qpSyALpmKqyCBSQXtIH_j3738YLVhIjlxGg/exec';
+function json_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
+function kiemQuyen_(ma, ver) {
+  ma = String(ma || '').replace(/\D/g, '');
+  if (String(PropertiesService.getScriptProperties().getProperty('AUTH_CHECK') || '').toLowerCase() === 'off') return { ok: true, ma: ma };
+  if (!ma) return { ok: false, loi: 'Thiếu mã nhân viên' };
+  var c = CacheService.getScriptCache(), k = 'auth_' + ma, v = c.get(k);
+  if (v) { try { return JSON.parse(v); } catch (e) { } }
+  var d = null;
+  try {
+    var r = UrlFetchApp.fetch(AUTH_API_ + '?type=check_auth&user=' + encodeURIComponent(ma) + (ver ? '&ver=' + encodeURIComponent(ver) : '') + '&_t=' + Date.now(), { muteHttpExceptions: true, followRedirects: true });
+    d = JSON.parse(r.getContentText());
+  } catch (e) { return { ok: false, tam: true, loi: 'Chưa kiểm được quyền (mạng chậm) — thử lại' }; }
+  var out;
+  if (d && d.status === 'success' && d.authorized === true) {
+    var ex = d.expireDays;
+    out = (ex !== null && ex !== undefined && ex !== '' && Number(ex) < 0) ? { ok: false, loi: 'Quyền AutoBI của mã ' + ma + ' đã hết hạn' } : { ok: true, ma: ma, ten: d.name || '' };
+  } else if (d && d.authorized === false) out = { ok: false, loi: 'Mã ' + ma + ' chưa được cấp quyền AutoBI' };
+  else return { ok: false, tam: true, loi: 'Máy kiểm quyền trả lỗi — thử lại' };
+  c.put(k, JSON.stringify(out), out.ok ? 1800 : 300);
+  return out;
+}
+function canQuyen_(ma, ver) { var q = kiemQuyen_(ma, ver); if (!q.ok) throw new Error(q.loi); return q; }
+
+/* v1.7: AutoBI gửi ảnh thẳng (không qua trang): POST JSON {action:'doc', ma, b64, mime, ver} → {ok, kq}
+   · {action:'luu', ma, goi} → lưu gói số (gộp theo phần như trang) · {action:'quyen', ma}. Mã kiểm theo tab Auth. */
+function doPost(e) {
+  var b = {}, out;
+  try { b = JSON.parse((e && e.postData && e.postData.contents) || '{}'); } catch (x) { return json_({ ok: false, loi: 'Dữ liệu gửi lên không đúng dạng' }); }
+  try {
+    var q = kiemQuyen_(b.ma, b.ver);
+    if (!q.ok) out = { ok: false, quyen: !q.tam, loi: q.loi };
+    else if (b.action === 'doc') out = { ok: true, kq: docAnh_(b.b64, b.mime) };
+    else if (b.action === 'luu') { out = luuGoi_(q.ma, typeof b.goi === 'string' ? b.goi : JSON.stringify(b.goi)); }
+    else if (b.action === 'quyen') out = { ok: true, ten: q.ten || '' };
+    else out = { ok: false, loi: 'Thiếu việc cần làm (action)' };
+  } catch (er) { out = { ok: false, loi: String((er && er.message) || er) }; }
+  return json_(out);
+}
+
 function tenFile_(ma) { return 'DocAnhBI_' + String(ma || '').replace(/[^0-9A-Za-z_-]/g, '') + '.json'; }
 function maHopLe_(ma) { return /^[0-9A-Za-z_-]{2,20}$/.test(String(ma || '')); }
 
 /** Trang gọi: lưu gói số (JSON) theo mã nhận — ghi đè bản cũ cùng mã. File nằm trong Drive của chủ dự án. */
 function luuKetQua(ma, json) {
+  ma = String(ma || '').trim();
+  canQuyen_(ma, '');
+  return luuGoi_(ma, json);
+}
+function luuGoi_(ma, json) {
   ma = String(ma || '').trim();
   if (!maHopLe_(ma)) throw new Error('Mã nhận số không hợp lệ (2–20 ký tự chữ/số)');
   if (!json || json.length > 2000000) throw new Error('Gói số rỗng hoặc quá lớn');
@@ -88,9 +136,10 @@ function gopGoi_(cu, moi) {
 
 function layKetQua_(p) {
   var key = PropertiesService.getScriptProperties().getProperty('AUTOBI_KEY');
-  var out;
+  var out, q0;
   if (key && String(p.key || '') !== key) out = { ok: false, loi: 'Sai khóa AUTOBI_KEY' };
   else if (!maHopLe_(p.ma)) out = { ok: false, loi: 'Thiếu mã nhận số' };
+  else if (!(q0 = kiemQuyen_(p.ma, '')).ok) out = { ok: false, quyen: !q0.tam, loi: q0.loi };
   else {
     var it = DriveApp.getFilesByName(tenFile_(p.ma));
     out = it.hasNext() ? { ok: true, data: JSON.parse(it.next().getBlob().getDataAsString()) }
@@ -195,8 +244,13 @@ function goiAI_(cfg, parts) {
   return { text: out, usage: data.usage || data.usageMetadata || null };
 }
 
-/** Đọc 1 ảnh (base64 JPEG/PNG) → JSON kết quả. Gọi từ trang bằng google.script.run */
-function docAnh(b64, mime) {
+/** Đọc 1 ảnh (base64 JPEG/PNG) → JSON kết quả. Gọi từ trang bằng google.script.run — v1.7: phải kèm mã NV có quyền */
+function docAnh(b64, mime, ma) {
+  canQuyen_(ma, '');
+  return docAnh_(b64, mime);
+}
+function docAnh_(b64, mime) {
+  if (!b64 || String(b64).length > 8000000) throw new Error('Ảnh rỗng hoặc quá lớn');
   var cfg = cauHinhAI_();
   var r = goiAI_(cfg, [{ img: b64, mime: mime || 'image/jpeg' }, { text: PROMPT }]);
   var out = String(r.text || '').replace(/^[\s\S]*?(\{)/, '$1').replace(/\}[^}]*$/, '}');

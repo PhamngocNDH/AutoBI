@@ -182,10 +182,14 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}tr.hd td{background:#f0f
     $('run').disabled = !anh.some(function (a) { return a.tt === 'cho' || a.tt === 'err'; });
   }
 
+  var maDoc = '';
   function goi(b64) {
-    return new Promise(function (ok, bad) { google.script.run.withSuccessHandler(ok).withFailureHandler(bad).docAnh(b64, 'image/jpeg'); });
+    return new Promise(function (ok, bad) { google.script.run.withSuccessHandler(ok).withFailureHandler(bad).docAnh(b64, 'image/jpeg', maDoc); });
   }
   $('run').onclick = function () {
+    /* v1.7: đọc ảnh phải kèm mã NV có quyền AutoBI (tab Auth) */
+    maDoc = $('maNhan').value.trim();
+    if (!/^\d{3,10}$/.test(maDoc)) { maDoc = (prompt('Nhập mã nhân viên của bạn (mã đăng nhập portal):') || '').replace(/\D/g, ''); if (!maDoc) return toast('Cần mã NV có quyền AutoBI'); $('maNhan').value = maDoc; try { localStorage.setItem('DAB_ma', maDoc); } catch (e) { } }
     var viec = anh.filter(function (a) { return a.tt === 'cho' || a.tt === 'err'; });
     $('run').disabled = true;
     var i = 0, chay = 0;
@@ -193,7 +197,7 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}tr.hd td{background:#f0f
       if (i >= viec.length) { if (!chay) xong(); return; }
       var a = viec[i++]; a.tt = 'run'; a.loi = ''; veAnh(); chay++;
       Promise.all(a.b64s.map(goi)).then(function (rs) { a.kq = rs; a.tt = 'ok'; })
-        .catch(function (er) { a.tt = 'err'; a.loi = (er && er.message) || String(er); toast('Ảnh lỗi: ' + a.loi); })
+        .catch(function (er) { a.tt = 'err'; a.loi = (er && er.message) || String(er); toast('Ảnh lỗi: ' + a.loi); if (/quyền|hết hạn/.test(a.loi)) i = viec.length; })
         .then(function () { chay--; veAnh(); next(); });
     }
     for (var k = 0; k < 3; k++) next();  /* 3 ảnh song song */
