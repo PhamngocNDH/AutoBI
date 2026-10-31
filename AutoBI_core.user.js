@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.79
+// @name         AutoBI Core V18.80
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.79
+// @version      18.80
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -15003,7 +15003,7 @@ window.__AutoBIRunPick = (() => {
     const u = s.url + '?action=lay&ma=' + encodeURIComponent(s.ma) + (s.kho ? '&kho=' + encodeURIComponent(s.kho) : '') + (s.key ? '&key=' + encodeURIComponent(s.key) : '') + '&t=' + Date.now();
     return new Promise((ok, bad) => {
       GM_xmlhttpRequest({
-        method: 'GET', url: u, timeout: 30000,
+        method: 'GET', url: u, timeout: 30000, anonymous: true,
         onload: r => {
           let j = null; try { j = JSON.parse(r.responseText); } catch (_) { }
           if (!j) return bad(new Error(r.status === 200 ? 'Trang Đọc ảnh trả về không phải số (kiểm tra link /exec, quyền truy cập "Bất kỳ ai")' : 'Không lấy được số (mã ' + r.status + ')'));
@@ -15648,6 +15648,7 @@ const DAB = (function () {
     return new Promise((ok, bad) => {
       GM_xmlhttpRequest({
         method: 'POST', url: s.url, timeout: timeout || 180000, headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        anonymous: true, /* V18.80: không gửi cookie Google — kèm cookie thì Google xếp hàng từng yêu cầu một (8 ảnh thành đọc lần lượt) */
         data: JSON.stringify(Object.assign({ ma: s.ma, kho: s.kho || '', ver: VER }, body)),
         onload: r => {
           let j = null; try { j = JSON.parse(r.responseText); } catch (_) { }
