@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.64
+// @name         AutoBI Core V18.65
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.64
+// @version      18.65
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -10892,13 +10892,15 @@ window.__AutoBIRunPick = (() => {
     all: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/></svg>',
     play: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M7 4l13 8-13 8z"/></svg>',
     x: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
-    ok: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>'
+    ok: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>',
+    anh: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>' /* V18.65 */
   };
   const MODES = [
     { id: 'lk', name: 'Lũy kế', sub: 'DT, thi đua, NV, ngành hàng', run: 'Chạy lũy kế', c: '#0b63ce', bg: '#e8f1fd' },
     { id: 'rt', name: 'Realtime', sub: 'Số hôm nay', run: 'Chạy realtime', c: '#c2410c', bg: '#fff1e6' },
     { id: 'wt', name: 'Giờ công', sub: 'Giờ công & năng suất NV', run: 'Chạy giờ công', c: '#087f8c', bg: '#e3f6f7' },
-    { id: 'all', name: 'Tất cả và lưu Sheet', sub: 'Cuối ngày, 1 lần', run: 'Chạy tất cả và lưu', c: '#15803d', bg: '#e7f6ec' }
+    { id: 'all', name: 'Tất cả và lưu Sheet', sub: 'Cuối ngày, 1 lần', run: 'Chạy tất cả và lưu', c: '#15803d', bg: '#e7f6ec' },
+    { id: 'anh', name: 'Nạp số từ ảnh', sub: 'Số từ trang Đọc ảnh BI · không gọi BI', run: 'Nạp số và xem', c: '#7c3aed', bg: '#f3eefe' } /* V18.65 */
   ];
   const IDS = ['chk-all-save', 'chk-rev-thidua', 'chk-fast-realtime', 'chk-crm', 'chk-last-run', 'chk-test', 'chk-worktime73'];
   const load = () => { try { const v = GM_getValue(KEY, null); return v && typeof v === 'object' ? v : {}; } catch (_) { return {}; } };
@@ -10965,6 +10967,7 @@ window.__AutoBIRunPick = (() => {
       });
       if (mode === 'lk' || mode === 'rt') chips.innerHTML = '<button type="button" class="arp-c' + (crm ? ' on' : '') + '" data-c="crm">' + (crm ? ico.ok : '+') + ' Phục vụ CRM</button>';
       else if (mode === 'all') chips.innerHTML = '<span class="arp-note">Gồm lũy kế, giờ công và lưu Sheet lịch sử; CRM khi chạy trước 8h hoặc sau 18h</span>';
+      else if (mode === 'anh') chips.innerHTML = '<button type="button" class="arp-c" data-c="anhcfg">⚙ Link / mã nhận</button><span class="arp-note">Lũy kế: DT, thi đua, NV (gửi từ trang Đọc ảnh BI)</span>'; /* V18.65 */
       else chips.innerHTML = '<span class="arp-note">Chạy riêng giờ công, không lấy doanh thu</span>';
       run.style.background = m.c;
       run.innerHTML = ico.play + ' ' + m.run;
@@ -10986,8 +10989,23 @@ window.__AutoBIRunPick = (() => {
       if (t.classList.contains('arp-x')) { const c = modal.querySelector('.btn-close-modal'); if (c) c.click(); return; }
       if (t.dataset.m) { mode = t.dataset.m; save({ mode, crm }); paint(); return; }
       if (t.dataset.c === 'crm') { crm = !crm; save({ mode, crm }); paint(); return; }
+      if (t.dataset.c === 'anhcfg') { try { window.__AutoBIAnh && window.__AutoBIAnh.settings(true); } catch (_) { } return; } /* V18.65 */
       const a = t.dataset.a;
       if (!a) return;
+      /* V18.65: Nạp số từ ảnh — lấy gói số trang Đọc ảnh BI, ghi bộ nhớ số rồi mở bằng đường "Xem lại" (không gọi BI) */
+      if (a === 'run' && mode === 'anh') {
+        const A = window.__AutoBIAnh, sEl = box.querySelector('.arp-s');
+        if (!A) { sEl.style.color = '#c00'; sEl.textContent = 'Thiếu module Nạp số từ ảnh — tải lại trang'; return; }
+        t.disabled = true; sEl.style.color = '#7c3aed'; sEl.textContent = 'Đang lấy số từ trang Đọc ảnh BI…';
+        A.run().then(r => {
+          sEl.style.color = '#15803d'; sEl.textContent = '✓ Đã nạp — đang mở báo cáo';
+          A.toast('✓ ' + r.text + (r.warn.length ? ' · ⚠ ' + r.warn.join(' · ') : ''), false);
+          if (!setChecks('last')) throw new Error('Không tìm thấy lựa chọn Xem lại — tải lại trang');
+          runBtn.click();
+        }).catch(e => { sEl.style.color = '#c00'; sEl.textContent = '✗ ' + (e && e.message || e); A.toast('✗ ' + (e && e.message || e), true); })
+          .then(() => { t.disabled = false; });
+        return;
+      }
       if (!setChecks(a)) { const sEl = box.querySelector('.arp-s'); sEl.style.color = '#c00'; sEl.textContent = 'Không tìm thấy lựa chọn này trong khung chạy — tải lại trang rồi thử lại'; return; }
       runBtn.click();
     });
@@ -14882,4 +14900,237 @@ window.__AutoBIRunPick = (() => {
   window.__AutoBIExcel = { on, set, apply, tab, rt, lk, mx, wrap, wtCss, collect, ctx: null, busy: false, get mode() { return mode; } };
   try { if (typeof unsafeWindow !== 'undefined') unsafeWindow.__AutoBIExcel = window.__AutoBIExcel; } catch (_) { }
   if (document.body) apply(); else document.addEventListener('DOMContentLoaded', apply);
+})();
+
+/* ==== V18.65: Nạp số từ ảnh (__AutoBIAnh) — công ty chỉ cho chụp ảnh màn hình BI (31/10/2026).
+   Lấy gói số mà trang "Đọc ảnh BI" (Apps Script của Ngọc) đã đọc từ ảnh, ghi vào bộ nhớ số y như API vẫn ghi
+   (link2 = DT lũy kế từng shop, link4_smart = Thi đua lũy kế nhóm × shop, link6 = DT + Thi đua từng NV) rồi mở báo cáo
+   qua đúng đường "Xem lại" — KHÔNG gọi BI. Đơn vị như API: DT siêu thị / NV = đồng (ảnh ghi triệu × 1.000.000);
+   Thi đua nhóm tiền × 1000 (như applyCompetition), nhóm số lượng giữ nguyên.
+   Chưa có từ ảnh (đợt 1): Realtime, Ngành hàng BI, Giờ công, CRM, trả chậm từng NV. ==== */
+(function () {
+  'use strict';
+  if (window.top !== window.self || window.__AutoBIAnh) return;
+  if (location.hostname !== 'baocao.dienmayxanh.com') return;
+  const CFG_KEY = 'TGDD_BI_STORE_PERMANENT_CONFIG_GM_V1', CACHE_KEY = 'tgdd_data_cache_v30', SET_KEY = 'autobi_anh_cfg_v1';
+  const page = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
+  const num = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+  const has = v => v !== null && v !== undefined && v !== '' && Number.isFinite(Number(v));
+  const slug = v => String(v ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  const note = t => { try { window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note(t); } catch (_) { } };
+  const pad = n => String(n).padStart(2, '0');
+  const readObj = key => { const v = GM_getValue(key, null); if (!v) return {}; if (typeof v === 'string') { try { return JSON.parse(v) || {}; } catch (_) { return {}; } } return v; };
+
+  /* Khai báo — đọc như __AutoBIApi.readConfig */
+  function shopsOf(cfg) {
+    const out = [];
+    for (let i = 1; i <= 5; i++) {
+      const code = String(cfg['makho' + i] || cfg['shopCode' + i] || cfg['code' + i] || '').trim();
+      const name = String(cfg['shop' + i] || cfg['shop' + i + 'Short'] || '').trim() || code;
+      if (name) out.push({ key: 'shop' + i, idx: i, name, short: String(cfg['shop' + i + 'Short'] || '').trim() || name, code });
+    }
+    return out;
+  }
+  function readConfig() {
+    const ok = v => v && typeof v === 'object' && Object.keys(v).length > 0;
+    const run = readObj('tgdd_active_run_config');
+    if (ok(run) && shopsOf(run).length) return run;
+    const gm = readObj(CFG_KEY);
+    if (ok(gm) && shopsOf(gm).length) return gm;
+    for (const ls of [page.localStorage, window.localStorage]) {
+      try { const v = ls && JSON.parse(ls.getItem(CFG_KEY) || 'null'); if (ok(v) && shopsOf(v).length) return v; } catch (_) { }
+    }
+    try { const v = page.tgdd_active_user_config || window.tgdd_active_user_config; if (ok(v) && shopsOf(v).length) return v; } catch (_) { }
+    return ok(gm) ? gm : (ok(run) ? run : {});
+  }
+  function groupList() {
+    const G = window.__AutoBIGroupList; if (G) return G.clean(G.read());
+    const v = GM_getValue('tgdd_gsheet_list_v30', []); if (Array.isArray(v)) return v;
+    try { const a = JSON.parse(v); return Array.isArray(a) ? a : []; } catch (_) { return []; }
+  }
+  /* Khớp tên chương trình (đã bỏ "T10 - ") với nhóm hàng — cùng cách __AutoBIApi.matchGroup */
+  function matchGroup(name, list, cfgGroups) {
+    const raw = String(name || '').replace(/^T?\d+\s*-\s*/i, '').trim(), s = slug(raw);
+    if (list.length) {
+      let m = null;
+      try { const D = page.DATA || window.DATA; if (D && D.matchGroupConfigName) m = D.matchGroupConfigName(raw, list); } catch (_) { }
+      if (!m) {
+        m = list.find(g => slug(g.short) === s || slug(g.full) === s || slug(String(g.full || '').replace(/^T?\d+\s*-\s*/i, '')) === s) || list.find(g => g.customSlug && slug(g.customSlug) === s) || null;
+        if (!m) { let best = 0; for (const g of list) { const k = slug(g.short); if (k && (s.startsWith(k) || k.startsWith(s)) && k.length > best) { best = k.length; m = g; } } }
+      }
+      return m && m.short ? m.short : null;
+    }
+    const keys = cfgGroups || [];
+    return keys.find(k => slug(k) === s) || keys.filter(k => slug(k).length >= 4 && (s.includes(slug(k)) || slug(k).includes(s))).sort((a, b) => slug(b).length - slug(a).length)[0] || null;
+  }
+  const staffIdOf = v => { const m = String(v || '').match(/\d+/); return m ? m[0] : String(v || '').trim(); };
+
+  /* ---------- Cài link trang Đọc ảnh BI + mã nhận ---------- */
+  function settings(ask) {
+    let s = GM_getValue(SET_KEY, null) || {};
+    if (ask || !s.url || !s.ma) {
+      const url = prompt('Link trang "Đọc ảnh BI" (dạng https://script.google.com/macros/s/…/exec):', s.url || '');
+      if (!url) return null;
+      if (!/^https:\/\/script\.google(usercontent)?\.com\//.test(url.trim())) { alert('Link phải là link Apps Script (script.google.com/…/exec)'); return null; }
+      const ma = prompt('Mã nhận số (giống ô "Mã nhận số" ở trang Đọc ảnh BI):', s.ma || String(window.__AutoBIAuthUid || ''));
+      if (!ma) return null;
+      const key = prompt('Khóa AUTOBI_KEY (trang Đọc ảnh không cài khóa thì để trống):', s.key || '');
+      s = { url: url.trim().replace(/\?.*$/, ''), ma: ma.trim(), key: (key || '').trim() };
+      GM_setValue(SET_KEY, s);
+    }
+    return s;
+  }
+  function fetchGoi(s) {
+    const u = s.url + '?action=lay&ma=' + encodeURIComponent(s.ma) + (s.key ? '&key=' + encodeURIComponent(s.key) : '') + '&t=' + Date.now();
+    return new Promise((ok, bad) => {
+      GM_xmlhttpRequest({
+        method: 'GET', url: u, timeout: 30000,
+        onload: r => {
+          let j = null; try { j = JSON.parse(r.responseText); } catch (_) { }
+          if (!j) return bad(new Error(r.status === 200 ? 'Trang Đọc ảnh trả về không phải số (kiểm tra link /exec, quyền truy cập "Bất kỳ ai")' : 'Không lấy được số (mã ' + r.status + ')'));
+          if (!j.ok) return bad(new Error(j.loi || 'Trang Đọc ảnh báo lỗi'));
+          ok(j.data);
+        },
+        onerror: () => bad(new Error('Không kết nối được trang Đọc ảnh BI')),
+        ontimeout: () => bad(new Error('Trang Đọc ảnh BI trả lời quá lâu'))
+      });
+    });
+  }
+
+  /* ---------- Gói số ảnh → bộ nhớ số AutoBI ---------- */
+  function build(goi, cfg) {
+    if (!goi || goi.v !== 1) throw new Error('Gói số không đúng dạng (cần trang Đọc ảnh BI bản 1.1 trở lên)');
+    const shops = shopsOf(cfg);
+    if (!shops.length) throw new Error('Khai báo chưa có siêu thị');
+    const list = groupList();
+    const cfgGroups = ((cfg && cfg.compData) || []).map(x => x && String(x.group || '').trim()).filter(Boolean);
+    const log = { shops: [], shopMiss: [], groups: 0, groupMiss: [], staff: 0, staffMiss: new Set(), rowMiss: new Set() };
+    /* khớp siêu thị: mã kho → tên trên BI → tên gọn / đuôi tên */
+    const byCode = {}; (goi.shops || []).forEach(p => { if (p.ma) byCode[String(p.ma)] = p; });
+    function shopOfLabel(label, ma) {
+      if (ma) { const s = shops.find(x => x.code && String(x.code) === String(ma)); if (s) return s; }
+      const p = (goi.shops || []).find(x => x.bi && slug(x.bi) === slug(label));
+      if (p && p.ma) { const s = shops.find(x => x.code && String(x.code) === String(p.ma)); if (s) return s; }
+      const s0 = slug(label), tail = slug(String(label || '').split(' - ').pop());
+      return shops.find(x => slug(x.name) === s0) || shops.find(x => tail.length >= 3 && (slug(x.short) === tail || slug(x.name).endsWith(tail))) || null;
+    }
+    const cache = {};
+    /* link2 — Doanh thu lũy kế từng shop + tổng */
+    const l2 = {}, tot = { t: 0, r: 0, dtlk: 0, tgop: 0, pvb: 0, pvk: 0, nT: 0, nDt: 0, nTg: 0, tgW: 0 };
+    (goi.shops || []).forEach(p => {
+      const s = shopOfLabel(p.bi || p.gon, p.ma);
+      if (!s) { log.shopMiss.push((p.gon || p.bi || '') + ' (' + p.ma + ')'); return; }
+      if (!has(p.lkQD)) return;
+      const c = { r: Math.round(num(p.lkQD) * 1e6) };
+      if (has(p.target)) { c.t = num(p.target) * 1e6; tot.t += c.t; tot.nT++; }
+      if (has(p.lkThuc)) { c.dtlk = num(p.lkThuc) * 1e6; tot.dtlk += c.dtlk; tot.nDt++; }
+      if (has(p.lkTC)) { c.tg = num(p.lkTC); tot.tgW += c.tg * c.r; }
+      if (has(p.lkTraGop)) { tot.tgop += num(p.lkTraGop); tot.nTg++; }
+      if (has(p.pvB) && has(p.pvK)) { c.pv_b = num(p.pvB); c.pv_k = num(p.pvK); c.tlpvtc = c.pv_k > 0 ? Math.round(c.pv_b / c.pv_k * 10000) / 100 : 0; tot.pvb += c.pv_b; tot.pvk += c.pv_k; }
+      tot.r += c.r;
+      l2[s.key] = c; log.shops.push(s.short + ' ' + Math.round(num(p.lkQD)).toLocaleString('en-US'));
+    });
+    if (Object.keys(l2).length) {
+      const n = Object.keys(l2).length, T = { r: tot.r };
+      if (tot.nT === n) T.t = tot.t;
+      if (tot.nDt === n) T.dtlk = tot.dtlk;
+      if (tot.nTg === n && tot.r > 0) T.tg = Math.round(tot.tgop * 1e6 / tot.r * 10000) / 100;
+      else if (tot.r > 0 && tot.tgW) T.tg = Math.round(tot.tgW / tot.r * 100) / 100;
+      if (tot.pvk > 0) { T.pv_b = tot.pvb; T.pv_k = tot.pvk; T.tlpvtc = Math.round(tot.pvb / tot.pvk * 10000) / 100; }
+      l2.total = T; cache.link2 = l2;
+    }
+    /* link4_smart — Thi đua lũy kế nhóm × shop */
+    const moneyOf = (short, donVi) => { const g = list.find(x => x.short === short), type = g ? slug(g.type) : ''; return type ? /doanhthu|tien/.test(type) : donVi !== 'SỐ LƯỢNG'; };
+    const l4 = {};
+    (goi.tdST || []).forEach(g => {
+      const short = matchGroup(g.key, list, cfgGroups);
+      if (!short) { log.groupMiss.push(g.key); return; }
+      const sc = moneyOf(short, g.donVi) ? 1000 : 1, out = l4[short] = l4[short] || {};
+      (g.rows || []).forEach(r => {
+        const s = shopOfLabel(r.ten);
+        if (!s) { log.rowMiss.add(r.ten); return; }
+        const t = has(r.t) ? Math.round(num(r.t) * sc * 100) / 100 : 0, v = Math.round(num(r.v) * sc * 100) / 100;
+        out[s.key] = { t, r: v, p: t ? Math.round(v / t * 1000) / 10 : 0 };
+      });
+      const cells = shops.map(s => out[s.key]).filter(Boolean);
+      if (!cells.length) { delete l4[short]; return; }
+      const t = cells.reduce((a, c) => a + c.t, 0), rr = cells.reduce((a, c) => a + c.r, 0);
+      out.total = { t, r: rr, p: t ? Math.round(rr / t * 1000) / 10 : 0 };
+      log.groups++;
+    });
+    if (Object.keys(l4).length) cache.link4_smart = l4;
+    /* link6 — NV: Thi đua (cộng dồn các dòng cùng mã: NV làm chéo shop) + DT QĐ; NV xếp vào shop nhà theo Khai báo như API */
+    const staffList = Array.isArray(cfg.staffList) ? cfg.staffList : [];
+    const byId = new Map(staffList.map(x => [staffIdOf(x.name), x]));
+    const l6 = {};
+    const slot = st => { const k = 'shop' + (Number(st.shopIdx) || 1); return l6[k] = l6[k] || { revenue: {}, competition: {}, crossSell: {} }; };
+    const seenNV = new Set();
+    (goi.tdNV || []).forEach(g => {
+      const short = matchGroup(g.key, list, cfgGroups);
+      if (!short) { if (!log.groupMiss.includes(g.key)) log.groupMiss.push(g.key + ' (NV)'); return; }
+      const sc = moneyOf(short, g.donVi) ? 1000 : 1;
+      (g.rows || []).forEach(r => {
+        const st = byId.get(staffIdOf(r.ten));
+        if (!st) { log.staffMiss.add(r.ten); return; }
+        const c = slot(st).competition, o = c[st.name] = c[st.name] || {};
+        o[short] = Math.round(((o[short] || 0) + num(r.v) * sc) * 100) / 100;
+        seenNV.add(st.name);
+      });
+    });
+    (goi.dtNV || []).forEach(r => {
+      const st = byId.get(staffIdOf(r.ten));
+      if (!st) { log.staffMiss.add(r.ten); return; }
+      slot(st).revenue[st.name] = { dtqd: num(r.dt) * 1e6, dtlk: 0, hqqd: 0 };
+      seenNV.add(st.name);
+    });
+    if (Object.keys(l6).length) cache.link6 = l6;
+    log.staff = seenNV.size;
+    if (!cache.link2 && !cache.link4_smart) throw new Error('Gói số không có Doanh thu / Thi đua nào khớp Khai báo (kiểm mã kho, tên siêu thị)');
+    cache.__anh = { at: goi.at, nap: Date.now(), ngayQua: goi.ngayQua || null, canhBao: (goi.canhBao || []).length };
+    return { cache, log };
+  }
+
+  function tom(log, goi) {
+    const d = new Date(goi.at || Date.now());
+    const parts = ['Số ảnh lúc ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ' ' + pad(d.getDate()) + '/' + pad(d.getMonth() + 1),
+      log.shops.length + ' siêu thị', log.groups + ' nhóm thi đua', log.staff + ' NV'];
+    const warn = [];
+    if (log.shopMiss.length) warn.push('siêu thị không khớp Khai báo: ' + log.shopMiss.join(', '));
+    if (log.groupMiss.length) warn.push('chương trình không khớp nhóm hàng: ' + log.groupMiss.slice(0, 6).join(', ') + (log.groupMiss.length > 6 ? '…' : ''));
+    if (log.staffMiss.size) warn.push(log.staffMiss.size + ' NV không có trong Khai báo (bỏ qua)');
+    if (log.rowMiss.size) warn.push('dòng thi đua không rõ siêu thị: ' + [...log.rowMiss].slice(0, 3).join(', '));
+    if ((goi.canhBao || []).length) warn.push(goi.canhBao.length + ' cảnh báo khi đọc ảnh (xem ở trang Đọc ảnh)');
+    return { text: parts.join(' · '), warn };
+  }
+
+  function toast(text, bad) {
+    try {
+      let el = document.getElementById('autobi-anh-toast');
+      if (!el) { el = document.createElement('div'); el.id = 'autobi-anh-toast'; document.body.appendChild(el); }
+      el.style.cssText = 'position:fixed;left:50%;bottom:80px;transform:translateX(-50%);z-index:2147483646;max-width:92vw;padding:10px 14px;border-radius:12px;font:600 13px/1.4 -apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#fff;box-shadow:0 6px 20px rgba(0,0,0,.25);background:' + (bad ? '#b4232c' : '#1f2328');
+      el.textContent = text; el.style.display = 'block';
+      clearTimeout(toast.t); toast.t = setTimeout(() => { el.style.display = 'none'; }, bad ? 9000 : 6000);
+    } catch (_) { }
+  }
+
+  /* Lấy gói số → ghi bộ nhớ số (thay toàn bộ số lần trước) → trả tóm tắt. Gọi xong thì mở báo cáo bằng "Xem lại". */
+  async function run() {
+    const s = settings(false);
+    if (!s) throw new Error('Chưa cài link trang Đọc ảnh BI');
+    const goi = await fetchGoi(s);
+    const age = Date.now() - num(goi.at);
+    if (goi.at && new Date(goi.at).toDateString() !== new Date().toDateString()) {
+      const d = new Date(goi.at);
+      if (!confirm('Số ảnh gửi lúc ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ' ngày ' + pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + ' (không phải hôm nay). Vẫn nạp?')) throw new Error('Đã hủy — gửi số mới từ trang Đọc ảnh BI');
+    }
+    const { cache, log } = build(goi, readConfig());
+    GM_setValue(CACHE_KEY, cache);
+    const t = tom(log, goi);
+    note('Nạp số từ ảnh: ' + t.text + (t.warn.length ? ' · ⚠ ' + t.warn.join(' · ') : '') + ' · gói số cách đây ' + Math.round(age / 60000) + ' phút');
+    return t;
+  }
+
+  window.__AutoBIAnh = { run, settings, build, toast, _shopsOf: shopsOf };
+  try { if (typeof unsafeWindow !== 'undefined') unsafeWindow.__AutoBIAnh = window.__AutoBIAnh; } catch (_) { }
+  try { GM_registerMenuCommand('AutoBI: Cài link Đọc ảnh BI', () => settings(true)); } catch (_) { }
 })();
