@@ -10939,7 +10939,7 @@ window.__AutoBIRunPick = (() => {
     const runBtn = modal && modal.querySelector('#btn-sel-run');
     if (!view || !runBtn) return;
     const st = load();
-    let mode = MODES.some(m => m.id === st.mode) ? st.mode : 'lk', crm = !!st.crm;
+    let mode = MODES.some(m => m.id === st.mode) ? st.mode : MODES[0].id, crm = !!st.crm; /* V18.67: chế độ đã lưu không còn (portal chỉ có Nạp số từ ảnh) → chọn chế độ đầu */
     const hasTest = !!modal.querySelector('#chk-test');
     const box = document.createElement('div');
     box.className = 'arp';
