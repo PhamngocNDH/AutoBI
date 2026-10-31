@@ -206,7 +206,7 @@ function goiMistral_(key, parts, tries) {
   var content = parts.map(function (x) {
     return x.img ? { type: 'image_url', image_url: 'data:' + (x.mime || 'image/jpeg') + ';base64,' + x.img } : { type: 'text', text: x.text };
   });
-  var chain = ['mistral-medium-latest', 'mistral-small-latest', 'mistral-large-latest'], cache = CacheService.getScriptCache();
+  var chain = ['mistral-medium-latest', 'mistral-small-latest', 'ministral-14b-latest'], cache = CacheService.getScriptCache();
   for (var k = 0; k < chain.length; k++) {
     if (cache.get('ai_bad_' + chain[k])) continue;
     var code = 0, txt = '';
