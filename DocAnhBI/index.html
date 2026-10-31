@@ -124,7 +124,7 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}tr.hd td{background:#f0f
   $('addShop').onclick = function () { if (document.querySelectorAll('.shop').length >= 4) return toast('Mẫu tối đa 4 siêu thị'); shopRow({ ma: '', bi: '', gon: '' }); };
 
   google.script.run.withSuccessHandler(function (t) {
-    $('ver').textContent = 'Phiên bản ' + t.version + ' · ' + (t.coKhoa ? 'AI: ' + t.model : '⚠ Chưa cài khóa API (xem hướng dẫn)');
+    $('ver').textContent = t.coKhoa ? 'Chụp màn hình Doanh thu hợp nhất / Thi đua / Trả chậm → tải lên → gửi sang AutoBI' : '⚠ Chưa cài khóa AI (xem hướng dẫn)'; /* v1.5: không hiện phiên bản / model */
     if (t.url) $('linkAB').innerHTML = 'Link dán vào AutoBI (lần đầu): <b>' + esc(t.url) + '</b>' + (t.coKhoaAutoBI ? ' · kèm khóa AUTOBI_KEY' : '');
   }).thongTin();
   try { $('maNhan').value = localStorage.getItem('DAB_ma') || ''; } catch (e) { }
@@ -134,10 +134,10 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}tr.hd td{background:#f0f
     if (!/^[0-9A-Za-z_-]{2,20}$/.test(ma)) return toast('Nhập mã nhận số (2–20 chữ/số)');
     try { localStorage.setItem('DAB_ma', ma); } catch (e) { }
     var goi = DAB.goiAutoBI(S, shops());
-    if (!goi.shops.length && !goi.tdST.length) return toast('Chưa có số Doanh thu / Thi đua để gửi');
+    if (!goi.shops.length && !goi.tdST.length && !goi.tdSTRT.length && !goi.dtNV.length && !goi.dtNVRT.length && !goi.tcNV.length && !goi.tcNVRT.length) return toast('Chưa có số để gửi');
     var bt = $('gui'); bt.disabled = true; $('guiTT').textContent = 'Đang gửi…';
     google.script.run.withSuccessHandler(function () {
-      var d = new Date(); $('guiTT').textContent = '✓ Đã gửi lúc ' + ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) + ' — ' + goi.shops.length + ' siêu thị · ' + goi.tdST.length + ' CT siêu thị · ' + goi.tdNV.length + ' CT NV · ' + goi.dtNV.length + ' NV';
+      var d = new Date(); $('guiTT').textContent = '✓ Đã gửi lúc ' + ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) + ' — ' + goi.shops.length + ' siêu thị · ' + goi.tdST.length + ' CT siêu thị · ' + goi.tdNV.length + ' CT NV · ' + goi.dtNV.length + ' NV' + (goi.tdSTRT.length || goi.dtNVRT.length ? ' · realtime ' + goi.tdSTRT.length + ' CT, ' + goi.dtNVRT.length + ' NV' : '') + (goi.tcNV.length ? ' · trả chậm ' + goi.tcNV.length + ' NV' : '');
       bt.disabled = false; toast('Đã gửi — mở AutoBI bấm Nạp số từ ảnh');
     }).withFailureHandler(function (er) { $('guiTT').textContent = '✗ ' + ((er && er.message) || er); bt.disabled = false; })
       .luuKetQua(ma, JSON.stringify(goi));
@@ -205,12 +205,12 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}tr.hd td{background:#f0f
       a.kq.forEach(function (r) { r.anh = String(i + 1); res.push(r); });
     });
     S = DAB.gop(res); render();
-    $('kq').classList.remove('hide'); $('xuat').classList.remove('hide'); $('guiAB').classList.remove('hide');
+    $('kq').classList.remove('hide'); $('guiAB').classList.remove('hide'); /* v1.5: ẩn khung Xuất Excel đổ tay */
     toast('Đọc xong ' + S.soAnh + ' ảnh');
   }
 
   /* ---------- Kết quả ---------- */
-  var TABS = [['tdLK', 'TĐ siêu thị'], ['tdNV', 'TĐ nhân viên'], ['dtNV', 'DT nhân viên'], ['nhapSo', 'Nhập số'], ['tdRT', 'TĐ realtime'], ['dtNVRT', 'DT NV realtime']];
+  var TABS = [['tdLK', 'TĐ siêu thị'], ['tdNV', 'TĐ nhân viên'], ['dtNV', 'DT nhân viên'], ['tcNV', 'Trả chậm NV'], ['nhapSo', 'Doanh thu ST'], ['tdRT', 'TĐ realtime'], ['dtNVRT', 'DT NV realtime'], ['tcNVRT', 'Trả chậm NV RT']];
   function render() {
     if (!S) return;
     B = DAB.tatCaBang(S, shops());
@@ -234,15 +234,15 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}tr.hd td{background:#f0f
   function veBang() {
     var h = '';
     if (tabOn === 'nhapSo') {
-      h = '<table><tr class="hd"><td>Siêu thị</td><td class="n">DT QĐ LK</td><td class="n">DT thực LK</td><td class="n">% TC LK</td><td class="n">DT QĐ RT</td><td class="n">Target</td></tr>' +
+      h = '<table><tr class="hd"><td>Siêu thị</td><td class="n">DT QĐ LK</td><td class="n">% TC LK</td><td class="n">Target tháng</td><td class="n">DT QĐ RT</td><td class="n">% TC RT</td></tr>' +
         B.nhapSo.map(function (s) {
-          var v = s.vals; return '<tr><td>' + esc(s.gon || s.bi || s.ma) + ' <span class="note">' + esc(s.ma) + '</span></td><td class="n">' + fmt(v[0]) + '</td><td class="n">' + fmt(v[1]) + '</td><td class="n">' + (v[2] != null ? (v[2] * 100).toFixed(1) + '%' : '') + '</td><td class="n">' + fmt(v[3]) + '</td><td class="n">' + fmt(s.target) + '</td></tr>';
+          var v = s.vals, pc = x => x != null ? (x * 100).toFixed(1) + '%' : ''; return '<tr><td>' + esc(s.gon || s.bi || s.ma) + ' <span class="note">' + esc(s.ma) + '</span></td><td class="n">' + fmt(v[0]) + '</td><td class="n">' + pc(v[2]) + '</td><td class="n">' + fmt(s.target) + '</td><td class="n">' + fmt(v[3]) + '</td><td class="n">' + pc(v[5]) + '</td></tr>';
         }).join('') + '</table>';
     } else {
       var rows = B[tabOn] || [], cap = /NV/.test(tabOn) && tabOn.indexOf('td') === 0 ? 'nv' : 'st', m = /RT/.test(tabOn) ? 'realtime' : 'luy_ke';
       h = '<table>' + rows.map(function (r, i) {
         var isHd = tabOn.indexOf('td') === 0 && (r[1] === 'DOANH THU' || r[1] === 'SỐ LƯỢNG' || /\(RT\)$/.test(r[1] || ''));
-        if (tabOn.indexOf('dt') === 0 && i === 0) isHd = true;
+        if ((tabOn.indexOf('dt') === 0 || tabOn.indexOf('tc') === 0) && i === 0) isHd = true;
         var cls = isHd ? 'hd' : (r[0] === 'TỔNG' ? 'tg' : '');
         var c0 = esc(r[0]) + (isHd && tabOn.indexOf('td') === 0 ? trangThai(r[0], cap, m) : '');
         var n = isHd ? 2 : r.length;

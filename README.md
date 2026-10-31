@@ -2,7 +2,7 @@
 
 Kho lưu AutoBI của 38967 - Mr Phạm.
 
-Bản hiện tại: **18.67**
+Bản hiện tại: **18.68**
 
 Link cài cố định: [AutoBI.user.js](https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI.user.js)
 
@@ -22,3 +22,10 @@ Link cài cố định: [AutoBI.user.js](https://raw.githubusercontent.com/Phamn
 - Nhận nhân viên trên portal từ thông tin đăng nhập của portal (mã NV + họ tên) → kiểm quyền như cũ.
 - Cụm nút nổi (▶ Chạy · ⋯ Menu) chuyển sang **góc dưới bên trái**. Nút "Trang chủ" / Dừng quay về portal.
 - Khung Chạy báo cáo trên portal chỉ còn **Nạp số từ ảnh** + **Xem lại** (các chế độ cần BI đã ẩn).
+
+## Thay đổi 18.68 — Realtime + trả chậm từ ảnh, sửa Lưu Sheet
+
+- Nạp số từ ảnh thêm **Realtime**: Doanh thu hợp nhất chế độ Realtime từng siêu thị (DT QĐ, target ngày, trả chậm, TLPVTC hôm nay) → `link1`; Thi đua Realtime → `link3_smart`; DT nhân viên hôm nay → `link6rt`. Realtime V1 có số.
+- Thêm **trả chậm từng NV** (Báo cáo trả chậm → Nhân viên) → `link7`; khớp theo họ tên trong Khai báo. Cần thấy cột DT siêu thị (hoặc %) mới tính được tỷ lệ.
+- Sửa lỗi **"Không thể lưu dữ liệu!"**: lưu Sheet bị chặn vì nhật ký phiên chạy BI cũ còn lỗi (403); số nạp từ ảnh nay lưu được. Cloud trả lỗi khác thì hiện nguyên lý do.
+- Trang Đọc ảnh BI 1.5: ẩn dòng phiên bản/model AI, ẩn khung Xuất Excel đổ tay, đọc thêm màn Realtime + Báo cáo trả chậm.

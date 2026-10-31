@@ -13,7 +13,7 @@
  *  3. Lần sau sửa code: Quản lý các lần triển khai → bút chì → Phiên bản mới (giữ nguyên URL)
  */
 
-var DAB_VERSION = '1.4';
+var DAB_VERSION = '1.5';
 
 /* v1.1: AutoBI lấy số đã đọc: GET <url /exec>?action=lay&ma=<mã nhận>&key=<AUTOBI_KEY nếu có cài> */
 function doGet(e) {
@@ -71,18 +71,20 @@ function thongTin() {
 var PROMPT = [
   'Bạn đọc ẢNH CHỤP MÀN HÌNH báo cáo BI Điện Máy Xanh (app/web, tiếng Việt) và trả về DUY NHẤT một đối tượng JSON, không giải thích, không ```.',
   '',
-  'Có 2 loại màn hình:',
+  'Có 3 loại màn hình:',
   'A) "thi_dua" — tiêu đề "Thi đua": nhiều bảng, mỗi bảng có ô tiêu đề là tên chương trình (vd "T10 - MÁY GIẶT"), cột "DOANH THU" hoặc "SỐ LƯỢNG", có thể có "TARGET", "% HT THÁNG"/"% HT NGÀY", "HẠNG TRONG ST"… Dòng đầu là "TỔNG", sau đó là các dòng siêu thị (vd "ĐMM_NDI_HHA - Hải Anh") hoặc nhân viên (vd "204372 - Nguyễn Quốc Khánh").',
+  'C) "tra_cham" — tiêu đề "Báo cáo trả chậm": bảng theo Nhân viên (hoặc Siêu thị) với cột "DT trả góp (triệu)", có thể có "DT siêu thị", "Tỷ lệ/Tỷ trọng trả chậm (%)".',
   'B) "doanh_thu" — tiêu đề "Doanh thu hợp nhất": các thẻ số (DT quy đổi / DT thực, DT dự kiến, % HT target "Target trọn kỳ …", Tỷ trọng trả chậm "x%" kèm "DT trả góp QĐ a / b"), đường dẫn "Toàn công ty > Siêu thị 5243", và có thể có bảng nhân viên (NHÂN VIÊN, SỐ LƯỢNG, DOANH THU QĐ…).',
   '',
   'Dạng JSON:',
-  '{"man_hinh":"thi_dua"|"doanh_thu"|"khac",',
+  '{"man_hinh":"thi_dua"|"doanh_thu"|"tra_cham"|"khac",',
   ' "che_do":"luy_ke"|"realtime"|null,          // nút đang chọn (màu xanh đậm) Lũy kế / Realtime; không thấy nút thì null',
   ' "loai_dt":"quy_doi"|"thuc"|null,            // chỉ màn doanh_thu: nút DT quy đổi / DT thực đang chọn',
   ' "sieu_thi":"5243"|null,                     // chỉ màn doanh_thu: mã siêu thị ở đường dẫn "Siêu thị xxxx"; không có thì null',
   ' "ngay_qua":số|null,"so_ngay":số|null,        // dòng "Quỹ thời gian: 30/31 ngày" → 30 và 31',
-  ' "kpi":{"dt":số,"target":số|null,"tra_cham_pct":số|null,"dt_tra_gop":số|null,"pv_bill":số|null,"pv_khach":số|null}|null,   // dt = số lớn ở thẻ DT quy đổi (hoặc DT thực); target = "Target trọn kỳ"; tra_cham_pct = số % ở thẻ Tỷ trọng trả chậm; dt_tra_gop = số a trong "DT trả góp QĐ a / b"; pv_bill, pv_khach = 2 số trong "495 bill / 3,469 khách" ở thẻ TLPVTC',
+  ' "kpi":{"dt":số,"target":số|null,"tra_cham_pct":số|null,"dt_tra_gop":số|null,"pv_bill":số|null,"pv_khach":số|null,"target_ngay":số|null}|null,   // dt = số lớn ở thẻ DT quy đổi (hoặc DT thực); target = "Target trọn kỳ" (chế độ Lũy kế); target_ngay = "Target ngày" ở thẻ "% HT target ngày" (chế độ Realtime); tra_cham_pct = số % ở thẻ Tỷ trọng trả chậm; dt_tra_gop = số a trong "DT trả góp QĐ a / b"; pv_bill, pv_khach = 2 số trong "495 bill / 3,469 khách" ở thẻ TLPVTC',
   ' "nhan_vien":[{"ten":"204372 - Nguyễn Qu","so_luong":số|null,"doanh_thu":số}],     // bảng nhân viên của màn doanh_thu, đúng thứ tự trên ảnh',
+  ' "tra_cham":[{"ten":"Nguyễn Quốc Khánh","dt_tra_gop":số,"dt_sieu_thi":số|null,"ty_le":số|null}],   // chỉ màn tra_cham: từng dòng của bảng (tên NV hoặc siêu thị như hiển thị); dt_tra_gop = cột DT trả góp; dt_sieu_thi, ty_le (%) nếu cột đó hiện đủ, không thấy thì null',
   ' "khoi":[{"chuong_trinh":"T10 - MÁY GIẶT"|null,"don_vi":"DOANH THU"|"SỐ LƯỢNG","tong":số|null,"tong_target":số|null,',
   '          "dong":[{"ten":"…","gia_tri":số,"target":số|null}]}]}',
   '',
@@ -94,6 +96,7 @@ var PROMPT = [
   '- Bảng ở đầu ảnh không thấy ô tên chương trình (cuộn tiếp từ ảnh trước) → "chuong_trinh": null. Nếu ô tiêu đề có hiện (kể cả bị che một phần) thì chép tên.',
   '- "tong" là số ở dòng TỔNG; không thấy dòng TỔNG thì null. "tong_target" là TARGET ở dòng TỔNG nếu có.',
   '- Mọi dòng đúng thứ tự từ trên xuống. Một người/siêu thị có thể xuất hiện 2 lần với số khác nhau — giữ cả 2.',
+  '- Màn tra_cham: bỏ dòng "Admin" và dòng tổng; cột bị cắt mép phải không đọc được thì để null.',
   '- Màn không có loại dữ liệu nào thì để mảng rỗng [] hoặc null.'
 ].join('\n');
 

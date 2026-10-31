@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.67
+// @name         AutoBI Core V18.68
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.67
+// @version      18.68
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -2336,7 +2336,7 @@ window.__AutoBIRun67 = (function () {
                 if (_0x421370)
                     _0x421370(null);
             } }, onerror: () => { if (_0x421370)
-                _0x421370(null); } }); }); }, saveHistoryToSheet: (...args) => { /* V17.53: đang kiểm nhóm hàng → chờ xong (tối đa 25s); có lấy lại Thi đua thì lưu số mới */ if (!window.__agSaveWaited && window.__AutoBIGroupCheck && window.__AutoBIGroupCheck.pending && window.__AutoBIGroupWait) { window.__AutoBIGroupWait().then(() => { const g = window.__AutoBIGroupCheck; if (g && g.rerun) args[0] = GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || args[0]; window.__agSaveWaited = true; try { DATA.saveHistoryToSheet(...args); } finally { window.__agSaveWaited = false; } }); return; } const journal = window.__AutoBILog5?.snapshot?.(), run = window.__AutoBIRun67?.current?.(); if (journal?.id === run?.id && journal.errors > 0) {
+                _0x421370(null); } }); }); }, saveHistoryToSheet: (...args) => { /* V17.53: đang kiểm nhóm hàng → chờ xong (tối đa 25s); có lấy lại Thi đua thì lưu số mới */ if (!window.__agSaveWaited && window.__AutoBIGroupCheck && window.__AutoBIGroupCheck.pending && window.__AutoBIGroupWait) { window.__AutoBIGroupWait().then(() => { const g = window.__AutoBIGroupCheck; if (g && g.rerun) args[0] = GM_getValue(CONSTANTS.KEYS.DATA_CACHE) || args[0]; window.__agSaveWaited = true; try { DATA.saveHistoryToSheet(...args); } finally { window.__agSaveWaited = false; } }); return; } const journal = window.__AutoBILog5?.snapshot?.(), run = window.__AutoBIRun67?.current?.(); if (journal?.id === run?.id && journal.errors > 0 && !(args[0] && args[0].__anh)) { /* V18.68: số nạp từ ảnh không thuộc phiên chạy cũ (phiên BI lỗi 403) → không chặn lưu */ try { UI.showToast('⚠️ Không lưu: phiên chạy gần nhất còn lỗi dữ liệu', 6000); } catch (_) { }
             window.__AutoBILog5.error('Kh\u00F4ng l\u01B0u l\u1ECBch s\u1EED: phi\u00EAn ch\u1EA1y c\u00F2n l\u1ED7i d\u1EEF li\u1EC7u; gi\u1EEF l\u1ECBch s\u1EED tr\u01B0\u1EDBc \u0111\u00F3');
             const cb = args[args.length - 1];
             if (typeof cb === 'function')
@@ -2361,7 +2361,7 @@ window.__AutoBIRun67 = (function () {
             }
         } return _0x598ebe; }; const _0x51343a = _0x5066c1(_0x730cdd); const _0x39ae77 = Object.keys(_0x51343a).map(_0x522b26 => ({ name: _0x522b26, value: _0x51343a[_0x522b26] })); const _0x182df8 = new Date(); const _0x4d283c = _0x2a6335 || String(_0x182df8.getDate()).padStart(2, '0') + '/' + String(_0x182df8.getMonth() + 1).padStart(2, '0') + '/' + _0x182df8.getFullYear(); GM_xmlhttpRequest({ method: 'POST', url: CONSTANTS.GSHEET.HISTORY_API, data: JSON.stringify({ date: _0x4d283c, sheetId: _0x3d2635.historySheetId, data: _0x39ae77 }), headers: { 'Content-Type': 'text/plain;charset=utf-8' }, onload: _0x655b2c => { try {
                 const _0x51917f = JSON.parse(_0x655b2c.responseText);
-                if (_0x51917f.status !== 'success') { try { const __m = String(_0x51917f.message || _0x51917f.msg || ''); window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Lưu lịch sử lỗi: ' + __m); if (/NO_ACCESS|NOT_ALLOWED/.test(__m)) UI.showToast('⚠️ Cloud chưa mở được Sheet lịch sử (' + __m + '). Chủ Sheet lịch sử cần chia sẻ quyền Chỉnh sửa cho tài khoản Cloud AutoBI, và ID Sheet phải đúng ở Khai báo.', 12000); } catch (_) { } }
+                if (_0x51917f.status !== 'success') { try { const __m = String(_0x51917f.message || _0x51917f.msg || ''); window.__AutoBILog5 && window.__AutoBILog5.note && window.__AutoBILog5.note('Lưu lịch sử lỗi: ' + __m); if (__m && !/NO_ACCESS|NOT_ALLOWED/.test(__m)) UI.showToast('⚠️ Cloud báo: ' + __m.slice(0, 160), 9000); /* V18.68 */ if (/NO_ACCESS|NOT_ALLOWED/.test(__m)) UI.showToast('⚠️ Cloud chưa mở được Sheet lịch sử (' + __m + '). Chủ Sheet lịch sử cần chia sẻ quyền Chỉnh sửa cho tài khoản Cloud AutoBI, và ID Sheet phải đúng ở Khai báo.', 12000); } catch (_) { } }
                 if (_0x51917f.status === 'success') {
                     /* V17.55: lưu xong cập nhật luôn lịch sử trong máy (khỏi tải lại trang) */ try { window.__AutoBINlnvSrc && window.__AutoBINlnvSrc.saved(_0x4d283c, _0x51343a); } catch (_) { }
                     if (_0x1f3482)
@@ -15092,7 +15092,69 @@ window.__AutoBIRunPick = (() => {
     });
     if (Object.keys(l6).length) cache.link6 = l6;
     log.staff = seenNV.size;
-    if (!cache.link2 && !cache.link4_smart) throw new Error('Gói số không có Doanh thu / Thi đua nào khớp Khai báo (kiểm mã kho, tên siêu thị)');
+    /* V18.68: link1 — Doanh thu REALTIME từng shop (target ngày, trả chậm, TLPVTC hôm nay) */
+    const l1 = {}, t1 = { t: 0, r: 0, tgop: 0, pvb: 0, pvk: 0, nT: 0, nTg: 0, tgW: 0 };
+    (goi.shops || []).forEach(p => {
+      if (!has(p.rtQD)) return;
+      const s = shopOfLabel(p.bi || p.gon, p.ma);
+      if (!s) return;
+      const c = { r: num(p.rtQD) };
+      if (has(p.rtTarget)) { c.t = num(p.rtTarget); t1.t += c.t; t1.nT++; }
+      if (has(p.rtThuc)) c.dtlk = num(p.rtThuc);
+      if (has(p.rtTC)) { c.tg = num(p.rtTC); t1.tgW += c.tg * c.r; }
+      if (has(p.rtTraGop)) { t1.tgop += num(p.rtTraGop); t1.nTg++; }
+      if (has(p.rtPvB) && has(p.rtPvK)) { c.pv_b = num(p.rtPvB); c.pv_k = num(p.rtPvK); c.tlpvtc = c.pv_k > 0 ? Math.round(c.pv_b / c.pv_k * 10000) / 100 : 0; t1.pvb += c.pv_b; t1.pvk += c.pv_k; }
+      t1.r += c.r; l1[s.key] = c;
+    });
+    if (Object.keys(l1).length) {
+      const n = Object.keys(l1).length, T = { r: t1.r };
+      if (t1.nT === n) T.t = t1.t;
+      if (t1.nTg === n && t1.r > 0) T.tg = Math.round(t1.tgop / t1.r * 10000) / 100; else if (t1.r > 0) T.tg = Math.round(t1.tgW / t1.r * 100) / 100;
+      if (t1.pvk > 0) { T.pv_b = t1.pvb; T.pv_k = t1.pvk; T.tlpvtc = Math.round(t1.pvb / t1.pvk * 10000) / 100; }
+      l1.total = T; cache.link1 = l1; log.rt = n;
+    }
+    /* V18.68: link3_smart — Thi đua REALTIME nhóm × shop (cùng cách link4_smart; target = target ngày) */
+    const l3 = {};
+    (goi.tdSTRT || []).forEach(g => {
+      const short = matchGroup(g.key, list, cfgGroups);
+      if (!short) { if (!log.groupMiss.includes(g.key)) log.groupMiss.push(g.key + ' (RT)'); return; }
+      const sc = moneyOf(short, g.donVi) ? 1000 : 1, out = l3[short] = l3[short] || {};
+      (g.rows || []).forEach(r => {
+        const s = shopOfLabel(r.ten); if (!s) { log.rowMiss.add(r.ten); return; }
+        const t = has(r.t) ? Math.round(num(r.t) * sc * 100) / 100 : 0, v = Math.round(num(r.v) * sc * 100) / 100;
+        out[s.key] = { t, r: v, p: t ? Math.round(v / t * 1000) / 10 : 0 };
+      });
+      const cells = shops.map(s => out[s.key]).filter(Boolean);
+      if (!cells.length) { delete l3[short]; return; }
+      const t = cells.reduce((a, c) => a + c.t, 0), rr = cells.reduce((a, c) => a + c.r, 0);
+      out.total = { t, r: rr, p: t ? Math.round(rr / t * 1000) / 10 : 0 };
+    });
+    if (Object.keys(l3).length) { cache.link3_smart = l3; log.rtGroups = Object.keys(l3).length; }
+    /* V18.68: link6rt — DT nhân viên hôm nay (như applyStaffToday: { day, at, data: { shopN: { 'mã - tên': { dtqd, dtlk } } } }) */
+    if ((goi.dtNVRT || []).length) {
+      const d = new Date(Date.now() + 7 * 3600e3), day = d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
+      const data = {};
+      goi.dtNVRT.forEach(r => {
+        const st = byId.get(staffIdOf(r.ten)); if (!st) { log.staffMiss.add(r.ten); return; }
+        const k = 'shop' + (Number(st.shopIdx) || 1); (data[k] = data[k] || {})[st.name] = { dtqd: num(r.dt), dtlk: 0 };
+      });
+      cache.link6rt = { day, at: Date.now(), data };
+    }
+    /* V18.68: link7 — trả chậm từng NV (Báo cáo trả chậm → Nhân viên; tên không kèm mã → khớp theo họ tên trong Khai báo) */
+    const nameOnly = v => slug(String(v || '').replace(/^\d+\s*-\s*/, ''));
+    const byName = new Map(staffList.map(x => [nameOnly(x.name), x]));
+    const l7 = {};
+    (goi.tcNV || []).forEach(r => {
+      const st = byId.get(staffIdOf(r.ten)) && /\d/.test(r.ten) ? byId.get(staffIdOf(r.ten)) : byName.get(nameOnly(r.ten));
+      if (!st) return;
+      const k = 'shop' + (Number(st.shopIdx) || 1), o = { dt_tragop: num(r.tg) };
+      if (has(r.st)) o.dt_sieu_thi = num(r.st);
+      if (has(r.tl)) o.tg = num(r.tl); else if (has(r.st) && num(r.st) > 0) o.tg = Math.round(num(r.tg) / num(r.st) * 10000) / 100;
+      (l7[k] = l7[k] || {})[st.name] = o;
+      log.tc = (log.tc || 0) + 1;
+    });
+    if (Object.keys(l7).length) cache.link7 = l7;
+    if (!cache.link2 && !cache.link4_smart && !cache.link1 && !cache.link3_smart) throw new Error('Gói số không có Doanh thu / Thi đua nào khớp Khai báo (kiểm mã kho, tên siêu thị)');
     cache.__anh = { at: goi.at, nap: Date.now(), ngayQua: goi.ngayQua || null, canhBao: (goi.canhBao || []).length };
     return { cache, log };
   }
@@ -15100,7 +15162,7 @@ window.__AutoBIRunPick = (() => {
   function tom(log, goi) {
     const d = new Date(goi.at || Date.now());
     const parts = ['Số ảnh lúc ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ' ' + pad(d.getDate()) + '/' + pad(d.getMonth() + 1),
-      log.shops.length + ' siêu thị', log.groups + ' nhóm thi đua', log.staff + ' NV'];
+      log.shops.length + ' siêu thị', log.groups + ' nhóm thi đua', log.staff + ' NV'].concat(log.rt || log.rtGroups ? ['realtime ' + (log.rt || 0) + ' siêu thị · ' + (log.rtGroups || 0) + ' nhóm'] : []).concat(log.tc ? ['trả chậm ' + log.tc + ' NV'] : []);
     const warn = [];
     if (log.shopMiss.length) warn.push('siêu thị không khớp Khai báo: ' + log.shopMiss.join(', '));
     if (log.groupMiss.length) warn.push('chương trình không khớp nhóm hàng: ' + log.groupMiss.slice(0, 6).join(', ') + (log.groupMiss.length > 6 ? '…' : ''));

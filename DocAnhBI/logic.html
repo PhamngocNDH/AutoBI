@@ -28,9 +28,10 @@ var DAB = (function () {
       tdOrder: { luy_ke: { st: [], nv: [] }, realtime: { st: [], nv: [] } },
       dtShop: {}, dtShopOrder: [],
       dtNV: { luy_ke: {}, realtime: {} }, dtNVOrder: { luy_ke: [], realtime: [] },
+      tcNV: { luy_ke: {}, realtime: {} }, tcNVOrder: { luy_ke: [], realtime: [] },
       canhBao: [], soAnh: 0
     };
-    var lastMode = { thi_dua: null, doanh_thu: null };
+    var lastMode = { thi_dua: null, doanh_thu: null, tra_cham: null };
     var lastBlock = null; /* khối cuối của ảnh trước — để nối khối bị cắt tiêu đề */
 
     (results || []).forEach(function (x, idx) {
@@ -85,6 +86,7 @@ var DAB = (function () {
           sh[pre + (thuc ? 'Thuc' : 'QD')] = num(k2.dt);
           if (num(k2.tra_cham_pct) !== null) sh[pre + "TC"] = Math.round(num(k2.tra_cham_pct) * 100) / 10000;
           if (num(k2.target) !== null && pre === 'lk' && !thuc) sh.target = num(k2.target);
+          if (pre === 'rt' && !thuc && num(k2.target_ngay) !== null) sh.rtTarget = num(k2.target_ngay);
           if (!thuc && num(k2.dt_tra_gop) !== null) sh[pre + 'TraGop'] = num(k2.dt_tra_gop);
           if (num(k2.pv_bill) !== null && num(k2.pv_khach) !== null) { sh[pre + 'PvB'] = num(k2.pv_bill); sh[pre + 'PvK'] = num(k2.pv_khach); }
         }
@@ -99,8 +101,19 @@ var DAB = (function () {
           if (!bag[key]) { bag[key] = { ten: ten, sl: num(r.so_luong), dt: dt }; ord.push(key); }
           else if (ten.length > bag[key].ten.length) bag[key].ten = ten;
         });
+      } else if (x.man_hinh === 'tra_cham') {
+        lastBlock = null;
+        var mt = modeOf(x, lastMode.tra_cham); lastMode.tra_cham = mt;
+        (x.tra_cham || []).forEach(function (r) {
+          var ten = clean(r.ten), tg = num(r.dt_tra_gop);
+          if (!ten || tg === null || r.ro === false || /^admin$/i.test(ten) || /^t[ổo]ng/i.test(ten)) return;
+          var key = codeOf(ten) || ten.toLowerCase();
+          var bag = S.tcNV[mt], ord = S.tcNVOrder[mt];
+          if (!bag[key]) { bag[key] = { ten: ten, tg: tg, st: num(r.dt_sieu_thi), tl: num(r.ty_le) }; ord.push(key); }
+          else { var o = bag[key]; if (o.st === null) o.st = num(r.dt_sieu_thi); if (o.tl === null) o.tl = num(r.ty_le); }
+        });
       } else {
-        S.canhBao.push({ muc: tag, noi: 'Không nhận ra màn hình (không phải Thi đua / Doanh thu hợp nhất) — bỏ qua' });
+        S.canhBao.push({ muc: tag, noi: 'Không nhận ra màn hình (không phải Thi đua / Doanh thu hợp nhất / Trả chậm) — bỏ qua' });
       }
     });
 
@@ -180,6 +193,13 @@ var DAB = (function () {
       return { ma: s.ma, bi: s.bi || '', gon: s.gon || '', vals: [d.lkQD, d.lkThuc, d.lkTC, d.rtQD, d.rtThuc, d.rtTC], target: d.target, coSo: !!(d.lkQD || d.rtQD) };
     });
   }
+  function bangTC(S, m) {
+    var ord = S.tcNVOrder[m];
+    if (!ord.length) return [];
+    var out = [['NHÂN VIÊN', 'DT TRẢ GÓP', 'DT SIÊU THỊ', '% TRẢ CHẬM']];
+    ord.forEach(function (k) { var o = S.tcNV[m][k]; out.push([o.ten, o.tg, o.st, o.tl !== null ? o.tl : (o.st ? r2(o.tg / o.st * 100) : null)]); });
+    return out;
+  }
   function tsv(rows) {
     return rows.map(function (r) { return r.map(function (v) { return v === null || v === undefined ? '' : v; }).join('\t'); }).join('\n');
   }
@@ -188,6 +208,7 @@ var DAB = (function () {
       tdLK: bangTDST(S, 'luy_ke'), tdRT: bangTDST(S, 'realtime'),
       tdNV: bangTDNV(S, 'luy_ke'), tdNVRT: bangTDNV(S, 'realtime'),
       dtNV: bangDTNV(S, 'luy_ke'), dtNVRT: bangDTNV(S, 'realtime'),
+      tcNV: bangTC(S, 'luy_ke'), tcNVRT: bangTC(S, 'realtime'),
       nhapSo: bangNhapSo(S, shops)
     };
   }
@@ -255,12 +276,16 @@ var DAB = (function () {
     var dsShop = S.dtShopOrder.map(function (ma) {
       var d = S.dtShop[ma], c = (shops || []).filter(function (s) { return String(s.ma).replace(/\D/g, '') === ma; })[0] || {};
       return { ma: ma, bi: c.bi || '', gon: c.gon || '', lkQD: d.lkQD, lkThuc: d.lkThuc, lkTC: d.lkTC != null ? Math.round(d.lkTC * 10000) / 100 : null,
-        lkTraGop: d.lkTraGop, target: d.target, pvB: d.lkPvB, pvK: d.lkPvK };
+        lkTraGop: d.lkTraGop, target: d.target, pvB: d.lkPvB, pvK: d.lkPvK,
+        rtQD: d.rtQD, rtThuc: d.rtThuc, rtTC: d.rtTC != null ? Math.round(d.rtTC * 10000) / 100 : null, rtTraGop: d.rtTraGop, rtTarget: d.rtTarget, rtPvB: d.rtPvB, rtPvK: d.rtPvK };
     });
     return {
       v: 1, at: Date.now(), ngayQua: S.ngayQua || null, soNgay: S.soNgay || null,
       shops: dsShop, tdST: td('luy_ke', 'st'), tdNV: td('luy_ke', 'nv'), tdSTRT: td('realtime', 'st'),
       dtNV: S.dtNVOrder.luy_ke.map(function (k) { var o = S.dtNV.luy_ke[k]; return { ten: o.ten, sl: o.sl, dt: o.dt }; }),
+      dtNVRT: S.dtNVOrder.realtime.map(function (k) { var o = S.dtNV.realtime[k]; return { ten: o.ten, sl: o.sl, dt: o.dt }; }),
+      tcNV: S.tcNVOrder.luy_ke.map(function (k) { return S.tcNV.luy_ke[k]; }),
+      tcNVRT: S.tcNVOrder.realtime.map(function (k) { return S.tcNV.realtime[k]; }),
       canhBao: S.canhBao.slice(0, 40)
     };
   }
