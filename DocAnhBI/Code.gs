@@ -14,7 +14,7 @@
  *  3. Lần sau sửa code: Quản lý các lần triển khai → bút chì → Phiên bản mới (giữ nguyên URL)
  */
 
-var DAB_VERSION = '1.10';
+var DAB_VERSION = '1.11';
 
 /* v1.1: AutoBI lấy số đã đọc: GET <url /exec>?action=lay&ma=<mã nhận>&key=<AUTOBI_KEY nếu có cài> */
 function doGet(e) {
@@ -65,7 +65,7 @@ function doPost(e) {
   try {
     var q = kiemQuyen_(b.ma, b.ver);
     if (!q.ok) out = { ok: false, quyen: !q.tam, loi: q.loi };
-    else if (b.action === 'doc') out = { ok: true, kq: docAnh_(b.b64, b.mime) };
+    else if (b.action === 'doc') out = { ok: true, kq: docAnh_(b.b64, b.mime, b.ai) };
     else if (b.action === 'luu') { out = luuGoi_(khoaLuu_(q.ma, b.kho), typeof b.goi === 'string' ? b.goi : JSON.stringify(b.goi), q.ma); }
     else if (b.action === 'quyen') out = { ok: true, ten: q.ten || '' };
     else out = { ok: false, loi: 'Thiếu việc cần làm (action)' };
@@ -302,10 +302,12 @@ function docAnh(b64, mime, ma) {
   canQuyen_(ma, '');
   return docAnh_(b64, mime);
 }
-function docAnh_(b64, mime) {
+function docAnh_(b64, mime, ai) {
   if (!b64 || String(b64).length > 8000000) throw new Error('Ảnh rỗng hoặc quá lớn');
-  var cfg = cauHinhAI_();
-  var r = goiAI_(cfg, [{ img: b64, mime: mime || 'image/jpeg' }, { text: PROMPT }]);
+  var cfg = cauHinhAI_(), parts = [{ img: b64, mime: mime || 'image/jpeg' }, { text: PROMPT }], r = null;
+  /* v1.11: AutoBI gửi lượt "dự phòng" khi ảnh đọc quá lâu → đọc bằng Mistral trước, không được mới về Gemini */
+  if (ai === 'mistral' && cfg.mistral) { r = goiMistral_(cfg.mistral, parts, []); if (r) cfg.model = r.model; }
+  if (!r) r = goiAI_(cfg, parts);
   var out = String(r.text || '').replace(/^[\s\S]*?(\{)/, '$1').replace(/\}[^}]*$/, '}');
   try {
     var obj = JSON.parse(out);

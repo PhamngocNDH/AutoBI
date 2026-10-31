@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.81
+// @name         AutoBI Core V18.82
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.81
+// @version      18.82
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -15752,8 +15752,8 @@ const DAB = (function () {
     };
     fetchGoi(s).then(g => { if (g && g.v === 1 && dayOf(g.at) === dayOf(Date.now())) { if (!g.atLK && !g.atRT) g.atLK = g.at; P.cloud = g; veCloud(); paint(); } }).catch(() => { });
     const paint = () => {
-      const lab = { cho: 'Chờ', run: 'Đọc…', ok: '✓', err: 'Lỗi' };
-      $('.th').innerHTML = P.items.map((a, i) => '<div class="' + a.tt + '" title="' + escH(a.loi || ((a.name || '') + ((a.kq || [])[0] && a.kq[0]._model ? ' · ' + a.kq[0]._model : ''))) + '">' + (a.url ? '<img src="' + a.url + '">' : '') + '<span>' + (i + 1) + ' ' + lab[a.tt] + '</span></div>').join('');
+      const lab = { cho: 'Chờ', run: 'Đọc…', ok: '✓', err: 'Lỗi' }, lb = a => a.tt === 'run' && a.dp ? 'Đọc… ⇄' : lab[a.tt];
+      $('.th').innerHTML = P.items.map((a, i) => '<div class="' + a.tt + '" title="' + escH(a.loi || ((a.name || '') + ((a.kq || [])[0] && a.kq[0]._model ? ' · ' + a.kq[0]._model : ''))) + '">' + (a.url ? '<img src="' + a.url + '">' : '') + '<span>' + (i + 1) + ' ' + lb(a) + '</span></div>').join('');
       const nOk = P.items.filter(a => a.tt === 'ok').length, nCho = P.items.filter(a => a.tt === 'cho' || a.tt === 'err').length;
       $('[data-k=read]').disabled = P.busy || !nCho;
       $('[data-k=read]').textContent = nCho ? 'Đọc ' + nCho + ' ảnh' : 'Đọc ảnh';
@@ -15795,6 +15795,26 @@ const DAB = (function () {
       $('.sum').innerHTML = '<div>' + co.map(t => '<span class="chip">' + escH(t) + '</span>').join('') + (du ? '<span class="chip g">' + du + ' bảng khớp TỔNG</span>' : '') + (lech ? '<span class="chip r">' + lech + ' bảng lệch</span>' : '') + '</div>'
         + (thieu.length || S.canhBao.length ? '<div class="wr">' + (thieu.length ? '<div><b>Chưa thấy ảnh:</b> ' + thieu.map(escH).join(' · ') + '</div>' : '') + S.canhBao.map(c => '<div>• <b>' + escH(c.muc) + '</b>: ' + escH(c.noi) + '</div>').join('') + '</div>' : '');
     };
+    /* V18.82: ảnh đọc quá 10 giây chưa xong → gửi thêm 1 lượt "dự phòng" (Cloud đọc bằng Mistral trước), lượt nào xong trước thì lấy.
+       Lượt chính lỗi sớm thì chuyển dự phòng ngay. 10 giây vì ảnh bình thường mất ~3 giây, ảnh nhiều dòng 5–8 giây. */
+    const HEDGE_MS = 10000;
+    const docMot = (a, b) => new Promise((ok, bad) => {
+      let xong = false, dp = false, gui = 0, loi = 0, tm = null;
+      const thu = ai => {
+        gui++;
+        post(P.s, { action: 'doc', b64: b, mime: 'image/jpeg', ai })
+          .then(j => { if (xong) return; xong = true; clearTimeout(tm); ok(j.kq); })
+          .catch(e => {
+            if (xong) return; loi++;
+            if (e && e.quyen) { xong = true; clearTimeout(tm); return bad(e); }
+            if (!dp) { clearTimeout(tm); duPhong(); return; }
+            if (loi >= gui) { xong = true; bad(e); }
+          });
+      };
+      const duPhong = () => { if (dp || xong) return; dp = true; a.dp = true; try { paint(); } catch (_) { } thu('mistral'); };
+      thu('');
+      tm = setTimeout(duPhong, HEDGE_MS);
+    });
     const docHet = () => {
       const viec = P.items.filter(a => a.tt === 'cho' || a.tt === 'err');
       if (!viec.length) return;
@@ -15803,9 +15823,9 @@ const DAB = (function () {
       const tong = viec.length;
       const next = () => {
         if (dung || i >= viec.length) { if (!chay) { P.busy = false; saveKq(P.items); paint(); } return; }
-        const a = viec[i++]; a.tt = 'run'; a.loi = ''; chay++; paint();
+        const a = viec[i++]; a.tt = 'run'; a.loi = ''; a.dp = false; chay++; paint();
         $('.tt').textContent = 'Đang đọc ' + (xong + 1) + '/' + tong + '…';
-        Promise.all(a.b64s.map(b => post(P.s, { action: 'doc', b64: b, mime: 'image/jpeg' }).then(j => j.kq)))
+        Promise.all(a.b64s.map(b => docMot(a, b)))
           .then(rs => { if (!rs.every(r => r && typeof r === 'object')) throw new Error('Cloud trả kết quả rỗng — đọc lại'); a.kq = rs; a.tt = 'ok'; })
           .catch(e => { a.tt = 'err'; a.loi = String(e && e.message || e); if (e && e.quyen) { dung = true; P.err = a.loi; toast('✗ ' + a.loi, true); } })
           .then(() => { chay--; xong++; $('.tt').textContent = 'Đang đọc ' + Math.min(xong + 1, tong) + '/' + tong + '…'; paint(); next(); });
