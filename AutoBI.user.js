@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         AutoBI
 // @namespace    https://github.com/PhamngocNDH/AutoBI
-// @version      18.79
-// @description  AutoBI 18.79
+// @version      18.80
+// @description  AutoBI 18.80
 // @author       38967 - Mr Phạm
 // @match        https://portal.thegioididong.com/*
 // @match        https://crm.thegioididong.com/*
@@ -30,7 +30,7 @@
 // @require      https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js
 // @require      https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js
-// @require      https://raw.githubusercontent.com/PhamngocNDH/AutoBI/5e51d33fa31fa3279e23251ad7fda79e3d161316/AutoBI_core.user.js
+// @require      https://raw.githubusercontent.com/PhamngocNDH/AutoBI/31796c38ad8aee6e6a18ba989940444da2b6a612/AutoBI_core.user.js
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI.user.js
 // ==/UserScript==
