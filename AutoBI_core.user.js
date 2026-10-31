@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.71
+// @name         AutoBI Core V18.72
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.71
+// @version      18.72
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -15728,7 +15728,7 @@ const DAB = (function () {
           .catch(e => { a.tt = 'err'; a.loi = String(e && e.message || e); if (e && e.quyen) { dung = true; P.err = a.loi; toast('✗ ' + a.loi, true); } })
           .then(() => { chay--; xong++; $('.tt').textContent = 'Đang đọc ' + Math.min(xong + 1, tong) + '/' + tong + '…'; paint(); next(); });
       };
-      for (let k = 0; k < 3; k++) next(); /* 3 ảnh song song như trang */
+      for (let k = 0; k < 5; k++) next(); /* V18.71: 5 ảnh song song (Gemini miễn phí chịu được; cao hơn dễ quá tải) */
     };
     el.addEventListener('click', ev => {
       const k = ev.target && ev.target.dataset && ev.target.dataset.k;

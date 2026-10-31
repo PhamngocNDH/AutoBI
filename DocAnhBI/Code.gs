@@ -13,7 +13,7 @@
  *  3. Lần sau sửa code: Quản lý các lần triển khai → bút chì → Phiên bản mới (giữ nguyên URL)
  */
 
-var DAB_VERSION = '1.7';
+var DAB_VERSION = '1.8';
 
 /* v1.1: AutoBI lấy số đã đọc: GET <url /exec>?action=lay&ma=<mã nhận>&key=<AUTOBI_KEY nếu có cài> */
 function doGet(e) {
@@ -221,6 +221,15 @@ function goiAI_(cfg, parts) {
     ? [cfg.model, 'gemini-3.1-flash-lite', 'gemini-3.5-flash-lite', 'gemini-2.5-flash-lite', 'gemini-flash-lite-latest', 'gemini-3.5-flash', 'gemini-flash-latest']
         .filter(function (m, i, a) { return m && a.indexOf(m) === i; })
     : [cfg.model];
+  /* v1.8: nhớ model vừa đọc được (10 phút) để thử trước; model vừa quá tải/treo thì bỏ qua 2 phút ở vòng đầu
+     — các ảnh đọc song song không cùng chờ một model đang nghẽn (01/11/2026 có ảnh mất 3–4 phút vì xoay hết vòng). */
+  var cache = CacheService.getScriptCache();
+  if (cfg.loai === 'gemini') {
+    var tot = cache.get('ai_ok');
+    if (tot && chain.indexOf(tot) >= 0) chain = [tot].concat(chain.filter(function (m) { return m !== tot; }));
+    var nghen = chain.filter(function (m) { return cache.get('ai_bad_' + m); });
+    if (nghen.length < chain.length) chain = chain.filter(function (m) { return nghen.indexOf(m) < 0; }).concat(nghen);
+  }
   var tries = [];
   for (var vong = 0; vong < 2 && code !== 200; vong++) {
     if (vong) Utilities.sleep(5000);
@@ -230,7 +239,8 @@ function goiAI_(cfg, parts) {
         res = UrlFetchApp.fetch(url, { method: 'post', contentType: 'application/json', headers: opt.headers, payload: JSON.stringify(body), muteHttpExceptions: true });
         code = res.getResponseCode(); txt = res.getContentText();
       } catch (e) { code = 0; txt = String(e && e.message || e); }
-      if (code === 200) { cfg.model = chain[k]; break; }
+      if (code === 200) { cfg.model = chain[k]; try { cache.put('ai_ok', chain[k], 600); } catch (e) { } break; }
+      try { if (code === 0 || code === 429 || code >= 500) cache.put('ai_bad_' + chain[k], '1', 120); } catch (e) { }
       tries.push(chain[k] + ':' + code);
       lastErr = 'Lỗi AI ' + cfg.loai + ' (mã ' + code + '): ' + txt.slice(0, 200);
       if (code === 401 || code === 403 || code === 400) throw new Error(lastErr); /* sai khóa / sai yêu cầu: đổi model cũng vô ích */
