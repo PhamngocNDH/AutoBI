@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.76
+// @name         AutoBI Core V18.77
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.76
+// @version      18.77
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -14996,8 +14996,10 @@ window.__AutoBIRunPick = (() => {
     }
     return s;
   }
+  /* V18.77: khóa lưu chung theo cụm = các mã kho trong Khai báo (vd 5243-8265) — QL đổ lũy kế sáng, đồng đội cùng cụm chỉ đổ realtime */
+  function khoOf(cfg) { return shopsOf(cfg || readConfig()).map(x => String(x.code || '').trim()).filter(c => /^\d{3,6}$/.test(c)).sort().join('-'); }
   function fetchGoi(s) {
-    const u = s.url + '?action=lay&ma=' + encodeURIComponent(s.ma) + (s.key ? '&key=' + encodeURIComponent(s.key) : '') + '&t=' + Date.now();
+    const u = s.url + '?action=lay&ma=' + encodeURIComponent(s.ma) + (s.kho ? '&kho=' + encodeURIComponent(s.kho) : '') + (s.key ? '&key=' + encodeURIComponent(s.key) : '') + '&t=' + Date.now();
     return new Promise((ok, bad) => {
       GM_xmlhttpRequest({
         method: 'GET', url: u, timeout: 30000,
@@ -15243,7 +15245,8 @@ window.__AutoBIRunPick = (() => {
   function tom(log, goi) {
     const d = new Date(goi.at || Date.now()), hm = t => { const x = new Date(t); return pad(x.getHours()) + ':' + pad(x.getMinutes()); };
     /* V18.69: gói số gộp theo phần trong ngày (trang Đọc ảnh 1.6) → hiện giờ của từng phần */
-    const when = goi.atLK || goi.atRT ? [goi.atLK ? 'Lũy kế ' + hm(goi.atLK) : '', goi.atRT ? 'Realtime ' + hm(goi.atRT) : ''].filter(Boolean).join(' · ') + ' ' + pad(d.getDate()) + '/' + pad(d.getMonth() + 1)
+    const me = uidNow(), ai = b => b && b !== me ? ' (mã ' + b + ')' : ''; /* V18.77: phần do đồng đội gửi thì ghi mã người gửi */
+    const when = goi.atLK || goi.atRT ? [goi.atLK ? 'Lũy kế ' + hm(goi.atLK) + ai(goi.byLK) : '', goi.atRT ? 'Realtime ' + hm(goi.atRT) + ai(goi.byRT) : ''].filter(Boolean).join(' · ') + ' ' + pad(d.getDate()) + '/' + pad(d.getMonth() + 1)
       : 'Số ảnh lúc ' + hm(goi.at || Date.now()) + ' ' + pad(d.getDate()) + '/' + pad(d.getMonth() + 1);
     const parts = [when,
       log.shops.length + ' siêu thị', log.groups + ' nhóm thi đua', log.staff + ' NV'].concat(log.rt || log.rtGroups ? ['realtime ' + (log.rt || 0) + ' siêu thị · ' + (log.rtGroups || 0) + ' nhóm'] : []).concat(log.tc ? ['trả chậm ' + log.tc + ' NV'] : []);
@@ -15270,7 +15273,7 @@ window.__AutoBIRunPick = (() => {
   async function run() {
     const s0 = settings(false);
     if (!s0) throw new Error('Chưa cài link trang Đọc ảnh BI');
-    const s = Object.assign({}, s0, { ma: uidNow() || s0.ma }); /* V18.71: mã theo đăng nhập portal (Cloud kiểm quyền theo mã này) */
+    const s = Object.assign({}, s0, { ma: uidNow() || s0.ma, kho: khoOf() }); /* V18.71: mã theo đăng nhập portal (Cloud kiểm quyền theo mã này) · V18.77: kho = cụm */
     const goi = await fetchGoi(s);
     const age = Date.now() - num(goi.at);
     if (goi.at && new Date(goi.at).toDateString() !== new Date().toDateString()) {
@@ -15644,7 +15647,7 @@ const DAB = (function () {
     return new Promise((ok, bad) => {
       GM_xmlhttpRequest({
         method: 'POST', url: s.url, timeout: timeout || 180000, headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        data: JSON.stringify(Object.assign({ ma: s.ma, ver: VER }, body)),
+        data: JSON.stringify(Object.assign({ ma: s.ma, kho: s.kho || '', ver: VER }, body)),
         onload: r => {
           let j = null; try { j = JSON.parse(r.responseText); } catch (_) { }
           if (!j) return bad(new Error(r.status === 200 ? 'Cloud Đọc ảnh chưa cập nhật bản 1.7 (chưa nhận ảnh từ AutoBI)' : 'Cloud Đọc ảnh lỗi (mã ' + r.status + ')'));
@@ -15688,7 +15691,7 @@ const DAB = (function () {
     const s0 = settings(false);
     if (!s0) { toast('Chưa cài link Cloud Đọc ảnh BI', true); return; }
     const uid = uidNow();
-    const s = Object.assign({}, s0, { ma: uid || s0.ma });
+    const s = Object.assign({}, s0, { ma: uid || s0.ma, kho: khoOf() });
     if (!document.getElementById('abi-anh-css')) {
       const st = document.createElement('style'); st.id = 'abi-anh-css';
       st.textContent = '#abi-anh{position:fixed;inset:0;z-index:2147483645;background:rgba(15,23,42,.45);display:flex;align-items:flex-end;justify-content:center;font:14px/1.4 -apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1f2328}'
@@ -15710,21 +15713,30 @@ const DAB = (function () {
       + '<div class="sub">Chụp BI: Doanh thu hợp nhất (từng ST + tab NV), Thi đua ST, Thi đua NV, Trả chậm NV — Lũy kế hoặc Realtime. Mã: <b>' + escH(s.ma || '?') + '</b></div>'
       + '<input type="file" accept="image/*" multiple style="display:none">'
       + '<div class="row"><button class="bt" data-k="pick">＋ Chọn ảnh</button><button class="bt p" data-k="read" disabled>Đọc ảnh</button></div>'
+      + '<div class="cl" style="font-size:12px;color:#475569;margin:2px 0 4px"></div>'
       + '<div class="th"></div><div class="tt"></div><div class="sum"></div>'
       + '<div class="row"><button class="bt p" data-k="nap" disabled>Nạp số và xem</button></div>'
       + '<div class="row"><button class="lk" data-k="clear">Xóa ảnh hôm nay</button></div></div>'; /* V18.76: bỏ nút lấy số từ trang Đọc ảnh */
     document.body.appendChild(el);
     const $ = k => el.querySelector(k), inp = $('input[type=file]');
-    P = { s, items: loadKq(), busy: false, S: null };
+    P = { s, items: loadKq(), busy: false, S: null, cloud: null };
+    /* V18.77: xem Cloud cụm hôm nay đã có phần nào (QL đổ lũy kế sáng → đồng đội chỉ cần ảnh realtime) */
+    const dayOf = t => new Date(Number(t) + 7 * 3600e3).toISOString().slice(0, 10);
+    const hmOf = t => { const x = new Date(Number(t)); return pad(x.getHours()) + ':' + pad(x.getMinutes()); };
+    const veCloud = () => {
+      const g = P.cloud, me = uidNow(), ai = b => b && b !== me ? ' (mã ' + escH(b) + ')' : '';
+      el.querySelector('.cl').innerHTML = g ? '☁️ Cloud cụm hôm nay: ' + (g.atLK ? '<b>Lũy kế ' + hmOf(g.atLK) + '</b>' + ai(g.byLK) : 'chưa có Lũy kế') + ' · ' + (g.atRT ? '<b>Realtime ' + hmOf(g.atRT) + '</b>' + ai(g.byRT) : 'chưa có Realtime') + (g.atLK && !g.atRT ? ' — chỉ cần chụp Realtime' : '') : '';
+    };
+    fetchGoi(s).then(g => { if (g && g.v === 1 && dayOf(g.at) === dayOf(Date.now())) { if (!g.atLK && !g.atRT) g.atLK = g.at; P.cloud = g; veCloud(); paint(); } }).catch(() => { });
     const paint = () => {
       const lab = { cho: 'Chờ', run: 'Đọc…', ok: '✓', err: 'Lỗi' };
       $('.th').innerHTML = P.items.map((a, i) => '<div class="' + a.tt + '" title="' + escH(a.loi || ((a.name || '') + ((a.kq || [])[0] && a.kq[0]._model ? ' · ' + a.kq[0]._model : ''))) + '">' + (a.url ? '<img src="' + a.url + '">' : '') + '<span>' + (i + 1) + ' ' + lab[a.tt] + '</span></div>').join('');
       const nOk = P.items.filter(a => a.tt === 'ok').length, nCho = P.items.filter(a => a.tt === 'cho' || a.tt === 'err').length;
       $('[data-k=read]').disabled = P.busy || !nCho;
       $('[data-k=read]').textContent = nCho ? 'Đọc ' + nCho + ' ảnh' : 'Đọc ảnh';
-      $('[data-k=nap]').disabled = P.busy || !nOk;
+      $('[data-k=nap]').disabled = P.busy || !(nOk || P.cloud);
       $('[data-k=pick]').disabled = P.busy;
-      if (!P.busy) $('.tt').textContent = P.err ? '✗ ' + P.err : P.items.length ? nOk + '/' + P.items.length + ' ảnh đã đọc' + (nCho ? ' · còn ' + nCho + ' chưa đọc' : '') : 'Chưa có ảnh';
+      if (!P.busy) $('.tt').textContent = P.err ? '✗ ' + P.err : !P.items.length && P.cloud ? 'Chưa chọn ảnh — bấm Nạp số và xem để xem số trên Cloud, hoặc chọn ảnh mới' : P.items.length ? nOk + '/' + P.items.length + ' ảnh đã đọc' + (nCho ? ' · còn ' + nCho + ' chưa đọc' : '') : 'Chưa có ảnh';
       tongHop();
     };
     const tongHop = () => {
@@ -15747,6 +15759,7 @@ const DAB = (function () {
       const coRT = S.tdOrder.realtime.st.length || S.dtNVOrder.realtime.length; /* V18.74: chỉ có DT siêu thị realtime thì không đòi đủ bộ realtime */
       [['lk', 'Lũy kế', coLK], ['rt', 'Realtime', coRT]].forEach(([pre, ten, co1]) => {
         if (!co1) return;
+        if (P.cloud && P.cloud[pre === 'lk' ? 'atLK' : 'atRT'] && !(pre === 'lk' ? S.tdOrder.luy_ke.st.length : S.tdOrder.realtime.st.length)) return; /* V18.77: phần này Cloud cụm đã có */
         const m = pre === 'rt' ? 'realtime' : 'luy_ke';
         sh.forEach(x => { if (x.code && !(S.dtShop[x.code] && S.dtShop[x.code][pre + 'QD'] != null)) thieu.push('DT hợp nhất ' + ten + ' – ' + x.short); });
         if (!S.tdOrder[m].st.length) thieu.push('Thi đua Siêu thị ' + ten);
@@ -15784,7 +15797,12 @@ const DAB = (function () {
       else if (k === 'clear') { if (P.busy || !confirm('Xóa hết ảnh đã đọc hôm nay?')) return; P.items = []; saveKq([]); paint(); }
       else if (k === 'old') { el.remove(); onLoaded(null); }
       else if (k === 'nap') {
-        if (!P.S) return;
+        if (!P.S) {
+          if (!P.cloud) return;
+          P.busy = true; paint(); $('.tt').textContent = 'Đang nạp số từ Cloud cụm…';
+          run().then(t => { P.busy = false; el.remove(); onLoaded(t); }).catch(e => { P.busy = false; paint(); $('.tt').textContent = '✗ ' + (e && e.message || e); });
+          return;
+        }
         const cfg = readConfig();
         const goi = DAB.goiAutoBI(P.S, shopsOf(cfg).map(x => ({ ma: x.code, bi: x.name, gon: x.short })));
         P.busy = true; paint(); $('.tt').textContent = 'Đang lưu số lên Cloud…';

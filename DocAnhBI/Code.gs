@@ -14,7 +14,7 @@
  *  3. Lần sau sửa code: Quản lý các lần triển khai → bút chì → Phiên bản mới (giữ nguyên URL)
  */
 
-var DAB_VERSION = '1.9';
+var DAB_VERSION = '1.10';
 
 /* v1.1: AutoBI lấy số đã đọc: GET <url /exec>?action=lay&ma=<mã nhận>&key=<AUTOBI_KEY nếu có cài> */
 function doGet(e) {
@@ -66,7 +66,7 @@ function doPost(e) {
     var q = kiemQuyen_(b.ma, b.ver);
     if (!q.ok) out = { ok: false, quyen: !q.tam, loi: q.loi };
     else if (b.action === 'doc') out = { ok: true, kq: docAnh_(b.b64, b.mime) };
-    else if (b.action === 'luu') { out = luuGoi_(q.ma, typeof b.goi === 'string' ? b.goi : JSON.stringify(b.goi)); }
+    else if (b.action === 'luu') { out = luuGoi_(khoaLuu_(q.ma, b.kho), typeof b.goi === 'string' ? b.goi : JSON.stringify(b.goi), q.ma); }
     else if (b.action === 'quyen') out = { ok: true, ten: q.ten || '' };
     else out = { ok: false, loi: 'Thiếu việc cần làm (action)' };
   } catch (er) { out = { ok: false, loi: String((er && er.message) || er) }; }
@@ -74,15 +74,21 @@ function doPost(e) {
 }
 
 function tenFile_(ma) { return 'DocAnhBI_' + String(ma || '').replace(/[^0-9A-Za-z_-]/g, '') + '.json'; }
-function maHopLe_(ma) { return /^[0-9A-Za-z_-]{2,20}$/.test(String(ma || '')); }
+function maHopLe_(ma) { return /^[0-9A-Za-z_-]{2,40}$/.test(String(ma || '')); }
 
 /** Trang gọi: lưu gói số (JSON) theo mã nhận — ghi đè bản cũ cùng mã. File nằm trong Drive của chủ dự án. */
 function luuKetQua(ma, json) {
   ma = String(ma || '').trim();
   canQuyen_(ma, '');
-  return luuGoi_(ma, json);
+  return luuGoi_(ma, json, ma);
 }
-function luuGoi_(ma, json) {
+/* v1.10: LƯU CHUNG THEO CỤM — khóa lưu = các mã kho của cụm (vd K5243-8265) nếu AutoBI gửi kèm, nên QL đổ lũy kế buổi sáng,
+   đồng đội cùng cụm chiều chỉ cần đổ realtime (Cloud gộp theo phần như v1.6). Không có mã kho thì lưu theo mã NV như cũ. */
+function khoaLuu_(ma, kho) {
+  kho = String(kho || '').replace(/[^0-9-]/g, '');
+  return /^\d{3,6}(-\d{3,6}){0,4}$/.test(kho) ? 'K' + kho : String(ma || '').trim();
+}
+function luuGoi_(ma, json, nguoi) {
   ma = String(ma || '').trim();
   if (!maHopLe_(ma)) throw new Error('Mã nhận số không hợp lệ (2–20 ký tự chữ/số)');
   if (!json || json.length > 2000000) throw new Error('Gói số rỗng hoặc quá lớn');
@@ -93,11 +99,12 @@ function luuGoi_(ma, json) {
   try {
     var it = DriveApp.getFilesByName(tenFile_(ma)), f = it.hasNext() ? it.next() : null, cu = null;
     if (f) { try { cu = JSON.parse(f.getBlob().getDataAsString()); } catch (e) { cu = null; } }
-    goi = gopGoi_(cu, JSON.parse(json));
+    var moi = JSON.parse(json); moi.by = String(nguoi || '');
+    goi = gopGoi_(cu, moi);
     var txt = JSON.stringify(goi);
     if (f) f.setContent(txt); else DriveApp.createFile(tenFile_(ma), txt, MimeType.PLAIN_TEXT);
   } finally { lock.releaseLock(); }
-  return { ok: true, at: Date.now(), atLK: goi.atLK || null, atRT: goi.atRT || null };
+  return { ok: true, at: Date.now(), atLK: goi.atLK || null, atRT: goi.atRT || null, byLK: goi.byLK || '', byRT: goi.byRT || '' };
 }
 
 /* v1.6: GỘP THEO PHẦN TRONG CÙNG NGÀY — sáng gửi lũy kế, trưa gửi realtime, ca chiều gửi cả hai… phần nào gói mới có thì thay,
@@ -112,7 +119,8 @@ function coPhan_(g, phan, sh) {
 function gopGoi_(cu, moi) {
   var coLK = coPhan_(moi, PHAN_LK_, SH_LK_), coRT = coPhan_(moi, PHAN_RT_, SH_RT_);
   if (!cu || cu.v !== 1 || vnNgay_(cu.at) !== vnNgay_(moi.at)) {
-    moi.atLK = coLK ? moi.at : null; moi.atRT = coRT ? moi.at : null; return moi;
+    moi.atLK = coLK ? moi.at : null; moi.atRT = coRT ? moi.at : null;
+    moi.byLK = coLK ? moi.by || '' : ''; moi.byRT = coRT ? moi.by || '' : ''; return moi;
   }
   var out = JSON.parse(JSON.stringify(moi));
   PHAN_LK_.concat(PHAN_RT_).forEach(function (k) { if (!(moi[k] || []).length && (cu[k] || []).length) out[k] = cu[k]; });
@@ -130,6 +138,7 @@ function gopGoi_(cu, moi) {
   Object.keys(byMa).forEach(function (m) { out.shops.push(byMa[m]); });
   out.atLK = coLK ? moi.at : (cu.atLK || null);
   out.atRT = coRT ? moi.at : (cu.atRT || null);
+  out.byLK = coLK ? moi.by || '' : (cu.byLK || ''); out.byRT = coRT ? moi.by || '' : (cu.byRT || '');
   if (!out.ngayQua) out.ngayQua = cu.ngayQua || null;
   if (!out.soNgay) out.soNgay = cu.soNgay || null;
   return out;
@@ -142,9 +151,10 @@ function layKetQua_(p) {
   else if (!maHopLe_(p.ma)) out = { ok: false, loi: 'Thiếu mã nhận số' };
   else if (!(q0 = kiemQuyen_(p.ma, '')).ok) out = { ok: false, quyen: !q0.tam, loi: q0.loi };
   else {
-    var it = DriveApp.getFilesByName(tenFile_(p.ma));
+    var kh = khoaLuu_(p.ma, p.kho), it = DriveApp.getFilesByName(tenFile_(kh));
+    if (!it.hasNext() && kh !== p.ma) it = DriveApp.getFilesByName(tenFile_(p.ma)); /* cụm chưa có → gói riêng theo mã (bản cũ) */
     out = it.hasNext() ? { ok: true, data: JSON.parse(it.next().getBlob().getDataAsString()) }
-                       : { ok: false, loi: 'Chưa có số cho mã ' + p.ma + ' — vào trang Đọc ảnh BI bấm "Gửi sang AutoBI" trước' };
+                       : { ok: false, trong: true, loi: 'Chưa có số trên Cloud hôm nay — chọn ảnh rồi Nạp số' };
   }
   return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
 }
