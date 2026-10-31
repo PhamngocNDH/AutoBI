@@ -221,7 +221,7 @@ function goiMistral_(key, parts, tries) {
       var out = typeof m.content === 'string' ? m.content : (m.content || []).map(function (c) { return c.text || ''; }).join('');
       return { text: out, usage: d.usage || null, model: chain[k] };
     }
-    tries.push(chain[k] + ':' + code);
+    tries.push(chain[k] + ':' + code + (code === 200 ? '' : ' ' + String(txt).slice(0, 160)));
     if (code === 401 || code === 403) return null; /* sai khóa Mistral → bỏ qua, không làm hỏng đường Gemini */
     try { if (code === 0 || code === 429 || code >= 500) cache.put('ai_bad_' + chain[k], '1', code === 429 ? 30 : 120); } catch (e) { }
   }
@@ -319,7 +319,7 @@ function kiemTraKhoa() {
 function kiemTraMistral() {
   var k = PropertiesService.getScriptProperties().getProperty('MISTRAL_KEY');
   if (!k) throw new Error('Chưa cài MISTRAL_KEY');
-  var r = goiMistral_(k, [{ text: 'Trả về đúng JSON {"ok":true}' }], []);
-  Logger.log(r ? 'Mistral ' + r.model + ' → ' + String(r.text).slice(0, 200) : 'Mistral không trả lời (sai khóa hoặc quá hạn mức)');
+  var t = [], r = goiMistral_(k, [{ text: 'Trả về đúng JSON {"ok":true}' }], t);
+  Logger.log(r ? 'Mistral ' + r.model + ' → ' + String(r.text).slice(0, 200) : 'Mistral không trả lời: ' + t.join(' | '));
   return r;
 }
