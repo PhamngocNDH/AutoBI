@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.65
+// @name         AutoBI Core V18.66
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.65
+// @version      18.66
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://baocao.dienmayxanh.com/*
@@ -14905,7 +14905,7 @@ window.__AutoBIRunPick = (() => {
 /* ==== V18.65: Nạp số từ ảnh (__AutoBIAnh) — công ty chỉ cho chụp ảnh màn hình BI (31/10/2026).
    Lấy gói số mà trang "Đọc ảnh BI" (Apps Script của Ngọc) đã đọc từ ảnh, ghi vào bộ nhớ số y như API vẫn ghi
    (link2 = DT lũy kế từng shop, link4_smart = Thi đua lũy kế nhóm × shop, link6 = DT + Thi đua từng NV) rồi mở báo cáo
-   qua đúng đường "Xem lại" — KHÔNG gọi BI. Đơn vị như API: DT siêu thị / NV = đồng (ảnh ghi triệu × 1.000.000);
+   qua đúng đường "Xem lại" — KHÔNG gọi BI. Đơn vị như API: DT siêu thị / NV = triệu (đúng như ảnh; V18.66 bỏ nhân 1.000.000 — từng ra 109381709%);
    Thi đua nhóm tiền × 1000 (như applyCompetition), nhóm số lượng giữ nguyên.
    Chưa có từ ảnh (đợt 1): Realtime, Ngành hàng BI, Giờ công, CRM, trả chậm từng NV. ==== */
 (function () {
@@ -15027,9 +15027,9 @@ window.__AutoBIRunPick = (() => {
       const s = shopOfLabel(p.bi || p.gon, p.ma);
       if (!s) { log.shopMiss.push((p.gon || p.bi || '') + ' (' + p.ma + ')'); return; }
       if (!has(p.lkQD)) return;
-      const c = { r: Math.round(num(p.lkQD) * 1e6) };
-      if (has(p.target)) { c.t = num(p.target) * 1e6; tot.t += c.t; tot.nT++; }
-      if (has(p.lkThuc)) { c.dtlk = num(p.lkThuc) * 1e6; tot.dtlk += c.dtlk; tot.nDt++; }
+      const c = { r: num(p.lkQD) };
+      if (has(p.target)) { c.t = num(p.target); tot.t += c.t; tot.nT++; }
+      if (has(p.lkThuc)) { c.dtlk = num(p.lkThuc); tot.dtlk += c.dtlk; tot.nDt++; }
       if (has(p.lkTC)) { c.tg = num(p.lkTC); tot.tgW += c.tg * c.r; }
       if (has(p.lkTraGop)) { tot.tgop += num(p.lkTraGop); tot.nTg++; }
       if (has(p.pvB) && has(p.pvK)) { c.pv_b = num(p.pvB); c.pv_k = num(p.pvK); c.tlpvtc = c.pv_k > 0 ? Math.round(c.pv_b / c.pv_k * 10000) / 100 : 0; tot.pvb += c.pv_b; tot.pvk += c.pv_k; }
@@ -15040,7 +15040,7 @@ window.__AutoBIRunPick = (() => {
       const n = Object.keys(l2).length, T = { r: tot.r };
       if (tot.nT === n) T.t = tot.t;
       if (tot.nDt === n) T.dtlk = tot.dtlk;
-      if (tot.nTg === n && tot.r > 0) T.tg = Math.round(tot.tgop * 1e6 / tot.r * 10000) / 100;
+      if (tot.nTg === n && tot.r > 0) T.tg = Math.round(tot.tgop / tot.r * 10000) / 100;
       else if (tot.r > 0 && tot.tgW) T.tg = Math.round(tot.tgW / tot.r * 100) / 100;
       if (tot.pvk > 0) { T.pv_b = tot.pvb; T.pv_k = tot.pvk; T.tlpvtc = Math.round(tot.pvb / tot.pvk * 10000) / 100; }
       l2.total = T; cache.link2 = l2;
@@ -15086,7 +15086,7 @@ window.__AutoBIRunPick = (() => {
     (goi.dtNV || []).forEach(r => {
       const st = byId.get(staffIdOf(r.ten));
       if (!st) { log.staffMiss.add(r.ten); return; }
-      slot(st).revenue[st.name] = { dtqd: num(r.dt) * 1e6, dtlk: 0, hqqd: 0 };
+      slot(st).revenue[st.name] = { dtqd: num(r.dt), dtlk: 0, hqqd: 0 };
       seenNV.add(st.name);
     });
     if (Object.keys(l6).length) cache.link6 = l6;
