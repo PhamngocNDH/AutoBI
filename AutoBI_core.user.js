@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.69
+// @name         AutoBI Core V18.70
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.69
+// @version      18.70
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -15150,6 +15150,10 @@ window.__AutoBIRunPick = (() => {
       const k = 'shop' + (Number(st.shopIdx) || 1), o = { dt_tragop: num(r.tg) };
       if (has(r.st)) o.dt_sieu_thi = num(r.st);
       if (has(r.tl)) o.tg = num(r.tl); else if (has(r.st) && num(r.st) > 0) o.tg = Math.round(num(r.tg) / num(r.st) * 10000) / 100;
+      else { /* V18.70: ảnh không có cột DT siêu thị → tỷ lệ = DT trả góp ÷ DT QĐ của NV (từ ảnh Doanh thu → Nhân viên) */
+        const dq = (goi.dtNV || []).find(x => staffIdOf(x.ten) === staffIdOf(st.name));
+        if (dq && num(dq.dt) > 0) { o.tg = Math.round(num(r.tg) / num(dq.dt) * 10000) / 100; o.dt_sieu_thi = num(dq.dt); o.theo = 'qd'; }
+      }
       (l7[k] = l7[k] || {})[st.name] = o;
       log.tc = (log.tc || 0) + 1;
     });
@@ -15157,6 +15161,74 @@ window.__AutoBIRunPick = (() => {
     if (!cache.link2 && !cache.link4_smart && !cache.link1 && !cache.link3_smart) throw new Error('Gói số không có Doanh thu / Thi đua nào khớp Khai báo (kiểm mã kho, tên siêu thị)');
     cache.__anh = { at: goi.at, nap: Date.now(), ngayQua: goi.ngayQua || null, canhBao: (goi.canhBao || []).length };
     return { cache, log };
+  }
+
+  /* ===== V18.70: Điểm thưởng NV (newinsite) khi Nạp số từ ảnh — chép cách lấy của __AutoBIApi.applyReward (module API chỉ chạy trên BI, đã tắt).
+     Kỳ = đầu tháng → hết hôm qua (như lũy kế); 3 NV/lượt; 1 lần/ngày (GM autobi_reward_v1, cùng dạng cũ); chờ tối đa 25s, lấy xong sau vẫn lưu. ===== */
+  const NIS_REWARD = 'https://newinsite.thegioididong.com/office/RewardPoint/RewardPoint/GetReward', REWARD_KEY = 'autobi_reward_v1';
+  const vnYmd = off => { const d = new Date(Date.now() + 7 * 3600e3 + (off || 0) * 86400e3); return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate(); };
+  const mdy = k => { const t = String(k); return t.slice(4, 6) + '/' + t.slice(6, 8) + '/' + t.slice(0, 4); };
+  function nisLoginError() { const e = new Error('chưa đăng nhập newinsite — mở newinsite.thegioididong.com đăng nhập rồi chạy lại'); e.code = 'NIS_LOGIN'; return e; }
+  function rewardParse(html) {
+    if (!String(html || '').trim()) return { tl: 0, tn: 0, total: 0, none: true };
+    const d = new DOMParser().parseFromString(String(html || ''), 'text/html');
+    const rows = [...d.querySelectorAll('tr')];
+    if (!rows.length) return null;
+    const cellText = c => String(c ? c.textContent : '').replace(/\s+/g, ' ').trim();
+    const total = rows.find(r => r.cells[0] && cellText(r.cells[0]) === 'Tổng cộng');
+    if (!total) return { tl: 0, tn: 0, total: 0, none: true };
+    const head = rows.find(r => r.cells[0] && cellText(r.cells[0]) === 'Số lượng');
+    const hs = head ? [...head.cells].map(cellText) : [];
+    const at = (label, def) => { const i = hs.indexOf(label); return (i >= 0 ? i : def) + 1; };
+    const v = i => num(cellText(total.cells[i]).replace(/,/g, ''));
+    return { tl: v(at('Điểm tích lũy', 1)), tn: v(at('Thưởng nóng', 3)), total: v(at('Điểm thực lãnh', 7)) };
+  }
+  function nisReward(user, from, to) {
+    return new Promise((resolve, reject) => {
+      const q = new URLSearchParams({ dtmFromDate: mdy(from), dtmToDate: mdy(to), strRewardUser: user, intRewardPositionID: '-1' });
+      GM_xmlhttpRequest({
+        method: 'GET', url: NIS_REWARD + '?' + q.toString(), timeout: 20000,
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html, */*' },
+        onload: r => {
+          if (r.status === 401 || r.status === 403 || /login|dang-nhap|signin/i.test(String(r.finalUrl || ''))) return reject(nisLoginError());
+          if (r.status !== 200) return reject(new Error('newinsite trả mã ' + r.status));
+          try { const v = rewardParse(r.responseText); if (!v) return reject(nisLoginError()); resolve(v); } catch (e) { reject(e); }
+        },
+        onerror: () => reject(nisLoginError()), ontimeout: () => reject(new Error('newinsite quá 20 giây'))
+      });
+    });
+  }
+  async function rewardCore(cfg) {
+    const staffList = Array.isArray(cfg.staffList) ? cfg.staffList : [];
+    if (!staffList.length) throw new Error('Khai báo chưa có danh sách nhân viên');
+    const to = vnYmd(-1), from = Math.floor(to / 100) * 100 + 1, today = vnYmd(0);
+    const memo = GM_getValue(REWARD_KEY, null);
+    const same = memo && memo.from === from && memo.to === to && memo.day === today && memo.data;
+    const data = {}, todo = [];
+    let fetched = 0, reused = 0, loginErr = null;
+    for (const st of staffList) {
+      if (same && memo.data[st.name]) { data[st.name] = memo.data[st.name]; reused++; continue; }
+      const id = staffIdOf(st.name);
+      if (/^\d+$/.test(id)) todo.push([st, id]);
+    }
+    for (let k = 0; k < todo.length; k += 3) {
+      await Promise.all(todo.slice(k, k + 3).map(async ([st, id]) => {
+        try { data[st.name] = await nisReward(id, from, to); fetched++; }
+        catch (e) { if (e && e.code === 'NIS_LOGIN') loginErr = e; else note('Thưởng NV: ' + st.name + ' lỗi (' + (e && e.message || e) + ')'); }
+      }));
+      if (loginErr) throw loginErr;
+    }
+    if (!Object.keys(data).length) throw new Error('newinsite không trả số nhân viên nào');
+    const out = { from, to, day: today, at: Date.now(), data };
+    GM_setValue(REWARD_KEY, out);
+    try { const c = GM_getValue(CACHE_KEY, {}) || {}; if (c.__anh) { c.link10_reward = out; GM_setValue(CACHE_KEY, c); } } catch (_) { }
+    note('Thưởng NV (newinsite): ' + Object.keys(data).length + ' NV' + (reused ? ' · dùng lại ' + reused : '') + (fetched ? ' · lấy mới ' + fetched : ''));
+    return out;
+  }
+  function reward(cfg) {
+    const work = rewardCore(cfg); work.catch(() => { });
+    const cap = new Promise((_, rej) => setTimeout(() => rej(new Error('newinsite trả chậm quá 25s — số thưởng tự lưu khi lấy xong, mở lại báo cáo để xem')), 25000));
+    return Promise.race([work, cap]);
   }
 
   function tom(log, goi) {
@@ -15195,9 +15267,15 @@ window.__AutoBIRunPick = (() => {
       const d = new Date(goi.at);
       if (!confirm('Số ảnh gửi lúc ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ' ngày ' + pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + ' (không phải hôm nay). Vẫn nạp?')) throw new Error('Đã hủy — gửi số mới từ trang Đọc ảnh BI');
     }
-    const { cache, log } = build(goi, readConfig());
+    const cfgNow = readConfig();
+    const { cache, log } = build(goi, cfgNow);
     GM_setValue(CACHE_KEY, cache);
+    /* V18.70: lấy luôn Điểm thưởng NV (newinsite) — lỗi/chậm thì báo, không chặn báo cáo */
+    try { const rw = await reward(cfgNow); cache.link10_reward = rw; GM_setValue(CACHE_KEY, cache); log.reward = Object.keys(rw.data || {}).length; }
+    catch (e) { log.rewardErr = String(e && e.message || e); }
     const t = tom(log, goi);
+    if (log.reward) t.text += ' · thưởng ' + log.reward + ' NV';
+    if (log.rewardErr) t.warn.push('Thưởng NV: ' + log.rewardErr);
     note('Nạp số từ ảnh: ' + t.text + (t.warn.length ? ' · ⚠ ' + t.warn.join(' · ') : '') + ' · gói số cách đây ' + Math.round(age / 60000) + ' phút');
     return t;
   }

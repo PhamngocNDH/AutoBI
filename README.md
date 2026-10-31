@@ -2,7 +2,7 @@
 
 Kho lưu AutoBI của 38967 - Mr Phạm.
 
-Bản hiện tại: **18.69**
+Bản hiện tại: **18.70**
 
 Link cài cố định: [AutoBI.user.js](https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI.user.js)
 
@@ -34,3 +34,8 @@ Link cài cố định: [AutoBI.user.js](https://raw.githubusercontent.com/Phamn
 
 - Trang Đọc ảnh BI 1.6: mỗi lần **Gửi sang AutoBI** không còn ghi đè cả gói. Phần nào gói mới có (DT siêu thị, thi đua siêu thị, thi đua NV, DT NV, trả chậm NV — riêng lũy kế và realtime) thì thay; phần không có thì giữ số đã gửi trước **trong cùng ngày**. Sáng đổ lũy kế, trưa đổ realtime, ca chiều đổ cả hai đều được. Sang ngày mới bỏ hết số cũ.
 - AutoBI khi Nạp số từ ảnh hiện giờ của từng phần, vd "Lũy kế 08:15 · Realtime 12:30".
+
+## Thay đổi 18.70 — trả chậm NV + thưởng NV khi Nạp số từ ảnh
+
+- Trả chậm từng NV hiện số: ảnh "Báo cáo trả chậm" không thấy cột DT siêu thị thì tỷ lệ = DT trả góp ÷ DT QĐ của NV (cùng cách thẻ Tỷ trọng trả chậm của BI).
+- Bấm **Nạp số và xem** lấy luôn **Điểm thưởng NV** (newinsite): kỳ đầu tháng → hết hôm qua, 3 NV/lượt, 1 lần/ngày (dùng lại), chờ tối đa 25s; chưa đăng nhập newinsite thì báo trong thông báo, báo cáo vẫn mở.
