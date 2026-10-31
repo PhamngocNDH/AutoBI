@@ -41,6 +41,7 @@ Link cài cố định: [AutoBI.user.js](https://raw.githubusercontent.com/Phamn
 - Cloud Đọc ảnh 1.7: thêm doPost (doc / luu / quyen); đọc ảnh, gửi, lấy số đều kiểm mã NV theo danh sách quyền AutoBI (tab Auth). Tắt tạm: thuộc tính AUTH_CHECK = off.
 - Trang Đọc ảnh: đọc ảnh phải có mã NV có quyền.
 - 18.72 + Cloud 1.8: đọc 5 ảnh song song; Cloud nhớ model AI vừa đọc được và tạm bỏ qua model đang nghẽn (bớt ảnh chờ 3–4 phút).
+- Cloud 1.9: Mistral làm dự phòng (thuộc tính MISTRAL_KEY) — Gemini nghẽn thì đọc bằng Mistral, không chờ model đang nghẽn.
 
 ## Thay đổi 18.70 — trả chậm NV + thưởng NV khi Nạp số từ ảnh
 

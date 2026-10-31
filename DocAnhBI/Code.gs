@@ -7,13 +7,14 @@
  *  1. Cài đặt dự án (bánh răng) → Thuộc tính tập lệnh → Thêm:
  *       AI_KEY        = khóa AI: Gemini (aistudio.google.com → Get API key) hoặc Claude (sk-ant-…, console.anthropic.com)
  *       MODEL         = không bắt buộc (mặc định gemini-3.1-flash-lite / claude-sonnet-5-5)
+ *       MISTRAL_KEY   = khóa Mistral (console.mistral.ai, miễn phí) — dự phòng khi Gemini quá tải (v1.9)
  *       AUTOBI_KEY    = 1 chuỗi bí mật tự đặt (không bắt buộc, nên có) — AutoBI phải gửi đúng chuỗi này mới lấy được số
  *  2. Triển khai → Tác vụ triển khai mới → Ứng dụng web
  *       Thực thi với tư cách: Tôi · Ai có quyền truy cập: Bất kỳ ai có tài khoản Google
  *  3. Lần sau sửa code: Quản lý các lần triển khai → bút chì → Phiên bản mới (giữ nguyên URL)
  */
 
-var DAB_VERSION = '1.8';
+var DAB_VERSION = '1.9';
 
 /* v1.1: AutoBI lấy số đã đọc: GET <url /exec>?action=lay&ma=<mã nhận>&key=<AUTOBI_KEY nếu có cài> */
 function doGet(e) {
@@ -196,7 +197,35 @@ function cauHinhAI_() {
   if (!key) throw new Error('Chưa cài khóa AI: Cài đặt dự án → Thuộc tính tập lệnh → AI_KEY');
   var loai = /^sk-ant-/.test(key) ? 'claude' : 'gemini';
   var model = p.getProperty('MODEL') || (loai === 'claude' ? 'claude-sonnet-5-5' : 'gemini-3.1-flash-lite');
-  return { key: key, loai: loai, model: model, p: p };
+  return { key: key, loai: loai, model: model, p: p, mistral: p.getProperty('MISTRAL_KEY') || '' };
+}
+
+/* v1.9: MISTRAL làm dự phòng — Gemini nghẽn hết vòng đầu thì đọc bằng Mistral (khóa MISTRAL_KEY, miễn phí ~1 lần/giây).
+   Ảnh gửi dạng data URL; trả JSON (response_format json_object). Hết model / quá hạn mức thì trả null để Gemini thử vòng 2. */
+function goiMistral_(key, parts, tries) {
+  var content = parts.map(function (x) {
+    return x.img ? { type: 'image_url', image_url: 'data:' + (x.mime || 'image/jpeg') + ';base64,' + x.img } : { type: 'text', text: x.text };
+  });
+  var chain = ['mistral-medium-latest', 'mistral-small-latest', 'mistral-large-latest'], cache = CacheService.getScriptCache();
+  for (var k = 0; k < chain.length; k++) {
+    if (cache.get('ai_bad_' + chain[k])) continue;
+    var code = 0, txt = '';
+    try {
+      var res = UrlFetchApp.fetch('https://api.mistral.ai/v1/chat/completions', { method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+        headers: { Authorization: 'Bearer ' + key },
+        payload: JSON.stringify({ model: chain[k], temperature: 0, max_tokens: 8192, response_format: { type: 'json_object' }, messages: [{ role: 'user', content: content }] }) });
+      code = res.getResponseCode(); txt = res.getContentText();
+    } catch (e) { code = 0; txt = String(e && e.message || e); }
+    if (code === 200) {
+      var d = JSON.parse(txt), m = ((d.choices || [])[0] || {}).message || {};
+      var out = typeof m.content === 'string' ? m.content : (m.content || []).map(function (c) { return c.text || ''; }).join('');
+      return { text: out, usage: d.usage || null, model: chain[k] };
+    }
+    tries.push(chain[k] + ':' + code);
+    if (code === 401 || code === 403) return null; /* sai khóa Mistral → bỏ qua, không làm hỏng đường Gemini */
+    try { if (code === 0 || code === 429 || code >= 500) cache.put('ai_bad_' + chain[k], '1', code === 429 ? 30 : 120); } catch (e) { }
+  }
+  return null;
 }
 
 function goiAI_(cfg, parts) {
@@ -232,8 +261,12 @@ function goiAI_(cfg, parts) {
   }
   var tries = [];
   for (var vong = 0; vong < 2 && code !== 200; vong++) {
-    if (vong) Utilities.sleep(5000);
+    if (vong) {
+      if (cfg.loai === 'gemini' && cfg.mistral) { var mi = goiMistral_(cfg.mistral, parts, tries); if (mi) { cfg.model = mi.model; return mi; } }
+      Utilities.sleep(5000);
+    }
     for (var k = 0; k < chain.length; k++) {
+      if (vong === 0 && cfg.loai === 'gemini' && cfg.mistral && cache.get('ai_bad_' + chain[k])) continue; /* có Mistral thì không chờ model đang nghẽn */
       if (cfg.loai === 'gemini') url = 'https://generativelanguage.googleapis.com/v1beta/models/' + chain[k] + ':generateContent';
       try {
         res = UrlFetchApp.fetch(url, { method: 'post', contentType: 'application/json', headers: opt.headers, payload: JSON.stringify(body), muteHttpExceptions: true });
@@ -280,4 +313,13 @@ function kiemTraKhoa() {
   var r = goiAI_(cfg, [{ text: 'Trả về đúng JSON {"ok":true}' }]);
   Logger.log('Khóa ' + cfg.loai + ' · model ' + cfg.model + ' → ' + String(r.text).slice(0, 200));
   return { loai: cfg.loai, model: cfg.model, tra_loi: String(r.text).slice(0, 200) };
+}
+
+/** v1.9: chạy tay để thử khóa Mistral (xem Nhật ký thực thi) */
+function kiemTraMistral() {
+  var k = PropertiesService.getScriptProperties().getProperty('MISTRAL_KEY');
+  if (!k) throw new Error('Chưa cài MISTRAL_KEY');
+  var r = goiMistral_(k, [{ text: 'Trả về đúng JSON {"ok":true}' }], []);
+  Logger.log(r ? 'Mistral ' + r.model + ' → ' + String(r.text).slice(0, 200) : 'Mistral không trả lời (sai khóa hoặc quá hạn mức)');
+  return r;
 }
