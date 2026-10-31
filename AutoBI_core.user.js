@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.80
+// @name         AutoBI Core V18.81
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.80
+// @version      18.81
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -15644,12 +15644,33 @@ const DAB = (function () {
     if (!uid) uid = String(window.__AutoBIAuthUid || (page && page.__AutoBIAuthUid) || '').replace(/\D/g, '');
     return uid;
   }
+  /* V18.81: gửi bằng fetch của trang (không cookie) — GM_xmlhttpRequest của Tampermonkey cho các yêu cầu tới Cloud đi lần lượt
+     từng cái (nhật ký Cloud 01/11: 8 ảnh nối đuôi nhau mỗi 4 giây); fetch thì chạy song song thật. Lỗi mạng/CORS → quay về GM. */
+  let fetchOk = true;
   function post(s, body, timeout) {
+    const data = JSON.stringify(Object.assign({ ma: s.ma, kho: s.kho || '', ver: VER }, body));
+    const xong = (j, ok, bad) => {
+      if (!j) return bad(new Error('Cloud Đọc ảnh trả về không đúng dạng'));
+      if (!j.ok) { const e = new Error(j.loi || 'Cloud Đọc ảnh báo lỗi'); e.quyen = !!j.quyen; return bad(e); }
+      ok(j);
+    };
+    if (fetchOk && typeof fetch === 'function') {
+      return new Promise((ok, bad) => {
+        const ctl = typeof AbortController === 'function' ? new AbortController() : null;
+        const tm = setTimeout(() => { try { ctl && ctl.abort(); } catch (_) { } }, timeout || 180000);
+        fetch(s.url, { method: 'POST', credentials: 'omit', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: data, signal: ctl ? ctl.signal : undefined })
+          .then(r => r.text()).then(t => { clearTimeout(tm); let j = null; try { j = JSON.parse(t); } catch (_) { } xong(j, ok, bad); })
+          .catch(e => { clearTimeout(tm); if (e && e.name === 'AbortError') return bad(new Error('Đọc ảnh quá lâu — thử lại')); fetchOk = false; postGM(s, data, timeout).then(ok, bad); });
+      });
+    }
+    return postGM(s, data, timeout);
+  }
+  function postGM(s, data, timeout) {
     return new Promise((ok, bad) => {
       GM_xmlhttpRequest({
         method: 'POST', url: s.url, timeout: timeout || 180000, headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         anonymous: true, /* V18.80: không gửi cookie Google — kèm cookie thì Google xếp hàng từng yêu cầu một (8 ảnh thành đọc lần lượt) */
-        data: JSON.stringify(Object.assign({ ma: s.ma, kho: s.kho || '', ver: VER }, body)),
+        data,
         onload: r => {
           let j = null; try { j = JSON.parse(r.responseText); } catch (_) { }
           if (!j) return bad(new Error(r.status === 200 ? 'Cloud Đọc ảnh chưa cập nhật bản 1.7 (chưa nhận ảnh từ AutoBI)' : 'Cloud Đọc ảnh lỗi (mã ' + r.status + ')'));
