@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.72
+// @name         AutoBI Core V18.73
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.72
+// @version      18.73
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -15675,7 +15675,7 @@ const DAB = (function () {
     P = { s, items: loadKq(), busy: false, S: null };
     const paint = () => {
       const lab = { cho: 'Chờ', run: 'Đọc…', ok: '✓', err: 'Lỗi' };
-      $('.th').innerHTML = P.items.map((a, i) => '<div class="' + a.tt + '" title="' + escH(a.loi || a.name || '') + '">' + (a.url ? '<img src="' + a.url + '">' : '') + '<span>' + (i + 1) + ' ' + lab[a.tt] + '</span></div>').join('');
+      $('.th').innerHTML = P.items.map((a, i) => '<div class="' + a.tt + '" title="' + escH(a.loi || ((a.name || '') + ((a.kq || [])[0] && a.kq[0]._model ? ' · ' + a.kq[0]._model : ''))) + '">' + (a.url ? '<img src="' + a.url + '">' : '') + '<span>' + (i + 1) + ' ' + lab[a.tt] + '</span></div>').join('');
       const nOk = P.items.filter(a => a.tt === 'ok').length, nCho = P.items.filter(a => a.tt === 'cho' || a.tt === 'err').length;
       $('[data-k=read]').disabled = P.busy || !nCho;
       $('[data-k=read]').textContent = nCho ? 'Đọc ' + nCho + ' ảnh' : 'Đọc ảnh';
@@ -15710,6 +15710,9 @@ const DAB = (function () {
         if (!S.tdOrder[m].nv.length && pre === 'lk') thieu.push('Thi đua Nhân viên ' + ten);
         if (!S.dtNVOrder[m].length) thieu.push('tab Nhân viên ' + ten);
       });
+      /* V18.73: đọc bằng máy nào (Gemini / Mistral) */
+      const mdl = {}; P.items.forEach(a => { if (a.tt === 'ok') (a.kq || []).forEach(r => { const m = String((r && r._model) || '?'); const k = /mistral|ministral/i.test(m) ? 'Mistral' : /gemini/i.test(m) ? 'Gemini' : m; mdl[k] = (mdl[k] || 0) + 1; }); });
+      co.push('đọc bằng ' + Object.keys(mdl).map(k => k + ' ' + mdl[k]).join(' · '));
       $('.sum').innerHTML = '<div>' + co.map(t => '<span class="chip">' + escH(t) + '</span>').join('') + (du ? '<span class="chip g">' + du + ' bảng khớp TỔNG</span>' : '') + (lech ? '<span class="chip r">' + lech + ' bảng lệch</span>' : '') + '</div>'
         + (thieu.length || S.canhBao.length ? '<div class="wr">' + (thieu.length ? '<div><b>Chưa thấy ảnh:</b> ' + thieu.map(escH).join(' · ') + '</div>' : '') + S.canhBao.map(c => '<div>• <b>' + escH(c.muc) + '</b>: ' + escH(c.noi) + '</div>').join('') + '</div>' : '');
     };
@@ -15758,7 +15761,7 @@ const DAB = (function () {
     paint();
   }
 
-  window.__AutoBIAnh = { run, open, settings, build, toast, _shopsOf: shopsOf, _DAB: DAB };
+  window.__AutoBIAnh = { run, open, settings, build, toast, _shopsOf: shopsOf, _DAB: DAB, _kq: () => loadKq() }; /* V18.73: _kq() xem kết quả đọc hôm nay (gỡ lỗi) */
   try { if (typeof unsafeWindow !== 'undefined') unsafeWindow.__AutoBIAnh = window.__AutoBIAnh; } catch (_) { }
   try { GM_registerMenuCommand('AutoBI: Cài link Đọc ảnh BI', () => settings(true)); } catch (_) { }
 })();

@@ -2,7 +2,7 @@
 
 Kho lưu AutoBI của 38967 - Mr Phạm.
 
-Bản hiện tại: **18.72**
+Bản hiện tại: **18.73**
 
 Link cài cố định: [AutoBI.user.js](https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI.user.js)
 
@@ -35,12 +35,13 @@ Link cài cố định: [AutoBI.user.js](https://raw.githubusercontent.com/Phamn
 - Trang Đọc ảnh BI 1.6: mỗi lần **Gửi sang AutoBI** không còn ghi đè cả gói. Phần nào gói mới có (DT siêu thị, thi đua siêu thị, thi đua NV, DT NV, trả chậm NV — riêng lũy kế và realtime) thì thay; phần không có thì giữ số đã gửi trước **trong cùng ngày**. Sáng đổ lũy kế, trưa đổ realtime, ca chiều đổ cả hai đều được. Sang ngày mới bỏ hết số cũ.
 - AutoBI khi Nạp số từ ảnh hiện giờ của từng phần, vd "Lũy kế 08:15 · Realtime 12:30".
 
-## Thay đổi 18.71–18.72 — chọn ảnh ngay trong AutoBI + kiểm quyền (Đọc ảnh BI 1.7)
+## Thay đổi 18.71–18.73 — chọn ảnh ngay trong AutoBI + kiểm quyền (Đọc ảnh BI 1.7)
 - Nạp số từ ảnh mở khung **Chọn ảnh** ngay trên portal: ảnh thu nhỏ trên máy → Cloud Đọc ảnh đọc (3 ảnh song song) → báo bảng thiếu/lệch TỔNG, màn chưa chụp → **Nạp số và xem**. Không cần mở trang Đọc ảnh, không cần bấm Gửi.
 - Kết quả đọc giữ trong ngày: chụp bù chỉ đọc ảnh mới. Nút "Lấy số đã gửi từ trang Đọc ảnh" giữ đường cũ.
 - Cloud Đọc ảnh 1.7: thêm doPost (doc / luu / quyen); đọc ảnh, gửi, lấy số đều kiểm mã NV theo danh sách quyền AutoBI (tab Auth). Tắt tạm: thuộc tính AUTH_CHECK = off.
 - Trang Đọc ảnh: đọc ảnh phải có mã NV có quyền.
 - 18.72 + Cloud 1.8: đọc 5 ảnh song song; Cloud nhớ model AI vừa đọc được và tạm bỏ qua model đang nghẽn (bớt ảnh chờ 3–4 phút).
+- 18.73: khung Nạp số từ ảnh hiện "đọc bằng Gemini x · Mistral y"; giữ chuột lên ảnh thấy model đã đọc.
 - Cloud 1.9: Mistral làm dự phòng (thuộc tính MISTRAL_KEY) — Gemini nghẽn thì đọc bằng Mistral, không chờ model đang nghẽn.
 
 ## Thay đổi 18.70 — trả chậm NV + thưởng NV khi Nạp số từ ảnh
