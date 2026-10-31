@@ -1,4 +1,4 @@
-# Đọc ảnh BI → đổ số AutoBI (bản 1.3)
+# Đọc ảnh BI → đổ số AutoBI (bản 1.4)
 
 Trang Apps Script đọc ảnh chụp màn hình BI ra số liệu, xuất đúng file mẫu đổ tay `AutoBI_mau_do_tay.xlsx` (hoặc chép bảng để dán). Đây là tầng **Thu thập** mới của AutoBI; phần tính toán và báo cáo trong file Excel giữ nguyên.
 
@@ -49,3 +49,6 @@ Trang Apps Script đọc ảnh chụp màn hình BI ra số liệu, xuất đún
 | index.html | Giao diện: khai báo siêu thị (lưu trên máy), chọn ảnh (thu nhỏ, cắt ảnh dài), đọc 3 ảnh song song, xem kết quả, chép bảng, xuất Excel |
 
 Quy ước: tên chương trình bỏ tiền tố tháng `T10 - ` giống AutoBI Core. Dòng bị coi là trùng khi cùng mã NV (hoặc tên siêu thị) và cùng số. NV làm chéo shop có 2 dòng với số khác nhau nên giữ cả 2, ma trận trong file sẽ cộng dồn.
+
+## Khi AI báo quá tải (503)
+Gemini miễn phí hay báo "high demand" theo giờ. Bản 1.4 tự chuyển lần lượt qua các model flash-lite → flash rồi thử thêm một vòng. Nếu vẫn lỗi: đợi vài phút, bấm **Đọc ảnh** lại (chỉ đọc lại các ảnh lỗi). Muốn ổn định hẳn: dùng khóa Claude đã nạp tiền, hoặc bật thanh toán cho khóa Gemini.

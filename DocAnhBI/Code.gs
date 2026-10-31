@@ -13,7 +13,7 @@
  *  3. Lần sau sửa code: Quản lý các lần triển khai → bút chì → Phiên bản mới (giữ nguyên URL)
  */
 
-var DAB_VERSION = '1.3';
+var DAB_VERSION = '1.4';
 
 /* v1.1: AutoBI lấy số đã đọc: GET <url /exec>?action=lay&ma=<mã nhận>&key=<AUTOBI_KEY nếu có cài> */
 function doGet(e) {
@@ -124,35 +124,34 @@ function goiAI_(cfg, parts) {
     }) }], generationConfig: { temperature: 0, responseMimeType: 'application/json', maxOutputTokens: 8192 } };
     opt = { headers: { 'x-goog-api-key': cfg.key } };
   }
-  var res, code, txt, lastErr = '';
-  for (var lan = 0; lan < 3; lan++) {
-    res = UrlFetchApp.fetch(url, { method: 'post', contentType: 'application/json', headers: opt.headers, payload: JSON.stringify(body), muteHttpExceptions: true });
-    code = res.getResponseCode(); txt = res.getContentText();
-    if (code === 200) break;
-    lastErr = 'Lỗi AI ' + cfg.loai + ' (mã ' + code + '): ' + txt.slice(0, 300);
-    if (code === 404 && cfg.loai === 'gemini' && lan === 0) { var m = chonModelGemini_(cfg); if (m) { cfg.model = m; url = 'https://generativelanguage.googleapis.com/v1beta/models/' + m + ':generateContent'; continue; } }
-    if (code === 429 || code >= 500) { Utilities.sleep(3000 * (lan + 1)); continue; }
-    throw new Error(lastErr);
+  var res, code = 0, txt, lastErr = '';
+  /* v1.4: Gemini miễn phí hay báo 503 "high demand" theo từng model → xoay vòng sang model khác ngay, hết vòng thì nghỉ rồi thử thêm 1 vòng.
+     Bản flash-lite trả lời nhanh; bản flash lớn để cuối (31/10/2026 hay treo ~60s). */
+  var chain = cfg.loai === 'gemini'
+    ? [cfg.model, 'gemini-3.1-flash-lite', 'gemini-3.5-flash-lite', 'gemini-2.5-flash-lite', 'gemini-flash-lite-latest', 'gemini-3.5-flash', 'gemini-flash-latest']
+        .filter(function (m, i, a) { return m && a.indexOf(m) === i; })
+    : [cfg.model];
+  var tries = [];
+  for (var vong = 0; vong < 2 && code !== 200; vong++) {
+    if (vong) Utilities.sleep(5000);
+    for (var k = 0; k < chain.length; k++) {
+      if (cfg.loai === 'gemini') url = 'https://generativelanguage.googleapis.com/v1beta/models/' + chain[k] + ':generateContent';
+      try {
+        res = UrlFetchApp.fetch(url, { method: 'post', contentType: 'application/json', headers: opt.headers, payload: JSON.stringify(body), muteHttpExceptions: true });
+        code = res.getResponseCode(); txt = res.getContentText();
+      } catch (e) { code = 0; txt = String(e && e.message || e); }
+      if (code === 200) { cfg.model = chain[k]; break; }
+      tries.push(chain[k] + ':' + code);
+      lastErr = 'Lỗi AI ' + cfg.loai + ' (mã ' + code + '): ' + txt.slice(0, 200);
+      if (code === 401 || code === 403 || code === 400) throw new Error(lastErr); /* sai khóa / sai yêu cầu: đổi model cũng vô ích */
+      if (cfg.loai === 'claude') { if (code === 429 || code >= 500 || code === 0) { Utilities.sleep(3000); continue; } throw new Error(lastErr); }
+    }
   }
-  if (code !== 200) throw new Error(lastErr);
+  if (code !== 200) throw new Error('AI đang quá tải, thử lại sau ít phút (' + tries.join(', ') + ') — ' + lastErr);
   var data = JSON.parse(txt), out;
   if (cfg.loai === 'claude') out = (data.content || []).filter(function (c) { return c.type === 'text'; }).map(function (c) { return c.text; }).join('');
   else out = ((((data.candidates || [])[0] || {}).content || {}).parts || []).map(function (c) { return c.text || ''; }).join('');
   return { text: out, usage: data.usage || data.usageMetadata || null };
-}
-
-/* Model Gemini cũ bị gỡ → hỏi danh sách, chọn bản "flash" mới nhất hỗ trợ generateContent, lưu vào MODEL */
-function chonModelGemini_(cfg) {
-  try {
-    var r = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: { 'x-goog-api-key': cfg.key }, muteHttpExceptions: true });
-    if (r.getResponseCode() !== 200) return null;
-    var ms = (JSON.parse(r.getContentText()).models || []).filter(function (m) {
-      return (m.supportedGenerationMethods || []).indexOf('generateContent') >= 0 && /flash-lite/.test(m.name) && !/image|tts|audio|live|preview|latest/.test(m.name);
-    }).map(function (m) { return m.name.replace(/^models\//, ''); });
-    ms.sort(function (a, b) { var va = parseFloat((a.match(/(\d+(\.\d+)?)/) || [0, 0])[1]), vb = parseFloat((b.match(/(\d+(\.\d+)?)/) || [0, 0])[1]); return vb - va || a.length - b.length; });
-    if (ms[0]) cfg.p.setProperty('MODEL', ms[0]);
-    return ms[0] || null;
-  } catch (e) { return null; }
 }
 
 /** Đọc 1 ảnh (base64 JPEG/PNG) → JSON kết quả. Gọi từ trang bằng google.script.run */
