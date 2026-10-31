@@ -6,14 +6,14 @@
  * CÀI ĐẶT (1 lần):
  *  1. Cài đặt dự án (bánh răng) → Thuộc tính tập lệnh → Thêm:
  *       AI_KEY        = khóa AI: Gemini (aistudio.google.com → Get API key) hoặc Claude (sk-ant-…, console.anthropic.com)
- *       MODEL         = không bắt buộc (mặc định gemini-2.5-flash / claude-sonnet-5-5)
+ *       MODEL         = không bắt buộc (mặc định gemini-3.1-flash-lite / claude-sonnet-5-5)
  *       AUTOBI_KEY    = 1 chuỗi bí mật tự đặt (không bắt buộc, nên có) — AutoBI phải gửi đúng chuỗi này mới lấy được số
  *  2. Triển khai → Tác vụ triển khai mới → Ứng dụng web
  *       Thực thi với tư cách: Tôi · Ai có quyền truy cập: Bất kỳ ai có tài khoản Google
  *  3. Lần sau sửa code: Quản lý các lần triển khai → bút chì → Phiên bản mới (giữ nguyên URL)
  */
 
-var DAB_VERSION = '1.2';
+var DAB_VERSION = '1.3';
 
 /* v1.1: AutoBI lấy số đã đọc: GET <url /exec>?action=lay&ma=<mã nhận>&key=<AUTOBI_KEY nếu có cài> */
 function doGet(e) {
@@ -65,7 +65,7 @@ function thongTin() {
   var p = PropertiesService.getScriptProperties();
   var url = ''; try { url = ScriptApp.getService().getUrl(); } catch (e) { }
   var k = p.getProperty('AI_KEY') || p.getProperty('ANTHROPIC_KEY') || p.getProperty('GEMINI_KEY') || '';
-  return { version: DAB_VERSION, coKhoa: !!k, model: p.getProperty('MODEL') || (/^sk-ant-/.test(k) ? 'claude-sonnet-5-5' : 'gemini-2.5-flash'), url: url, coKhoaAutoBI: !!p.getProperty('AUTOBI_KEY') };
+  return { version: DAB_VERSION, coKhoa: !!k, model: p.getProperty('MODEL') || (/^sk-ant-/.test(k) ? 'claude-sonnet-5-5' : 'gemini-3.1-flash-lite'), url: url, coKhoaAutoBI: !!p.getProperty('AUTOBI_KEY') };
 }
 
 var PROMPT = [
@@ -99,13 +99,13 @@ var PROMPT = [
 
 /* v1.2: dùng được 2 loại khóa — tự nhận theo dạng khóa:
    sk-ant-…  → Claude (Anthropic)      · MODEL mặc định claude-sonnet-5-5
-   còn lại   → Gemini (Google AI Studio) · MODEL mặc định gemini-2.5-flash (máy chủ báo không có model → tự chọn bản flash mới nhất) */
+   còn lại   → Gemini (Google AI Studio) · MODEL mặc định gemini-3.1-flash-lite (miễn phí, nhanh; 31/10/2026 các bản flash lớn hơn hay treo) — máy chủ báo không có model → tự chọn bản flash-lite mới nhất */
 function cauHinhAI_() {
   var p = PropertiesService.getScriptProperties();
   var key = p.getProperty('AI_KEY') || p.getProperty('ANTHROPIC_KEY') || p.getProperty('GEMINI_KEY');
   if (!key) throw new Error('Chưa cài khóa AI: Cài đặt dự án → Thuộc tính tập lệnh → AI_KEY');
   var loai = /^sk-ant-/.test(key) ? 'claude' : 'gemini';
-  var model = p.getProperty('MODEL') || (loai === 'claude' ? 'claude-sonnet-5-5' : 'gemini-2.5-flash');
+  var model = p.getProperty('MODEL') || (loai === 'claude' ? 'claude-sonnet-5-5' : 'gemini-3.1-flash-lite');
   return { key: key, loai: loai, model: model, p: p };
 }
 
@@ -147,7 +147,7 @@ function chonModelGemini_(cfg) {
     var r = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: { 'x-goog-api-key': cfg.key }, muteHttpExceptions: true });
     if (r.getResponseCode() !== 200) return null;
     var ms = (JSON.parse(r.getContentText()).models || []).filter(function (m) {
-      return (m.supportedGenerationMethods || []).indexOf('generateContent') >= 0 && /flash/.test(m.name) && !/lite|image|tts|audio|live|thinking|exp/.test(m.name);
+      return (m.supportedGenerationMethods || []).indexOf('generateContent') >= 0 && /flash-lite/.test(m.name) && !/image|tts|audio|live|preview|latest/.test(m.name);
     }).map(function (m) { return m.name.replace(/^models\//, ''); });
     ms.sort(function (a, b) { var va = parseFloat((a.match(/(\d+(\.\d+)?)/) || [0, 0])[1]), vb = parseFloat((b.match(/(\d+(\.\d+)?)/) || [0, 0])[1]); return vb - va || a.length - b.length; });
     if (ms[0]) cfg.p.setProperty('MODEL', ms[0]);

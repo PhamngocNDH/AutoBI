@@ -1,4 +1,4 @@
-# Đọc ảnh BI → đổ số AutoBI (bản 1.2)
+# Đọc ảnh BI → đổ số AutoBI (bản 1.3)
 
 Trang Apps Script đọc ảnh chụp màn hình BI ra số liệu, xuất đúng file mẫu đổ tay `AutoBI_mau_do_tay.xlsx` (hoặc chép bảng để dán). Đây là tầng **Thu thập** mới của AutoBI; phần tính toán và báo cáo trong file Excel giữ nguyên.
 
@@ -10,7 +10,7 @@ Trang Apps Script đọc ảnh chụp màn hình BI ra số liệu, xuất đún
    - `+` → HTML → tên `logic` → dán `logic.html`
 3. **Cài đặt dự án** (bánh răng) → **Thuộc tính tập lệnh** → Thêm:
    - `AI_KEY` = khóa AI. Dùng được khóa **Gemini** (aistudio.google.com → Get API key) hoặc khóa **Claude** (`sk-ant-…`, console.anthropic.com); tool tự nhận theo dạng khóa.
-   - `MODEL` = không bắt buộc (mặc định `gemini-2.5-flash` hoặc `claude-sonnet-5-5`; nếu Google gỡ model cũ thì tool tự chọn bản flash mới nhất)
+   - `MODEL` = không bắt buộc (mặc định `gemini-3.1-flash-lite` — miễn phí, nhanh — hoặc `claude-sonnet-5-5`)
    - `AUTOBI_KEY` = một chuỗi bí mật tự đặt (nên có). AutoBI phải gửi đúng chuỗi này mới lấy được số.
 4. **Triển khai → Tác vụ triển khai mới → Ứng dụng web**
    Thực thi với tư cách: **Tôi** · Ai có quyền truy cập: **Bất kỳ ai có tài khoản Google** → Triển khai → cấp quyền → chép URL `/exec`.
