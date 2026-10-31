@@ -14966,10 +14966,16 @@ window.__AutoBIRunPick = (() => {
   const staffIdOf = v => { const m = String(v || '').match(/\d+/); return m ? m[0] : String(v || '').trim(); };
 
   /* ---------- Cài link trang Đọc ảnh BI + mã nhận ---------- */
+  /* Link trang Đọc ảnh BI của Ngọc (Apps Script "Đọc ảnh BI", triển khai 31/10/2026) — mặc định cho cả cụm; mã nhận mặc định = mã NV đang dùng AutoBI */
+  const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbyaZjLon3UI2HEak0bPg7pdwBsdffvjBSqwewiQ6BOPTziuhPSEyItLu2WOHAx2Ftd-Pw/exec';
   function settings(ask) {
     let s = GM_getValue(SET_KEY, null) || {};
+    if (!ask && !s.url) {
+      const uid = String(window.__AutoBIAuthUid || (page && page.__AutoBIAuthUid) || '').replace(/\D/g, '');
+      if (uid) { s = { url: DEFAULT_URL, ma: uid, key: s.key || '' }; GM_setValue(SET_KEY, s); }
+    }
     if (ask || !s.url || !s.ma) {
-      const url = prompt('Link trang "Đọc ảnh BI" (dạng https://script.google.com/macros/s/…/exec):', s.url || '');
+      const url = prompt('Link trang "Đọc ảnh BI" (dạng https://script.google.com/macros/s/…/exec):', s.url || DEFAULT_URL);
       if (!url) return null;
       if (!/^https:\/\/script\.google(usercontent)?\.com\//.test(url.trim())) { alert('Link phải là link Apps Script (script.google.com/…/exec)'); return null; }
       const ma = prompt('Mã nhận số (giống ô "Mã nhận số" ở trang Đọc ảnh BI):', s.ma || String(window.__AutoBIAuthUid || ''));
