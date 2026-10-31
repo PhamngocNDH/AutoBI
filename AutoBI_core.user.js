@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.82
+// @name         AutoBI Core V18.83
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.82
+// @version      18.83
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -15753,7 +15753,7 @@ const DAB = (function () {
     fetchGoi(s).then(g => { if (g && g.v === 1 && dayOf(g.at) === dayOf(Date.now())) { if (!g.atLK && !g.atRT) g.atLK = g.at; P.cloud = g; veCloud(); paint(); } }).catch(() => { });
     const paint = () => {
       const lab = { cho: 'Chờ', run: 'Đọc…', ok: '✓', err: 'Lỗi' }, lb = a => a.tt === 'run' && a.dp ? 'Đọc… ⇄' : lab[a.tt];
-      $('.th').innerHTML = P.items.map((a, i) => '<div class="' + a.tt + '" title="' + escH(a.loi || ((a.name || '') + ((a.kq || [])[0] && a.kq[0]._model ? ' · ' + a.kq[0]._model : ''))) + '">' + (a.url ? '<img src="' + a.url + '">' : '') + '<span>' + (i + 1) + ' ' + lb(a) + '</span></div>').join('');
+      $('.th').innerHTML = P.items.map((a, i) => '<div data-i="' + i + '" class="' + a.tt + '" title="' + escH(a.loi || ((a.name || '') + ((a.kq || [])[0] && a.kq[0]._model ? ' · ' + a.kq[0]._model : ''))) + '">' + (a.url ? '<img src="' + a.url + '">' : '') + '<span>' + (i + 1) + ' ' + lb(a) + '</span></div>').join('');
       const nOk = P.items.filter(a => a.tt === 'ok').length, nCho = P.items.filter(a => a.tt === 'cho' || a.tt === 'err').length;
       $('[data-k=read]').disabled = P.busy || !nCho;
       $('[data-k=read]').textContent = nCho ? 'Đọc ' + nCho + ' ảnh' : 'Đọc ảnh';
@@ -15833,6 +15833,16 @@ const DAB = (function () {
       for (let k = 0; k < 8; k++) next(); /* V18.78: 8 ảnh song song — Cloud xoay 6 model Gemini (hạn mức riêng từng model) + Mistral dự phòng */
     };
     el.addEventListener('click', ev => {
+      /* V18.83: bấm vào ảnh đã đọc → đọc lại riêng ảnh đó (AI bỏ sót dòng, bảng báo thiếu) */
+      const th = ev.target && ev.target.closest && ev.target.closest('.th [data-i]');
+      if (th && !P.busy) {
+        const a = P.items[Number(th.dataset.i)];
+        if (a && (a.tt === 'ok' || a.tt === 'err') && confirm('Đọc lại ảnh ' + (Number(th.dataset.i) + 1) + '?')) {
+          if (!a.b64s || !a.b64s.length) { toast('Ảnh này đã tải lại trang nên không còn bản gốc — chọn lại ảnh đó bằng ＋ Chọn ảnh', true); return; }
+          a.tt = 'cho'; a.kq = []; paint(); docHet();
+        }
+        return;
+      }
       const k = ev.target && ev.target.dataset && ev.target.dataset.k;
       if (ev.target === el || k === 'x') { if (!P.busy) el.remove(); return; }
       if (k === 'pick') inp.click();
