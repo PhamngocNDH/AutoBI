@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.77
+// @name         AutoBI Core V18.78
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.77
+// @version      18.78
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -14684,7 +14684,7 @@ window.__AutoBIRunPick = (() => {
       '<tr>' + '<td class="i bgR" colspan="2">Mục tiêu ngày</td><td class="i bgG" colspan="2">Thực hiện</td>' + G + '<td class="i co" colspan="3">Hoàn thành: <b>' + pc(D.lkP) + '</b></td><td class="i cb" colspan="3">Còn lại: <b>' + nf(Math.max(0, D.monT - D.lk)) + '</b></td></tr>' +
       '<tr>' + '<td class="i cr" colspan="2"><b>' + nf(D.dayT) + '</b> Triệu</td><td class="i cb" colspan="2"><b>' + nf(D.rt) + '</b> Triệu</td>' + G + '<td class="i il" colspan="3">☀️ Dự kiến ngày mai:' + (D.maiOk ? '' : ' <span style="font-size:11px;font-weight:400;color:#666">(chưa có số hôm nay)</span>') + '</td><td class="i co" colspan="3"><b>' + pc(dkM) + '</b></td></tr>' +
       /* V18.74: bỏ %QĐ, Lũy kế DT thực, %Quy đổi/thực → Thời gian qua + Dự kiến (hết hôm qua) */
-      '<tr>' + '<td class="i cg2" colspan="2">Hoàn thành</td><td class="i cb" colspan="2"><b>' + pc(D.rtP) + '</b></td>' + G + '<td class="i il" colspan="3">Thời gian qua:</td><td class="i" colspan="3"><b>' + pc(D.timeP) + '</b> <span style="font-size:11px;font-weight:400;color:#666">(' + D.dp + '/' + D.dim + ' ngày)</span></td></tr>' +
+      '<tr>' + '<td class="i cg2" colspan="2">Hoàn thành</td><td class="i cb" colspan="2"><b>' + pc(D.rtP) + '</b></td>' + G + '<td class="i il" colspan="3">Thời gian qua:</td><td class="i" colspan="3"><b>' + pc(D.timeP) + '</b></td></tr>' +
       '<tr>' + '<td class="i cr" colspan="2">Mục tiêu trả chậm:</td><td class="i cr bgY" colspan="2"><b>' + D.tgLim + '%</b></td>' + G + '<td class="i il" colspan="3">Dự kiến (hết hôm qua):</td><td class="i co" colspan="3"><b>' + pc(D.dk) + '</b></td></tr>' +
       '<tr>' + '<td class="i cr" colspan="2">Realtime:</td><td class="i" colspan="2"><b>' + Math.round(D.tg) + '%</b></td>' + G + '<td class="i il cr" colspan="3">Lũy kế trả chậm:</td><td class="i" colspan="3"><b>' + Math.round(tgLK) + '%</b></td></tr>';
     const row = x => {
@@ -15787,7 +15787,7 @@ const DAB = (function () {
           .catch(e => { a.tt = 'err'; a.loi = String(e && e.message || e); if (e && e.quyen) { dung = true; P.err = a.loi; toast('✗ ' + a.loi, true); } })
           .then(() => { chay--; xong++; $('.tt').textContent = 'Đang đọc ' + Math.min(xong + 1, tong) + '/' + tong + '…'; paint(); next(); });
       };
-      for (let k = 0; k < 5; k++) next(); /* V18.71: 5 ảnh song song (Gemini miễn phí chịu được; cao hơn dễ quá tải) */
+      for (let k = 0; k < 8; k++) next(); /* V18.78: 8 ảnh song song — Cloud xoay 6 model Gemini (hạn mức riêng từng model) + Mistral dự phòng */
     };
     el.addEventListener('click', ev => {
       const k = ev.target && ev.target.dataset && ev.target.dataset.k;
@@ -15848,7 +15848,9 @@ const DAB = (function () {
     return true;
   }
   /* V18.76: trên portal ẩn Sức khỏe ST và Giờ công & Năng suất ở thanh dưới (ảnh BI không có số cho 2 mục này) */
-  try { GM_addStyle('.rpt-nav-item[data-tab="health"],.rpt-nav-item[data-wt-menu]{display:none!important}'); } catch (_) { }
+  /* V18.78: trang báo cáo viết lại cả document nên kiểm lại mỗi giây, mất thì chèn lại */
+  const hideNav = () => { try { if (document.head && !document.getElementById('abi-anh-hide')) { const st = document.createElement('style'); st.id = 'abi-anh-hide'; st.textContent = '.rpt-nav-item[data-tab="health"],.rpt-nav-item[data-wt-menu]{display:none!important}'; document.head.appendChild(st); } } catch (_) { } };
+  hideNav(); setInterval(hideNav, 1000);
   if (!patchTime()) { let n = 0; const iv = setInterval(() => { if (patchTime() || ++n > 120) clearInterval(iv); }, 500); }
 
   window.__AutoBIAnh = { run, open, settings, build, toast, _shopsOf: shopsOf, _DAB: DAB, _kq: () => loadKq() }; /* V18.73: _kq() xem kết quả đọc hôm nay (gỡ lỗi) */
