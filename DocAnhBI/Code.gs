@@ -14,13 +14,17 @@
  *  3. Lần sau sửa code: Quản lý các lần triển khai → bút chì → Phiên bản mới (giữ nguyên URL)
  */
 
-var DAB_VERSION = '1.11';
+var DAB_VERSION = '1.12';
 
 /* v1.1: AutoBI lấy số đã đọc: GET <url /exec>?action=lay&ma=<mã nhận>&key=<AUTOBI_KEY nếu có cài> */
 function doGet(e) {
   var p = (e && e.parameter) || {};
   if (p.action === 'quyen') return json_(kiemQuyen_(p.ma, ''));
   if (p.action === 'lay') return layKetQua_(p);
+  /* v1.12: ĐÓNG TRANG ĐỌC ẢNH — AutoBI tự đọc ảnh qua doPost nên trang không cần nữa; ai mở link chỉ thấy dòng báo.
+     Muốn mở lại (dự phòng): Thuộc tính tập lệnh TRANG = on */
+  if (String(PropertiesService.getScriptProperties().getProperty('TRANG') || '').toLowerCase() !== 'on')
+    return HtmlService.createHtmlOutput('<p style="font:16px Arial;padding:24px">Trang này đã đóng. Dùng AutoBI trên portal để nạp số từ ảnh.</p>').setTitle('AutoBI');
   return HtmlService.createTemplateFromFile('index').evaluate()
     .setTitle('Đọc ảnh BI')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1')
