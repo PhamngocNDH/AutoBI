@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.86
+// @name         AutoBI Core V18.87
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.86
+// @version      18.87
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -15356,6 +15356,7 @@ const DAB = (function () {
           }
           if (num(b.tong) !== null) g.tong = num(b.tong);
           if (num(b.tong_target) !== null) g.tongT = num(b.tong_target);
+          g.anh = g.anh || []; var so = String(x.anh || idx + 1); if (g.anh.indexOf(so) < 0) g.anh.push(so); /* V18.87: bảng này nằm ở ảnh nào */
           rows.forEach(function (r) {
             var ten = clean(r.ten), v = num(r.gia_tri), t = num(r.target);
             /* v1.10: bảng SIÊU THỊ — mỗi siêu thị 1 dòng/chương trình: trùng tên (kể cả ghi khác kiểu) thì gộp, số khác nhau giữ làm phương án để khớp TỔNG */
@@ -15483,10 +15484,11 @@ const DAB = (function () {
           if (Math.abs(thieu) <= tol) { g.trangThai = 'du'; return; }
           g.trangThai = thieu > 0 ? 'thieu' : 'thua';
           g.lech = thieu;
+          var oAnh = (g.anh || []).length ? ' · ảnh ' + g.anh.join(', ') : '';
           S.canhBao.push({
-            muc: ten,
-            noi: thieu > 0 ? 'Còn thiếu ' + thieu + ' (đã đọc ' + sum + ' / TỔNG ' + g.tong + ') — chụp thêm phần cuối bảng'
-                           : 'Dư ' + (-thieu) + ' so với TỔNG ' + g.tong + ' — có thể đọc sai 1 số, kiểm lại'
+            muc: ten, anh: (g.anh || []).slice(),
+            noi: thieu > 0 ? 'Còn thiếu ' + thieu + ' (đã đọc ' + sum + ' / TỔNG ' + g.tong + ')' + oAnh + ' — bấm ảnh đó để đọc lại, vẫn thiếu thì chụp thêm phần cuối bảng'
+                           : 'Dư ' + (-thieu) + ' so với TỔNG ' + g.tong + oAnh + ' — bấm ảnh đó để đọc lại'
           });
         });
       });
@@ -15724,7 +15726,7 @@ const DAB = (function () {
         + '#abi-anh .bt{flex:1;min-width:120px;border:0;border-radius:10px;padding:11px 10px;font-weight:700;font-size:14px;background:#f3eefe;color:#7c3aed}#abi-anh .bt.p{background:#7c3aed;color:#fff}#abi-anh .bt:disabled{opacity:.45}'
         + '#abi-anh .th{display:grid;grid-template-columns:repeat(auto-fill,minmax(54px,1fr));gap:6px;margin:8px 0}#abi-anh .th div{position:relative;height:72px;border-radius:8px;overflow:hidden;background:#f1f5f9;border:2px solid #e2e8f0;font-size:10px;display:flex;align-items:flex-end;justify-content:center}'
         + '#abi-anh .th img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}#abi-anh .th span{position:relative;background:rgba(255,255,255,.9);width:100%;text-align:center;font-weight:700}'
-        + '#abi-anh .th .ok{border-color:#16a34a}#abi-anh .th .run{border-color:#7c3aed}#abi-anh .th .err{border-color:#dc2626}'
+        + '#abi-anh .th .lech{border-color:#f59e0b!important;box-shadow:0 0 0 2px #fde68a}#abi-anh .th .ok{border-color:#16a34a}#abi-anh .th .run{border-color:#7c3aed}#abi-anh .th .err{border-color:#dc2626}'
         + '#abi-anh .tt{font-weight:600;color:#7c3aed;margin:6px 0}#abi-anh .chip{display:inline-block;padding:3px 8px;border-radius:999px;background:#f1f5f9;margin:2px;font-size:12px}#abi-anh .chip.g{background:#e7f6ec;color:#15803d}#abi-anh .chip.r{background:#fdecec;color:#b4232c}'
         + '#abi-anh .wr{background:#fff8e1;border:1px solid #f5d77a;border-radius:10px;padding:8px 10px;font-size:12px;margin:8px 0;max-height:34vh;overflow:auto}#abi-anh .wr div{margin:2px 0}'
         + '#abi-anh .lk{background:none;border:0;color:#64748b;text-decoration:underline;font-size:12px;padding:6px 0}';
@@ -15762,15 +15764,16 @@ const DAB = (function () {
     post(s, { action: 'dem' }, 20000).then(j => { P.dem = j.dem; veDem(); }).catch(() => { });
     fetchGoi(s).then(g => { if (g && g.v === 1 && dayOf(g.at) === dayOf(Date.now())) { if (!g.atLK && !g.atRT) g.atLK = g.at; P.cloud = g; veCloud(); paint(); } }).catch(() => { });
     const paint = () => {
-      const lab = { cho: 'Chờ', run: 'Đọc…', ok: '✓', err: 'Lỗi' }, lb = a => a.tt === 'run' && a.dp ? 'Đọc… ⇄' : lab[a.tt];
-      $('.th').innerHTML = P.items.map((a, i) => '<div data-i="' + i + '" class="' + a.tt + '" title="' + escH(a.loi || ((a.name || '') + ((a.kq || [])[0] && a.kq[0]._model ? ' · ' + a.kq[0]._model : ''))) + '">' + (a.url ? '<img src="' + a.url + '">' : '') + '<span>' + (i + 1) + ' ' + lb(a) + '</span></div>').join('');
+      tongHop(); /* V18.87: tính trước để biết ảnh nào có bảng lệch → viền cam */
+      const lech = {}; ((P.S && P.S.canhBao) || []).forEach(c => (c.anh || []).forEach(n => { lech[n] = 1; }));
+      const lab = { cho: 'Chờ', run: 'Đọc…', ok: '✓', err: 'Lỗi' }, lb = (a, i) => a.tt === 'run' && a.dp ? 'Đọc… ⇄' : a.tt === 'ok' && lech[String(i + 1)] ? '⚠ đọc lại' : lab[a.tt];
+      $('.th').innerHTML = P.items.map((a, i) => '<div data-i="' + i + '" class="' + a.tt + (a.tt === 'ok' && lech[String(i + 1)] ? ' lech' : '') + '" title="' + escH(a.loi || ((a.name || '') + ((a.kq || [])[0] && a.kq[0]._model ? ' · ' + a.kq[0]._model : ''))) + '">' + (a.url ? '<img src="' + a.url + '">' : '') + '<span>' + (i + 1) + ' ' + lb(a, i) + '</span></div>').join('');
       const nOk = P.items.filter(a => a.tt === 'ok').length, nCho = P.items.filter(a => a.tt === 'cho' || a.tt === 'err').length;
       $('[data-k=read]').disabled = P.busy || !nCho;
       $('[data-k=read]').textContent = nCho ? 'Đọc ' + nCho + ' ảnh' : 'Đọc ảnh';
       $('[data-k=nap]').disabled = P.busy || !(nOk || P.cloud);
       $('[data-k=pick]').disabled = P.busy;
       if (!P.busy) $('.tt').textContent = P.err ? '✗ ' + P.err : !P.items.length && P.cloud ? 'Chưa chọn ảnh — bấm Nạp số và xem để xem số trên Cloud, hoặc chọn ảnh mới' : P.items.length ? nOk + '/' + P.items.length + ' ảnh đã đọc' + (nCho ? ' · còn ' + nCho + ' chưa đọc' : '') : 'Chưa có ảnh';
-      tongHop();
     };
     const tongHop = () => {
       const res = [];
