@@ -15284,3 +15284,4 @@ window.__AutoBIRunPick = (() => {
   try { if (typeof unsafeWindow !== 'undefined') unsafeWindow.__AutoBIAnh = window.__AutoBIAnh; } catch (_) { }
   try { GM_registerMenuCommand('AutoBI: Cài link Đọc ảnh BI', () => settings(true)); } catch (_) { }
 })();
+
