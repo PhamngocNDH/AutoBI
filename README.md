@@ -4,6 +4,8 @@ Kho lưu AutoBI của 38967 - Mr Phạm.
 
 Bản hiện tại: **18.84**
 
+Phần Cloud "Đọc ảnh BI" (Apps Script) không để trên GitHub — mã nằm riêng trong dự án Apps Script của chủ tool.
+
 Link cài cố định: [AutoBI.user.js](https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI.user.js)
 
 ## Thay đổi 18.65 — Nạp số từ ảnh
