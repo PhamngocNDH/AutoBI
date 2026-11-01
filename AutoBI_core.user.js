@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.85
+// @name         AutoBI Core V18.86
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.85
+// @version      18.86
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -15737,6 +15737,7 @@ const DAB = (function () {
       + '<input type="file" accept="image/*" multiple style="display:none">'
       + '<div class="row"><button class="bt" data-k="pick">＋ Chọn ảnh</button><button class="bt p" data-k="read" disabled>Đọc ảnh</button></div>'
       + '<div class="cl" style="font-size:12px;color:#475569;margin:2px 0 4px"></div>'
+      + '<div class="dm" data-k="dem" style="font-size:12px;color:#475569;margin:0 0 4px;cursor:pointer"></div>'
       + '<div class="th"></div><div class="tt"></div><div class="sum"></div>'
       + '<div class="row"><button class="bt p" data-k="nap" disabled>Nạp số và xem</button></div>'
       + '<div class="row"><button class="lk" data-k="clear">Xóa ảnh hôm nay</button></div></div>'; /* V18.76: bỏ nút lấy số từ trang Đọc ảnh */
@@ -15750,6 +15751,15 @@ const DAB = (function () {
       const g = P.cloud, me = uidNow(), ai = b => b && b !== me ? ' (mã ' + escH(b) + ')' : '';
       el.querySelector('.cl').innerHTML = g ? '☁️ Cloud cụm hôm nay: ' + (g.atLK ? '<b>Lũy kế ' + hmOf(g.atLK) + '</b>' + ai(g.byLK) : 'chưa có Lũy kế') + ' · ' + (g.atRT ? '<b>Realtime ' + hmOf(g.atRT) + '</b>' + ai(g.byRT) : 'chưa có Realtime') + (g.atLK && !g.atRT ? ' — chỉ cần chụp Realtime' : '') : '';
     };
+    /* V18.86: đếm ảnh đã đọc hôm nay (Cloud đếm chung cả cụm, cùng khóa AI); admin bấm vào xem từng người */
+    const veDem = () => {
+      const d = P.dem; if (!d) return;
+      let h = '📊 Hôm nay đã đọc <b>' + (d.t || 0) + ' ảnh</b> (X ' + (d.x || 0) + ' · Y ' + (d.y || 0) + ') · bạn đọc ' + (d.ban || 0);
+      if (d.u && P.demMo) h += '<div style="margin-top:2px">' + Object.keys(d.u).sort((a, b) => d.u[b] - d.u[a]).map(m => escH(m) + ': ' + d.u[m]).join(' · ') + '</div>';
+      el.querySelector('.dm').innerHTML = h;
+    };
+    P.veDem = veDem;
+    post(s, { action: 'dem' }, 20000).then(j => { P.dem = j.dem; veDem(); }).catch(() => { });
     fetchGoi(s).then(g => { if (g && g.v === 1 && dayOf(g.at) === dayOf(Date.now())) { if (!g.atLK && !g.atRT) g.atLK = g.at; P.cloud = g; veCloud(); paint(); } }).catch(() => { });
     const paint = () => {
       const lab = { cho: 'Chờ', run: 'Đọc…', ok: '✓', err: 'Lỗi' }, lb = a => a.tt === 'run' && a.dp ? 'Đọc… ⇄' : lab[a.tt];
@@ -15803,7 +15813,7 @@ const DAB = (function () {
       const thu = ai => {
         gui++;
         post(P.s, { action: 'doc', b64: b, mime: 'image/jpeg', ai })
-          .then(j => { if (xong) return; xong = true; clearTimeout(tm); ok(j.kq); })
+          .then(j => { if (j && j.dem) { P.dem = j.dem; try { P.veDem && P.veDem(); } catch (_) { } } if (xong) return; xong = true; clearTimeout(tm); ok(j.kq); })
           .catch(e => {
             if (xong) return; loi++;
             if (e && e.quyen) { xong = true; clearTimeout(tm); return bad(e); }
@@ -15845,6 +15855,7 @@ const DAB = (function () {
       }
       const k = ev.target && ev.target.dataset && ev.target.dataset.k;
       if (ev.target === el || k === 'x') { if (!P.busy) el.remove(); return; }
+      if (k === 'dem') { if (P.dem && P.dem.u) { P.demMo = !P.demMo; P.veDem(); } return; }
       if (k === 'pick') inp.click();
       else if (k === 'read') docHet();
       else if (k === 'clear') { if (P.busy || !confirm('Xóa hết ảnh đã đọc hôm nay?')) return; P.items = []; saveKq([]); paint(); }
