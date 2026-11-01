@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.70
+// @name         AutoBI Core V18.85
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.70
+// @version      18.85
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -10900,7 +10900,7 @@ window.__AutoBIRunPick = (() => {
     { id: 'rt', name: 'Realtime', sub: 'Số hôm nay', run: 'Chạy realtime', c: '#c2410c', bg: '#fff1e6' },
     { id: 'wt', name: 'Giờ công', sub: 'Giờ công & năng suất NV', run: 'Chạy giờ công', c: '#087f8c', bg: '#e3f6f7' },
     { id: 'all', name: 'Tất cả và lưu Sheet', sub: 'Cuối ngày, 1 lần', run: 'Chạy tất cả và lưu', c: '#15803d', bg: '#e7f6ec' },
-    { id: 'anh', name: 'Nạp số từ ảnh', sub: 'Số từ trang Đọc ảnh BI · không gọi BI', run: 'Nạp số và xem', c: '#7c3aed', bg: '#f3eefe' } /* V18.65 */
+    { id: 'anh', name: 'Nạp số từ ảnh', sub: 'Chọn ảnh chụp BI → đọc → xem báo cáo', run: 'Chọn ảnh / Nạp số', c: '#7c3aed', bg: '#f3eefe' } /* V18.65 · V18.71 chọn ảnh ngay tại đây */
   ].filter(m => location.hostname !== 'portal.thegioididong.com' || m.id === 'anh'); /* V18.67: trên portal không lấy được số BI → chỉ Nạp số từ ảnh (+ Xem lại) */
   const IDS = ['chk-all-save', 'chk-rev-thidua', 'chk-fast-realtime', 'chk-crm', 'chk-last-run', 'chk-test', 'chk-worktime73'];
   const load = () => { try { const v = GM_getValue(KEY, null); return v && typeof v === 'object' ? v : {}; } catch (_) { return {}; } };
@@ -10967,8 +10967,9 @@ window.__AutoBIRunPick = (() => {
       });
       if (mode === 'lk' || mode === 'rt') chips.innerHTML = '<button type="button" class="arp-c' + (crm ? ' on' : '') + '" data-c="crm">' + (crm ? ico.ok : '+') + ' Phục vụ CRM</button>';
       else if (mode === 'all') chips.innerHTML = '<span class="arp-note">Gồm lũy kế, giờ công và lưu Sheet lịch sử; CRM khi chạy trước 8h hoặc sau 18h</span>';
-      else if (mode === 'anh') chips.innerHTML = '<button type="button" class="arp-c" data-c="anhcfg">⚙ Link / mã nhận</button><span class="arp-note">Lũy kế: DT, thi đua, NV (gửi từ trang Đọc ảnh BI)</span>'; /* V18.65 */
+      else if (mode === 'anh') chips.innerHTML = ''; /* V18.79: link + mã tự lấy theo portal nên bỏ "⚙ Link / mã nhận" (admin vẫn đổi được ở menu Tampermonkey) */
       else chips.innerHTML = '<span class="arp-note">Chạy riêng giờ công, không lấy doanh thu</span>';
+      const lab = box.querySelector('.arp-l'); if (lab) lab.style.display = chips.innerHTML ? '' : 'none'; chips.style.display = chips.innerHTML ? '' : 'none'; /* V18.79: không có gì thì ẩn cả dòng "Lấy thêm" */
       run.style.background = m.c;
       run.innerHTML = ico.play + ' ' + m.run;
     }
@@ -10996,6 +10997,14 @@ window.__AutoBIRunPick = (() => {
       if (a === 'run' && mode === 'anh') {
         const A = window.__AutoBIAnh, sEl = box.querySelector('.arp-s');
         if (!A) { sEl.style.color = '#c00'; sEl.textContent = 'Thiếu module Nạp số từ ảnh — tải lại trang'; return; }
+        const show = r => {
+          sEl.style.color = '#15803d'; sEl.textContent = '✓ Đã nạp — đang mở báo cáo';
+          A.toast('✓ ' + r.text + (r.warn.length ? ' · ⚠ ' + r.warn.join(' · ') : ''), false);
+          if (!setChecks('last')) throw new Error('Không tìm thấy lựa chọn Xem lại — tải lại trang');
+          runBtn.click();
+        };
+        /* V18.71: mở khung chọn ảnh ngay trong AutoBI; "Lấy số đã gửi từ trang Đọc ảnh" (r = null) → đường cũ */
+        if (A.open) { A.open(r => { if (r) { try { show(r); } catch (e) { sEl.style.color = '#c00'; sEl.textContent = '✗ ' + e.message; } return; } t.disabled = true; sEl.style.color = '#7c3aed'; sEl.textContent = 'Đang lấy số từ trang Đọc ảnh BI…'; A.run().then(show).catch(e => { sEl.style.color = '#c00'; sEl.textContent = '✗ ' + (e && e.message || e); A.toast('✗ ' + (e && e.message || e), true); }).then(() => { t.disabled = false; }); }); return; }
         t.disabled = true; sEl.style.color = '#7c3aed'; sEl.textContent = 'Đang lấy số từ trang Đọc ảnh BI…';
         A.run().then(r => {
           sEl.style.color = '#15803d'; sEl.textContent = '✓ Đã nạp — đang mở báo cáo';
@@ -11389,15 +11398,16 @@ window.__AutoBIRunPick = (() => {
     const I = (r, c1, c2, v, st, fmt) => box(ws, r, c1, r, c2, v, Object.assign({ al: 'center', font: { bold: true, size: 11 } }, st || {}), fmt);
     const red = { font: { color: 'C00000', bold: true, size: 11 } }, blue = { font: { color: '1F4E9C', bold: true, size: 11 } }, grn = { font: { color: '1D7A3A', bold: true, size: 11 } }, org = { font: { color: 'C55A11', bold: true, size: 11 } };
     let r = 3;
-    I(r, 1, 1, 'Time:', { al: 'left' }); I(r, 2, 4, '=' + DP(P, 'at'), red); I(r, 6, 6, 'Target QĐ', red); I(r, 7, 7, '=' + DP(P, 'monT'), red, N0); I(r, 8, 8, 'Thực hiện QĐ', grn); I(r, 9, 11, '=' + DP(P, 'lk'), grn, N0); r++;
+    I(r, 1, 1, 'Time:', { al: 'left' }); I(r, 2, 4, '=' + DP(P, 'at'), red); I(r, 6, 6, 'Target', red); I(r, 7, 7, '=' + DP(P, 'monT'), red, N0); I(r, 8, 8, 'Thực hiện', grn); I(r, 9, 11, '=' + DP(P, 'lk'), grn, N0); r++;
     I(r, 1, 2, 'Mục tiêu ngày', { fill: F('FF0000'), font: { color: 'FFFFFF', bold: true, size: 11 } }); I(r, 3, 4, 'Thực hiện', { fill: F('0E8F5B'), font: { color: 'FFFFFF', bold: true, size: 11 } });
     I(r, 6, 6, 'Hoàn thành', org); I(r, 7, 7, '=' + pctF('I3', 'G3'), org, PCT); I(r, 8, 8, 'Còn lại', blue); I(r, 9, 11, '=MAX(0,G3-I3)', blue, N0); r++;
     I(r, 1, 2, '=' + DP(P, 'dayT'), red, '#,##0 "Triệu"'); I(r, 3, 4, '=' + DP(P, 'rt'), blue, '#,##0.0 "Triệu"');
     I(r, 6, 8, '☀️ Dự kiến ngày mai', { al: 'left' }); I(r, 9, 11, '=' + maiF(DP(P, 'lk'), DP(P, 'rt'), DP(P, 'monT'), 'CoRT'), org, PCT); r++;
-    I(r, 1, 1, 'Hoàn thành', grn); I(r, 2, 2, '=' + pctF('C5', 'A5'), blue, PCT); I(r, 3, 3, '%QĐ'); I(r, 4, 4, '=IFERROR(' + DP(P, 'rt') + '/' + DP(P, 'rtThuc') + ',0)', blue, PCT);
-    I(r, 6, 8, 'Lũy kế Doanh thu thực', { al: 'left' }); I(r, 9, 11, '=' + DP(P, 'lkThuc'), {}, N0); r++;
+    /* V18.74: bỏ các ô quy đổi/thực (%QĐ, DT thực, %Quy đổi/thực) — thay bằng Thời gian qua + Dự kiến hết hôm qua */
+    I(r, 1, 1, 'Hoàn thành', grn); I(r, 2, 4, '=' + pctF('C5', 'A5'), blue, PCT);
+    I(r, 6, 8, 'Thời gian qua', { al: 'left' }); I(r, 9, 11, '=IFERROR(NgayQua/SoNgay,0)', {}, PCT); r++;
     I(r, 1, 2, 'Mục tiêu trả chậm', red); I(r, 3, 4, '=MucTieuTC', Object.assign({ fill: F('FFFF00') }, red), PCT);
-    I(r, 6, 8, '%Quy đổi/thực', { al: 'left' }); I(r, 9, 11, '=IFERROR(' + DP(P, 'lk') + '/' + DP(P, 'lkThuc') + ',0)', org, PCT); r++;
+    I(r, 6, 8, 'Dự kiến HT', { al: 'left' }); I(r, 9, 11, '=' + fcF(DP(P, 'lk'), DP(P, 'monT')), org, PCT); r++;
     I(r, 1, 2, 'Realtime trả chậm', red); I(r, 3, 4, '=' + DP(P, 'tgRT'), {}, PCT);
     I(r, 6, 8, 'Lũy kế trả chậm', Object.assign({ al: 'left' }, red)); I(r, 9, 11, '=' + DP(P, 'tgLK'), {}, PCT);
     ws.addConditionalFormatting({ ref: 'C8', rules: [{ type: 'expression', priority: 1, formulae: ['AND(ISNUMBER(C8),C8>=MucTieuTC)'], style: dxf('C6EFCE', '006100') }, { type: 'expression', priority: 2, formulae: ['ISNUMBER(C8)'], style: dxf('FFC7CE', '9C0006') }] });
@@ -14661,7 +14671,6 @@ window.__AutoBIRunPick = (() => {
     const now = new Date();
     const time = D.tc.isPastMonth ? 'Hết tháng ' + D.tc.month + '/' + D.tc.year : pad(now.getHours()) + ':' + pad(now.getMinutes()) + ' - ' + pad(now.getDate()) + '/' + pad(now.getMonth() + 1) + '/' + now.getFullYear();
     const l2 = D.l2 || {};
-    const qdLK = num(l2.dtlk) > 0 ? D.lk / num(l2.dtlk) * 100 : 0;
     const tgLK = num(l2.tg);
     const G = '<td class="gap"></td>';
     const rows = (D.rows || []).map(x => Object.assign({}, x, { pNow: num(x.tL) > 0 ? x.rL / x.tL * 100 : 0 }));
@@ -14672,11 +14681,12 @@ window.__AutoBIRunPick = (() => {
     const passD = rows.filter(x => x.d >= 100).length;
     const curCls = p => p >= D.timeP ? 'g' : p >= D.timeP * 0.8 ? 'y' : 'r';
     const info =
-      '<tr>' + '<td class="i il">Time:</td><td class="i cr" colspan="3">' + time + '</td>' + G + '<td class="i cr" colspan="3">Target QĐ: <b>' + nf(D.monT) + '</b></td><td class="i cg2" colspan="3">Thực hiện QĐ: <b>' + nf(D.lk) + '</b></td></tr>' +
+      '<tr>' + '<td class="i il">Time:</td><td class="i cr" colspan="3">' + time + '</td>' + G + '<td class="i cr" colspan="3">Target: <b>' + nf(D.monT) + '</b></td><td class="i cg2" colspan="3">Thực hiện: <b>' + nf(D.lk) + '</b></td></tr>' +
       '<tr>' + '<td class="i bgR" colspan="2">Mục tiêu ngày</td><td class="i bgG" colspan="2">Thực hiện</td>' + G + '<td class="i co" colspan="3">Hoàn thành: <b>' + pc(D.lkP) + '</b></td><td class="i cb" colspan="3">Còn lại: <b>' + nf(Math.max(0, D.monT - D.lk)) + '</b></td></tr>' +
       '<tr>' + '<td class="i cr" colspan="2"><b>' + nf(D.dayT) + '</b> Triệu</td><td class="i cb" colspan="2"><b>' + nf(D.rt) + '</b> Triệu</td>' + G + '<td class="i il" colspan="3">☀️ Dự kiến ngày mai:' + (D.maiOk ? '' : ' <span style="font-size:11px;font-weight:400;color:#666">(chưa có số hôm nay)</span>') + '</td><td class="i co" colspan="3"><b>' + pc(dkM) + '</b></td></tr>' +
-      '<tr>' + '<td class="i cg2">Hoàn thành</td><td class="i cb"><b>' + pc(D.rtP) + '</b></td><td class="i">%QĐ</td><td class="i cb"><b>' + Math.round(D.qd) + '%</b></td>' + G + '<td class="i il" colspan="3">Lũy kế Doanh thu thực:</td><td class="i" colspan="3"><b>' + nf(l2.dtlk) + '</b></td></tr>' +
-      '<tr>' + '<td class="i cr" colspan="2">Mục tiêu trả chậm:</td><td class="i cr bgY" colspan="2"><b>' + D.tgLim + '%</b></td>' + G + '<td class="i il" colspan="3">%Quy đổi/thực:</td><td class="i co" colspan="3"><b>' + Math.round(qdLK) + '%</b></td></tr>' +
+      /* V18.74: bỏ %QĐ, Lũy kế DT thực, %Quy đổi/thực → Thời gian qua + Dự kiến (hết hôm qua) */
+      '<tr>' + '<td class="i cg2" colspan="2">Hoàn thành</td><td class="i cb" colspan="2"><b>' + pc(D.rtP) + '</b></td>' + G + '<td class="i il" colspan="3">Thời gian qua:</td><td class="i" colspan="3"><b>' + pc(D.timeP) + '</b></td></tr>' +
+      '<tr>' + '<td class="i cr" colspan="2">Mục tiêu trả chậm:</td><td class="i cr bgY" colspan="2"><b>' + D.tgLim + '%</b></td>' + G + '<td class="i il" colspan="3">Dự kiến HT:</td><td class="i co" colspan="3"><b>' + pc(D.dk) + '</b></td></tr>' +
       '<tr>' + '<td class="i cr" colspan="2">Realtime:</td><td class="i" colspan="2"><b>' + Math.round(D.tg) + '%</b></td>' + G + '<td class="i il cr" colspan="3">Lũy kế trả chậm:</td><td class="i" colspan="3"><b>' + Math.round(tgLK) + '%</b></td></tr>';
     const row = x => {
       const has = x.r !== 0;
@@ -14987,11 +14997,13 @@ window.__AutoBIRunPick = (() => {
     }
     return s;
   }
+  /* V18.77: khóa lưu chung theo cụm = các mã kho trong Khai báo (vd 5243-8265) — QL đổ lũy kế sáng, đồng đội cùng cụm chỉ đổ realtime */
+  function khoOf(cfg) { return shopsOf(cfg || readConfig()).map(x => String(x.code || '').trim()).filter(c => /^\d{3,6}$/.test(c)).sort().join('-'); }
   function fetchGoi(s) {
-    const u = s.url + '?action=lay&ma=' + encodeURIComponent(s.ma) + (s.key ? '&key=' + encodeURIComponent(s.key) : '') + '&t=' + Date.now();
+    const u = s.url + '?action=lay&ma=' + encodeURIComponent(s.ma) + (s.kho ? '&kho=' + encodeURIComponent(s.kho) : '') + (s.key ? '&key=' + encodeURIComponent(s.key) : '') + '&t=' + Date.now();
     return new Promise((ok, bad) => {
       GM_xmlhttpRequest({
-        method: 'GET', url: u, timeout: 30000,
+        method: 'GET', url: u, timeout: 30000, anonymous: true,
         onload: r => {
           let j = null; try { j = JSON.parse(r.responseText); } catch (_) { }
           if (!j) return bad(new Error(r.status === 200 ? 'Trang Đọc ảnh trả về không phải số (kiểm tra link /exec, quyền truy cập "Bất kỳ ai")' : 'Không lấy được số (mã ' + r.status + ')'));
@@ -15159,7 +15171,7 @@ window.__AutoBIRunPick = (() => {
     });
     if (Object.keys(l7).length) cache.link7 = l7;
     if (!cache.link2 && !cache.link4_smart && !cache.link1 && !cache.link3_smart) throw new Error('Gói số không có Doanh thu / Thi đua nào khớp Khai báo (kiểm mã kho, tên siêu thị)');
-    cache.__anh = { at: goi.at, nap: Date.now(), ngayQua: goi.ngayQua || null, canhBao: (goi.canhBao || []).length };
+    cache.__anh = { at: goi.at, nap: Date.now(), ngayQua: goi.ngayQua || null, soNgay: goi.soNgay || null, canhBao: (goi.canhBao || []).length };
     return { cache, log };
   }
 
@@ -15234,7 +15246,8 @@ window.__AutoBIRunPick = (() => {
   function tom(log, goi) {
     const d = new Date(goi.at || Date.now()), hm = t => { const x = new Date(t); return pad(x.getHours()) + ':' + pad(x.getMinutes()); };
     /* V18.69: gói số gộp theo phần trong ngày (trang Đọc ảnh 1.6) → hiện giờ của từng phần */
-    const when = goi.atLK || goi.atRT ? [goi.atLK ? 'Lũy kế ' + hm(goi.atLK) : '', goi.atRT ? 'Realtime ' + hm(goi.atRT) : ''].filter(Boolean).join(' · ') + ' ' + pad(d.getDate()) + '/' + pad(d.getMonth() + 1)
+    const me = uidNow(), ai = b => b && b !== me ? ' (mã ' + b + ')' : ''; /* V18.77: phần do đồng đội gửi thì ghi mã người gửi */
+    const when = goi.atLK || goi.atRT ? [goi.atLK ? 'Lũy kế ' + hm(goi.atLK) + ai(goi.byLK) : '', goi.atRT ? 'Realtime ' + hm(goi.atRT) + ai(goi.byRT) : ''].filter(Boolean).join(' · ') + ' ' + pad(d.getDate()) + '/' + pad(d.getMonth() + 1)
       : 'Số ảnh lúc ' + hm(goi.at || Date.now()) + ' ' + pad(d.getDate()) + '/' + pad(d.getMonth() + 1);
     const parts = [when,
       log.shops.length + ' siêu thị', log.groups + ' nhóm thi đua', log.staff + ' NV'].concat(log.rt || log.rtGroups ? ['realtime ' + (log.rt || 0) + ' siêu thị · ' + (log.rtGroups || 0) + ' nhóm'] : []).concat(log.tc ? ['trả chậm ' + log.tc + ' NV'] : []);
@@ -15243,7 +15256,7 @@ window.__AutoBIRunPick = (() => {
     if (log.groupMiss.length) warn.push('chương trình không khớp nhóm hàng: ' + log.groupMiss.slice(0, 6).join(', ') + (log.groupMiss.length > 6 ? '…' : ''));
     if (log.staffMiss.size) warn.push(log.staffMiss.size + ' NV không có trong Khai báo (bỏ qua)');
     if (log.rowMiss.size) warn.push('dòng thi đua không rõ siêu thị: ' + [...log.rowMiss].slice(0, 3).join(', '));
-    if ((goi.canhBao || []).length) warn.push(goi.canhBao.length + ' cảnh báo khi đọc ảnh (xem ở trang Đọc ảnh)');
+    if ((goi.canhBao || []).length) warn.push(goi.canhBao.length + ' cảnh báo khi đọc ảnh (bảng thiếu/lệch TỔNG)');
     return { text: parts.join(' · '), warn };
   }
 
@@ -15259,8 +15272,9 @@ window.__AutoBIRunPick = (() => {
 
   /* Lấy gói số → ghi bộ nhớ số (thay toàn bộ số lần trước) → trả tóm tắt. Gọi xong thì mở báo cáo bằng "Xem lại". */
   async function run() {
-    const s = settings(false);
-    if (!s) throw new Error('Chưa cài link trang Đọc ảnh BI');
+    const s0 = settings(false);
+    if (!s0) throw new Error('Chưa cài link trang Đọc ảnh BI');
+    const s = Object.assign({}, s0, { ma: uidNow() || s0.ma, kho: khoOf() }); /* V18.71: mã theo đăng nhập portal (Cloud kiểm quyền theo mã này) · V18.77: kho = cụm */
     const goi = await fetchGoi(s);
     const age = Date.now() - num(goi.at);
     if (goi.at && new Date(goi.at).toDateString() !== new Date().toDateString()) {
@@ -15280,8 +15294,619 @@ window.__AutoBIRunPick = (() => {
     return t;
   }
 
-  window.__AutoBIAnh = { run, settings, build, toast, _shopsOf: shopsOf };
+  /* V18.71: lõi gộp số DAB — chép nguyên từ DocAnhBI/logic.html; sửa ở đó thì chép lại vào đây (V18.74: bản 1.10) */
+/* DocAnhBI — lõi gộp số từ ảnh (thuần JS, không phụ thuộc giao diện).
+   Đầu vào: mảng kết quả đọc từng ảnh (JSON do AI trả về, theo thứ tự ảnh).
+   Đầu ra: các bảng đúng dạng "Chép bảng" của mẫu AutoBI_mau_do_tay.xlsx (cột A–H) + danh sách cảnh báo. */
+const DAB = (function () {
+  function num(v) {
+    if (v === null || v === undefined || v === '') return null;
+    if (typeof v === 'number') return isFinite(v) ? v : null;
+    var s = String(v).replace(/\s/g, '').replace(/%$/, '').replace(/,/g, '');
+    var n = parseFloat(s);
+    return isNaN(n) ? null : n;
+  }
+  function r2(x) { return Math.round(x * 100) / 100; }
+  function clean(s) { return String(s == null ? '' : s).replace(/\s+/g, ' ').trim(); }
+  /* Tên chương trình: bỏ tiền tố tháng "T10 - " như AutoBI Core (fullOf) */
+  function keyCT(t) { return clean(t).replace(/^T\d+\s*-\s*/i, ''); }
+  function codeOf(s) { var m = /^(\d+)\s*-/.exec(clean(s)); return m ? m[1] : ''; }
+  function isNV(s) { return !!codeOf(s); }
+  /* v1.10: khóa siêu thị = phần tên sau dấu " - " cuối, bỏ dấu ("ĐMM_NDI_HHA - Hải Anh" = "Hải Anh") */
+  function shopKey(s) { var t = clean(s).split(' - ').pop(); return 'st:' + t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/[^a-z0-9]+/g, ''); }
+  function modeOf(x, prev) {
+    var m = x && x.che_do;
+    if (m === 'realtime' || m === 'luy_ke') return m;
+    return prev || 'luy_ke';
+  }
+
+  function gop(results) {
+    var S = {
+      td: { luy_ke: { st: {}, nv: {} }, realtime: { st: {}, nv: {} } },
+      tdOrder: { luy_ke: { st: [], nv: [] }, realtime: { st: [], nv: [] } },
+      dtShop: {}, dtShopOrder: [],
+      dtNV: { luy_ke: {}, realtime: {} }, dtNVOrder: { luy_ke: [], realtime: [] },
+      tcNV: { luy_ke: {}, realtime: {} }, tcNVOrder: { luy_ke: [], realtime: [] },
+      canhBao: [], soAnh: 0
+    };
+    var lastMode = { thi_dua: null, doanh_thu: null, tra_cham: null };
+    var lastBlock = null; /* khối cuối của ảnh trước — để nối khối bị cắt tiêu đề */
+
+    (results || []).forEach(function (x, idx) {
+      if (!x || x.loi) { S.canhBao.push({ muc: 'Ảnh ' + (idx + 1), noi: 'Không đọc được: ' + ((x && x.loi) || 'trống') }); return; }
+      S.soAnh++;
+      var tag = 'Ảnh ' + (x.anh || idx + 1);
+      if (x.man_hinh === 'thi_dua') {
+        var mode = modeOf(x, lastMode.thi_dua); lastMode.thi_dua = mode;
+        (x.khoi || []).forEach(function (b) {
+          var rows = (b.dong || []).filter(function (r) { return r && clean(r.ten) && num(r.gia_tri) !== null && r.ro !== false; });
+          var bo = (b.dong || []).length - rows.length;
+          if (bo) S.canhBao.push({ muc: tag, noi: bo + ' dòng số bị che/mờ — đã bỏ, chụp lại nếu thiếu' });
+          var key = b.chuong_trinh ? keyCT(b.chuong_trinh) : null;
+          var cap = rows.length ? (isNV(rows[0].ten) ? 'nv' : 'st') : (lastBlock ? lastBlock.cap : 'st');
+          if (!key) {
+            if (lastBlock && lastBlock.cap === cap && lastBlock.mode === mode) { key = lastBlock.key; }
+            else { S.canhBao.push({ muc: tag, noi: 'Khối không thấy tên chương trình — đã bỏ ' + rows.length + ' dòng' }); return; }
+          }
+          var bag = S.td[mode][cap], ord = S.tdOrder[mode][cap];
+          var g = bag[key];
+          if (!g) {
+            g = bag[key] = { key: key, full: clean(b.chuong_trinh) || key, donVi: /SỐ LƯỢNG|SO LUONG/i.test(b.don_vi || '') ? 'SỐ LƯỢNG' : 'DOANH THU', tong: null, tongT: null, rows: [], seen: {} };
+            ord.push(key);
+          }
+          if (num(b.tong) !== null) g.tong = num(b.tong);
+          if (num(b.tong_target) !== null) g.tongT = num(b.tong_target);
+          rows.forEach(function (r) {
+            var ten = clean(r.ten), v = num(r.gia_tri), t = num(r.target);
+            /* v1.10: bảng SIÊU THỊ — mỗi siêu thị 1 dòng/chương trình: trùng tên (kể cả ghi khác kiểu) thì gộp, số khác nhau giữ làm phương án để khớp TỔNG */
+            if (cap === 'st') {
+              var ks = shopKey(ten);
+              if (g.seen[ks] !== undefined) {
+                var os = g.rows[g.seen[ks]];
+                if (ten.length > os.ten.length) os.ten = ten;
+                if (os.t === null && t !== null) os.t = t;
+                if (v !== os.v) { os.alts = os.alts || [os.v]; if (os.alts.indexOf(v) < 0) os.alts.push(v); os.v = v; }
+                return;
+              }
+              g.seen[ks] = g.rows.length; g.rows.push({ ten: ten, v: v, t: t }); return;
+            }
+            /* trùng do ảnh chụp chồng: cùng người/shop + cùng số. NV làm chéo shop có 2 dòng khác số → giữ cả 2 */
+            var k = (codeOf(ten) || ten.toLowerCase()) + '|' + v;
+            if (g.seen[k] !== undefined) {
+              var o = g.rows[g.seen[k]];
+              if (ten.length > o.ten.length) o.ten = ten;
+              if (o.t === null && t !== null) o.t = t;
+              return;
+            }
+            g.seen[k] = g.rows.length;
+            g.rows.push({ ten: ten, v: v, t: t });
+          });
+          lastBlock = { key: key, cap: cap, mode: mode };
+        });
+      } else if (x.man_hinh === 'doanh_thu') {
+        lastBlock = null;
+        var md = modeOf(x, lastMode.doanh_thu); lastMode.doanh_thu = md;
+        var k2 = x.kpi || {};
+        var ma = clean(x.sieu_thi).replace(/\D/g, '');
+        if (ma && num(k2.dt) !== null) {
+          var sh = S.dtShop[ma];
+          if (!sh) { sh = S.dtShop[ma] = { ma: ma }; S.dtShopOrder.push(ma); }
+          var thuc = x.loai_dt === 'thuc';
+          var pre = md === 'realtime' ? 'rt' : 'lk';
+          sh[pre + (thuc ? 'Thuc' : 'QD')] = num(k2.dt);
+          if (num(k2.tra_cham_pct) !== null) sh[pre + "TC"] = Math.round(num(k2.tra_cham_pct) * 100) / 10000;
+          if (num(k2.target) !== null && pre === 'lk' && !thuc) sh.target = num(k2.target);
+          if (pre === 'rt' && !thuc && num(k2.target_ngay) !== null) sh.rtTarget = num(k2.target_ngay);
+          if (!thuc && num(k2.dt_tra_gop) !== null) sh[pre + 'TraGop'] = num(k2.dt_tra_gop);
+          if (num(k2.pv_bill) !== null && num(k2.pv_khach) !== null) { sh[pre + 'PvB'] = num(k2.pv_bill); sh[pre + 'PvK'] = num(k2.pv_khach); }
+        }
+        if (num(x.ngay_qua) !== null) S.ngayQua = num(x.ngay_qua);
+        if (num(x.so_ngay) !== null) S.soNgay = num(x.so_ngay);
+        var nvs = x.nhan_vien || [];
+        nvs.forEach(function (r) {
+          var ten = clean(r.ten), dt = num(r.doanh_thu);
+          if (!ten || dt === null || r.ro === false) return;
+          var key = codeOf(ten) || ten.toLowerCase();
+          var bag = S.dtNV[md], ord = S.dtNVOrder[md];
+          if (!bag[key]) { bag[key] = { ten: ten, sl: num(r.so_luong), dt: dt }; ord.push(key); }
+          else if (ten.length > bag[key].ten.length) bag[key].ten = ten;
+        });
+      } else if (x.man_hinh === 'tra_cham') {
+        lastBlock = null;
+        var mt = modeOf(x, lastMode.tra_cham); lastMode.tra_cham = mt;
+        (x.tra_cham || []).forEach(function (r) {
+          var ten = clean(r.ten), tg = num(r.dt_tra_gop);
+          if (!ten || tg === null || r.ro === false || /^admin$/i.test(ten) || /^t[ổo]ng/i.test(ten)) return;
+          var key = codeOf(ten) || ten.toLowerCase();
+          var bag = S.tcNV[mt], ord = S.tcNVOrder[mt];
+          if (!bag[key]) { bag[key] = { ten: ten, tg: tg, st: num(r.dt_sieu_thi), tl: num(r.ty_le) }; ord.push(key); }
+          else { var o = bag[key]; if (o.st === null) o.st = num(r.dt_sieu_thi); if (o.tl === null) o.tl = num(r.ty_le); }
+        });
+      } else {
+        S.canhBao.push({ muc: tag, noi: 'Không nhận ra màn hình (không phải Thi đua / Doanh thu hợp nhất / Trả chậm) — bỏ qua' });
+      }
+    });
+
+    /* Bổ sung tên NV đầy đủ: DT NV hay bị cắt tên → lấy tên dài nhất cùng mã từ bảng Thi đua */
+    var fullName = {};
+    ['luy_ke', 'realtime'].forEach(function (m) {
+      S.tdOrder[m].nv.forEach(function (k) {
+        S.td[m].nv[k].rows.forEach(function (r) { var c = codeOf(r.ten); if (c && (!fullName[c] || r.ten.length > fullName[c].length)) fullName[c] = r.ten; });
+      });
+    });
+    ['luy_ke', 'realtime'].forEach(function (m) {
+      S.dtNVOrder[m].forEach(function (k) { var o = S.dtNV[m][k], c = codeOf(o.ten); if (c && fullName[c] && fullName[c].length > o.ten.length) o.ten = fullName[c]; });
+    });
+    kiemTra(S);
+    return S;
+  }
+
+  /* Kiểm: tổng các dòng phải bằng dòng TỔNG (lệch do làm tròn cho phép 0.006/dòng) */
+  function kiemTra(S) {
+    ['luy_ke', 'realtime'].forEach(function (m) {
+      ['st', 'nv'].forEach(function (cap) {
+        S.tdOrder[m][cap].forEach(function (k) {
+          var g = S.td[m][cap][k];
+          var tong0 = function () { return r2(g.rows.reduce(function (a, r) { return a + r.v; }, 0)); };
+          var tol = Math.max(0.02, 0.006 * g.rows.length), ten = (m === 'realtime' ? 'RT · ' : '') + (cap === 'nv' ? 'NV · ' : 'ST · ') + k;
+          /* v1.10: tự gỡ dòng trùng do chụp 2 lần đọc ra 2 số khác nhau — chỉ khi chọn lại thì khớp đúng TỔNG */
+          if (g.tong !== null && Math.abs(r2(g.tong - tong0())) > tol) {
+            if (cap === 'st') {
+              var co = g.rows.filter(function (r) { return r.alts && r.alts.length > 1; }).slice(0, 6);
+              if (co.length) {
+                var n = 1; co.forEach(function (r) { n *= r.alts.length; }); n = Math.min(n, 729);
+                for (var i = 0; i < n; i++) {
+                  var x = i; co.forEach(function (r) { r.v = r.alts[x % r.alts.length]; x = Math.floor(x / r.alts.length); });
+                  if (Math.abs(r2(g.tong - tong0())) <= tol) { S.canhBao.push({ muc: ten, noi: 'Ảnh chụp 2 lần đọc ra 2 số khác nhau — đã tự chọn số khớp TỔNG' }); break; }
+                }
+                if (Math.abs(r2(g.tong - tong0())) > tol) co.forEach(function (r) { r.v = r.alts[r.alts.length - 1]; });
+              }
+              /* dòng tổng vùng/cụm bị đọc lẫn vào danh sách siêu thị: bỏ đúng dòng đó thì khớp TỔNG */
+              if (tong0() > g.tong + tol) for (var q = 0; q < g.rows.length; q++) {
+                if (Math.abs(r2(g.tong - (tong0() - g.rows[q].v))) <= tol) { S.canhBao.push({ muc: ten, noi: 'Bỏ dòng ' + g.rows[q].ten + ' (' + g.rows[q].v + ') — giống dòng tổng, bỏ thì khớp TỔNG' }); g.rows.splice(q, 1); break; }
+              }
+            } else if (tong0() > g.tong) {
+              var dem = {}; g.rows.forEach(function (r) { var c = codeOf(r.ten) || r.ten; dem[c] = (dem[c] || 0) + 1; });
+              for (var j = 0; j < g.rows.length; j++) {
+                var c2 = codeOf(g.rows[j].ten) || g.rows[j].ten;
+                if (dem[c2] > 1 && Math.abs(r2(g.tong - (tong0() - g.rows[j].v))) <= tol) {
+                  S.canhBao.push({ muc: ten, noi: 'Bỏ 1 dòng trùng của ' + g.rows[j].ten + ' (' + g.rows[j].v + ') — chụp 2 lần đọc ra 2 số khác nhau, bỏ dòng này thì khớp TỔNG' });
+                  g.rows.splice(j, 1); break;
+                }
+              }
+            }
+          }
+          var sum = tong0();
+          g.sum = sum;
+          if (g.tong === null) { g.trangThai = 'chua_ro'; return; }
+          var thieu = r2(g.tong - sum);
+          if (Math.abs(thieu) <= tol) { g.trangThai = 'du'; return; }
+          g.trangThai = thieu > 0 ? 'thieu' : 'thua';
+          g.lech = thieu;
+          S.canhBao.push({
+            muc: ten,
+            noi: thieu > 0 ? 'Còn thiếu ' + thieu + ' (đã đọc ' + sum + ' / TỔNG ' + g.tong + ') — chụp thêm phần cuối bảng'
+                           : 'Dư ' + (-thieu) + ' so với TỔNG ' + g.tong + ' — có thể đọc sai 1 số, kiểm lại'
+          });
+        });
+      });
+    });
+  }
+
+  /* ----- Dựng bảng dán (y như AutoBI Core fillDoTay) ----- */
+  function bangTDST(S, m) {
+    var out = [];
+    S.tdOrder[m].st.forEach(function (k) {
+      var g = S.td[m].st[k];
+      var unit = g.donVi + (m === 'realtime' ? ' (RT)' : '');
+      out.push([g.key, unit, 'TARGET', m === 'realtime' ? '% HT NGÀY' : '% HT THÁNG', '% DỰ BÁO', 'HẠNG VÙNG', 'TOP/BOTTOM VÙNG']);
+      var tt = g.tongT !== null ? g.tongT : r2(g.rows.reduce(function (a, r) { return a + (r.t || 0); }, 0));
+      out.push(['TỔNG', g.tong !== null ? g.tong : g.sum, tt]);
+      g.rows.forEach(function (r) { out.push([r.ten, r.v, r.t]); });
+    });
+    return out;
+  }
+  function bangTDNV(S, m) {
+    var out = [];
+    S.tdOrder[m].nv.forEach(function (k) {
+      var g = S.td[m].nv[k];
+      out.push([g.key, g.donVi, 'HẠNG TRONG ST', 'TOP/BOTTOM ST', 'BỘ PHẬN']);
+      out.push(['TỔNG', g.sum]); /* TỔNG = tổng các dòng đã đọc (như Core) */
+      g.rows.forEach(function (r) { out.push([r.ten, r.v]); });
+    });
+    return out;
+  }
+  function bangDTNV(S, m) {
+    var ord = S.dtNVOrder[m];
+    if (!ord.length) return [];
+    var out = [['NHÂN VIÊN', 'SỐ LƯỢNG', 'DOANH THU', '% TỈ TRỌNG', 'TB 3 THÁNG', '% TT']];
+    ord.forEach(function (k) { var o = S.dtNV[m][k]; out.push([o.ten, o.sl, o.dt]); });
+    return out;
+  }
+  /* Nhập số: theo thứ tự siêu thị trong Khai báo (mã kho); không khai báo thì theo thứ tự ảnh */
+  function bangNhapSo(S, shops) {
+    var list = (shops && shops.length) ? shops : S.dtShopOrder.map(function (ma) { return { ma: ma }; });
+    return list.map(function (s) {
+      var d = S.dtShop[String(s.ma || '').replace(/\D/g, '')] || {};
+      return { ma: s.ma, bi: s.bi || '', gon: s.gon || '', vals: [d.lkQD, d.lkThuc, d.lkTC, d.rtQD, d.rtThuc, d.rtTC], target: d.target, coSo: !!(d.lkQD || d.rtQD) };
+    });
+  }
+  function bangTC(S, m) {
+    var ord = S.tcNVOrder[m];
+    if (!ord.length) return [];
+    var out = [['NHÂN VIÊN', 'DT TRẢ GÓP', 'DT SIÊU THỊ', '% TRẢ CHẬM']];
+    ord.forEach(function (k) { var o = S.tcNV[m][k]; out.push([o.ten, o.tg, o.st, o.tl !== null ? o.tl : (o.st ? r2(o.tg / o.st * 100) : null)]); });
+    return out;
+  }
+  function tsv(rows) {
+    return rows.map(function (r) { return r.map(function (v) { return v === null || v === undefined ? '' : v; }).join('\t'); }).join('\n');
+  }
+  function tatCaBang(S, shops) {
+    return {
+      tdLK: bangTDST(S, 'luy_ke'), tdRT: bangTDST(S, 'realtime'),
+      tdNV: bangTDNV(S, 'luy_ke'), tdNVRT: bangTDNV(S, 'realtime'),
+      dtNV: bangDTNV(S, 'luy_ke'), dtNVRT: bangDTNV(S, 'realtime'),
+      tcNV: bangTC(S, 'luy_ke'), tcNVRT: bangTC(S, 'realtime'),
+      nhapSo: bangNhapSo(S, shops)
+    };
+  }
+
+  /* ----- Điền vào file Excel (ExcelJS) — file của anh em (đã Khai báo) hoặc mẫu trống ----- */
+  function dienExcel(wb, B, opt) {
+    opt = opt || {};
+    var need = ['Khai báo', 'Nhập số', 'Dán TĐ lũy kế', 'Dán TĐ realtime', 'Dán TĐ nhân viên', 'Dán DT nhân viên', 'Dán DT NV realtime'];
+    need.forEach(function (n) { if (!wb.getWorksheet(n)) throw new Error('File thiếu sheet "' + n + '" — dùng đúng file mẫu đổ tay AutoBI'); });
+    function dump(name, rows, giuCu) {
+      var ws = wb.getWorksheet(name);
+      if (giuCu && !rows.length) return; /* không có ảnh mục này → giữ số cũ trong file */
+      for (var r = 1; r <= 1500; r++) for (var c = 1; c <= 8; c++) ws.getCell(r, c).value = null;
+      rows.forEach(function (row, i) { row.forEach(function (v, j) { if (v !== '' && v !== null && v !== undefined) ws.getCell(i + 1, j + 1).value = v; }); });
+    }
+    var giu = opt.giuMucKhongAnh !== false;
+    dump('Dán TĐ lũy kế', B.tdLK, giu);
+    dump('Dán TĐ realtime', B.tdRT, giu);
+    dump('Dán TĐ nhân viên', B.tdNV, giu);
+    dump('Dán DT nhân viên', B.dtNV, giu);
+    dump('Dán DT NV realtime', B.dtNVRT, giu);
+    var KB = wb.getWorksheet('Khai báo'), NS = wb.getWorksheet('Nhập số');
+    /* Nhập số: dòng 4..7 ứng với siêu thị 1..4 của Khai báo (cột C = tên trên BI) */
+    var kbBI = [12, 13, 14, 15].map(function (r) { return clean(KB.getCell('C' + r).value); });
+    var trong = kbBI.every(function (s) { return !s; });
+    B.nhapSo.forEach(function (s, i) {
+      var idx = -1;
+      if (!trong && s.bi) idx = kbBI.indexOf(clean(s.bi));
+      if (idx < 0 && trong) idx = i;
+      if (idx < 0 || idx > 3) return;
+      if (trong) {
+        if (s.gon) KB.getCell('B' + (12 + idx)).value = s.gon;
+        if (s.bi) KB.getCell('C' + (12 + idx)).value = s.bi;
+        if (s.target) KB.getCell('D' + (12 + idx)).value = s.target;
+      }
+      if (!s.coSo) return;
+      s.vals.forEach(function (v, j) { if (v !== null && v !== undefined) NS.getCell(4 + idx, 2 + j).value = v; });
+    });
+    /* Mẫu trống: điền luôn nhóm thi đua + danh sách NV để báo cáo chạy được ngay */
+    if (trong) {
+      var groups = B.tdLK.filter(function (r) { return r[2] === 'TARGET'; }).map(function (r) { return r[0]; });
+      groups.slice(0, 20).forEach(function (k, i) {
+        KB.getCell('A' + (18 + i)).value = k; KB.getCell('B' + (18 + i)).value = k; KB.getCell('C' + (18 + i)).value = 'Chính';
+      });
+      var seen = {}, nv = [];
+      B.dtNV.slice(1).concat(B.tdNV).forEach(function (r) {
+        var c = codeOf(r[0]); if (!c || seen[c]) return; seen[c] = 1;
+        nv.push([c, clean(r[0]).replace(/^\d+\s*-\s*/, '')]);
+      });
+      nv.slice(0, 45).forEach(function (x, i) { KB.getCell('A' + (46 + i)).value = x[0]; KB.getCell('B' + (46 + i)).value = x[1]; });
+    }
+    wb.calcProperties = Object.assign({}, wb.calcProperties || {}, { fullCalcOnLoad: true });
+    return { mauTrong: trong };
+  }
+
+  /* ----- Gói số gửi AutoBI (Cloud) — AutoBI "Nạp số từ ảnh" đổi sang link2 / link4_smart / link6 ----- */
+  function goiAutoBI(S, shops) {
+    function td(m, cap) {
+      return S.tdOrder[m][cap].map(function (k) {
+        var g = S.td[m][cap][k];
+        return { key: g.key, full: g.full, donVi: g.donVi, tong: g.tong, tongT: g.tongT, sum: g.sum, trangThai: g.trangThai || '',
+          rows: g.rows.map(function (r) { return cap === 'st' ? { ten: r.ten, v: r.v, t: r.t } : { ten: r.ten, v: r.v }; }) };
+      });
+    }
+    var dsShop = S.dtShopOrder.map(function (ma) {
+      var d = S.dtShop[ma], c = (shops || []).filter(function (s) { return String(s.ma).replace(/\D/g, '') === ma; })[0] || {};
+      return { ma: ma, bi: c.bi || '', gon: c.gon || '', lkQD: d.lkQD, lkThuc: d.lkThuc, lkTC: d.lkTC != null ? Math.round(d.lkTC * 10000) / 100 : null,
+        lkTraGop: d.lkTraGop, target: d.target, pvB: d.lkPvB, pvK: d.lkPvK,
+        rtQD: d.rtQD, rtThuc: d.rtThuc, rtTC: d.rtTC != null ? Math.round(d.rtTC * 10000) / 100 : null, rtTraGop: d.rtTraGop, rtTarget: d.rtTarget, rtPvB: d.rtPvB, rtPvK: d.rtPvK };
+    });
+    return {
+      v: 1, at: Date.now(), ngayQua: S.ngayQua || null, soNgay: S.soNgay || null,
+      shops: dsShop, tdST: td('luy_ke', 'st'), tdNV: td('luy_ke', 'nv'), tdSTRT: td('realtime', 'st'),
+      dtNV: S.dtNVOrder.luy_ke.map(function (k) { var o = S.dtNV.luy_ke[k]; return { ten: o.ten, sl: o.sl, dt: o.dt }; }),
+      dtNVRT: S.dtNVOrder.realtime.map(function (k) { var o = S.dtNV.realtime[k]; return { ten: o.ten, sl: o.sl, dt: o.dt }; }),
+      tcNV: S.tcNVOrder.luy_ke.map(function (k) { return S.tcNV.luy_ke[k]; }),
+      tcNVRT: S.tcNVOrder.realtime.map(function (k) { return S.tcNV.realtime[k]; }),
+      canhBao: S.canhBao.slice(0, 40)
+    };
+  }
+
+  return { gop: gop, tatCaBang: tatCaBang, tsv: tsv, dienExcel: dienExcel, goiAutoBI: goiAutoBI, keyCT: keyCT, codeOf: codeOf, num: num };
+})();
+
+  /* ---------- V18.71: CHỌN ẢNH NGAY TRONG AUTOBI (không cần mở trang Đọc ảnh) ----------
+     Ảnh → thu nhỏ/cắt trên máy → POST lên Cloud Đọc ảnh (action doc, kiểm mã theo tab Auth) → gộp số bằng lõi DAB
+     (giống hệt trang) → POST action luu (Cloud gộp theo phần trong ngày) → run() lấy gói số + mở báo cáo.
+     Kết quả đọc giữ trong ngày (GM autobi_anh_kq_v1) để chụp bù không phải đọc lại. */
+  const KQ_KEY = 'autobi_anh_kq_v1', VER = (typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) || '';
+  const vnDay = () => new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 10);
+  const escH = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  function uidNow() {
+    let uid = '';
+    try { const u = JSON.parse(sessionStorage.getItem('userinfor') || 'null'); uid = String((u && u.username) || '').replace(/\D/g, ''); } catch (_) { }
+    if (!uid) uid = String(window.__AutoBIAuthUid || (page && page.__AutoBIAuthUid) || '').replace(/\D/g, '');
+    return uid;
+  }
+  /* V18.81: gửi bằng fetch của trang (không cookie) — GM_xmlhttpRequest của Tampermonkey cho các yêu cầu tới Cloud đi lần lượt
+     từng cái (nhật ký Cloud 01/11: 8 ảnh nối đuôi nhau mỗi 4 giây); fetch thì chạy song song thật. Lỗi mạng/CORS → quay về GM. */
+  let fetchOk = true;
+  function post(s, body, timeout) {
+    const data = JSON.stringify(Object.assign({ ma: s.ma, kho: s.kho || '', ver: VER }, body));
+    const xong = (j, ok, bad) => {
+      if (!j) return bad(new Error('Cloud Đọc ảnh trả về không đúng dạng'));
+      if (!j.ok) { const e = new Error(j.loi || 'Cloud Đọc ảnh báo lỗi'); e.quyen = !!j.quyen; return bad(e); }
+      ok(j);
+    };
+    if (fetchOk && typeof fetch === 'function') {
+      return new Promise((ok, bad) => {
+        const ctl = typeof AbortController === 'function' ? new AbortController() : null;
+        const tm = setTimeout(() => { try { ctl && ctl.abort(); } catch (_) { } }, timeout || 180000);
+        fetch(s.url, { method: 'POST', credentials: 'omit', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: data, signal: ctl ? ctl.signal : undefined })
+          .then(r => r.text()).then(t => { clearTimeout(tm); let j = null; try { j = JSON.parse(t); } catch (_) { } xong(j, ok, bad); })
+          .catch(e => { clearTimeout(tm); if (e && e.name === 'AbortError') return bad(new Error('Đọc ảnh quá lâu — thử lại')); fetchOk = false; postGM(s, data, timeout).then(ok, bad); });
+      });
+    }
+    return postGM(s, data, timeout);
+  }
+  function postGM(s, data, timeout) {
+    return new Promise((ok, bad) => {
+      GM_xmlhttpRequest({
+        method: 'POST', url: s.url, timeout: timeout || 180000, headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        anonymous: true, /* V18.80: không gửi cookie Google — kèm cookie thì Google xếp hàng từng yêu cầu một (8 ảnh thành đọc lần lượt) */
+        data,
+        onload: r => {
+          let j = null; try { j = JSON.parse(r.responseText); } catch (_) { }
+          if (!j) return bad(new Error(r.status === 200 ? 'Cloud Đọc ảnh chưa cập nhật bản 1.7 (chưa nhận ảnh từ AutoBI)' : 'Cloud Đọc ảnh lỗi (mã ' + r.status + ')'));
+          if (!j.ok) { const e = new Error(j.loi || 'Cloud Đọc ảnh báo lỗi'); e.quyen = !!j.quyen; return bad(e); }
+          ok(j);
+        },
+        onerror: () => bad(new Error('Không kết nối được Cloud Đọc ảnh')),
+        ontimeout: () => bad(new Error('Đọc ảnh quá lâu — thử lại'))
+      });
+    });
+  }
+  function loadKq() { const v = GM_getValue(KQ_KEY, null); return v && v.day === vnDay() && Array.isArray(v.items) ? v.items : []; }
+  function saveKq(items) { try { GM_setValue(KQ_KEY, { day: vnDay(), items: items.map(a => ({ name: a.name, tt: a.tt === 'ok' ? 'ok' : 'cho', kq: a.tt === 'ok' ? a.kq : [], t: a.t || 0 })).filter(a => a.tt === 'ok') }); } catch (_) { } }
+
+  /* Thu nhỏ + cắt ảnh dài (y như trang Đọc ảnh: cạnh dài ≤1568px, đoạn chồng ~15%) */
+  function chuanBi(file) {
+    return new Promise((ok, bad) => {
+      const img = new Image(), url = URL.createObjectURL(file);
+      img.onload = () => {
+        try {
+          const W = img.naturalWidth, H = img.naturalHeight, parts = [], maxH = Math.round(W * 2.2), step = Math.round(W * 1.9);
+          let y = 0;
+          for (;;) { const h = Math.min(maxH, H - y); parts.push([y, h]); if (y + h >= H) break; y += step; }
+          const b64s = parts.map(p => {
+            const sc = Math.min(1, 1568 / Math.max(W, p[1])), c = document.createElement('canvas');
+            c.width = Math.round(W * sc); c.height = Math.round(p[1] * sc);
+            const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+            g.drawImage(img, 0, p[0], W, p[1], 0, 0, c.width, c.height);
+            return c.toDataURL('image/jpeg', 0.88).split(',')[1];
+          });
+          ok({ name: file.name, url, b64s, kq: [], tt: 'cho', t: file.lastModified || 0 });
+        } catch (e) { bad(e); }
+      };
+      img.onerror = () => bad(new Error('Không mở được ảnh ' + file.name));
+      img.src = url;
+    });
+  }
+
+  let P = null; /* trạng thái khung */
+  function open(onLoaded) {
+    const s0 = settings(false);
+    if (!s0) { toast('Chưa cài link Cloud Đọc ảnh BI', true); return; }
+    const uid = uidNow();
+    const s = Object.assign({}, s0, { ma: uid || s0.ma, kho: khoOf() });
+    if (!document.getElementById('abi-anh-css')) {
+      const st = document.createElement('style'); st.id = 'abi-anh-css';
+      st.textContent = '#abi-anh{position:fixed;inset:0;z-index:2147483645;background:rgba(15,23,42,.45);display:flex;align-items:flex-end;justify-content:center;font:14px/1.4 -apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1f2328}'
+        + '#abi-anh .bx{background:#fff;width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:16px 16px 0 0;padding:14px 14px 18px;box-shadow:0 -8px 30px rgba(0,0,0,.2)}'
+        + '#abi-anh .hd{display:flex;align-items:center;gap:8px;margin-bottom:8px}#abi-anh .hd b{font-size:16px;flex:1}#abi-anh .x{border:0;background:#f1f5f9;border-radius:50%;width:32px;height:32px;font-size:18px}'
+        + '#abi-anh .sub{color:#64748b;font-size:12px;margin-bottom:10px}#abi-anh .row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}'
+        + '#abi-anh .bt{flex:1;min-width:120px;border:0;border-radius:10px;padding:11px 10px;font-weight:700;font-size:14px;background:#f3eefe;color:#7c3aed}#abi-anh .bt.p{background:#7c3aed;color:#fff}#abi-anh .bt:disabled{opacity:.45}'
+        + '#abi-anh .th{display:grid;grid-template-columns:repeat(auto-fill,minmax(54px,1fr));gap:6px;margin:8px 0}#abi-anh .th div{position:relative;height:72px;border-radius:8px;overflow:hidden;background:#f1f5f9;border:2px solid #e2e8f0;font-size:10px;display:flex;align-items:flex-end;justify-content:center}'
+        + '#abi-anh .th img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}#abi-anh .th span{position:relative;background:rgba(255,255,255,.9);width:100%;text-align:center;font-weight:700}'
+        + '#abi-anh .th .ok{border-color:#16a34a}#abi-anh .th .run{border-color:#7c3aed}#abi-anh .th .err{border-color:#dc2626}'
+        + '#abi-anh .tt{font-weight:600;color:#7c3aed;margin:6px 0}#abi-anh .chip{display:inline-block;padding:3px 8px;border-radius:999px;background:#f1f5f9;margin:2px;font-size:12px}#abi-anh .chip.g{background:#e7f6ec;color:#15803d}#abi-anh .chip.r{background:#fdecec;color:#b4232c}'
+        + '#abi-anh .wr{background:#fff8e1;border:1px solid #f5d77a;border-radius:10px;padding:8px 10px;font-size:12px;margin:8px 0;max-height:34vh;overflow:auto}#abi-anh .wr div{margin:2px 0}'
+        + '#abi-anh .lk{background:none;border:0;color:#64748b;text-decoration:underline;font-size:12px;padding:6px 0}';
+      document.head.appendChild(st);
+    }
+    let el = document.getElementById('abi-anh'); if (el) el.remove();
+    el = document.createElement('div'); el.id = 'abi-anh';
+    el.innerHTML = '<div class="bx"><div class="hd"><b>📷 Nạp số từ ảnh</b><button class="x" data-k="x">×</button></div>'
+      + '<div class="sub">Chụp BI: Doanh thu hợp nhất (từng ST + tab NV), Thi đua ST, Thi đua NV, Trả chậm NV — Lũy kế hoặc Realtime. Mã: <b>' + escH(s.ma || '?') + '</b></div>'
+      + '<input type="file" accept="image/*" multiple style="display:none">'
+      + '<div class="row"><button class="bt" data-k="pick">＋ Chọn ảnh</button><button class="bt p" data-k="read" disabled>Đọc ảnh</button></div>'
+      + '<div class="cl" style="font-size:12px;color:#475569;margin:2px 0 4px"></div>'
+      + '<div class="th"></div><div class="tt"></div><div class="sum"></div>'
+      + '<div class="row"><button class="bt p" data-k="nap" disabled>Nạp số và xem</button></div>'
+      + '<div class="row"><button class="lk" data-k="clear">Xóa ảnh hôm nay</button></div></div>'; /* V18.76: bỏ nút lấy số từ trang Đọc ảnh */
+    document.body.appendChild(el);
+    const $ = k => el.querySelector(k), inp = $('input[type=file]');
+    P = { s, items: loadKq(), busy: false, S: null, cloud: null };
+    /* V18.77: xem Cloud cụm hôm nay đã có phần nào (QL đổ lũy kế sáng → đồng đội chỉ cần ảnh realtime) */
+    const dayOf = t => new Date(Number(t) + 7 * 3600e3).toISOString().slice(0, 10);
+    const hmOf = t => { const x = new Date(Number(t)); return pad(x.getHours()) + ':' + pad(x.getMinutes()); };
+    const veCloud = () => {
+      const g = P.cloud, me = uidNow(), ai = b => b && b !== me ? ' (mã ' + escH(b) + ')' : '';
+      el.querySelector('.cl').innerHTML = g ? '☁️ Cloud cụm hôm nay: ' + (g.atLK ? '<b>Lũy kế ' + hmOf(g.atLK) + '</b>' + ai(g.byLK) : 'chưa có Lũy kế') + ' · ' + (g.atRT ? '<b>Realtime ' + hmOf(g.atRT) + '</b>' + ai(g.byRT) : 'chưa có Realtime') + (g.atLK && !g.atRT ? ' — chỉ cần chụp Realtime' : '') : '';
+    };
+    fetchGoi(s).then(g => { if (g && g.v === 1 && dayOf(g.at) === dayOf(Date.now())) { if (!g.atLK && !g.atRT) g.atLK = g.at; P.cloud = g; veCloud(); paint(); } }).catch(() => { });
+    const paint = () => {
+      const lab = { cho: 'Chờ', run: 'Đọc…', ok: '✓', err: 'Lỗi' }, lb = a => a.tt === 'run' && a.dp ? 'Đọc… ⇄' : lab[a.tt];
+      $('.th').innerHTML = P.items.map((a, i) => '<div data-i="' + i + '" class="' + a.tt + '" title="' + escH(a.loi || ((a.name || '') + ((a.kq || [])[0] && a.kq[0]._model ? ' · ' + a.kq[0]._model : ''))) + '">' + (a.url ? '<img src="' + a.url + '">' : '') + '<span>' + (i + 1) + ' ' + lb(a) + '</span></div>').join('');
+      const nOk = P.items.filter(a => a.tt === 'ok').length, nCho = P.items.filter(a => a.tt === 'cho' || a.tt === 'err').length;
+      $('[data-k=read]').disabled = P.busy || !nCho;
+      $('[data-k=read]').textContent = nCho ? 'Đọc ' + nCho + ' ảnh' : 'Đọc ảnh';
+      $('[data-k=nap]').disabled = P.busy || !(nOk || P.cloud);
+      $('[data-k=pick]').disabled = P.busy;
+      if (!P.busy) $('.tt').textContent = P.err ? '✗ ' + P.err : !P.items.length && P.cloud ? 'Chưa chọn ảnh — bấm Nạp số và xem để xem số trên Cloud, hoặc chọn ảnh mới' : P.items.length ? nOk + '/' + P.items.length + ' ảnh đã đọc' + (nCho ? ' · còn ' + nCho + ' chưa đọc' : '') : 'Chưa có ảnh';
+      tongHop();
+    };
+    const tongHop = () => {
+      const res = [];
+      P.items.forEach((a, i) => { if (a.tt === 'ok') (a.kq || []).forEach(r => { if (r && typeof r === 'object') { r.anh = String(i + 1); res.push(r); } }); });
+      if (!res.length) { $('.sum').innerHTML = ''; P.S = null; return; }
+      const S = P.S = DAB.gop(res);
+      let du = 0, lech = 0;
+      ['luy_ke', 'realtime'].forEach(m => ['st', 'nv'].forEach(c => S.tdOrder[m][c].forEach(k => { const g = S.td[m][c][k]; if (g.trangThai === 'du') du++; else if (g.trangThai && g.trangThai !== 'chua_ro') lech++; })));
+      const co = [];
+      if (S.dtShopOrder.length) co.push(S.dtShopOrder.length + ' siêu thị');
+      if (S.tdOrder.luy_ke.st.length || S.tdOrder.luy_ke.nv.length) co.push('TĐ LK ' + S.tdOrder.luy_ke.st.length + ' ST · ' + S.tdOrder.luy_ke.nv.length + ' NV');
+      if (S.tdOrder.realtime.st.length || S.tdOrder.realtime.nv.length) co.push('TĐ RT ' + S.tdOrder.realtime.st.length + ' ST · ' + S.tdOrder.realtime.nv.length + ' NV');
+      if (S.dtNVOrder.luy_ke.length) co.push('DT ' + S.dtNVOrder.luy_ke.length + ' NV');
+      if (S.dtNVOrder.realtime.length) co.push('DT RT ' + S.dtNVOrder.realtime.length + ' NV');
+      if (S.tcNVOrder.luy_ke.length) co.push('trả chậm ' + S.tcNVOrder.luy_ke.length + ' NV');
+      /* Còn thiếu màn nào (theo Khai báo) */
+      const thieu = [], cfg = readConfig(), sh = shopsOf(cfg);
+      const coLK = S.tdOrder.luy_ke.st.length || S.dtNVOrder.luy_ke.length || sh.some(x => x.code && S.dtShop[x.code] && S.dtShop[x.code].lkQD != null);
+      const coRT = S.tdOrder.realtime.st.length || S.dtNVOrder.realtime.length; /* V18.74: chỉ có DT siêu thị realtime thì không đòi đủ bộ realtime */
+      [['lk', 'Lũy kế', coLK], ['rt', 'Realtime', coRT]].forEach(([pre, ten, co1]) => {
+        if (!co1) return;
+        if (P.cloud && P.cloud[pre === 'lk' ? 'atLK' : 'atRT'] && !(pre === 'lk' ? S.tdOrder.luy_ke.st.length : S.tdOrder.realtime.st.length)) return; /* V18.77: phần này Cloud cụm đã có */
+        const m = pre === 'rt' ? 'realtime' : 'luy_ke';
+        sh.forEach(x => { if (x.code && !(S.dtShop[x.code] && S.dtShop[x.code][pre + 'QD'] != null)) thieu.push('DT hợp nhất ' + ten + ' – ' + x.short); });
+        if (!S.tdOrder[m].st.length) thieu.push('Thi đua Siêu thị ' + ten);
+        if (!S.tdOrder[m].nv.length && pre === 'lk') thieu.push('Thi đua Nhân viên ' + ten);
+        if (!S.dtNVOrder[m].length) thieu.push('tab Nhân viên ' + ten);
+      });
+      /* V18.73: đọc bằng máy nào (Gemini / Mistral) */
+      const mdl = {}; P.items.forEach(a => { if (a.tt === 'ok') (a.kq || []).forEach(r => { const m = String((r && r._model) || '?'); const k = /mistral|ministral/i.test(m) ? 'Mistral' : /gemini/i.test(m) ? 'Gemini' : m; mdl[k] = (mdl[k] || 0) + 1; }); });
+      P.mdl = mdl; /* V18.76: không hiện chip "đọc bằng" (giữ chuột lên ảnh vẫn thấy model) */
+      $('.sum').innerHTML = '<div>' + co.map(t => '<span class="chip">' + escH(t) + '</span>').join('') + (du ? '<span class="chip g">' + du + ' bảng khớp TỔNG</span>' : '') + (lech ? '<span class="chip r">' + lech + ' bảng lệch</span>' : '') + '</div>'
+        + (thieu.length || S.canhBao.length ? '<div class="wr">' + (thieu.length ? '<div><b>Chưa thấy ảnh:</b> ' + thieu.map(escH).join(' · ') + '</div>' : '') + S.canhBao.map(c => '<div>• <b>' + escH(c.muc) + '</b>: ' + escH(c.noi) + '</div>').join('') + '</div>' : '');
+    };
+    /* V18.82: ảnh đọc quá 10 giây chưa xong → gửi thêm 1 lượt "dự phòng" (Cloud đọc bằng Mistral trước), lượt nào xong trước thì lấy.
+       Lượt chính lỗi sớm thì chuyển dự phòng ngay. 10 giây vì ảnh bình thường mất ~3 giây, ảnh nhiều dòng 5–8 giây. */
+    const HEDGE_MS = 10000;
+    const docMot = (a, b) => new Promise((ok, bad) => {
+      let xong = false, dp = false, gui = 0, loi = 0, tm = null;
+      const thu = ai => {
+        gui++;
+        post(P.s, { action: 'doc', b64: b, mime: 'image/jpeg', ai })
+          .then(j => { if (xong) return; xong = true; clearTimeout(tm); ok(j.kq); })
+          .catch(e => {
+            if (xong) return; loi++;
+            if (e && e.quyen) { xong = true; clearTimeout(tm); return bad(e); }
+            if (!dp) { clearTimeout(tm); duPhong(); return; }
+            if (loi >= gui) { xong = true; bad(e); }
+          });
+      };
+      const duPhong = () => { if (dp || xong) return; dp = true; a.dp = true; try { paint(); } catch (_) { } thu('mistral'); };
+      thu('');
+      tm = setTimeout(duPhong, HEDGE_MS);
+    });
+    const docHet = () => {
+      const viec = P.items.filter(a => a.tt === 'cho' || a.tt === 'err');
+      if (!viec.length) return;
+      P.busy = true; P.err = ''; paint();
+      let i = 0, chay = 0, xong = 0, dung = false;
+      const tong = viec.length;
+      const next = () => {
+        if (dung || i >= viec.length) { if (!chay) { P.busy = false; saveKq(P.items); paint(); } return; }
+        const a = viec[i++]; a.tt = 'run'; a.loi = ''; a.dp = false; chay++; paint();
+        $('.tt').textContent = 'Đang đọc ' + (xong + 1) + '/' + tong + '…';
+        Promise.all(a.b64s.map(b => docMot(a, b)))
+          .then(rs => { if (!rs.every(r => r && typeof r === 'object')) throw new Error('Cloud trả kết quả rỗng — đọc lại'); a.kq = rs; a.tt = 'ok'; })
+          .catch(e => { a.tt = 'err'; a.loi = String(e && e.message || e); if (e && e.quyen) { dung = true; P.err = a.loi; toast('✗ ' + a.loi, true); } })
+          .then(() => { chay--; xong++; $('.tt').textContent = 'Đang đọc ' + Math.min(xong + 1, tong) + '/' + tong + '…'; paint(); next(); });
+      };
+      for (let k = 0; k < 8; k++) next(); /* V18.78: 8 ảnh song song — Cloud xoay 6 model Gemini (hạn mức riêng từng model) + Mistral dự phòng */
+    };
+    el.addEventListener('click', ev => {
+      /* V18.83: bấm vào ảnh đã đọc → đọc lại riêng ảnh đó (AI bỏ sót dòng, bảng báo thiếu) */
+      const th = ev.target && ev.target.closest && ev.target.closest('.th [data-i]');
+      if (th && !P.busy) {
+        const a = P.items[Number(th.dataset.i)];
+        if (a && (a.tt === 'ok' || a.tt === 'err') && confirm('Đọc lại ảnh ' + (Number(th.dataset.i) + 1) + '?')) {
+          if (!a.b64s || !a.b64s.length) { toast('Ảnh này đã tải lại trang nên không còn bản gốc — chọn lại ảnh đó bằng ＋ Chọn ảnh', true); return; }
+          a.tt = 'cho'; a.kq = []; paint(); docHet();
+        }
+        return;
+      }
+      const k = ev.target && ev.target.dataset && ev.target.dataset.k;
+      if (ev.target === el || k === 'x') { if (!P.busy) el.remove(); return; }
+      if (k === 'pick') inp.click();
+      else if (k === 'read') docHet();
+      else if (k === 'clear') { if (P.busy || !confirm('Xóa hết ảnh đã đọc hôm nay?')) return; P.items = []; saveKq([]); paint(); }
+      else if (k === 'old') { el.remove(); onLoaded(null); }
+      else if (k === 'nap') {
+        if (!P.S) {
+          if (!P.cloud) return;
+          P.busy = true; paint(); $('.tt').textContent = 'Đang nạp số từ Cloud cụm…';
+          run().then(t => { P.busy = false; el.remove(); onLoaded(t); }).catch(e => { P.busy = false; paint(); $('.tt').textContent = '✗ ' + (e && e.message || e); });
+          return;
+        }
+        const cfg = readConfig();
+        const goi = DAB.goiAutoBI(P.S, shopsOf(cfg).map(x => ({ ma: x.code, bi: x.name, gon: x.short })));
+        P.busy = true; paint(); $('.tt').textContent = 'Đang lưu số lên Cloud…';
+        post(P.s, { action: 'luu', goi }, 60000)
+          .then(() => { $('.tt').textContent = 'Đang nạp số…'; return run(); })
+          .then(t => { P.busy = false; el.remove(); onLoaded(t); })
+          .catch(e => { P.busy = false; paint(); $('.tt').textContent = '✗ ' + (e && e.message || e); toast('✗ ' + (e && e.message || e), true); });
+      }
+    });
+    inp.addEventListener('change', e => {
+      const fs = Array.prototype.slice.call(e.target.files || []).sort((a, b) => (a.lastModified || 0) - (b.lastModified || 0));
+      e.target.value = '';
+      if (!fs.length) return;
+      $('.tt').textContent = 'Đang chuẩn bị ' + fs.length + ' ảnh…';
+      Promise.all(fs.map(chuanBi)).then(arr => { P.items = P.items.concat(arr); paint(); docHet(); }).catch(er => toast(er.message, true));
+    });
+    paint();
+  }
+
+  /* V18.74: SỐ NGÀY THEO ẢNH — số nạp từ ảnh thì "ngày đã qua / số ngày tháng" lấy theo ảnh ("đến hết 30/10, 31 ngày"),
+     không theo hôm nay. Từng lỗi: mùng 1/11 nạp số tháng 10 → tính 1/30 ngày → Dự kiến 1955%. Ảnh chụp số tháng trước
+     (ngày hôm nay ≤ ngày đã qua trong ảnh) thì tháng của số = tháng trước. Đang chọn tháng khác ở Cấu hình thì giữ nguyên. */
+  function patchTime() {
+    const U = window.__AutoBIUI || (page && page.__AutoBIUI);
+    if (!U || !U.HTML || typeof U.HTML.resolveTimeContext !== 'function') return false;
+    if (U.HTML.__anhTime) return true;
+    const orig = U.HTML.resolveTimeContext;
+    U.HTML.resolveTimeContext = function (cfg) {
+      const r = orig.apply(this, arguments);
+      try {
+        if ((GM_getValue('tgdd_custom_report_month', 'current') || 'current') !== 'current') return r;
+        const c = GM_getValue(CACHE_KEY, null), a = c && c.__anh, dpI = num(a && a.ngayQua);
+        if (!a || dpI < 1 || dpI > 31) return r;
+        const now = new Date(), dimI = num(a.soNgay) >= 28 ? num(a.soNgay) : r.daysInMonth;
+        let m = now.getMonth() + 1, y = now.getFullYear();
+        if (now.getDate() <= dpI) { m--; if (!m) { m = 12; y--; } }
+        const cur = m === now.getMonth() + 1, dd = pad(dpI) + '/' + pad(m) + '/' + y;
+        return Object.assign({}, r, { month: m, year: y, daysInMonth: dimI, daysPassed: Math.min(dpI, dimI), isPastMonth: !cur,
+          dateStr: cur ? r.dateStr : 'Hết ngày ' + dd, realtimeStr: cur ? r.realtimeStr : 'Dữ liệu đến hết ' + dd });
+      } catch (_) { return r; }
+    };
+    U.HTML.__anhTime = true;
+    return true;
+  }
+  /* V18.76: trên portal ẩn Sức khỏe ST và Giờ công & Năng suất ở thanh dưới (ảnh BI không có số cho 2 mục này) */
+  /* V18.78: trang báo cáo viết lại cả document nên kiểm lại mỗi giây, mất thì chèn lại */
+  const hideNav = () => { try { if (document.head && !document.getElementById('abi-anh-hide')) { const st = document.createElement('style'); st.id = 'abi-anh-hide'; st.textContent = '.rpt-nav-item[data-tab="health"],.rpt-nav-item[data-wt-menu]{display:none!important}'; document.head.appendChild(st); } } catch (_) { } };
+  hideNav(); setInterval(hideNav, 1000);
+  if (!patchTime()) { let n = 0; const iv = setInterval(() => { if (patchTime() || ++n > 120) clearInterval(iv); }, 500); }
+
+  window.__AutoBIAnh = { run, open, settings, build, toast, _shopsOf: shopsOf, _DAB: DAB, _kq: () => loadKq() }; /* V18.73: _kq() xem kết quả đọc hôm nay (gỡ lỗi) */
   try { if (typeof unsafeWindow !== 'undefined') unsafeWindow.__AutoBIAnh = window.__AutoBIAnh; } catch (_) { }
   try { GM_registerMenuCommand('AutoBI: Cài link Đọc ảnh BI', () => settings(true)); } catch (_) { }
 })();
-
