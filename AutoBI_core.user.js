@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.83
+// @name         AutoBI Core V18.84
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.83
+// @version      18.84
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -11407,7 +11407,7 @@ window.__AutoBIRunPick = (() => {
     I(r, 1, 1, 'Hoàn thành', grn); I(r, 2, 4, '=' + pctF('C5', 'A5'), blue, PCT);
     I(r, 6, 8, 'Thời gian qua', { al: 'left' }); I(r, 9, 11, '=IFERROR(NgayQua/SoNgay,0)', {}, PCT); r++;
     I(r, 1, 2, 'Mục tiêu trả chậm', red); I(r, 3, 4, '=MucTieuTC', Object.assign({ fill: F('FFFF00') }, red), PCT);
-    I(r, 6, 8, 'Dự kiến (hết hôm qua)', { al: 'left' }); I(r, 9, 11, '=' + fcF(DP(P, 'lk'), DP(P, 'monT')), org, PCT); r++;
+    I(r, 6, 8, 'Dự kiến HT', { al: 'left' }); I(r, 9, 11, '=' + fcF(DP(P, 'lk'), DP(P, 'monT')), org, PCT); r++;
     I(r, 1, 2, 'Realtime trả chậm', red); I(r, 3, 4, '=' + DP(P, 'tgRT'), {}, PCT);
     I(r, 6, 8, 'Lũy kế trả chậm', Object.assign({ al: 'left' }, red)); I(r, 9, 11, '=' + DP(P, 'tgLK'), {}, PCT);
     ws.addConditionalFormatting({ ref: 'C8', rules: [{ type: 'expression', priority: 1, formulae: ['AND(ISNUMBER(C8),C8>=MucTieuTC)'], style: dxf('C6EFCE', '006100') }, { type: 'expression', priority: 2, formulae: ['ISNUMBER(C8)'], style: dxf('FFC7CE', '9C0006') }] });
@@ -14686,7 +14686,7 @@ window.__AutoBIRunPick = (() => {
       '<tr>' + '<td class="i cr" colspan="2"><b>' + nf(D.dayT) + '</b> Triệu</td><td class="i cb" colspan="2"><b>' + nf(D.rt) + '</b> Triệu</td>' + G + '<td class="i il" colspan="3">☀️ Dự kiến ngày mai:' + (D.maiOk ? '' : ' <span style="font-size:11px;font-weight:400;color:#666">(chưa có số hôm nay)</span>') + '</td><td class="i co" colspan="3"><b>' + pc(dkM) + '</b></td></tr>' +
       /* V18.74: bỏ %QĐ, Lũy kế DT thực, %Quy đổi/thực → Thời gian qua + Dự kiến (hết hôm qua) */
       '<tr>' + '<td class="i cg2" colspan="2">Hoàn thành</td><td class="i cb" colspan="2"><b>' + pc(D.rtP) + '</b></td>' + G + '<td class="i il" colspan="3">Thời gian qua:</td><td class="i" colspan="3"><b>' + pc(D.timeP) + '</b></td></tr>' +
-      '<tr>' + '<td class="i cr" colspan="2">Mục tiêu trả chậm:</td><td class="i cr bgY" colspan="2"><b>' + D.tgLim + '%</b></td>' + G + '<td class="i il" colspan="3">Dự kiến (hết hôm qua):</td><td class="i co" colspan="3"><b>' + pc(D.dk) + '</b></td></tr>' +
+      '<tr>' + '<td class="i cr" colspan="2">Mục tiêu trả chậm:</td><td class="i cr bgY" colspan="2"><b>' + D.tgLim + '%</b></td>' + G + '<td class="i il" colspan="3">Dự kiến HT:</td><td class="i co" colspan="3"><b>' + pc(D.dk) + '</b></td></tr>' +
       '<tr>' + '<td class="i cr" colspan="2">Realtime:</td><td class="i" colspan="2"><b>' + Math.round(D.tg) + '%</b></td>' + G + '<td class="i il cr" colspan="3">Lũy kế trả chậm:</td><td class="i" colspan="3"><b>' + Math.round(tgLK) + '%</b></td></tr>';
     const row = x => {
       const has = x.r !== 0;

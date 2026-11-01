@@ -2,7 +2,7 @@
 
 Kho lưu AutoBI của 38967 - Mr Phạm.
 
-Bản hiện tại: **18.83**
+Bản hiện tại: **18.84**
 
 Link cài cố định: [AutoBI.user.js](https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI.user.js)
 
@@ -35,7 +35,7 @@ Link cài cố định: [AutoBI.user.js](https://raw.githubusercontent.com/Phamn
 - Trang Đọc ảnh BI 1.6: mỗi lần **Gửi sang AutoBI** không còn ghi đè cả gói. Phần nào gói mới có (DT siêu thị, thi đua siêu thị, thi đua NV, DT NV, trả chậm NV — riêng lũy kế và realtime) thì thay; phần không có thì giữ số đã gửi trước **trong cùng ngày**. Sáng đổ lũy kế, trưa đổ realtime, ca chiều đổ cả hai đều được. Sang ngày mới bỏ hết số cũ.
 - AutoBI khi Nạp số từ ảnh hiện giờ của từng phần, vd "Lũy kế 08:15 · Realtime 12:30".
 
-## Thay đổi 18.71–18.83 — chọn ảnh ngay trong AutoBI + kiểm quyền (Đọc ảnh BI 1.7)
+## Thay đổi 18.71–18.84 — chọn ảnh ngay trong AutoBI + kiểm quyền (Đọc ảnh BI 1.7)
 - Nạp số từ ảnh mở khung **Chọn ảnh** ngay trên portal: ảnh thu nhỏ trên máy → Cloud Đọc ảnh đọc (3 ảnh song song) → báo bảng thiếu/lệch TỔNG, màn chưa chụp → **Nạp số và xem**. Không cần mở trang Đọc ảnh, không cần bấm Gửi.
 - Kết quả đọc giữ trong ngày: chụp bù chỉ đọc ảnh mới. Nút "Lấy số đã gửi từ trang Đọc ảnh" giữ đường cũ.
 - Cloud Đọc ảnh 1.7: thêm doPost (doc / luu / quyen); đọc ảnh, gửi, lấy số đều kiểm mã NV theo danh sách quyền AutoBI (tab Auth). Tắt tạm: thuộc tính AUTH_CHECK = off.
@@ -52,6 +52,7 @@ Link cài cố định: [AutoBI.user.js](https://raw.githubusercontent.com/Phamn
 - 18.81: gửi ảnh bằng fetch của trang (không cookie) thay GM_xmlhttpRequest — GM của Tampermonkey đi lần lượt từng yêu cầu; lỗi thì tự quay về GM.
 - 18.82 + Cloud 1.11: ảnh đọc quá 10 giây → gửi thêm lượt dự phòng đọc bằng Mistral (hiện "Đọc… ⇄"), lượt nào xong trước lấy lượt đó; lượt chính lỗi thì chuyển dự phòng ngay.
 - 18.83: bấm vào ảnh đã đọc trong khung để đọc lại riêng ảnh đó (khi AI bỏ sót dòng).
+- 18.84: đổi nhãn "Dự kiến (hết hôm qua)" thành "Dự kiến HT" (bảng Realtime + file Xuất Excel).
 - Cloud 1.9: Mistral làm dự phòng (thuộc tính MISTRAL_KEY) — Gemini nghẽn thì đọc bằng Mistral, không chờ model đang nghẽn.
 
 ## Thay đổi 18.70 — trả chậm NV + thưởng NV khi Nạp số từ ảnh
