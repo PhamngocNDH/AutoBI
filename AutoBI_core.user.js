@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.87
+// @name         AutoBI Core V18.88
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.87
+// @version      18.88
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -15756,7 +15756,7 @@ const DAB = (function () {
     /* V18.86: đếm ảnh đã đọc hôm nay (Cloud đếm chung cả cụm, cùng khóa AI); admin bấm vào xem từng người */
     const veDem = () => {
       const d = P.dem; if (!d) return;
-      let h = '📊 Hôm nay đã đọc <b>' + (d.t || 0) + ' ảnh</b> (X ' + (d.x || 0) + ' · Y ' + (d.y || 0) + ') · bạn đọc ' + (d.ban || 0);
+      let h = '📊 Hôm nay đã đọc <b>' + (d.t || 0) + ' ảnh</b> (X ' + (d.x || 0) + (d.z ? ' · Z ' + d.z : '') + ' · Y ' + (d.y || 0) + ') · bạn đọc ' + (d.ban || 0);
       if (d.u && P.demMo) h += '<div style="margin-top:2px">' + Object.keys(d.u).sort((a, b) => d.u[b] - d.u[a]).map(m => escH(m) + ': ' + d.u[m]).join(' · ') + '</div>';
       el.querySelector('.dm').innerHTML = h;
     };
