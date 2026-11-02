@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.88
+// @name         AutoBI Core V18.89
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.88
+// @version      18.89
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -10048,7 +10048,15 @@ window.__AutoBIBiTarget99 = (function () {
 
   /* ---------- Bản chụp lũy kế theo ngày ---------- */
   /* V17.48: ngày lũy kế (yyyymmdd) của số đang nằm trong máy — lấy dấu của lượt đổ số API gần nhất */
-  const liveStamp = c => { for (const o of [c.__apiCompetition, c.__apiStaffComp, c.__apiRevenue, c.__apiStaffRev]) { const v = num(o && o.cumTo); if (v > 20000000) return v; } return 0; };
+  const liveStamp = c => { for (const o of [c.__apiCompetition, c.__apiStaffComp, c.__apiRevenue, c.__apiStaffRev]) { const v = num(o && o.cumTo); if (v > 20000000) return v; } return anhStamp(c); };
+  /* V18.89: số nạp từ ảnh (portal) không có dấu cumTo của API → lấy ngày lũy kế từ "Ngày đã qua" của gói ảnh (cùng cách patchTime) */
+  function anhStamp(c) {
+    const a = c && c.__anh, dq = num(a && a.ngayQua);
+    if (!a || dq < 1 || dq > 31) return 0;
+    const t = vnDay(); let y = Math.floor(t / 10000), m = Math.floor(t / 100) % 100;
+    if (t % 100 <= dq) { m--; if (!m) { m = 12; y--; } }
+    return y * 10000 + m * 100 + dq;
+  }
   /* Lũy kế của một siêu thị lấy thẳng từ số đang nằm trong máy (cùng dạng bản chụp) */
   function rowFromCache(c, shop) {
     const o = {}, l6 = (c.link6 && c.link6[shop]) || {};
