@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.89
+// @name         AutoBI Core V18.90
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.89
+// @version      18.90
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -10105,6 +10105,9 @@ window.__AutoBIBiTarget99 = (function () {
       has(d, shop) { if (d <= 0) return true; const s = srow(d, shop); if (s && s.nv) return true; return scan(d, 'link6|||' + shop + '|||competition|||'); },
       nv(d, shop, name, g) { if (d <= 0) return 0; const s = srow(d, shop); if (s && s.nv) return num(s.nv[name] && s.nv[name][g]); return hv(hrow(d), 'link6|||' + shop + '|||competition|||' + name + '|||' + g); },
       dt(d, shop, name) { if (d <= 0) return 0; const s = srow(d, shop); if (s && s.dt) return num(s.dt[name]); return hv(hrow(d), 'link6|||' + shop + '|||revenue|||' + name + '|||dtqd'); },
+      /* V18.90: ngày có số DT QĐ NV / DT siêu thị — tách khỏi thi đua (đầu tháng BI có DT nhưng chưa có thi đua) */
+      hasDT(d, shop) { if (d <= 0) return true; const s = srow(d, shop); if (s && s.dt) return true; return scan(d, 'link6|||' + shop + '|||revenue|||', '|||dtqd'); },
+      hasSdt(d, shop) { if (d <= 0) return true; const s = srow(d, shop); if (s && s.sdt != null) return true; const h = hrow(d); return !!(h && h['link2|||' + shop + '|||r'] !== undefined); },
       hasShop(d, shop) { if (d <= 0) return true; const s = srow(d, shop); if (s && s.sh) return true; return scan(d, 'link4_smart|||', '|||' + shop + '|||r'); },
       shop(d, shop, g) { if (d <= 0) return 0; const s = srow(d, shop); if (s && s.sh) return num(s.sh[g]); return hv(hrow(d), 'link4_smart|||' + g + '|||' + shop + '|||r'); },
       sdt(d, shop) { if (d <= 0) return 0; const s = srow(d, shop); if (s && s.sdt != null) return num(s.sdt); return hv(hrow(d), 'link2|||' + shop + '|||r'); },
@@ -10147,7 +10150,9 @@ window.__AutoBIBiTarget99 = (function () {
     /* lũy kế gần nhất có số, tại hoặc trước ngày d */
     const prevNV = d => { while (d > 0 && !src.has(d, shop)) d--; return d; };
     const prevSh = d => { while (d > 0 && !src.hasShop(d, shop)) d--; return d; };
-    return { tc, y, m, dim, dp, ym, shop, shopIdx, W, src, G, staff, baseW, shopMon, gT, staffT, code, sname, prevNV, prevSh, cfg, c, h };
+    const prevDT = d => { while (d > 0 && !src.hasDT(d, shop)) d--; return d; };
+    const prevSdt = d => { while (d > 0 && !src.hasSdt(d, shop)) d--; return d; };
+    return { tc, y, m, dim, dp, ym, shop, shopIdx, W, src, G, staff, baseW, shopMon, gT, staffT, code, sname, prevNV, prevSh, prevDT, prevSdt, cfg, c, h };
   }
 
   const cai = (g, v) => g.money ? Math.round(v / (g.u * 1000) + 1e-9) : Math.round(v);
@@ -10157,7 +10162,7 @@ window.__AutoBIBiTarget99 = (function () {
   function lr(total, w, pri) { const s = w.reduce((a, b) => a + b, 0) || 1, raw = w.map(x => total * x / s), fl = raw.map(Math.floor); let left = total - fl.reduce((a, b) => a + b, 0); raw.map((x, i) => [Math.round((x - fl[i]) * 1e6), (pri && pri[i]) || 0, i]).sort((a, b) => b[0] - a[0] || b[1] - a[1] || a[2] - b[2]).slice(0, Math.max(0, left)).forEach(p => fl[p[2]]++); return fl; }
   /* Mức thiếu của từng NV tới đầu tuần: nhóm = mục tiêu tháng NV − lũy kế NV (quy ra cái); doanh thu = mục tiêu tháng NV − DT QĐ lũy kế */
   const needG = (X, wi, g) => { const d = X.prevNV(X.W[wi].f - 1); return X.staff.map(x => (X.staffT(g, x) - X.src.nv(d, X.shop, x.name, g.short)) / unitV(g)); };
-  const needDT = (X, wi) => { const d = X.prevNV(X.W[wi].f - 1); return X.staff.map((x, j) => X.shopMon * (X.baseW[j] || 0) - X.src.dt(d, X.shop, x.name)); };
+  const needDT = (X, wi) => { const d = X.prevDT(X.W[wi].f - 1); return X.staff.map((x, j) => X.shopMon * (X.baseW[j] || 0) - X.src.dt(d, X.shop, x.name)); };
   /* V17.48: chia nhóm hàng cho NV — mỗi NV có đi làm (ngày làm > 0) ít nhất 1 cái. NV bị 0 thì lấy bớt 1 cái từ NV đang nhận nhiều nhất (≥ 2);
      không còn ai để lấy (chốt ST < số NV) thì nâng Chốt ST lên = tổng NV để không báo lệch. */
   function allocG(X, wi, p, g, total, w) {
@@ -10187,10 +10192,10 @@ window.__AutoBIBiTarget99 = (function () {
     return { v: X.src.nv(lastD, X.shop, x.name, g.short) - base, n: end - W.f + 1, start: d0, days };
   }
   function weekDT(X, W, x) {
-    const end = Math.min(W.t, X.dp), d0 = X.prevNV(W.f - 1), lastD = X.prevNV(end);
+    const end = Math.min(W.t, X.dp), d0 = X.prevDT(W.f - 1), lastD = X.prevDT(end);
     if (end < W.f || lastD < W.f) return { v: 0, n: 0, days: {} };
     const base = X.src.dt(d0, X.shop, x.name), days = {}; let prev = base;
-    for (let d = W.f; d <= end; d++) { if (!X.src.has(d, X.shop)) { days[d] = { gop: true }; continue; } const lk = X.src.dt(d, X.shop, x.name); days[d] = { v: lk - prev }; prev = lk; }
+    for (let d = W.f; d <= end; d++) { if (!X.src.hasDT(d, X.shop)) { days[d] = { gop: true }; continue; } const lk = X.src.dt(d, X.shop, x.name); days[d] = { v: lk - prev }; prev = lk; }
     return { v: X.src.dt(lastD, X.shop, x.name) - base, n: end - W.f + 1, days };
   }
   const shopWeek = (X, W, g) => X.staff.reduce((a, x) => a + weekNV(X, W, x, g).v, 0);
@@ -10214,7 +10219,7 @@ window.__AutoBIBiTarget99 = (function () {
     const rows = planRows(X, wi, p);
     rows.forEach(r => { const g = r.g; p.u[g.short] = g.money ? g.u : 0; allocG(X, wi, p, g, r.sug, w); });
     pickSmart(X, wi, p, rows);
-    const L = X.src.sdt(lkAsOf, X.shop), dtS = Math.ceil(Math.max(0, X.shopMon - L) / rem * nd * p.k / 100);
+    const L = X.src.sdt(X.prevSdt(asOf), X.shop), dtS = Math.ceil(Math.max(0, X.shopMon - L) / rem * nd * p.k / 100);
     p.dt.st = dtS; const a = lr(dtS, w, needDT(X, wi)); X.staff.forEach((x, i) => { p.dt.a[x.name] = a[i]; });
     return p;
   }
@@ -10386,10 +10391,10 @@ window.__AutoBIBiTarget99 = (function () {
     const dis = RO ? ' disabled' : '', on = X.G.filter(g => p.on[g.short]).length;
     const nvh = X.staff.map((x, i) => { const s = shortNm(x); return '<th class="nvh">' + esc(s.nm) + '<br><span style="font-weight:600">' + esc(s.id) + ' · ' + Math.round(X.baseW[i] * 100) + '%</span></th>'; }).join('');
     const COLS = 10 + X.staff.length;
-    const now = curSh(X);
-    const th = '<tr><th class="l">Nhóm thi đua</th><th>QĐ<br>1 cái =</th><th>Target<br>tháng</th><th>Lũy kế<br>đến ' + (now ? pad(now) + '/' + pad(X.m) : '—') + '</th><th>%HT</th><th>DK HT</th><th>Chạy<br>tuần</th><th class="l">Lý do</th><th>Gợi ý<br>(cái)</th><th class="nk-hl">Chốt ST<br>(cái)</th>' + nvh + '</tr>';
+    const now = curSh(X), nowD = X.prevSdt(X.dp), asD = X.prevSdt(W.f - 1), hd = Math.max(now, nowD);
+    const th = '<tr><th class="l">Nhóm thi đua</th><th>QĐ<br>1 cái =</th><th>Target<br>tháng</th><th>Lũy kế<br>đến ' + (hd ? pad(hd) + '/' + pad(X.m) : '—') + '</th><th>%HT</th><th>DK HT</th><th>Chạy<br>tuần</th><th class="l">Lý do</th><th>Gợi ý<br>(cái)</th><th class="nk-hl">Chốt ST<br>(cái)</th>' + nvh + '</tr>';
     const daysRow = '<tr class="nk-days"><td class="l" colspan="10"><b>📅 Ngày làm tuần này</b> <span style="font-size:12px;color:#475569">— NV nghỉ phép thì giảm số ngày, target tự chia lại</span></td>' + X.staff.map((x, j) => '<td><input class="nk-in" data-nk-days="' + j + '" value="' + num(p.days[x.name] != null ? p.days[x.name] : 7) + '"' + dis + '><span class="nk-u">ngày</span></td>').join('') + '</tr>';
-    const dL0 = X.src.sdt(asOf, X.shop), dL = X.src.sdt(now, X.shop), dtDk = now > 0 && X.shopMon > 0 ? dL / now * X.dim / X.shopMon * 100 : null, dtSug = Math.ceil(Math.max(0, X.shopMon - dL0) / rem * nd * num(p.k) / 100);
+    const dL0 = X.src.sdt(asD, X.shop), dL = X.src.sdt(nowD, X.shop), dtDk = nowD > 0 && X.shopMon > 0 ? dL / nowD * X.dim / X.shopMon * 100 : null, dtSug = Math.ceil(Math.max(0, X.shopMon - dL0) / rem * nd * num(p.k) / 100);
     const dtRow = '<tr class="nk-dt"><td class="l"><b>💰 Doanh thu QĐ</b></td><td>tr</td><td>' + nf(X.shopMon) + '</td><td>' + nf(dL) + '</td><td>' + (X.shopMon ? Math.round(dL / X.shopMon * 100) + '%' : '—') + '</td><td><b class="' + pctCls(dtDk) + '">' + (dtDk == null ? '—' : Math.round(dtDk) + '%') + '</b></td><td>✓</td><td class="l" style="font-size:12px;color:#475569">luôn giao mỗi tuần</td><td style="color:#64748b">' + nf(dtSug) + '</td><td class="nk-hl"><input class="nk-in" style="width:60px" data-nk-dtst value="' + num(p.dt.st) + '"' + dis + '></td>' + X.staff.map((x, j) => '<td><input class="nk-in" style="width:60px" data-nk-dta="' + j + '" value="' + num(p.dt.a[x.name]) + '"' + dis + '></td>').join('') + '</tr>';
     let last = null, first = true;
     const body = ordered(X).map(g => {
@@ -10414,7 +10419,7 @@ window.__AutoBIBiTarget99 = (function () {
 
   function msgOf(X, wi, p, j) {
     const x = X.staff[j], s = shortNm(x), W = X.W[wi], L = [];
-    const lkD = X.prevNV(W.f - 1), lkN = X.src.dt(lkD, X.shop, x.name), tM = X.shopMon * (X.baseW[j] || 0);
+    const lkD = X.prevDT(W.f - 1), lkN = X.src.dt(lkD, X.shop, x.name), tM = X.shopMon * (X.baseW[j] || 0);
     L.push('📣 MỤC TIÊU TUẦN ' + W.k + ' (' + W.f + '–' + W.t + '/' + X.m + ') – ĐMX ' + String(X.sname).toUpperCase());
     L.push('👤 ' + s.nm + (s.id ? ' – ' + s.id : ''));
     L.push('💰 Doanh thu QĐ tuần: ' + nf(num(p.dt.a[x.name])) + ' triệu (~' + nf(num(p.dt.a[x.name]) / wlen(W)) + ' tr/ngày)');
@@ -10442,12 +10447,12 @@ window.__AutoBIBiTarget99 = (function () {
   function phieu(X, j, wi, p) {
     const BL = S.mode === 'blank', sl = S.unit === 'sl', W = X.W[wi], x = X.staff[j], s = shortNm(x);
     const cols = Array(7).fill(null); for (let d = W.f; d <= W.t; d++) cols[(new Date(X.y, X.m - 1, d).getDay() + 6) % 7] = d;
-    const lkD = X.prevNV(W.f - 1);
+    const lkD = X.prevNV(W.f - 1), lkDD = X.prevDT(W.f - 1), lkH = Math.max(lkD, lkDD);
     const cell = (k, inner) => '<td class="' + (k ? '' : 'bl') + '">' + inner + '</td>';
     const dayCells = fn => cols.map((d, k) => d == null ? '<td class="' + (k ? '' : 'bl') + '" style="background:#f1f5f9"></td>' : (d > X.dp || BL) ? cell(k, '') : fn(d, k)).join('');
     let ok = 0, cnt = 0;
     const dw = weekDT(X, W, x), dtg = p ? num(p.dt.a[x.name]) : null;
-    const dtRow = '<tr class="nk-dt"><td>–</td><td class="l"><b>💰 Doanh thu QĐ (tr)</b></td><td class="bl">' + nf(X.shopMon * (X.baseW[j] || 0)) + '</td><td>' + nf(X.src.dt(lkD, X.shop, x.name)) + '</td>' +
+    const dtRow = '<tr class="nk-dt"><td>–</td><td class="l"><b>💰 Doanh thu QĐ (tr)</b></td><td class="bl">' + nf(X.shopMon * (X.baseW[j] || 0)) + '</td><td>' + nf(X.src.dt(lkDD, X.shop, x.name)) + '</td>' +
       dayCells((d, k) => { const o = dw.days[d] || {}; return o.gop ? '<td class="' + (k ? '' : 'bl') + ' nk-gop" title="Chưa có lịch sử ngày ' + d + ' → gộp vào ngày sau">↪</td>' : cell(k, nf(o.v)); }) +
       (BL ? '<td class="bl"></td><td><b>' + (dtg == null ? '—' : nf(dtg)) + '</b></td><td></td>' : '<td class="bl nk-hl"><b>' + nf(dw.v) + '</b></td><td>' + (dtg == null ? '—' : nf(dtg)) + '</td><td>' + (dtg ? (dw.v >= dtg ? '<b class="t-ok">✓ Đạt ' + Math.round(dw.v / dtg * 100) + '%</b>' : '<b class="' + pctCls(dw.v / dtg * 100) + '">✗ Thiếu ' + nf(dtg - dw.v) + ' tr</b>') : '—') + '</td>') + '</tr>';
     let stt = 0, last = null;
@@ -10467,7 +10472,7 @@ window.__AutoBIBiTarget99 = (function () {
       return sc + '<tr><td>' + stt + '</td><td class="l"><b>' + esc(g.short) + '</b><div class="nk-s2">' + (g.money ? '1 cái = ' + g.u + ' tr' : 'tính số lượng') + '</div></td><td class="bl">' + tm + '</td><td>' + fmt(lk) + '</td>' + dayCells(day) +
         (BL ? '<td class="bl"></td><td>' + tgC + '</td><td></td>' : '<td class="bl nk-hl">' + fmt(wk.v) + '</td><td>' + tgC + '</td><td>' + ev + '</td>') + '</tr>';
     }).join('');
-    const th = '<tr><th>STT</th><th class="l">Nhóm hàng thi đua</th><th class="bl">Mục tiêu<br>tháng NV</th><th>Lũy kế NV<br>đến ' + (lkD ? lkD + '/' + X.m : '—') + '</th>' + DOW.map((t, k) => '<th class="' + (k ? '' : 'bl') + '">' + t + '<br><span style="font-weight:600">' + (cols[k] ? cols[k] + '/' + X.m : '') + '</span></th>').join('') + '<th class="bl nk-hl">Tổng<br>tuần</th><th>Target NV<br>' + W.f + '–' + W.t + '/' + X.m + '</th><th>Đánh giá KQ</th></tr>';
+    const th = '<tr><th>STT</th><th class="l">Nhóm hàng thi đua</th><th class="bl">Mục tiêu<br>tháng NV</th><th>Lũy kế NV<br>đến ' + (lkH ? lkH + '/' + X.m : '—') + '</th>' + DOW.map((t, k) => '<th class="' + (k ? '' : 'bl') + '">' + t + '<br><span style="font-weight:600">' + (cols[k] ? cols[k] + '/' + X.m : '') + '</span></th>').join('') + '<th class="bl nk-hl">Tổng<br>tuần</th><th>Target NV<br>' + W.f + '–' + W.t + '/' + X.m + '</th><th>Đánh giá KQ</th></tr>';
     const dtL = X.src.sdt(X.dp, X.shop) || num(((X.c.link2 || {})[X.shop] || {}).r);
     return '<div class="nk-card nk-phieu' + (BL ? ' nk-blank' : '') + '" style="margin-bottom:14px"><div class="nk-ph-t">NHẬT KÝ BÁN HÀNG NHÂN VIÊN ĐIỆN MÁY XANH ' + esc(String(X.sname).toUpperCase()) + ' – TUẦN ' + W.k.slice(1) + ' THÁNG ' + pad(X.m) + '/' + X.y + '</div>' +
       (BL ? '<div class="nk-ph-s">Phiếu đầu tuần · ' + esc(s.nm) + (s.id ? ' (' + esc(s.id) + ')' : '') + ' · Mỗi ngày ghi <b>số cái</b> bán được (nhóm tiền: đủ số tiền 1 cái thì ghi 1)</div>' : '') +
