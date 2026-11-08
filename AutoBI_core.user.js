@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.96
+// @name         AutoBI Core V18.97
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.96
+// @version      18.97
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -15824,7 +15824,10 @@ const DAB = (function () {
         const k = r.kpi;
         if (k && has(k.dt) && r.loai !== 'tra_cham_nv' && r.loai !== 'nv_ca_nhan') {
           const kk = { dt: k.dt, tra_cham_pct: k.tra_cham_pct, dt_tra_gop: k.dt_tra_gop, pv_bill: k.pv_bill, pv_khach: k.pv_khach, target: null, target_ngay: null };
-          if (mode === 'realtime') kk.target_ngay = k.target; else kk.target = k.target;
+          /* V18.97: kiểm target bằng số % lớn của thẻ — Realtime % = DT ÷ target ngày; Lũy kế % = DT dự kiến ÷ target tháng (AI từng đọc "Target ngày 121" thành 93) */
+          let tg = Number(k.target); const pc = Number(k.ht_pct), base = mode === 'realtime' ? Number(k.dt) : Number(k.dt_du_kien);
+          if (pc > 0 && base > 0) { const tc = Math.round(base / pc * 100); if (!(tg > 0) || Math.abs(tg - tc) > Math.max(2, tc * 0.03)) { warn.push({ muc: 'Ảnh ' + an, noi: 'target ' + (mode === 'realtime' ? 'ngày ' : '') + 'đọc ' + (tg > 0 ? tg : '—') + ' → sửa ' + tc + ' (theo ' + (mode === 'realtime' ? 'DT' : 'DT dự kiến') + ' ÷ ' + pc + '%)' }); tg = tc; } }
+          if (mode === 'realtime') kk.target_ngay = tg > 0 ? tg : k.target; else kk.target = tg > 0 ? tg : k.target;
           res.push({ anh: an, man_hinh: 'doanh_thu', che_do: mode, loai_dt: ldt || 'quy_doi', sieu_thi: ma, kpi: kk, nhan_vien: [], ngay_qua: mode === 'luy_ke' ? nq : null, so_ngay: mode === 'luy_ke' ? sn : null });
         }
         if (r.loai === 'dt_nv' && (r.nhan_vien || []).length) res.push({ anh: an, man_hinh: 'doanh_thu', che_do: mode, sieu_thi: null, kpi: null, nhan_vien: r.nhan_vien.map(n => { const m = String(n.ma ?? '').replace(/\D/g, '') || maTheoTen(n.ten); return { ten: (m ? m + ' - ' : '') + String(n.ten || '').trim(), so_luong: n.so_luong, doanh_thu: n.doanh_thu }; }) });
@@ -16044,6 +16047,7 @@ const DAB = (function () {
         $('.tt').textContent = 'Đang đọc ' + (xong + 1) + '/' + tong + '…';
         Promise.all(a.b64s.map(b => docMot(a, b)))
           .then(rs => Promise.all(rs.map((r, k) => r && r.loai === 'khac' ? docMot(a, a.b64s[k], 'cu').catch(() => r) : r))) /* V18.91: lát không thuộc ảnh mẫu (vd bảng ADM) → đọc lại bằng lời dặn cũ */
+          .then(rs => Promise.all(rs.map((r, k) => { const kp = r && r.loai && r.kpi; if (!(kp && kp.dt != null && !(Number(kp.target) > 0))) return r; return docMot(a, a.b64s[k]).then(r2 => (r2 && r2.kpi && Number(r2.kpi.target) > 0) ? r2 : r).catch(() => r); }))) /* V18.97: lát có thẻ DT mà thiếu target → đọc lại 1 lần */
           .then(rs => { if (!rs.every(r => r && typeof r === 'object')) throw new Error('Cloud trả kết quả rỗng — đọc lại'); a.kq = rs; a.tt = 'ok'; })
           .catch(e => { a.tt = 'err'; a.loi = String(e && e.message || e); if (e && e.quyen) { dung = true; P.err = a.loi; toast('✗ ' + a.loi, true); } })
           .then(() => { chay--; xong++; $('.tt').textContent = 'Đang đọc ' + Math.min(xong + 1, tong) + '/' + tong + '…'; paint(); next(); });
