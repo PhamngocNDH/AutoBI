@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V19.00
+// @name         AutoBI Core V19.01
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      19.00
+// @version      19.01
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -16035,7 +16035,7 @@ const DAB = (function () {
       + '<div class="dm" data-k="dem" style="font-size:12px;color:#475569;margin:0 0 4px;cursor:pointer"></div>'
       + '<div class="th"></div><div class="tt"></div><div class="sum"></div>'
       + '<div class="row"><button class="bt p" data-k="nap" disabled>Nạp số và xem</button></div>'
-      + '<div class="row"><button class="lk" data-k="clear">Xóa ảnh hôm nay</button></div></div>'; /* V18.76: bỏ nút lấy số từ trang Đọc ảnh */
+      + '<div class="row xr"><button class="lk" data-k="clear">Xóa ảnh hôm nay</button><button class="lk" data-k="xoa" style="color:#b4232c;margin-left:auto">🗑 Xóa hẳn số hôm nay (Cloud cụm)</button></div></div>'; /* V18.76: bỏ nút lấy số từ trang Đọc ảnh · V19.01: nút xóa hẳn */
     document.body.appendChild(el);
     const $ = k => el.querySelector(k), inp = $('input[type=file]');
     P = { s, items: loadKq(), busy: false, S: null, cloud: null };
@@ -16171,6 +16171,24 @@ const DAB = (function () {
       if (k === 'pick') inp.click();
       else if (k === 'read') docHet();
       else if (k === 'clear') { if (P.busy || !confirm('Xóa hết ảnh đã đọc hôm nay?')) return; P.items = []; saveKq([]); paint(); }
+      /* V19.01: XÓA HẲN — số đọc sai đã lưu Cloud thì nạp lại không thay được (Cloud gộp theo phần, giữ số cũ) → bỏ gói cụm hôm nay + ảnh đã đọc.
+         Bấm 1: hiện "Xóa thật / Hủy" đứng yên; bấm "Xóa thật" mới xóa (giống trang Báo cáo đổ số) */
+      else if (k === 'xoa') {
+        if (P.busy) return;
+        $('.xr').innerHTML = '<span style="font-size:12px;color:#b4232c;flex:1">Xóa hết số hôm nay của cả cụm trên Cloud (Lũy kế + Realtime) và ảnh đã đọc?</span><button class="bt" data-k="xoa2" style="background:#dc2626;color:#fff;flex:0;min-width:96px">Xóa thật</button><button class="bt" data-k="xoa0" style="flex:0;min-width:70px">Hủy</button>';
+      }
+      else if (k === 'xoa0') { $('.xr').innerHTML = '<button class="lk" data-k="clear">Xóa ảnh hôm nay</button><button class="lk" data-k="xoa" style="color:#b4232c;margin-left:auto">🗑 Xóa hẳn số hôm nay (Cloud cụm)</button>'; }
+      else if (k === 'xoa2') {
+        P.busy = true; paint(); $('.tt').textContent = 'Đang xóa số trên Cloud…';
+        post(P.s, { action: 'xoa' }, 60000)
+          .then(j => {
+            P.busy = false; P.cloud = null; P.items = []; P.S = null; saveKq([]);
+            el.querySelector('.cl').innerHTML = '☁️ Cloud cụm hôm nay: <b>đã xóa</b> — chọn ảnh rồi Nạp số lại từ đầu';
+            $('.xr').innerHTML = '<button class="lk" data-k="clear">Xóa ảnh hôm nay</button><button class="lk" data-k="xoa" style="color:#b4232c;margin-left:auto">🗑 Xóa hẳn số hôm nay (Cloud cụm)</button>';
+            paint(); toast('Đã xóa số hôm nay trên Cloud' + (j && j.xoa ? ' (' + j.xoa + ' gói)' : ' (Cloud chưa có số)'));
+          })
+          .catch(e => { P.busy = false; paint(); const m = String(e && e.message || e); $('.tt').textContent = '✗ ' + (/action/.test(m) ? 'Cloud Đọc ảnh chưa có lệnh xóa (cần bản v1.22)' : m); });
+      }
       else if (k === 'old') { el.remove(); onLoaded(null); }
       else if (k === 'nap') {
         if (!P.S) {
