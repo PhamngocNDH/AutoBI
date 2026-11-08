@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.92
+// @name         AutoBI Core V18.93
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.92
+// @version      18.93
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -8016,6 +8016,9 @@ window.__AutoBIBiTarget99 = (function () {
     if (!cfg || typeof cfg !== 'object' || !cache || typeof cache !== 'object') return false;
     const lk = cache.link2 || {}, td = cache.link4_smart || {};
     const days = daysInMonth();
+    /* V18.93: số nạp từ ảnh (cache.__anh) là target chép đúng từ BI → không chặn "lệch quá 3 lần": Khai báo đang sai (vd 5117 thay 511,7)
+       thì bước chặn giữ mãi số sai, báo cáo ra target gấp 10. Đổ số API vẫn chặn như cũ. */
+    const tinAnh = !!cache.__anh;
     let changed = false;
     const set = (o, k, v) => { if (o[k] !== v) { o[k] = v; changed = true; } };
 
@@ -8027,7 +8030,7 @@ window.__AutoBIBiTarget99 = (function () {
     }
     const shopIdx = Object.keys(shopNew);
     let shopOk = shopIdx.length > 0;
-    if (shopOk && mostlyAbnormal(shopIdx.map(i => [shopNew[i], Number(cfg['target' + i]) || 0]))) { shopOk = false; note('Bỏ qua Target tháng siêu thị: số BI lệch quá 3 lần so với số đang dùng (có thể BI chưa tải xong)'); }
+    if (shopOk && !tinAnh && mostlyAbnormal(shopIdx.map(i => [shopNew[i], Number(cfg['target' + i]) || 0]))) { shopOk = false; note('Bỏ qua Target tháng siêu thị: số BI lệch quá 3 lần so với số đang dùng (có thể BI chưa tải xong)'); }
     if (shopOk) {
       let total = 0;
       shopIdx.forEach(i => { set(cfg, 'target' + i, shopNew[i]); set(cfg, 'targetDay' + i, Math.round(shopNew[i] / days)); });
@@ -8057,7 +8060,7 @@ window.__AutoBIBiTarget99 = (function () {
         }
       });
       if (rows.length >= 4 && found < rows.length / 2) { groupOk = false; note('Bỏ qua Target nhóm hàng: BI mới đọc được ' + found + '/' + rows.length + ' nhóm (bảng chưa tải hết)'); }
-      else if (mostlyAbnormal(updates.map(([row, k, v]) => [v, Number(row[k]) || 0]))) { groupOk = false; note('Bỏ qua Target nhóm hàng: số BI lệch quá 3 lần so với số đang dùng (sai bảng hoặc sai đơn vị)'); }
+      else if (!tinAnh && mostlyAbnormal(updates.map(([row, k, v]) => [v, Number(row[k]) || 0]))) { groupOk = false; note('Bỏ qua Target nhóm hàng: số BI lệch quá 3 lần so với số đang dùng (sai bảng hoặc sai đơn vị)'); }
     }
     if (groupOk) updates.forEach(([row, k, v]) => set(row, k, v));
 
