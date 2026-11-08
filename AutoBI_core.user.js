@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.95
+// @name         AutoBI Core V18.96
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.95
+// @version      18.96
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -15790,6 +15790,13 @@ const DAB = (function () {
           if (dao >= 2 && !thuan) { (r.chuong_trinh || []).forEach(c => { const t = c.thuc_hien; c.thuc_hien = c.target; c.target = t; }); warn.push({ muc: 'Ảnh ' + an, noi: 'đã đảo lại cột Thực hiện/Target của 1 lát bị đọc ngược' }); }
           (r.chuong_trinh || []).forEach(c => { const k = slug(c.ten); if (k && !seen[k]) seen[k] = [c.thuc_hien, c.target]; });
         });
+      }
+      { /* V18.96: 1 ảnh = 1 siêu thị → mỗi chương trình chỉ 1 số; 2 lát ra số khác nhau = AI đọc/gán nhầm tên → giữ lát SAU */
+        const cuoi = {}, kn = t => slug(String(t || '').replace(/^T\d+\s*-\s*/i, ''));
+        kq.forEach((r, k) => { if (r.loai === 'thi_dua_st') (r.chuong_trinh || []).forEach(c => { const x = kn(c.ten); if (x) cuoi[x] = { k, th: c.thuc_hien, t: c.target }; }); });
+        let bo = 0;
+        kq.forEach((r, k) => { if (r.loai !== 'thi_dua_st') return; r.chuong_trinh = (r.chuong_trinh || []).filter(c => { const o = cuoi[kn(c.ten)]; if (!o || o.k === k || (o.th === c.thuc_hien && o.t === c.target)) return true; bo++; return false; }); });
+        if (bo) warn.push({ muc: 'Ảnh ' + an, noi: 'bỏ ' + bo + ' dòng Thi đua đọc mâu thuẫn giữa 2 lát (giữ số của lát sau)' });
       }
       const shop = ma ? shops.find(x => String(x.code) === ma) : null;
       /* V18.95: KIỂM BẰNG SỐ (thắng phiếu chữ/nút): target chương trình đọc được ÷ target tháng nhóm ở Khai báo (compData) —
