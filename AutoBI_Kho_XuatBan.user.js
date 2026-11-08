@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AutoBI - Kho & Xuất Bán
 // @namespace    https://github.com/PhamngocNDH/AutoBI/kho-xuatban-test
-// @version      3.1.1
+// @version      3.2.0
 // @description  Check xin hàng trên CRM: tra siêu thị trong tỉnh còn tồn bán được, gần mình trước.
 // @author       AutoBI / 38967 - Mr Phạm
 // @homepageURL  https://github.com/PhamngocNDH/AutoBI
@@ -47,7 +47,7 @@
  */
 (function () {
     'use strict';
-    const VERSION = '3.1.1';
+    const VERSION = '3.2.0';
     const UPDATE_URL = 'https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_Kho_XuatBan.user.js';
     const SALES_SCHEMA = 5;                             // 5 (V2.9) = mọi hình thức bán (gồm trả góp) + dòng dịch vụ bảo hiểm; 4 = tất cả ngành + Loại hàng + Kho xuất; ngày lưu bằng bản cũ sẽ được lấy lại
     const PREFIX = 'autobi_kxb_test_v1_';               // giữ khóa cũ để không mất khai báo shop
@@ -1005,7 +1005,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
     /* ---------- V2.7: cấu hình lưu trên Google Sheet (AutoBi HA, tab ConfigKho) ----------
      * Chỉ đồng bộ các khóa cài đặt người dùng tự chọn; không đưa bộ nhớ tạm (danh sách siêu thị CRM, tọa độ) và số liệu lên Sheet. */
     const SYNC_KEYS = ['shops', 'basis', 'returnDays', 'balTarget', 'balSpare', 'ageAlert', 'freshHours', 'notify', 'invTransit', 'balIncoming', 'attachGroups', 'img',
-        'crmProvinces', 'crmNearProvinces', 'reqFavs', 'srcKeep', 'srcRadius', 'compareMode', 'staffLists'];
+        'crmProvinces', 'crmNearProvinces', 'reqFavs', 'reqHot', 'srcKeep', 'srcRadius', 'compareMode', 'staffLists'];
     function syncPick(cfg) { const o = {}; for (const k of SYNC_KEYS) if (cfg && cfg[k] !== undefined) o[k] = cfg[k]; return o; }
     // Người mới: lấy danh sách siêu thị từ cấu hình AutoBI Core (shopCode1/makho1 + shop1 "ĐMM_NDI_HHA - Hải Anh" / shop1Short)
     function coreShops(json) {
@@ -2751,6 +2751,37 @@ tr{break-inside:avoid;page-break-inside:avoid}
                 if (!hot.length) el('span', 'Không có mã hết / sắp hết (theo Cân hàng)', qb, 'kxb-muted');
             } catch { el('span', 'Đổ cân hàng để có gợi ý mã hết hàng', qb, 'kxb-muted'); }
         } else el('span', 'Đổ cân hàng để có gợi ý mã hết hàng', qb, 'kxb-muted');
+        /* V3.2.0: 🔥 Mẫu hot — lưu sẵn mã các mẫu hay hết hàng, bấm là Check ngay (config.reqHot, đồng bộ Sheet ConfigKho như ⭐) */
+        {
+            const hb = ui.querySelector('[data-req-hot]'); hb.replaceChildren();
+            const hots = Array.isArray(config.reqHot) ? config.reqHot.filter(h => h && h.n && Array.isArray(h.codes) && h.codes.length) : [];
+            const chay = codes => { R.q = codes.join('\n'); q.value = R.q; return withSession('crmReq', runRequest); };
+            hots.forEach((h, i) => {
+                const w = el('span', undefined, hb, 'chip kxb-hot');
+                const b = el('button', '🔥 ' + h.n, w); b.type = 'button'; b.title = 'Check nhanh ' + h.codes.length + ' mã: ' + h.codes.join(', ');
+                b.onclick = safely(() => chay(h.codes));
+                const x = el('button', '✕', w, 'x'); x.type = 'button'; x.title = 'Xóa mẫu hot này';
+                x.onclick = safely(() => { if (!window.confirm('Xóa mẫu hot "' + h.n + '"?')) return; config.reqHot = hots.filter((_, k) => k !== i); save('config', config); renderRequest(); });
+            });
+            if (hots.length > 1) {
+                const all = el('button', '⚡ Check hết mẫu hot', hb, 'chip'); all.type = 'button';
+                const codes = [...new Set(hots.flatMap(h => h.codes))];
+                all.title = codes.length > 20 ? 'Có ' + codes.length + ' mã — mỗi lần Check tối đa 20 mã, tool lấy 20 mã đầu' : 'Check cùng lúc ' + codes.length + ' mã';
+                all.onclick = safely(() => { if (codes.length > 20) status('Có ' + codes.length + ' mã — mỗi lần Check tối đa 20, đang Check 20 mã đầu', 'warn'); return chay(codes.slice(0, 20)); });
+            }
+            const add = el('button', '+ Lưu làm mẫu hot', hb, 'chip'); add.type = 'button';
+            add.title = 'Gõ hoặc chọn mã trong ô tìm (vd tích đủ các màu), rồi bấm để lưu thành 1 nút Check nhanh';
+            add.onclick = safely(() => {
+                const codes = reqKeys(q.value);
+                invariant(codes.length, 'Gõ hoặc chọn mã trong ô tìm trước, rồi bấm "+ Lưu làm mẫu hot"');
+                const goiY = codes.find(c => !/^\d+$/.test(c)) || '';
+                const ten = window.prompt('Tên mẫu hot (ngắn, vd: 18 Pro Max 256) — gồm ' + codes.length + ' mã:', goiY);
+                if (!ten || !ten.trim()) return;
+                config.reqHot = hots.filter(h => h.n !== ten.trim()).concat([{ n: ten.trim().slice(0, 40), codes }]);
+                save('config', config); renderRequest(); status('Đã lưu mẫu hot "' + ten.trim() + '" (' + codes.length + ' mã)', 'ok');
+            });
+            if (!hots.length) el('span', 'Chưa có — chọn mã như bình thường rồi bấm "+ Lưu làm mẫu hot"', hb, 'kxb-muted');
+        }
         if (!R.results.length) {
             el('div', 'Gõ mã sản phẩm (13 số) hoặc tên rồi bấm "🔎 Check" — tool tra CRM, chỉ lấy siêu thị có TỒN BÁN ĐƯỢC > 0 trong tỉnh đã chọn (⚙️ Cài đặt), xếp: ⭐ ưu tiên → cùng huyện → cùng tỉnh cũ → xa hơn. Nhiều mã: mỗi mã một dòng. Không tính kho chi nhánh.', area, 'kxb-empty');
             return;
@@ -3596,6 +3627,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
         #kxb-panel .kxb-drawer .dfoot{flex:none;display:flex;align-items:center;gap:10px;padding:10px 16px;border-top:1px solid var(--line);background:#fbfcfc}
         #kxb-panel .kxb-drawer pre{max-height:none;margin-top:8px}
         #kxb-panel .kxb-drawer .kxb-drop>summary{min-width:240px}
+        #kxb-panel .kxb-hot{display:inline-flex;align-items:center;gap:0;padding:0;overflow:hidden}#kxb-panel .kxb-hot button{border:0;background:none;padding:5px 9px;cursor:pointer;font:inherit;color:inherit}#kxb-panel .kxb-hot .x{padding:5px 7px;opacity:.45;border-left:1px solid rgba(0,0,0,.08)}#kxb-panel .kxb-hot .x:hover{opacity:1;color:#c0392b}
         @media (max-width:1400px){#kxb-panel{font-size:13px}#kxb-panel .tabs button{padding:13px 10px 10px;font-size:13.5px}#kxb-panel .kxb-kpis b{font-size:20px}}
         `, document.head || document.documentElement); style.dataset.kxbUi = '';
         const launch = el('button', 'AutoBI · Check xin hàng', document.body); launch.id = 'kxb-launch'; launch.dataset.kxbUi = ''; launch.type = 'button';
@@ -3642,6 +3674,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
                 <span class="kxb-search grow"><textarea data-req-q rows="1" placeholder="Gõ tên (vd: iPhone 18) rồi chọn trong gợi ý, hoặc dán mã 13 số · nhiều mã: mỗi mã một dòng (Shift+Enter) · Enter = Check"></textarea></span>
                 <label class="inl" title="Số máy cần xin cho mỗi sản phẩm — tool chia cho từng nơi cho (gần trước, nơi tồn nhiều cho nhiều)">SL<input type="number" min="1" max="50" step="1" data-req-qty style="width:60px"></label>
                 <button type="button" class="primary idle-only" data-run-req>🔎 Check</button><label class="chk"><input type="checkbox" data-req-far>Hiện cả nơi xa</label></div>
+              <div class="frow"><span class="lbl" title="Mẫu điện thoại hot — bấm là Check ngay, không phải gõ">🔥 Mẫu hot</span><span class="group" data-req-hot></span></div>
               <div class="frow" style="display:none"><span class="lbl">Đang hết</span><span class="group" data-req-quick></span></div></div>
             <div data-req-result></div></div>
         </div>
