@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.94
+// @name         AutoBI Core V18.95
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.94
+// @version      18.95
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -15766,18 +15766,21 @@ const DAB = (function () {
       if (a.tt !== 'ok') return;
       const an = String(i + 1), kq = (a.kq || []).filter(r => r && typeof r === 'object');
       if (!kq.some(r => r.loai)) { kq.forEach(r => { r.anh = an; res.push(r); }); return; }
-      let md = null, ma = null, ldt = null, mdChu = null, nq = null, sn = null;
+      let md = null, ma = null, ldt = null, nq = null, sn = null, vRT = 0, vLK = 0;
       kq.forEach(r => {
         if (!r.loai || r.loai === 'khac') return;
         if (!md && (r.che_do === 'luy_ke' || r.che_do === 'realtime')) md = r.che_do;
         const mm = String(r.sieu_thi ?? '').replace(/\D/g, ''); if (!ma && mm) ma = mm;
         if (!ldt && r.loai_dt) ldt = r.loai_dt;
+        /* V18.95: bỏ phiếu trên MỌI lát — chữ 1 phiếu, nút 0,5 (AI có lát nhìn nhầm cả chữ: ảnh Realtime 15:03 lát đầu đọc "% HT target DT") */
         const t1 = slug(r.tieu_de_target), t2 = slug(r.cot_target);
-        if (!mdChu) { if (/targetngay/.test(t1) || /targetngay/.test(t2)) mdChu = 'realtime'; else if (/targetdt$/.test(t1) || t2 === 'target') mdChu = 'luy_ke'; }
+        if (/targetngay/.test(t1)) vRT++; else if (/targetdt$/.test(t1)) vLK++;
+        if (/targetngay/.test(t2)) vRT++; else if (t2 === 'target') vLK++;
+        if (r.che_do === 'realtime') vRT += 0.5; else if (r.che_do === 'luy_ke') vLK += 0.5;
         if (nq === null && has(r.ngay_qua)) nq = Number(r.ngay_qua);
         if (sn === null && has(r.so_ngay)) sn = Number(r.so_ngay);
       });
-      if (mdChu) md = mdChu;
+      if (vRT !== vLK) md = vRT > vLK ? 'realtime' : 'luy_ke';
       { /* đảo lại lát Thi đua đọc ngược cột */
         const seen = {};
         kq.forEach(r => {
@@ -15788,7 +15791,25 @@ const DAB = (function () {
           (r.chuong_trinh || []).forEach(c => { const k = slug(c.ten); if (k && !seen[k]) seen[k] = [c.thuc_hien, c.target]; });
         });
       }
-      const shop = ma ? shops.find(x => String(x.code) === ma) : null, mode = md || 'luy_ke';
+      const shop = ma ? shops.find(x => String(x.code) === ma) : null;
+      /* V18.95: KIỂM BẰNG SỐ (thắng phiếu chữ/nút): target chương trình đọc được ÷ target tháng nhóm ở Khai báo (compData) —
+         0,7–1,4 → Lũy kế (cột TARGET = target tháng); < 0,6 → Realtime (target ngày, cuối tháng có thể tới 20–30% target tháng) */
+      if (shop) {
+        try {
+          const list = groupList(), cfgGroups = (cfg.compData || []).map(x => x && String(x.group || '').trim()).filter(Boolean), tl = [];
+          kq.forEach(r => {
+            if (r.loai !== 'thi_dua_st') return;
+            (r.chuong_trinh || []).forEach(c => {
+              const t = Number(c.target); if (!(t > 0)) return;
+              const short = (list.length ? exactGroup(c.ten, list) : null) || null; if (!short) return;
+              const row = (cfg.compData || []).find(x => x && String(x.group || '').trim() === short), tm = row ? Number(row['t' + shop.idx]) : 0;
+              if (tm > 0) tl.push(t / tm);
+            });
+          });
+          if (tl.length >= 3) { tl.sort((x, y) => x - y); const med = tl[Math.floor(tl.length / 2)]; if (med >= 0.7 && med <= 1.4) md = 'luy_ke'; else if (med < 0.6) md = 'realtime'; }
+        } catch (_) { }
+      }
+      const mode = md || 'luy_ke';
       if (ldt === 'thuc') warn.push({ muc: 'Ảnh ' + an, noi: 'đang chọn "DT thực" — số lấy theo DT quy đổi, bấm "DT quy đổi" rồi chụp lại' });
       kq.forEach(r => {
         if (!r.loai) { r.anh = an; res.push(r); return; }
