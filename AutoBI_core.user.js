@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.97
+// @name         AutoBI Core V18.98
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.97
+// @version      18.98
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -15200,6 +15200,16 @@ window.__AutoBIRunPick = (() => {
     if (Object.keys(l7).length) cache.link7 = l7;
     if (!cache.link2 && !cache.link4_smart && !cache.link1 && !cache.link3_smart) throw new Error('Gói số không có Doanh thu / Thi đua nào khớp Khai báo (kiểm mã kho, tên siêu thị)');
     cache.__anh = { at: goi.at, nap: Date.now(), ngayQua: goi.ngayQua || null, soNgay: goi.soNgay || null, canhBao: (goi.canhBao || []).length };
+    /* V18.98: ☀️ DK mai (Realtime V1/V2) chỉ tính khi có dấu ngày như đổ số API (__apiRevenue.rtDay = hôm nay, cumTo = ngày chốt lũy kế; __apiCompetition.at = hôm nay).
+       Số nạp từ ảnh không có → báo "(chưa có số hôm nay)", DK mai = DK. Phần Realtime chụp TRONG HÔM NAY thì ghi dấu ngày tương ứng. */
+    try {
+      const atRT = Number(goi.atRT || (goi.atLK ? 0 : goi.at)) || 0, ngayK = t => { const d = new Date(t + 7 * 3600e3); return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate(); };
+      if (cache.link1 && atRT && ngayK(atRT) === vnYmd(0)) {
+        const nq = Number(goi.ngayQua) || (vnYmd(-1) % 100);
+        cache.__apiRevenue = { rtDay: vnYmd(0), cumTo: Math.floor(vnYmd(0) / 100) * 100 + nq, at: atRT, nguon: 'anh' };
+        if (cache.link3_smart) cache.__apiCompetition = { at: atRT, nguon: 'anh' };
+      }
+    } catch (_) { }
     return { cache, log };
   }
 
