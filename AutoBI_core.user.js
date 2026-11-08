@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.98
+// @name         AutoBI Core V18.99
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.98
+// @version      18.99
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -15768,6 +15768,24 @@ const DAB = (function () {
      AI chỉ nhận 4 kiểu ảnh mẫu (Thi đua 1 siêu thị dạng Lưới · tab Nhân viên · Báo cáo trả chậm NV · Dashboard cá nhân NV), trả 1 khuôn cố định.
      Lũy kế/Realtime theo CHỮ trên ảnh ("% HT target ngày" / cột "TARGET NGÀY" = Realtime), siêu thị + chế độ dùng chung cho mọi lát của cùng ảnh,
      lát Thi đua bị AI đảo cột Thực hiện↔Target thì tự đảo lại (so dòng trùng với lát trước). Kết quả đổi về dạng cũ để DAB.gop + build giữ nguyên. */
+  /* V18.99: dòng con của bảng Thi đua CẢ CỤM ("ĐMM_NDI_HHA - Hải Anh") → siêu thị trong Khai báo (tên đủ / phần sau " - " / mã đầu) */
+  function shopOfSub(ten, shops) {
+    const s = slug(ten), tail = slug(String(ten || '').split(' - ').pop()), head = slug(String(ten || '').split(' - ')[0]);
+    if (!s) return null;
+    let best = null, bd = 0, hoa = false;
+    shops.forEach(x => {
+      let d = 0;
+      [x.name, x.short].forEach(c => {
+        const cs = slug(c), ct = slug(String(c || '').split(' - ').pop());
+        if (!cs) return;
+        if (cs === s) d = Math.max(d, 4);
+        else if (tail.length >= 3 && ct === tail) d = Math.max(d, 3);
+        else if (cs.length >= 3 && (s.includes(cs) || (tail.length >= 3 && cs.includes(tail)) || (head.length >= 5 && cs.includes(head)))) d = Math.max(d, 1);
+      });
+      if (d > bd) { bd = d; best = x; hoa = false; } else if (d && d === bd) hoa = true;
+    });
+    return bd && !hoa ? best : null;
+  }
   function chuanHoaLk3(items, cfg) {
     const shops = shopsOf(cfg), res = [], dash = [], warn = [];
     const staffL = Array.isArray(cfg.staffList) ? cfg.staffList : [];
@@ -15811,22 +15829,29 @@ const DAB = (function () {
       const shop = ma ? shops.find(x => String(x.code) === ma) : null;
       /* V18.95: KIỂM BẰNG SỐ (thắng phiếu chữ/nút): target chương trình đọc được ÷ target tháng nhóm ở Khai báo (compData) —
          0,7–1,4 → Lũy kế (cột TARGET = target tháng); < 0,6 → Realtime (target ngày, cuối tháng có thể tới 20–30% target tháng) */
-      if (shop) {
+      const cum = !shop && kq.some(r => r.loai === 'thi_dua_st' && (r.chuong_trinh || []).some(c => Array.isArray(c.sieu_thi_con) && c.sieu_thi_con.length)); /* V18.99: bảng Thi đua cả cụm */
+      if (shop || cum) {
         try {
-          const list = groupList(), cfgGroups = (cfg.compData || []).map(x => x && String(x.group || '').trim()).filter(Boolean), tl = [];
+          const list = groupList(), tl = [];
           kq.forEach(r => {
             if (r.loai !== 'thi_dua_st') return;
             (r.chuong_trinh || []).forEach(c => {
-              const t = Number(c.target); if (!(t > 0)) return;
               const short = (list.length ? exactGroup(c.ten, list) : null) || null; if (!short) return;
-              const row = (cfg.compData || []).find(x => x && String(x.group || '').trim() === short), tm = row ? Number(row['t' + shop.idx]) : 0;
-              if (tm > 0) tl.push(t / tm);
+              const row = (cfg.compData || []).find(x => x && String(x.group || '').trim() === short); if (!row) return;
+              const cap = shop ? [[c.target, shop]] : (c.sieu_thi_con || []).map(z => [z && z.target, shopOfSub(z && z.ten, shops)]);
+              cap.forEach(([t0, sh]) => { const t = Number(t0), tm = sh ? Number(row['t' + sh.idx]) : 0; if (t > 0 && tm > 0) tl.push(t / tm); });
             });
           });
           if (tl.length >= 3) { tl.sort((x, y) => x - y); const med = tl[Math.floor(tl.length / 2)]; if (med >= 0.7 && med <= 1.4) md = 'luy_ke'; else if (med < 0.6) md = 'realtime'; }
         } catch (_) { }
       }
       const mode = md || 'luy_ke';
+      if (cum) { /* V18.99: chương trình thu gọn (＋) không có số từng siêu thị → bỏ, chỉ báo số lượng */
+        const mo = new Set(), tat = new Set();
+        kq.forEach(r => { if (r.loai === 'thi_dua_st') (r.chuong_trinh || []).forEach(c => { const x = slug(c && c.ten); if (!x) return; if ((c.sieu_thi_con || []).length) mo.add(x); else tat.add(x); }); });
+        const bo = [...tat].filter(x => !mo.has(x)).length;
+        warn.push({ muc: 'Ảnh ' + an, noi: 'Thi đua cả cụm ' + (mode === 'realtime' ? 'Realtime' : 'Lũy kế') + ': lấy ' + mo.size + ' chương trình đang mở' + (bo ? ', bỏ ' + bo + ' chương trình thu gọn (＋)' : '') });
+      }
       if (ldt === 'thuc') warn.push({ muc: 'Ảnh ' + an, noi: 'đang chọn "DT thực" — số lấy theo DT quy đổi, bấm "DT quy đổi" rồi chụp lại' });
       kq.forEach(r => {
         if (!r.loai) { r.anh = an; res.push(r); return; }
@@ -15842,14 +15867,52 @@ const DAB = (function () {
         }
         if (r.loai === 'dt_nv' && (r.nhan_vien || []).length) res.push({ anh: an, man_hinh: 'doanh_thu', che_do: mode, sieu_thi: null, kpi: null, nhan_vien: r.nhan_vien.map(n => { const m = String(n.ma ?? '').replace(/\D/g, '') || maTheoTen(n.ten); return { ten: (m ? m + ' - ' : '') + String(n.ten || '').trim(), so_luong: n.so_luong, doanh_thu: n.doanh_thu }; }) });
         if (r.loai === 'tra_cham_nv' && (r.tra_cham || []).length) res.push({ anh: an, man_hinh: 'tra_cham', che_do: 'luy_ke', tra_cham: r.tra_cham.map(t => ({ ten: t.ten, ty_le: t.ty_le, dt_tra_gop: null, dt_sieu_thi: null })) }); /* trả góp NV chỉ có Lũy kế */
-        if (r.loai === 'thi_dua_st' && (r.chuong_trinh || []).length) {
-          if (!shop) { if (!warn.some(w => w.muc === 'Ảnh ' + an)) warn.push({ muc: 'Ảnh ' + an, noi: 'Thi đua siêu thị mã ' + (ma || '?') + ' — mã kho này chưa có trong Khai báo, bỏ qua' }); return; }
+        if (r.loai === 'thi_dua_st' && (r.chuong_trinh || []).length && cum) {
+          /* V18.99: cả cụm — chỉ lấy chương trình đang MỞ (có dòng con siêu thị); dòng chương trình = tổng cụm để DAB so tổng */
+          const khoi = [];
+          r.chuong_trinh.forEach(c => {
+            if (!c || !c.ten || !Array.isArray(c.sieu_thi_con) || !c.sieu_thi_con.length) return;
+            const dong = [];
+            c.sieu_thi_con.forEach(z => {
+              if (!z || !z.ten) return;
+              const sh = shopOfSub(z.ten, shops);
+              if (!sh) { const m = 'dòng siêu thị "' + z.ten + '" không khớp siêu thị nào trong Khai báo — bỏ'; if (!warn.some(w => w.muc === 'Ảnh ' + an && w.noi === m)) warn.push({ muc: 'Ảnh ' + an, noi: m }); return; }
+              if (!dong.some(d => d.ten === sh.name)) dong.push({ ten: sh.name, gia_tri: z.thuc_hien, target: z.target });
+            });
+            if (dong.length) khoi.push({ chuong_trinh: c.ten, don_vi: /^SL/i.test(String(c.don_vi || '')) ? 'SỐ LƯỢNG' : 'DOANH THU', tong: has(c.thuc_hien) ? c.thuc_hien : null, tong_target: has(c.target) ? c.target : null, dong });
+          });
+          if (khoi.length) res.push({ anh: an, man_hinh: 'thi_dua', che_do: mode, khoi });
+        } else if (r.loai === 'thi_dua_st' && (r.chuong_trinh || []).length) {
+          if (!shop) { if (!warn.some(w => w.muc === 'Ảnh ' + an)) warn.push({ muc: 'Ảnh ' + an, noi: ma ? 'Thi đua siêu thị mã ' + ma + ' — mã kho này chưa có trong Khai báo, bỏ qua' : 'Thi đua cả cụm nhưng không thấy chương trình nào mở (−) có dòng từng siêu thị — bấm ＋ mở nhóm cần lấy rồi chụp lại' }); return; }
           res.push({ anh: an, man_hinh: 'thi_dua', che_do: mode, khoi: r.chuong_trinh.filter(c => c && c.ten).map(c => ({ chuong_trinh: c.ten, don_vi: /^SL/i.test(String(c.don_vi || '')) ? 'SỐ LƯỢNG' : 'DOANH THU', tong: null, tong_target: null, dong: [{ ten: shop.name, gia_tri: c.thuc_hien, target: c.target }] })) });
         }
         if (r.loai === 'nv_ca_nhan' && r.nv) dash.push({ anh: an, nv: r.nv, td_pct: r.td_pct || [], td_chua_co: r.td_chua_co || [] });
       });
     });
+    nvTheoTong(res, warn);
     return { res, dash, warn };
+  }
+  /* V18.99: ảnh tab Nhân viên hay bị cắt mất nút "Lũy kế | Realtime" → so TỔNG DT các NV với DT siêu thị cùng lô
+     (từng ST hoặc cả cụm): khớp đúng 1 chế độ (lệch ≤ 2% hoặc ≤ 2 tr) thì theo chế độ đó. Vd LK 880 = 481 + 399, RT 347 = 238 + 109 */
+  function nvTheoTong(res, warn) {
+    const kp = { luy_ke: {}, realtime: {} };
+    res.forEach(x => { if (x.man_hinh === 'doanh_thu' && x.kpi && x.sieu_thi && x.loai_dt !== 'thuc' && has(x.kpi.dt) && kp[x.che_do]) kp[x.che_do][x.sieu_thi] = Number(x.kpi.dt); });
+    const cand = m => { const v = Object.values(kp[m]); return v.length > 1 ? v.concat([v.reduce((a, b) => a + b, 0)]) : v; };
+    const C = { luy_ke: cand('luy_ke'), realtime: cand('realtime') };
+    if (!C.luy_ke.length && !C.realtime.length) return;
+    const nhom = {};
+    res.forEach(x => { if (x.man_hinh === 'doanh_thu' && !x.kpi && (x.nhan_vien || []).length) (nhom[x.anh] = nhom[x.anh] || []).push(x); });
+    Object.keys(nhom).forEach(an => {
+      const seen = {}; let tong = 0;
+      nhom[an].forEach(x => x.nhan_vien.forEach(n => { const k = slug(n.ten); if (!k || seen[k] || !has(n.doanh_thu)) return; seen[k] = 1; tong += Number(n.doanh_thu); }));
+      if (!(tong > 0)) return;
+      const khop = m => C[m].find(c => c > 0 && Math.abs(tong - c) <= Math.max(2, c * 0.02));
+      const lk = khop('luy_ke'), rt = khop('realtime');
+      if ((lk == null) === (rt == null)) return; /* không khớp hoặc khớp cả 2 → giữ theo chữ/nút */
+      const m = lk != null ? 'luy_ke' : 'realtime', cu = nhom[an][0].che_do;
+      nhom[an].forEach(x => { x.che_do = m; });
+      if (cu !== m) warn.push({ muc: 'Ảnh ' + an, noi: 'bảng NV tổng ' + Math.round(tong) + ' khớp DT ' + (m === 'realtime' ? 'Realtime' : 'Lũy kế') + ' (' + Math.round(lk != null ? lk : rt) + ') → tính là ' + (m === 'realtime' ? 'Realtime' : 'Lũy kế') });
+    });
   }
   /* Dashboard cá nhân → Thi đua lũy kế NV: số = % đạt × target ST ÷ số NV của siêu thị (Khai báo).
      Nhóm SỐ LƯỢNG: target cá nhân làm tròn số nguyên (BI: Sim 34÷4=8,5→9 ⇒ 2÷9=22%). Target ST lấy từ ảnh Thi đua siêu thị lũy kế cùng lô. "Chưa có số liệu" = 0. */
