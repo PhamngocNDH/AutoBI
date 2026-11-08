@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V19.01
+// @name         AutoBI Core V19.02
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      19.01
+// @version      19.02
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -15891,6 +15891,8 @@ const DAB = (function () {
           /* V18.99: cả cụm — chỉ lấy chương trình đang MỞ (có dòng con siêu thị); dòng chương trình = tổng cụm để DAB so tổng */
           const khoi = [];
           r.chuong_trinh.forEach(c => {
+            /* V19.02: chương trình đang MỞ (nút −) mà AI không chép dòng siêu thị → đọc sót (8/11: Máy lọc nước Lũy kế mất cả 2 ST) → viền cam "⚠ đọc lại" */
+            if (c && c.ten && c.mo === true && !(c.sieu_thi_con || []).length) { const m = '"' + c.ten + '" đang mở nhưng AI đọc sót dòng từng siêu thị — bấm ảnh này để đọc lại'; if (!warn.some(w => w.muc === 'Ảnh ' + an && w.noi === m)) warn.push({ muc: 'Ảnh ' + an, noi: m, anh: [an] }); }
             if (!c || !c.ten || !Array.isArray(c.sieu_thi_con) || !c.sieu_thi_con.length) return;
             const dong = [];
             c.sieu_thi_con.forEach(z => {
