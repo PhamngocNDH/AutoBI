@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.91
+// @name         AutoBI Core V18.92
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.91
+// @version      18.92
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -14972,10 +14972,25 @@ window.__AutoBIRunPick = (() => {
     try { const a = JSON.parse(v); return Array.isArray(a) ? a : []; } catch (_) { return []; }
   }
   /* Khớp tên chương trình (đã bỏ "T10 - ") với nhóm hàng — cùng cách __AutoBIApi.matchGroup */
+  /* V18.92: khớp ĐÚNG tên đầy đủ (bỏ "T11 - ") / tên rút gọn / slug ở Sheet trước — luật "tên rút gọn là đầu tên" của lõi từng ghép
+     "Bảo hiểm Thợ ĐMX" → "Bảo hiểm" (Thợ CE ra 0) và "Sim ĐMX" → SIM (cộng dồn sai ở NV) */
+  function exactGroup(name, list) {
+    const s = slug(String(name || '').replace(/^T?\d+\s*-\s*/i, '').replace(/[.…]+\s*$/, ''));
+    if (!s) return null;
+    const m = list.find(g => slug(g.short) === s || slug(String(g.full || '').replace(/^T?\d+\s*-\s*/i, '').replace(/[.…]+\s*$/, '')) === s) || list.find(g => g.customSlug && slug(g.customSlug) === s);
+    return m && m.short ? m.short : null;
+  }
+  /* các bảng chương trình → [{g, short}]; nhóm đã có chương trình khớp đúng tên thì bỏ chương trình chỉ khớp phần đầu */
+  function chonNhom(arr, list, cfgGroups) {
+    const out = (arr || []).map(g => { const ex = list.length ? exactGroup(g.key, list) : null; return { g, short: ex || matchGroup(g.key, list, cfgGroups), exact: !!ex }; });
+    const coExact = new Set(out.filter(x => x.exact && x.short).map(x => x.short));
+    return out.filter(x => !x.short || x.exact || !coExact.has(x.short));
+  }
   function matchGroup(name, list, cfgGroups) {
     const raw = String(name || '').replace(/^T?\d+\s*-\s*/i, '').trim(), s = slug(raw);
     if (list.length) {
       let m = null;
+      { const ex = exactGroup(raw, list); if (ex) return ex; }
       try { const D = page.DATA || window.DATA; if (D && D.matchGroupConfigName) m = D.matchGroupConfigName(raw, list); } catch (_) { }
       if (!m) {
         m = list.find(g => slug(g.short) === s || slug(g.full) === s || slug(String(g.full || '').replace(/^T?\d+\s*-\s*/i, '')) === s) || list.find(g => g.customSlug && slug(g.customSlug) === s) || null;
@@ -15074,8 +15089,7 @@ window.__AutoBIRunPick = (() => {
     /* link4_smart — Thi đua lũy kế nhóm × shop */
     const moneyOf = (short, donVi) => { const g = list.find(x => x.short === short), type = g ? slug(g.type) : ''; return type ? /doanhthu|tien/.test(type) : donVi !== 'SỐ LƯỢNG'; };
     const l4 = {};
-    (goi.tdST || []).forEach(g => {
-      const short = matchGroup(g.key, list, cfgGroups);
+    chonNhom(goi.tdST, list, cfgGroups).forEach(({ g, short }) => { /* V18.92 */
       if (!short) { log.groupMiss.push(g.key); return; }
       const sc = moneyOf(short, g.donVi) ? 1000 : 1, out = l4[short] = l4[short] || {};
       (g.rows || []).forEach(r => {
@@ -15097,8 +15111,7 @@ window.__AutoBIRunPick = (() => {
     const l6 = {};
     const slot = st => { const k = 'shop' + (Number(st.shopIdx) || 1); return l6[k] = l6[k] || { revenue: {}, competition: {}, crossSell: {} }; };
     const seenNV = new Set();
-    (goi.tdNV || []).forEach(g => {
-      const short = matchGroup(g.key, list, cfgGroups);
+    chonNhom(goi.tdNV, list, cfgGroups).forEach(({ g, short }) => { /* V18.92 */
       if (!short) { if (!log.groupMiss.includes(g.key)) log.groupMiss.push(g.key + ' (NV)'); return; }
       const sc = moneyOf(short, g.donVi) ? 1000 : 1;
       (g.rows || []).forEach(r => {
@@ -15140,8 +15153,7 @@ window.__AutoBIRunPick = (() => {
     }
     /* V18.68: link3_smart — Thi đua REALTIME nhóm × shop (cùng cách link4_smart; target = target ngày) */
     const l3 = {};
-    (goi.tdSTRT || []).forEach(g => {
-      const short = matchGroup(g.key, list, cfgGroups);
+    chonNhom(goi.tdSTRT, list, cfgGroups).forEach(({ g, short }) => { /* V18.92 */
       if (!short) { if (!log.groupMiss.includes(g.key)) log.groupMiss.push(g.key + ' (RT)'); return; }
       const sc = moneyOf(short, g.donVi) ? 1000 : 1, out = l3[short] = l3[short] || {};
       (g.rows || []).forEach(r => {
@@ -15284,6 +15296,16 @@ window.__AutoBIRunPick = (() => {
   }
 
   /* Lấy gói số → ghi bộ nhớ số (thay toàn bộ số lần trước) → trả tóm tắt. Gọi xong thì mở báo cáo bằng "Xem lại". */
+  /* V18.92: danh sách nhóm hàng (Sheet AutoBi HA tab ThiDua) chỉ được tải lại khi đổ số trên BI — trên portal Nạp số từ ảnh dùng mãi danh sách cũ
+     (08/11: máy còn tên rút gọn tháng trước "Phone/Tablet", "HomeCredit"… nên chỉ SIM, Máy giặt khớp Khai báo, các nhóm khác ra 0).
+     Mở khung là tải Sheet ngầm; trước khi ghép số chờ tối đa 15s, Sheet lỗi thì giữ danh sách đang có. */
+  function lamMoiNhom() {
+    try {
+      const D = page.DATA || window.DATA; if (!D || !D.groupCheckStart) return Promise.resolve();
+      const st = D.groupCheckStart(true);
+      return Promise.race([st && st.fetchP ? st.fetchP : Promise.resolve(), new Promise(r => setTimeout(r, 15000))]).catch(() => { });
+    } catch (_) { return Promise.resolve(); }
+  }
   async function run() {
     const s0 = settings(false);
     if (!s0) throw new Error('Chưa cài link trang Đọc ảnh BI');
@@ -15294,6 +15316,7 @@ window.__AutoBIRunPick = (() => {
       const d = new Date(goi.at);
       if (!confirm('Số ảnh gửi lúc ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ' ngày ' + pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + ' (không phải hôm nay). Vẫn nạp?')) throw new Error('Đã hủy — gửi số mới từ trang Đọc ảnh BI');
     }
+    await lamMoiNhom(); /* V18.92: danh sách nhóm theo Sheet tháng hiện tại trước khi ghép */
     const cfgNow = readConfig();
     const { cache, log } = build(goi, cfgNow);
     GM_setValue(CACHE_KEY, cache);
@@ -15902,6 +15925,7 @@ const DAB = (function () {
     };
     P.veDem = veDem;
     post(s, { action: 'dem' }, 20000).then(j => { P.dem = j.dem; veDem(); }).catch(() => { });
+    lamMoiNhom(); /* V18.92: tải danh sách nhóm hàng ngầm ngay khi mở khung */
     fetchGoi(s).then(g => { if (g && g.v === 1 && dayOf(g.at) === dayOf(Date.now())) { if (!g.atLK && !g.atRT) g.atLK = g.at; P.cloud = g; veCloud(); paint(); } }).catch(() => { });
     const paint = () => {
       tongHop(); /* V18.87: tính trước để biết ảnh nào có bảng lệch → viền cam */
