@@ -1,12 +1,14 @@
 // ==UserScript==
 // @name         AutoBI - Kho & Xuất Bán
 // @namespace    https://github.com/PhamngocNDH/AutoBI/kho-xuatban-test
-// @version      3.1.0
+// @version      3.1.1
 // @description  Check xin hàng trên CRM: tra siêu thị trong tỉnh còn tồn bán được, gần mình trước.
 // @author       AutoBI / 38967 - Mr Phạm
 // @homepageURL  https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_Kho_XuatBan.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_Kho_XuatBan.user.js
+// @match        https://crm.thegioididong.com/
+// @match        https://crm.thegioididong.com/?*
 // @match        https://crm.thegioididong.com/trang-chu*
 // @run-at       document-start
 // @noframes
@@ -45,7 +47,7 @@
  */
 (function () {
     'use strict';
-    const VERSION = '3.1.0';
+    const VERSION = '3.1.1';
     const UPDATE_URL = 'https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_Kho_XuatBan.user.js';
     const SALES_SCHEMA = 5;                             // 5 (V2.9) = mọi hình thức bán (gồm trả góp) + dòng dịch vụ bảo hiểm; 4 = tất cả ngành + Loại hàng + Kho xuất; ngày lưu bằng bản cũ sẽ được lấy lại
     const PREFIX = 'autobi_kxb_test_v1_';               // giữ khóa cũ để không mất khai báo shop
