@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.90
+// @name         AutoBI Core V18.91
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.90
+// @version      18.91
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -15430,7 +15430,7 @@ const DAB = (function () {
         var mt = modeOf(x, lastMode.tra_cham); lastMode.tra_cham = mt;
         (x.tra_cham || []).forEach(function (r) {
           var ten = clean(r.ten), tg = num(r.dt_tra_gop);
-          if (!ten || tg === null || r.ro === false || /^admin$/i.test(ten) || /^t[ổo]ng/i.test(ten)) return;
+          if (!ten || (tg === null && num(r.ty_le) === null) || r.ro === false || /^admin$/i.test(ten) || /^t[ổo]ng/i.test(ten)) return; /* V18.91: ảnh Tỷ trọng trả góp chỉ có cột % */
           var key = codeOf(ten) || ten.toLowerCase();
           var bag = S.tcNV[mt], ord = S.tcNVOrder[mt];
           if (!bag[key]) { bag[key] = { ten: ten, tg: tg, st: num(r.dt_sieu_thi), tl: num(r.ty_le) }; ord.push(key); }
@@ -15706,6 +15706,8 @@ const DAB = (function () {
       const img = new Image(), url = URL.createObjectURL(file);
       img.onload = () => {
         try {
+          const dsh = timDash(img); /* V18.91: dashboard cá nhân NV → 1 ảnh ghép, 1 lượt đọc */
+          if (dsh) { ok({ name: file.name, url, b64s: [ghepDash(img, dsh)], kq: [], tt: 'cho', t: file.lastModified || 0 }); return; }
           const W = img.naturalWidth, H = img.naturalHeight, parts = [], maxH = Math.round(W * 2.2), step = Math.round(W * 1.9);
           let y = 0;
           for (;;) { const h = Math.min(maxH, H - y); parts.push([y, h]); if (y + h >= H) break; y += step; }
@@ -15722,6 +15724,131 @@ const DAB = (function () {
       img.onerror = () => bad(new Error('Không mở được ảnh ' + file.name));
       img.src = url;
     });
+  }
+
+  /* ---------- V18.91: KHUÔN ĐỌC CHẶT "lk3" (Cloud Đọc ảnh BI v1.19) — giống trang Báo cáo đổ số @96 ----------
+     AI chỉ nhận 4 kiểu ảnh mẫu (Thi đua 1 siêu thị dạng Lưới · tab Nhân viên · Báo cáo trả chậm NV · Dashboard cá nhân NV), trả 1 khuôn cố định.
+     Lũy kế/Realtime theo CHỮ trên ảnh ("% HT target ngày" / cột "TARGET NGÀY" = Realtime), siêu thị + chế độ dùng chung cho mọi lát của cùng ảnh,
+     lát Thi đua bị AI đảo cột Thực hiện↔Target thì tự đảo lại (so dòng trùng với lát trước). Kết quả đổi về dạng cũ để DAB.gop + build giữ nguyên. */
+  function chuanHoaLk3(items, cfg) {
+    const shops = shopsOf(cfg), res = [], dash = [], warn = [];
+    const staffL = Array.isArray(cfg.staffList) ? cfg.staffList : [];
+    const maTheoTen = t => { const s = slug(t); if (!s) return ''; const h = staffL.filter(x => slug(String(x.name || '').replace(/^\d+\s*-\s*/, '')) === s); return h.length === 1 ? staffIdOf(h[0].name) : ''; }; /* AI không đọc được "id:" → lấy mã theo họ tên ở Khai báo */
+    items.forEach((a, i) => {
+      if (a.tt !== 'ok') return;
+      const an = String(i + 1), kq = (a.kq || []).filter(r => r && typeof r === 'object');
+      if (!kq.some(r => r.loai)) { kq.forEach(r => { r.anh = an; res.push(r); }); return; }
+      let md = null, ma = null, ldt = null, mdChu = null, nq = null, sn = null;
+      kq.forEach(r => {
+        if (!r.loai || r.loai === 'khac') return;
+        if (!md && (r.che_do === 'luy_ke' || r.che_do === 'realtime')) md = r.che_do;
+        const mm = String(r.sieu_thi ?? '').replace(/\D/g, ''); if (!ma && mm) ma = mm;
+        if (!ldt && r.loai_dt) ldt = r.loai_dt;
+        const t1 = slug(r.tieu_de_target), t2 = slug(r.cot_target);
+        if (!mdChu) { if (/targetngay/.test(t1) || /targetngay/.test(t2)) mdChu = 'realtime'; else if (/targetdt$/.test(t1) || t2 === 'target') mdChu = 'luy_ke'; }
+        if (nq === null && has(r.ngay_qua)) nq = Number(r.ngay_qua);
+        if (sn === null && has(r.so_ngay)) sn = Number(r.so_ngay);
+      });
+      if (mdChu) md = mdChu;
+      { /* đảo lại lát Thi đua đọc ngược cột */
+        const seen = {};
+        kq.forEach(r => {
+          if (r.loai !== 'thi_dua_st') return;
+          let thuan = 0, dao = 0;
+          (r.chuong_trinh || []).forEach(c => { const o = seen[slug(c.ten)]; if (!o) return; const x = c.thuc_hien, y = c.target; if (x == null || y == null || x === y) return; if (x === o[0] && y === o[1]) thuan++; else if (x === o[1] && y === o[0]) dao++; });
+          if (dao >= 2 && !thuan) { (r.chuong_trinh || []).forEach(c => { const t = c.thuc_hien; c.thuc_hien = c.target; c.target = t; }); warn.push({ muc: 'Ảnh ' + an, noi: 'đã đảo lại cột Thực hiện/Target của 1 lát bị đọc ngược' }); }
+          (r.chuong_trinh || []).forEach(c => { const k = slug(c.ten); if (k && !seen[k]) seen[k] = [c.thuc_hien, c.target]; });
+        });
+      }
+      const shop = ma ? shops.find(x => String(x.code) === ma) : null, mode = md || 'luy_ke';
+      if (ldt === 'thuc') warn.push({ muc: 'Ảnh ' + an, noi: 'đang chọn "DT thực" — số lấy theo DT quy đổi, bấm "DT quy đổi" rồi chụp lại' });
+      kq.forEach(r => {
+        if (!r.loai) { r.anh = an; res.push(r); return; }
+        if (r.loai === 'khac') { res.push({ anh: an, man_hinh: 'khac' }); return; }
+        const k = r.kpi;
+        if (k && has(k.dt) && r.loai !== 'tra_cham_nv' && r.loai !== 'nv_ca_nhan') {
+          const kk = { dt: k.dt, tra_cham_pct: k.tra_cham_pct, dt_tra_gop: k.dt_tra_gop, pv_bill: k.pv_bill, pv_khach: k.pv_khach, target: null, target_ngay: null };
+          if (mode === 'realtime') kk.target_ngay = k.target; else kk.target = k.target;
+          res.push({ anh: an, man_hinh: 'doanh_thu', che_do: mode, loai_dt: ldt || 'quy_doi', sieu_thi: ma, kpi: kk, nhan_vien: [], ngay_qua: mode === 'luy_ke' ? nq : null, so_ngay: mode === 'luy_ke' ? sn : null });
+        }
+        if (r.loai === 'dt_nv' && (r.nhan_vien || []).length) res.push({ anh: an, man_hinh: 'doanh_thu', che_do: mode, sieu_thi: null, kpi: null, nhan_vien: r.nhan_vien.map(n => { const m = String(n.ma ?? '').replace(/\D/g, '') || maTheoTen(n.ten); return { ten: (m ? m + ' - ' : '') + String(n.ten || '').trim(), so_luong: n.so_luong, doanh_thu: n.doanh_thu }; }) });
+        if (r.loai === 'tra_cham_nv' && (r.tra_cham || []).length) res.push({ anh: an, man_hinh: 'tra_cham', che_do: 'luy_ke', tra_cham: r.tra_cham.map(t => ({ ten: t.ten, ty_le: t.ty_le, dt_tra_gop: null, dt_sieu_thi: null })) }); /* trả góp NV chỉ có Lũy kế */
+        if (r.loai === 'thi_dua_st' && (r.chuong_trinh || []).length) {
+          if (!shop) { if (!warn.some(w => w.muc === 'Ảnh ' + an)) warn.push({ muc: 'Ảnh ' + an, noi: 'Thi đua siêu thị mã ' + (ma || '?') + ' — mã kho này chưa có trong Khai báo, bỏ qua' }); return; }
+          res.push({ anh: an, man_hinh: 'thi_dua', che_do: mode, khoi: r.chuong_trinh.filter(c => c && c.ten).map(c => ({ chuong_trinh: c.ten, don_vi: /^SL/i.test(String(c.don_vi || '')) ? 'SỐ LƯỢNG' : 'DOANH THU', tong: null, tong_target: null, dong: [{ ten: shop.name, gia_tri: c.thuc_hien, target: c.target }] })) });
+        }
+        if (r.loai === 'nv_ca_nhan' && r.nv) dash.push({ anh: an, nv: r.nv, td_pct: r.td_pct || [], td_chua_co: r.td_chua_co || [] });
+      });
+    });
+    return { res, dash, warn };
+  }
+  /* Dashboard cá nhân → Thi đua lũy kế NV: số = % đạt × target ST ÷ số NV của siêu thị (Khai báo).
+     Nhóm SỐ LƯỢNG: target cá nhân làm tròn số nguyên (BI: Sim 34÷4=8,5→9 ⇒ 2÷9=22%). Target ST lấy từ ảnh Thi đua siêu thị lũy kế cùng lô. "Chưa có số liệu" = 0. */
+  function tinhDash(S, dash, cfg, warn) {
+    if (!dash.length) return;
+    const shops = shopsOf(cfg), staff = Array.isArray(cfg.staffList) ? cfg.staffList : [];
+    const bo = s => slug(String(s || '').replace(/^\d+\s*-\s*/, ''));
+    dash.forEach(d => {
+      const ma = String(d.nv.ma ?? '').replace(/\D/g, '');
+      let st = ma ? staff.find(x => staffIdOf(x.name) === ma) : null;
+      if (!st) { const h = staff.filter(x => bo(x.name) === slug(d.nv.ten)); if (h.length === 1) st = h[0]; }
+      if (!st) { warn.push({ muc: 'Ảnh ' + d.anh, noi: 'Dashboard của ' + (d.nv.ten || '?') + ' (mã ' + (ma || '?') + ') — chưa có trong Khai báo NV, bỏ qua' }); return; }
+      const si = Number(st.shopIdx) || 1, shop = shops.find(x => x.idx === si), n = staff.filter(x => (Number(x.shopIdx) || 1) === si).length || 1;
+      const id = staffIdOf(st.name), tenNV = id + ' - ' + String(st.name).replace(/^\d+\s*-\s*/, '');
+      let so = 0; const mau = [], thieu = [];
+      const ghi = (ten, pct) => {
+        const s = slug(String(ten).replace(/[.…]+\s*$/, ''));
+        let key = null, tg = null, e = null;
+        Object.keys(S.td.luy_ke.st).forEach(k => {
+          if (tg !== null) return; const kk = slug(k);
+          if (!(kk === s || (Math.min(kk.length, s.length) >= 12 && (kk.startsWith(s) || s.startsWith(kk))))) return;
+          const row = shop && (S.td.luy_ke.st[k].rows || []).find(r => slug(r.ten) === slug(shop.name));
+          if (row && has(row.t) && Number(row.t) > 0) { key = k; e = S.td.luy_ke.st[k]; tg = Number(row.t); }
+        });
+        if (tg === null) { if (pct) thieu.push(ten); return; }
+        const sl = e.donVi === 'SỐ LƯỢNG', v = sl ? Math.round(pct / 100 * Math.round(tg / n)) : Math.round(pct / 100 * tg / n * 100) / 100;
+        const bag = S.td.luy_ke.nv, ord = S.tdOrder.luy_ke.nv;
+        let g = bag[key]; if (!g) { g = bag[key] = { key, full: e.full, donVi: e.donVi, tong: null, tongT: null, rows: [], seen: {}, anh: [] }; ord.push(key); }
+        if (g.anh.indexOf(d.anh) < 0) g.anh.push(d.anh);
+        const cu = g.rows.findIndex(r => staffIdOf(r.ten) === id);
+        if (cu >= 0) g.rows[cu].v = v; else g.rows.push({ ten: tenNV, v, t: null });
+        so++; if (pct && mau.length < 4) mau.push(ten + ' ' + pct + '% → ' + v);
+      };
+      (d.td_pct || []).forEach(p => { if (p && p.ten && has(p.pct)) ghi(p.ten, Number(p.pct)); });
+      (d.td_chua_co || []).forEach(t => { if (t) ghi(t, 0); });
+      warn.push({ muc: 'Ảnh ' + d.anh, noi: 'Thi đua NV ' + st.name + ' (÷' + n + ' NV): ' + so + ' nhóm — ' + mau.join(' · ') + (thieu.length ? ' · chưa có Thi đua ST lũy kế (target) cho: ' + thieu.join(', ') : '') });
+    });
+  }
+  /* Dashboard cá nhân NV: dò nền HỒNG của khung THI ĐUA ở mép trái → chỉ gửi AI [phần đầu (tên, mã NV) + khung Thi đua] = 1 lượt đọc / NV */
+  function timDash(img) {
+    try {
+      const W = img.naturalWidth, H = img.naturalHeight; if (H < W * 1.2) return null;
+      const c = document.createElement('canvas'); c.width = 3; c.height = H;
+      const g = c.getContext('2d'); g.drawImage(img, Math.round(W * 0.03), 0, 3, H, 0, 0, 3, H);
+      const d = g.getImageData(0, 0, 3, H).data, loai = [];
+      for (let y = 0; y < H; y++) {
+        let R = 0, G = 0, B = 0; for (let k = 0; k < 3; k++) { const o = (y * 3 + k) * 4; R += d[o]; G += d[o + 1]; B += d[o + 2]; } R /= 3; G /= 3; B /= 3;
+        loai.push(R >= 235 && R - G >= 6 && B - G >= 3 && R - B >= 1 ? 'h' : B - R >= 5 && B >= 235 ? 'x' : Math.min(R, G, B) >= 248 ? 't' : 'k');
+      }
+      let best = null, s = -1, e = -1, gap = 0; const maxGap = Math.round(H * 0.02);
+      for (let y = 0; y <= H; y++) {
+        if (y < H && loai[y] === 'h') { if (s < 0) s = y; e = y; gap = 0; }
+        else if (s >= 0) { gap++; if (gap > maxGap || y === H) { if (!best || e - s > best[1] - best[0]) best = [s, e]; s = -1; gap = 0; } }
+      }
+      if (!best || best[1] - best[0] < H * 0.08) return null;
+      let x0 = -1;
+      for (let y = Math.round(H * 0.03); y < best[0]; y++) { if (loai[y] === 'x') { let dai = 0; while (y + dai < best[0] && loai[y + dai] === 'x') dai++; if (dai >= H * 0.02) { x0 = y; break; } y += dai; } }
+      if (x0 < 0 || x0 > H * 0.45) return null;
+      return { dau: Math.max(1, x0 - 4), hs: Math.max(0, best[0] - 6), he: Math.min(H, best[1] + 6) };
+    } catch (_) { return null; }
+  }
+  function ghepDash(img, ds) {
+    const W = img.naturalWidth, h1 = ds.dau, h2 = ds.he - ds.hs, sc = Math.min(1, 1568 / Math.max(W, h1 + h2 + 8));
+    const c = document.createElement('canvas'); c.width = Math.round(W * sc); c.height = Math.round((h1 + h2 + 8) * sc);
+    const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+    g.drawImage(img, 0, 0, W, h1, 0, 0, c.width, Math.round(h1 * sc));
+    g.drawImage(img, 0, ds.hs, W, h2, 0, Math.round((h1 + 8) * sc), c.width, Math.round(h2 * sc));
+    return c.toDataURL('image/jpeg', 0.9).split(',')[1];
   }
 
   let P = null; /* trạng thái khung */
@@ -15789,10 +15916,11 @@ const DAB = (function () {
       if (!P.busy) $('.tt').textContent = P.err ? '✗ ' + P.err : !P.items.length && P.cloud ? 'Chưa chọn ảnh — bấm Nạp số và xem để xem số trên Cloud, hoặc chọn ảnh mới' : P.items.length ? nOk + '/' + P.items.length + ' ảnh đã đọc' + (nCho ? ' · còn ' + nCho + ' chưa đọc' : '') : 'Chưa có ảnh';
     };
     const tongHop = () => {
-      const res = [];
-      P.items.forEach((a, i) => { if (a.tt === 'ok') (a.kq || []).forEach(r => { if (r && typeof r === 'object') { r.anh = String(i + 1); res.push(r); } }); });
-      if (!res.length) { $('.sum').innerHTML = ''; P.S = null; return; }
+      const cfgA = readConfig(), cv = chuanHoaLk3(P.items, cfgA), res = cv.res; /* V18.91: khuôn lk3 → dạng cũ */
+      if (!res.length && !cv.dash.length) { $('.sum').innerHTML = ''; P.S = null; return; }
       const S = P.S = DAB.gop(res);
+      tinhDash(S, cv.dash, cfgA, cv.warn);
+      S.canhBao = cv.warn.concat(S.canhBao);
       let du = 0, lech = 0;
       ['luy_ke', 'realtime'].forEach(m => ['st', 'nv'].forEach(c => S.tdOrder[m][c].forEach(k => { const g = S.td[m][c][k]; if (g.trangThai === 'du') du++; else if (g.trangThai && g.trangThai !== 'chua_ro') lech++; })));
       const co = [];
@@ -15824,11 +15952,11 @@ const DAB = (function () {
     /* V18.82: ảnh đọc quá 10 giây chưa xong → gửi thêm 1 lượt "dự phòng" (Cloud đọc bằng Mistral trước), lượt nào xong trước thì lấy.
        Lượt chính lỗi sớm thì chuyển dự phòng ngay. 10 giây vì ảnh bình thường mất ~3 giây, ảnh nhiều dòng 5–8 giây. */
     const HEDGE_MS = 10000;
-    const docMot = (a, b) => new Promise((ok, bad) => {
+    const docMot = (a, b, mau) => new Promise((ok, bad) => {
       let xong = false, dp = false, gui = 0, loi = 0, tm = null;
       const thu = ai => {
         gui++;
-        post(P.s, { action: 'doc', b64: b, mime: 'image/jpeg', ai })
+        post(P.s, { action: 'doc', b64: b, mime: 'image/jpeg', ai, mau: mau === 'cu' ? '' : 'lk3' }) /* V18.91: khuôn đọc chặt lk3; 'cu' = lời dặn cũ */
           .then(j => { if (j && j.dem) { P.dem = j.dem; try { P.veDem && P.veDem(); } catch (_) { } } if (xong) return; xong = true; clearTimeout(tm); ok(j.kq); })
           .catch(e => {
             if (xong) return; loi++;
@@ -15852,6 +15980,7 @@ const DAB = (function () {
         const a = viec[i++]; a.tt = 'run'; a.loi = ''; a.dp = false; chay++; paint();
         $('.tt').textContent = 'Đang đọc ' + (xong + 1) + '/' + tong + '…';
         Promise.all(a.b64s.map(b => docMot(a, b)))
+          .then(rs => Promise.all(rs.map((r, k) => r && r.loai === 'khac' ? docMot(a, a.b64s[k], 'cu').catch(() => r) : r))) /* V18.91: lát không thuộc ảnh mẫu (vd bảng ADM) → đọc lại bằng lời dặn cũ */
           .then(rs => { if (!rs.every(r => r && typeof r === 'object')) throw new Error('Cloud trả kết quả rỗng — đọc lại'); a.kq = rs; a.tt = 'ok'; })
           .catch(e => { a.tt = 'err'; a.loi = String(e && e.message || e); if (e && e.quyen) { dung = true; P.err = a.loi; toast('✗ ' + a.loi, true); } })
           .then(() => { chay--; xong++; $('.tt').textContent = 'Đang đọc ' + Math.min(xong + 1, tong) + '/' + tong + '…'; paint(); next(); });
