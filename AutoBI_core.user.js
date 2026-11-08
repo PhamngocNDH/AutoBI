@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V18.93
+// @name         AutoBI Core V18.94
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      18.93
+// @version      18.94
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -15251,8 +15251,8 @@ window.__AutoBIRunPick = (() => {
       const id = staffIdOf(st.name);
       if (/^\d+$/.test(id)) todo.push([st, id]);
     }
-    for (let k = 0; k < todo.length; k += 3) {
-      await Promise.all(todo.slice(k, k + 3).map(async ([st, id]) => {
+    for (let k = 0; k < todo.length; k += 4) { /* V18.94: 4 NV/lượt */
+      await Promise.all(todo.slice(k, k + 4).map(async ([st, id]) => {
         try { data[st.name] = await nisReward(id, from, to); fetched++; }
         catch (e) { if (e && e.code === 'NIS_LOGIN') loginErr = e; else note('Thưởng NV: ' + st.name + ' lỗi (' + (e && e.message || e) + ')'); }
       }));
@@ -15265,8 +15265,10 @@ window.__AutoBIRunPick = (() => {
     note('Thưởng NV (newinsite): ' + Object.keys(data).length + ' NV' + (reused ? ' · dùng lại ' + reused : '') + (fetched ? ' · lấy mới ' + fetched : ''));
     return out;
   }
+  /* V18.94: lấy thưởng ngay khi mở khung Nạp số (chạy song song lúc chọn/đọc ảnh) — bấm Nạp số dùng lại lượt đang chạy hoặc số đã lưu trong ngày */
+  let rwBay = null;
   function reward(cfg) {
-    const work = rewardCore(cfg); work.catch(() => { });
+    const work = rwBay || (rwBay = rewardCore(cfg).finally(() => { rwBay = null; })); work.catch(() => { });
     const cap = new Promise((_, rej) => setTimeout(() => rej(new Error('newinsite trả chậm quá 25s — số thưởng tự lưu khi lấy xong, mở lại báo cáo để xem')), 25000));
     return Promise.race([work, cap]);
   }
@@ -15895,6 +15897,7 @@ const DAB = (function () {
         + '#abi-anh .th .lech{border-color:#f59e0b!important;box-shadow:0 0 0 2px #fde68a}#abi-anh .th .ok{border-color:#16a34a}#abi-anh .th .run{border-color:#7c3aed}#abi-anh .th .err{border-color:#dc2626}'
         + '#abi-anh .tt{font-weight:600;color:#7c3aed;margin:6px 0}#abi-anh .chip{display:inline-block;padding:3px 8px;border-radius:999px;background:#f1f5f9;margin:2px;font-size:12px}#abi-anh .chip.g{background:#e7f6ec;color:#15803d}#abi-anh .chip.r{background:#fdecec;color:#b4232c}'
         + '#abi-anh .wr{background:#fff8e1;border:1px solid #f5d77a;border-radius:10px;padding:8px 10px;font-size:12px;margin:8px 0;max-height:34vh;overflow:auto}#abi-anh .wr div{margin:2px 0}'
+        + '#abi-anh .nkh{display:flex;gap:14px;align-items:center;margin:4px 0}#abi-anh .nkh .lk{padding:4px 0}'
         + '#abi-anh .lk{background:none;border:0;color:#64748b;text-decoration:underline;font-size:12px;padding:6px 0}';
       document.head.appendChild(st);
     }
@@ -15929,6 +15932,7 @@ const DAB = (function () {
     P.veDem = veDem;
     post(s, { action: 'dem' }, 20000).then(j => { P.dem = j.dem; veDem(); }).catch(() => { });
     lamMoiNhom(); /* V18.92: tải danh sách nhóm hàng ngầm ngay khi mở khung */
+    try { reward(readConfig()).catch(() => { }); } catch (_) { } /* V18.94: lấy Điểm thưởng NV (newinsite) ngầm ngay khi mở khung */
     fetchGoi(s).then(g => { if (g && g.v === 1 && dayOf(g.at) === dayOf(Date.now())) { if (!g.atLK && !g.atRT) g.atLK = g.at; P.cloud = g; veCloud(); paint(); } }).catch(() => { });
     const paint = () => {
       tongHop(); /* V18.87: tính trước để biết ảnh nào có bảng lệch → viền cam */
@@ -15974,7 +15978,11 @@ const DAB = (function () {
       const mdl = {}; P.items.forEach(a => { if (a.tt === 'ok') (a.kq || []).forEach(r => { const m = String((r && r._model) || '?'); const k = /mistral|ministral/i.test(m) ? 'Mistral' : /gemini/i.test(m) ? 'Gemini' : m; mdl[k] = (mdl[k] || 0) + 1; }); });
       P.mdl = mdl; /* V18.76: không hiện chip "đọc bằng" (giữ chuột lên ảnh vẫn thấy model) */
       $('.sum').innerHTML = '<div>' + co.map(t => '<span class="chip">' + escH(t) + '</span>').join('') + (du ? '<span class="chip g">' + du + ' bảng khớp TỔNG</span>' : '') + (lech ? '<span class="chip r">' + lech + ' bảng lệch</span>' : '') + '</div>'
-        + (thieu.length || S.canhBao.length ? '<div class="wr">' + (thieu.length ? '<div><b>Chưa thấy ảnh:</b> ' + thieu.map(escH).join(' · ') + '</div>' : '') + S.canhBao.map(c => '<div>• <b>' + escH(c.muc) + '</b>: ' + escH(c.noi) + '</div>').join('') + '</div>' : '');
+        + (thieu.length ? '<div class="wr"><b>Chưa thấy ảnh:</b> ' + thieu.map(escH).join(' · ') + '</div>' : '')
+        /* V18.94: nhật ký đọc ảnh thu gọn — bấm mới mở, có nút Sao chép */
+        + (S.canhBao.length ? '<div class="nkh"><button class="lk" data-k="nk">' + (P.nkMo ? '▾ Ẩn' : '▸ Xem') + ' nhật ký đọc ảnh (' + S.canhBao.length + ' dòng)</button><button class="lk" data-k="nkcp">📋 Sao chép</button></div>'
+          + (P.nkMo ? '<div class="wr">' + S.canhBao.map(c => '<div>• <b>' + escH(c.muc) + '</b>: ' + escH(c.noi) + '</div>').join('') + '</div>' : '') : '');
+      P.nkText = (thieu.length ? 'Chưa thấy ảnh: ' + thieu.join(' · ') + '\n' : '') + S.canhBao.map(c => '• ' + c.muc + ': ' + c.noi).join('\n');
     };
     /* V18.82: ảnh đọc quá 10 giây chưa xong → gửi thêm 1 lượt "dự phòng" (Cloud đọc bằng Mistral trước), lượt nào xong trước thì lấy.
        Lượt chính lỗi sớm thì chuyển dự phòng ngay. 10 giây vì ảnh bình thường mất ~3 giây, ảnh nhiều dòng 5–8 giây. */
@@ -16028,6 +16036,13 @@ const DAB = (function () {
       const k = ev.target && ev.target.dataset && ev.target.dataset.k;
       if (ev.target === el || k === 'x') { if (!P.busy) el.remove(); return; }
       if (k === 'dem') { if (P.dem && P.dem.u) { P.demMo = !P.demMo; P.veDem(); } return; }
+      if (k === 'nk') { P.nkMo = !P.nkMo; tongHop(); return; } /* V18.94 */
+      if (k === 'nkcp') {
+        const txt = P.nkText || '', xong = () => toast('✓ Đã sao chép nhật ký (' + txt.split('\n').length + ' dòng)', false);
+        const cu = () => { const ta = document.createElement('textarea'); ta.value = txt; ta.style.cssText = 'position:fixed;left:-9999px'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); xong(); } catch (_) { toast('Không sao chép được', true); } ta.remove(); };
+        try { navigator.clipboard.writeText(txt).then(xong, cu); } catch (_) { cu(); }
+        return;
+      }
       if (k === 'pick') inp.click();
       else if (k === 'read') docHet();
       else if (k === 'clear') { if (P.busy || !confirm('Xóa hết ảnh đã đọc hôm nay?')) return; P.items = []; saveKq([]); paint(); }
