@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V19.02
+// @name         AutoBI Core V19.03
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      19.02
+// @version      19.03
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -15938,9 +15938,16 @@ const DAB = (function () {
   }
   /* Dashboard cá nhân → Thi đua lũy kế NV: số = % đạt × target ST ÷ số NV của siêu thị (Khai báo).
      Nhóm SỐ LƯỢNG: target cá nhân làm tròn số nguyên (BI: Sim 34÷4=8,5→9 ⇒ 2÷9=22%). Target ST lấy từ ảnh Thi đua siêu thị lũy kế cùng lô. "Chưa có số liệu" = 0. */
-  function tinhDash(S, dash, cfg, warn) {
+  function tinhDash(S, dash, cfg, warn, cloud) {
     if (!dash.length) return;
     const shops = shopsOf(cfg), staff = Array.isArray(cfg.staffList) ? cfg.staffList : [];
+    /* V19.03: target Thi đua siêu thị Lũy kế — lô ảnh trước, thiếu thì lấy bảng đã lưu trên Cloud cụm HÔM NAY
+       (9/11: nạp riêng thư mục ảnh dashboard NV sau ảnh Thi đua cụm → 7 NV ra "0 nhóm", Thi đua NV toàn 0%) */
+    const ST = {}; let tuCloud = 0;
+    if (cloud && Array.isArray(cloud.tdST)) cloud.tdST.forEach(e => { if (e && e.key && !S.td.luy_ke.st[e.key]) { ST[e.key] = { full: e.full || e.key, donVi: e.donVi, rows: e.rows || [] }; tuCloud++; } });
+    Object.assign(ST, S.td.luy_ke.st);
+    if (tuCloud) warn.push({ muc: 'Thi đua NV', noi: 'dùng target ' + tuCloud + ' chương trình Thi đua siêu thị Lũy kế đã lưu trên Cloud hôm nay (lô ảnh này không có)' });
+    const laShop = (ten, shop) => !!shop && (slug(ten) === slug(shop.name) || shopOfSub(ten, shops) === shop);
     const bo = s => slug(String(s || '').replace(/^\d+\s*-\s*/, ''));
     dash.forEach(d => {
       const ma = String(d.nv.ma ?? '').replace(/\D/g, '');
@@ -15953,11 +15960,11 @@ const DAB = (function () {
       const ghi = (ten, pct) => {
         const s = slug(String(ten).replace(/[.…]+\s*$/, ''));
         let key = null, tg = null, e = null;
-        Object.keys(S.td.luy_ke.st).forEach(k => {
+        Object.keys(ST).forEach(k => {
           if (tg !== null) return; const kk = slug(k);
           if (!(kk === s || (Math.min(kk.length, s.length) >= 12 && (kk.startsWith(s) || s.startsWith(kk))))) return;
-          const row = shop && (S.td.luy_ke.st[k].rows || []).find(r => slug(r.ten) === slug(shop.name));
-          if (row && has(row.t) && Number(row.t) > 0) { key = k; e = S.td.luy_ke.st[k]; tg = Number(row.t); }
+          const row = shop && (ST[k].rows || []).find(r => laShop(r.ten, shop));
+          if (row && has(row.t) && Number(row.t) > 0) { key = k; e = ST[k]; tg = Number(row.t); }
         });
         if (tg === null) { if (pct) thieu.push(ten); return; }
         const sl = e.donVi === 'SỐ LƯỢNG', v = sl ? Math.round(pct / 100 * Math.round(tg / n)) : Math.round(pct / 100 * tg / n * 100) / 100;
@@ -16076,7 +16083,7 @@ const DAB = (function () {
       const cfgA = readConfig(), cv = chuanHoaLk3(P.items, cfgA), res = cv.res; /* V18.91: khuôn lk3 → dạng cũ */
       if (!res.length && !cv.dash.length) { $('.sum').innerHTML = ''; P.S = null; return; }
       const S = P.S = DAB.gop(res);
-      tinhDash(S, cv.dash, cfgA, cv.warn);
+      tinhDash(S, cv.dash, cfgA, cv.warn, P.cloud);
       S.canhBao = cv.warn.concat(S.canhBao);
       let du = 0, lech = 0;
       ['luy_ke', 'realtime'].forEach(m => ['st', 'nv'].forEach(c => S.tdOrder[m][c].forEach(k => { const g = S.td[m][c][k]; if (g.trangThai === 'du') du++; else if (g.trangThai && g.trangThai !== 'chua_ro') lech++; })));
