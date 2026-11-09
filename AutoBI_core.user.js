@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V19.05
+// @name         AutoBI Core V19.06
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      19.05
+// @version      19.06
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -11924,7 +11924,8 @@ window.__AutoBIRunPick = (() => {
       onload: r => {
         try {
           const d = JSON.parse(r.responseText || '{}');
-          const name = String(d.name || '').trim();
+          /* V19.06: tab Auth có tên gõ thừa dấu cách ("Phạm Ánh  Ngọc") → khóa lệch tab Config → "Không thể tải cấu hình Cloud!" */
+          const name = String(d.name || '').replace(/\s+/g, ' ').trim();
           if (d.status === 'success' && name) { done(String(d.user || c).trim() + ' - ' + name); return; }
         } catch (_) { }
         keyOld(c, done);
@@ -15468,7 +15469,11 @@ const DAB = (function () {
           var key = codeOf(ten) || ten.toLowerCase();
           var bag = S.dtNV[md], ord = S.dtNVOrder[md];
           if (!bag[key]) { bag[key] = { ten: ten, sl: num(r.so_luong), dt: dt }; ord.push(key); }
-          else if (ten.length > bag[key].ten.length) bag[key].ten = ten;
+          else {
+            if (ten.length > bag[key].ten.length) bag[key].ten = ten;
+            /* V19.06: cùng NV ở nhiều ảnh (tab NV lọc 1 siêu thị chỉ có phần bán tại ST đó, ảnh cả cụm có tổng) → giữ số LỚN, không giữ ảnh đọc trước */
+            if (dt > bag[key].dt) { bag[key].dt = dt; bag[key].sl = num(r.so_luong); }
+          }
         });
       } else if (x.man_hinh === 'tra_cham') {
         lastBlock = null;
@@ -16126,13 +16131,16 @@ const DAB = (function () {
     };
     /* V18.82: ảnh đọc quá 10 giây chưa xong → gửi thêm 1 lượt "dự phòng" (Cloud đọc bằng Mistral trước), lượt nào xong trước thì lấy.
        Lượt chính lỗi sớm thì chuyển dự phòng ngay. 10 giây vì ảnh bình thường mất ~3 giây, ảnh nhiều dòng 5–8 giây. */
-    const HEDGE_MS = 10000;
+    /* V19.06: chờ dự phòng THEO NHỊP thật của lô — đo 9/11: 1 lát 3,6–6 giây nhưng cứ ~8 lượt song song có 1 lượt treo tới 120 giây.
+       Chờ = 1,8 × trung vị các lát vừa đọc xong, trong khoảng 6–10 giây (chưa có số đo thì 8 giây) → lát treo được cứu sớm hơn 2–4 giây. */
+    const tms = [];
+    const hedgeMs = () => { if (tms.length < 3) return 8000; const s = tms.slice(-20).sort((x, y) => x - y); return Math.max(6000, Math.min(10000, Math.round(s[Math.floor(s.length / 2)] * 1.8))); };
     const docMot = (a, b, mau) => new Promise((ok, bad) => {
-      let xong = false, dp = false, gui = 0, loi = 0, tm = null;
+      let xong = false, dp = false, gui = 0, loi = 0, tm = null; const t0 = Date.now();
       const thu = ai => {
         gui++;
         post(P.s, { action: 'doc', b64: b, mime: 'image/jpeg', ai, mau: mau === 'cu' ? '' : 'lk3' }) /* V18.91: khuôn đọc chặt lk3; 'cu' = lời dặn cũ */
-          .then(j => { if (j && j.dem) { P.dem = j.dem; try { P.veDem && P.veDem(); } catch (_) { } } if (xong) return; xong = true; clearTimeout(tm); ok(j.kq); })
+          .then(j => { if (j && j.dem) { P.dem = j.dem; try { P.veDem && P.veDem(); } catch (_) { } } if (xong) return; xong = true; clearTimeout(tm); if (!ai) tms.push(Date.now() - t0); ok(j.kq); })
           .catch(e => {
             if (xong) return; loi++;
             if (e && e.quyen) { xong = true; clearTimeout(tm); return bad(e); }
@@ -16142,7 +16150,7 @@ const DAB = (function () {
       };
       const duPhong = () => { if (dp || xong) return; dp = true; a.dp = true; try { paint(); } catch (_) { } thu('mistral'); };
       thu('');
-      tm = setTimeout(duPhong, HEDGE_MS);
+      tm = setTimeout(duPhong, hedgeMs());
     });
     /* V19.04: GỘP 2 LẦN ĐỌC của cùng 1 lát (tự đọc lại ảnh ⚠) — Thi đua: chương trình lần nào cũng thấy thì giữ, lần nào có dòng siêu thị thì lấy
        (9/11: lần 1 sót dòng ST của FE); "mo" chỉ còn true khi CẢ 2 lần cùng nói mở mà không có dòng ST (AI từng nói "BH Thợ ICT" mở dù đang thu gọn) */
