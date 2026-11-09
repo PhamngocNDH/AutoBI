@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V19.04
+// @name         AutoBI Core V19.05
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      19.04
+// @version      19.05
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -11015,7 +11015,7 @@ window.__AutoBIRunPick = (() => {
         if (!A) { sEl.style.color = '#c00'; sEl.textContent = 'Thiếu module Nạp số từ ảnh — tải lại trang'; return; }
         const show = r => {
           sEl.style.color = '#15803d'; sEl.textContent = '✓ Đã nạp — đang mở báo cáo';
-          A.toast('✓ ' + r.text + (r.warn.length ? ' · ⚠ ' + r.warn.join(' · ') : ''), false);
+          A.toast('✓ ' + r.text + (r.warn.length ? ' · ⚠ ' + r.warn.join(' · ') : ''), r.warn.some(w => /^Thưởng NV/.test(w))); /* V19.05: thưởng lỗi → thông báo đỏ, 9 giây */
           if (!setChecks('last')) throw new Error('Không tìm thấy lựa chọn Xem lại — tải lại trang');
           runBtn.click();
         };
@@ -11024,7 +11024,7 @@ window.__AutoBIRunPick = (() => {
         t.disabled = true; sEl.style.color = '#7c3aed'; sEl.textContent = 'Đang lấy số từ trang Đọc ảnh BI…';
         A.run().then(r => {
           sEl.style.color = '#15803d'; sEl.textContent = '✓ Đã nạp — đang mở báo cáo';
-          A.toast('✓ ' + r.text + (r.warn.length ? ' · ⚠ ' + r.warn.join(' · ') : ''), false);
+          A.toast('✓ ' + r.text + (r.warn.length ? ' · ⚠ ' + r.warn.join(' · ') : ''), r.warn.some(w => /^Thưởng NV/.test(w))); /* V19.05: thưởng lỗi → thông báo đỏ, 9 giây */
           if (!setChecks('last')) throw new Error('Không tìm thấy lựa chọn Xem lại — tải lại trang');
           runBtn.click();
         }).catch(e => { sEl.style.color = '#c00'; sEl.textContent = '✗ ' + (e && e.message || e); A.toast('✗ ' + (e && e.message || e), true); })
@@ -15337,10 +15337,17 @@ window.__AutoBIRunPick = (() => {
     GM_setValue(CACHE_KEY, cache);
     /* V18.70: lấy luôn Điểm thưởng NV (newinsite) — lỗi/chậm thì báo, không chặn báo cáo */
     try { const rw = await reward(cfgNow); cache.link10_reward = rw; GM_setValue(CACHE_KEY, cache); log.reward = Object.keys(rw.data || {}).length; }
-    catch (e) { log.rewardErr = String(e && e.message || e); }
+    catch (e) {
+      log.rewardErr = String(e && e.message || e);
+      /* V19.05: newinsite lỗi (hay gặp: hết phiên đăng nhập sau 1 đêm) → dùng số thưởng đã lấy gần nhất CÙNG THÁNG thay vì mất cả cột Thưởng */
+      try {
+        const memo = GM_getValue(REWARD_KEY, null), toNay = vnYmd(-1);
+        if (memo && memo.data && Object.keys(memo.data).length && Math.floor(Number(memo.to) / 100) === Math.floor(toNay / 100)) { cache.link10_reward = memo; GM_setValue(CACHE_KEY, cache); log.rewardCu = String(memo.to).slice(6, 8) + '/' + String(memo.to).slice(4, 6); }
+      } catch (_) { }
+    }
     const t = tom(log, goi);
     if (log.reward) t.text += ' · thưởng ' + log.reward + ' NV';
-    if (log.rewardErr) t.warn.push('Thưởng NV: ' + log.rewardErr);
+    if (log.rewardErr) { t.warn.push('Thưởng NV: ' + log.rewardErr + (log.rewardCu ? ' — tạm dùng số thưởng đến hết ' + log.rewardCu : '')); toast('⚠ Thưởng NV: ' + log.rewardErr + (log.rewardCu ? ' — đang hiện số thưởng cũ đến hết ' + log.rewardCu : ' — báo cáo không có cột Thưởng'), true); }
     note('Nạp số từ ảnh: ' + t.text + (t.warn.length ? ' · ⚠ ' + t.warn.join(' · ') : '') + ' · gói số cách đây ' + Math.round(age / 60000) + ' phút');
     return t;
   }
