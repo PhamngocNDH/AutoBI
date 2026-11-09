@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V19.03
+// @name         AutoBI Core V19.04
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      19.03
+// @version      19.04
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -16137,6 +16137,22 @@ const DAB = (function () {
       thu('');
       tm = setTimeout(duPhong, HEDGE_MS);
     });
+    /* V19.04: GỘP 2 LẦN ĐỌC của cùng 1 lát (tự đọc lại ảnh ⚠) — Thi đua: chương trình lần nào cũng thấy thì giữ, lần nào có dòng siêu thị thì lấy
+       (9/11: lần 1 sót dòng ST của FE); "mo" chỉ còn true khi CẢ 2 lần cùng nói mở mà không có dòng ST (AI từng nói "BH Thợ ICT" mở dù đang thu gọn) */
+    const gopDoc = (r0, r1) => {
+      if (!r0 || typeof r0 !== 'object') return r1;
+      if (!r1 || typeof r1 !== 'object' || r1.loai === 'khac') return r0;
+      if (r0.loai !== 'thi_dua_st' || r1.loai !== 'thi_dua_st') return r1;
+      const ds = (r1.chuong_trinh || []).map(c => Object.assign({}, c)), co = c => (c.sieu_thi_con || []).length > 0;
+      (r0.chuong_trinh || []).forEach(c0 => {
+        const k = slug(c0 && c0.ten); if (!k) return;
+        const c1 = ds.find(c => slug(c.ten) === k);
+        if (!c1) { ds.push(Object.assign({}, c0)); return; }
+        if (!co(c1) && co(c0)) c1.sieu_thi_con = c0.sieu_thi_con;
+        c1.mo = co(c1) ? true : (c0.mo === true && c1.mo === true ? true : null);
+      });
+      return Object.assign({}, r1, { chuong_trinh: ds });
+    };
     const docHet = () => {
       const viec = P.items.filter(a => a.tt === 'cho' || a.tt === 'err');
       if (!viec.length) return;
@@ -16144,13 +16160,22 @@ const DAB = (function () {
       let i = 0, chay = 0, xong = 0, dung = false;
       const tong = viec.length;
       const next = () => {
-        if (dung || i >= viec.length) { if (!chay) { P.busy = false; saveKq(P.items); paint(); } return; }
+        if (dung || i >= viec.length) {
+          if (!chay) {
+            P.busy = false; saveKq(P.items); paint();
+            /* V19.04: ảnh có ⚠ (bảng lệch / chương trình mở mà sót dòng ST) → TỰ đọc lại 1 lần, gộp với lần đầu */
+            const lech = new Set(); ((P.S && P.S.canhBao) || []).forEach(c => (c.anh || []).forEach(n => lech.add(String(n))));
+            const lai = dung ? [] : P.items.filter((a, k) => a.tt === 'ok' && !a.tuDoc && lech.has(String(k + 1)) && (a.b64s || []).length);
+            if (lai.length) { lai.forEach(a => { a.tuDoc = 1; a.kq0 = a.kq; a.tt = 'cho'; }); toast('Tự đọc lại ' + lai.length + ' ảnh có ⚠'); docHet(); }
+          }
+          return;
+        }
         const a = viec[i++]; a.tt = 'run'; a.loi = ''; a.dp = false; chay++; paint();
         $('.tt').textContent = 'Đang đọc ' + (xong + 1) + '/' + tong + '…';
         Promise.all(a.b64s.map(b => docMot(a, b)))
           .then(rs => Promise.all(rs.map((r, k) => r && r.loai === 'khac' ? docMot(a, a.b64s[k], 'cu').catch(() => r) : r))) /* V18.91: lát không thuộc ảnh mẫu (vd bảng ADM) → đọc lại bằng lời dặn cũ */
           .then(rs => Promise.all(rs.map((r, k) => { const kp = r && r.loai && r.kpi; if (!(kp && kp.dt != null && !(Number(kp.target) > 0))) return r; return docMot(a, a.b64s[k]).then(r2 => (r2 && r2.kpi && Number(r2.kpi.target) > 0) ? r2 : r).catch(() => r); }))) /* V18.97: lát có thẻ DT mà thiếu target → đọc lại 1 lần */
-          .then(rs => { if (!rs.every(r => r && typeof r === 'object')) throw new Error('Cloud trả kết quả rỗng — đọc lại'); a.kq = rs; a.tt = 'ok'; })
+          .then(rs => { if (!rs.every(r => r && typeof r === 'object')) throw new Error('Cloud trả kết quả rỗng — đọc lại'); a.kq = a.kq0 ? rs.map((r, k) => gopDoc(a.kq0[k], r)) : rs; delete a.kq0; a.tt = 'ok'; })
           .catch(e => { a.tt = 'err'; a.loi = String(e && e.message || e); if (e && e.quyen) { dung = true; P.err = a.loi; toast('✗ ' + a.loi, true); } })
           .then(() => { chay--; xong++; $('.tt').textContent = 'Đang đọc ' + Math.min(xong + 1, tong) + '/' + tong + '…'; paint(); next(); });
       };
@@ -16163,7 +16188,7 @@ const DAB = (function () {
         const a = P.items[Number(th.dataset.i)];
         if (a && (a.tt === 'ok' || a.tt === 'err') && confirm('Đọc lại ảnh ' + (Number(th.dataset.i) + 1) + '?')) {
           if (!a.b64s || !a.b64s.length) { toast('Ảnh này đã tải lại trang nên không còn bản gốc — chọn lại ảnh đó bằng ＋ Chọn ảnh', true); return; }
-          a.tt = 'cho'; a.kq = []; paint(); docHet();
+          a.tt = 'cho'; a.kq0 = a.kq; a.tuDoc = 1; a.kq = []; paint(); docHet(); /* V19.04: đọc lại tay cũng gộp với lần trước */
         }
         return;
       }
