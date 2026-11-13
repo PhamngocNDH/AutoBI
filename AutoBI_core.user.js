@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V19.06
+// @name         AutoBI Core V19.07
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      19.06
+// @version      19.07
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -26,6 +26,7 @@
 // @grant        GM_deleteValue
 // @grant        GM_addStyle
 // @grant        GM_xmlhttpRequest
+// @grant        GM_openInTab
 // @grant        GM_info
 // @grant        GM_registerMenuCommand
 // @grant        unsafeWindow
@@ -8844,9 +8845,10 @@ window.__AutoBIBiTarget99 = (function () {
      Lấy 1 lần/ngày: lưu ở REWARD_KEY, lượt sau cùng ngày + cùng kỳ + đủ NV thì dùng lại (0 giây).
      cache.link10_reward = { from, to, day, at, data: { 'mã - tên': { tl, tn, total, none } } } ===== */
   const NIS_REWARD = 'https://newinsite.thegioididong.com/office/RewardPoint/RewardPoint/GetReward';
+  const NIS_LINK = 'https://newinsite.thegioididong.com/email-noi-bo?stateReport=danhan'; /* V19.07 */
   const REWARD_KEY = 'autobi_reward_v1';
   const mdy = k => { const t = String(k); return t.slice(4, 6) + '/' + t.slice(6, 8) + '/' + t.slice(0, 4); };
-  function nisLoginError() { const e = new Error('chưa đăng nhập newinsite — mở newinsite.thegioididong.com đăng nhập rồi chạy lại'); e.code = 'NIS_LOGIN'; return e; }
+  function nisLoginError() { const e = new Error('chưa đăng nhập newinsite — mở ' + NIS_LINK + ' đăng nhập rồi chạy lại'); e.code = 'NIS_LOGIN'; return e; }
   function nisReward(user, from, to) {
     return new Promise((resolve, reject) => {
       const q = new URLSearchParams({ dtmFromDate: mdy(from), dtmToDate: mdy(to), strRewardUser: user, intRewardPositionID: '-1' });
@@ -15217,9 +15219,29 @@ window.__AutoBIRunPick = (() => {
   /* ===== V18.70: Điểm thưởng NV (newinsite) khi Nạp số từ ảnh — chép cách lấy của __AutoBIApi.applyReward (module API chỉ chạy trên BI, đã tắt).
      Kỳ = đầu tháng → hết hôm qua (như lũy kế); 3 NV/lượt; 1 lần/ngày (GM autobi_reward_v1, cùng dạng cũ); chờ tối đa 25s, lấy xong sau vẫn lưu. ===== */
   const NIS_REWARD = 'https://newinsite.thegioididong.com/office/RewardPoint/RewardPoint/GetReward', REWARD_KEY = 'autobi_reward_v1';
+  /* V19.07: newinsite đăng nhập qua SSO authkey.dmx.vn — phiên hết thì GetReward chuyển sang trang SSO, GM_xmlhttpRequest không tự đăng nhập lại được.
+     Mở trang Mail báo cáo nội bộ newinsite ở tab nền để SSO cấp lại phiên, thử lại tới 40s, lấy được thì đóng tab; chưa được thì đưa tab ra trước cho người dùng đăng nhập. */
+  const NIS_LINK = 'https://newinsite.thegioididong.com/email-noi-bo?stateReport=danhan';
+  let nisTab = null;
+  function moNis(active) {
+    try { if (nisTab && !nisTab.closed) return; } catch (_) { }
+    try { nisTab = typeof GM_openInTab === 'function' ? GM_openInTab(NIS_LINK, { active: !!active, insert: true, setParent: true }) : window.open(NIS_LINK, '_blank'); } catch (_) { nisTab = null; }
+  }
+  function dongNis() { try { if (nisTab && !nisTab.closed) nisTab.close(); } catch (_) { } nisTab = null; }
+  async function chuaPhienNis(user, from, to) {
+    note('Thưởng NV: phiên newinsite hết — tự mở ' + NIS_LINK + ' ở tab nền để đăng nhập lại');
+    moNis(false);
+    for (let i = 0; i < 10; i++) {
+      await new Promise(r => setTimeout(r, 4000));
+      try { await nisReward(user, from, to); dongNis(); note('Thưởng NV: newinsite đã đăng nhập lại'); return true; }
+      catch (e) { if (!(e && e.code === 'NIS_LOGIN')) throw e; }
+    }
+    dongNis(); moNis(true); /* SSO không tự qua (hết phiên SSO) → mở tab ra trước để đăng nhập */
+    return false;
+  }
   const vnYmd = off => { const d = new Date(Date.now() + 7 * 3600e3 + (off || 0) * 86400e3); return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate(); };
   const mdy = k => { const t = String(k); return t.slice(4, 6) + '/' + t.slice(6, 8) + '/' + t.slice(0, 4); };
-  function nisLoginError() { const e = new Error('chưa đăng nhập newinsite — mở newinsite.thegioididong.com đăng nhập rồi chạy lại'); e.code = 'NIS_LOGIN'; return e; }
+  function nisLoginError() { const e = new Error('chưa đăng nhập newinsite — mở ' + NIS_LINK + ' đăng nhập rồi chạy lại'); e.code = 'NIS_LOGIN'; return e; }
   function rewardParse(html) {
     if (!String(html || '').trim()) return { tl: 0, tn: 0, total: 0, none: true };
     const d = new DOMParser().parseFromString(String(html || ''), 'text/html');
@@ -15262,6 +15284,10 @@ window.__AutoBIRunPick = (() => {
       const id = staffIdOf(st.name);
       if (/^\d+$/.test(id)) todo.push([st, id]);
     }
+    if (todo.length) { /* V19.07: thử 1 NV trước — hết phiên thì tự mở newinsite đăng nhập lại rồi lấy tiếp */
+      try { await nisReward(todo[0][1], from, to); }
+      catch (e) { if (e && e.code === 'NIS_LOGIN') { if (!(await chuaPhienNis(todo[0][1], from, to))) throw e; } else throw e; }
+    }
     for (let k = 0; k < todo.length; k += 4) { /* V18.94: 4 NV/lượt */
       await Promise.all(todo.slice(k, k + 4).map(async ([st, id]) => {
         try { data[st.name] = await nisReward(id, from, to); fetched++; }
@@ -15280,7 +15306,7 @@ window.__AutoBIRunPick = (() => {
   let rwBay = null;
   function reward(cfg) {
     const work = rwBay || (rwBay = rewardCore(cfg).finally(() => { rwBay = null; })); work.catch(() => { });
-    const cap = new Promise((_, rej) => setTimeout(() => rej(new Error('newinsite trả chậm quá 25s — số thưởng tự lưu khi lấy xong, mở lại báo cáo để xem')), 25000));
+    const cap = new Promise((_, rej) => setTimeout(() => rej(new Error('newinsite trả chậm quá 50s — số thưởng tự lưu khi lấy xong, mở lại báo cáo để xem')), 50000));
     return Promise.race([work, cap]);
   }
 
@@ -15306,7 +15332,7 @@ window.__AutoBIRunPick = (() => {
       let el = document.getElementById('autobi-anh-toast');
       if (!el) { el = document.createElement('div'); el.id = 'autobi-anh-toast'; document.body.appendChild(el); }
       el.style.cssText = 'position:fixed;left:50%;bottom:80px;transform:translateX(-50%);z-index:2147483646;max-width:92vw;padding:10px 14px;border-radius:12px;font:600 13px/1.4 -apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#fff;box-shadow:0 6px 20px rgba(0,0,0,.25);background:' + (bad ? '#b4232c' : '#1f2328');
-      el.textContent = text; el.style.display = 'block';
+      el.textContent = text; el.style.display = 'block'; el.onclick = null; el.style.cursor = '';
       clearTimeout(toast.t); toast.t = setTimeout(() => { el.style.display = 'none'; }, bad ? 9000 : 6000);
     } catch (_) { }
   }
@@ -15348,7 +15374,7 @@ window.__AutoBIRunPick = (() => {
     }
     const t = tom(log, goi);
     if (log.reward) t.text += ' · thưởng ' + log.reward + ' NV';
-    if (log.rewardErr) { t.warn.push('Thưởng NV: ' + log.rewardErr + (log.rewardCu ? ' — tạm dùng số thưởng đến hết ' + log.rewardCu : '')); toast('⚠ Thưởng NV: ' + log.rewardErr + (log.rewardCu ? ' — đang hiện số thưởng cũ đến hết ' + log.rewardCu : ' — báo cáo không có cột Thưởng'), true); }
+    if (log.rewardErr) { t.warn.push('Thưởng NV: ' + log.rewardErr + (log.rewardCu ? ' — tạm dùng số thưởng đến hết ' + log.rewardCu : '')); toast('⚠ Thưởng NV: ' + log.rewardErr + (log.rewardCu ? ' — đang hiện số thưởng cũ đến hết ' + log.rewardCu : ' — báo cáo không có cột Thưởng') + (/NIS_LOGIN|đăng nhập/.test(log.rewardErr) ? ' · bấm vào đây để mở newinsite' : ''), true); if (/đăng nhập/.test(log.rewardErr)) { try { const el = document.getElementById('autobi-anh-toast'); el.style.cursor = 'pointer'; el.onclick = () => { el.style.display = 'none'; moNis(true); }; } catch (_) { } } }
     note('Nạp số từ ảnh: ' + t.text + (t.warn.length ? ' · ⚠ ' + t.warn.join(' · ') : '') + ' · gói số cách đây ' + Math.round(age / 60000) + ' phút');
     return t;
   }
