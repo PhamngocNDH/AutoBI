@@ -5,6 +5,7 @@
 // @description  AutoBI 19.07
 // @author       38967 - Mr Phạm
 // @match        https://portal.thegioididong.com/*
+// @match        https://newinsite.thegioididong.com/email-noi-bo*
 // @match        https://crm.thegioididong.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=thegioididong.com
 // @connect      self
