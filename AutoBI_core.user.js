@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         AutoBI Core V19.08
+// @name         AutoBI Core V19.09
 // @namespace    https://github.com/PhamngocNDH/AutoBI
 // @updateURL    https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
 // @downloadURL  https://raw.githubusercontent.com/PhamngocNDH/AutoBI/main/AutoBI_core.user.js
-// @version      19.08
+// @version      19.09
 // @description  AutoBI — Loading Guard, Journal, Ngành hàng BI động
 // @author       38967 _ Mr Phạm
 // @match        https://portal.thegioididong.com/*
@@ -15900,14 +15900,23 @@ const DAB = (function () {
           const k = kr.kpi, dt = Number(k.dt), dk = Number(k.dt_du_kien), now = new Date();
           const q = nq > 0 ? nq : now.getDate() - 1, n = sn > 0 ? sn : new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
           let m2 = null, ly = '';
-          /* 1) không cần Khai báo: Lũy kế thì DT dự kiến ≈ DT × số ngày tháng ÷ ngày đã qua; Realtime (DT 1 ngày) thì DT dự kiến lớn gấp ~ngày đã qua lần */
-          if (q >= 3) { const r = dk / (dt * n / q); if (r >= 0.75 && r <= 1.33) m2 = 'luy_ke'; else if (r >= 1.6) m2 = 'realtime'; ly = 'DT ' + dt + ' · DT dự kiến ' + dk + ' (' + q + '/' + n + ' ngày)'; }
-          /* 2) dự phòng: target Khai báo — DT dự kiến ÷ % ≈ target tháng → Lũy kế; DT ÷ % nhỏ hẳn → Realtime */
-          if (!m2 && Number(k.ht_pct) > 0) {
-            let kb = Number(cfg['target' + shop.idx]) || 0; if (kb > 1e5) kb /= 1e6;
-            const pc = Number(k.ht_pct), tL = dk / pc * 100, tR = dt / pc * 100;
-            if (kb > 0) { if (Math.abs(tL - kb) <= kb * 0.05) m2 = 'luy_ke'; else if (tR < kb * 0.25) m2 = 'realtime'; ly = 'target Khai báo ' + Math.round(kb); }
+          /* V19.09: 21/11 thẻ Realtime 85 (DT 115, DK 227 lúc 15:18 = 52% giờ làm) bị phép so tỉ lệ cũ nhận là Lũy kế (227 ÷ 115×30/20 = 1,32)
+             → ghi đè Lũy kế. Realtime DK = DT ÷ % giờ làm trong ngày, dễ trùng tỉ lệ ngày tháng → kiểm bằng target trước, tỉ lệ để cuối & khung hẹp */
+          const pc = Number(k.ht_pct), tgk = Number(k.target);
+          /* 1) target trên thẻ: Lũy kế % = DT dự kiến ÷ target; Realtime % = DT ÷ target ngày */
+          if (pc > 0 && tgk > 0) {
+            const eL = Math.abs(dk / tgk * 100 - pc) / pc, eR = Math.abs(dt / tgk * 100 - pc) / pc;
+            if (eL <= 0.03 && eR > 0.1) m2 = 'luy_ke'; else if (eR <= 0.03 && eL > 0.1) m2 = 'realtime';
+            if (m2) ly = 'target ' + tgk + ' · ' + pc + '%';
           }
+          /* 2) target Khai báo — DT dự kiến ÷ % ≈ target tháng → Lũy kế; DT ÷ % nhỏ hẳn → Realtime */
+          if (!m2 && pc > 0) {
+            let kb = Number(cfg['target' + shop.idx]) || 0; if (kb > 1e5) kb /= 1e6;
+            const tL = dk / pc * 100, tR = dt / pc * 100;
+            if (kb > 0) { if (Math.abs(tL - kb) <= kb * 0.05) m2 = 'luy_ke'; else if (tR < kb * 0.25) m2 = 'realtime'; if (m2) ly = 'target Khai báo ' + Math.round(kb); }
+          }
+          /* 3) không có target: Lũy kế DT dự kiến = DT × số ngày tháng ÷ ngày đã qua (gần như đúng tuyệt đối) → khung hẹp */
+          if (!m2 && q >= 3) { const r = dk / (dt * n / q); if (r >= 0.96 && r <= 1.05) m2 = 'luy_ke'; else if (r >= 1.6) m2 = 'realtime'; ly = 'DT ' + dt + ' · DT dự kiến ' + dk + ' (' + q + '/' + n + ' ngày)'; }
           if (m2 && m2 !== md) warn.push({ muc: 'Ảnh ' + an, noi: 'thẻ số ' + shop.short + ': AI đọc ' + (md === 'realtime' ? 'Realtime' : 'Lũy kế') + ' nhưng số khớp ' + (m2 === 'realtime' ? 'Realtime' : 'Lũy kế') + ' (' + ly + ') → theo số' });
           if (m2) md = m2;
         }
