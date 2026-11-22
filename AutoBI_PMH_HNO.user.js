@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AutoBI - Phiếu Mua Hàng HNO+
 // @namespace    https://github.com/PhamngocNDH/AutoBI/pmh-hnoplus
-// @version      1.3.2
+// @version      1.3.3
 // @description  Tự lấy phiếu mua hàng kho 01 (ICT) và 02 (CE) trên trang megalive: bảng lọc theo ngành/hãng, nhật ký, nút dừng, copy Line.
 // @author       AutoBI / 38967 - Mr Phạm
 // @homepageURL  https://github.com/PhamngocNDH/AutoBI
@@ -27,7 +27,7 @@
  */
 (function () {
     'use strict';
-    const VERSION = '1.3.2';
+    const VERSION = '1.3.3';
     const PREFIX = 'autobi_pmh_v1_';
 
     /* ===== CẤU HÌNH ===== */
@@ -193,7 +193,10 @@
             const t = txt(box), m = t.match(BADGE);
             const left = m ? parseInt(m[2].replace(/\D/g, ''), 10) : null;
             const name = clean(t.replace(BADGE, '')).replace(/^[•\-–\s]+/, '');
-            return { group: findHeader(box), name, left: Number.isFinite(left) ? left : null };
+            // Phiếu đã hết: trang khóa nút chọn (radio disabled) + gạch ngang tên, hoặc còn 0 xuất
+            const radio = box.querySelector('input[type=radio]');
+            const het = !!(radio?.disabled || box.querySelector('.line-through,s,del,strike') || left === 0);
+            return { group: findHeader(box), name, left: Number.isFinite(left) ? left : null, het };
         }).filter(x => x.name);
     }
     const sigOf = items => items.map(i => `${i.group}|${i.name}|${i.left}`).join('\n');
@@ -433,6 +436,7 @@
 #pmh-panel .badge.ict{background:#1d4ed8}#pmh-panel .badge.ce{background:#be185d}
 #pmh-panel .left{display:inline-block;min-width:54px;text-align:center;padding:3px 8px;border-radius:8px;font-weight:700;background:#e6f4ea;color:#14532d}
 #pmh-panel .left.mid{background:#fff4cf;color:#5c3800}#pmh-panel .left.low{background:#fdecea;color:#8a1c1c}
+#pmh-panel .left.hetb{background:#64748b;color:#fff}#pmh-panel td.het{color:#94a3b8;text-decoration:line-through}
 #pmh-panel .warnbox{padding:10px;background:#fff4cf;border-radius:8px}
 #pmh-panel details{margin-top:14px;border:1px solid #e3e9ed;border-radius:10px;padding:8px 12px}
 #pmh-panel summary{cursor:pointer;font-weight:600}
@@ -512,7 +516,8 @@
         meta.textContent = `Lấy lúc ${stamp(d.time)} · ` + d.kho.map(k => `Kho ${k.code} ${k.nganh} ${k.ok ? '✔' : '✖ ' + (k.err || 'lỗi')}`).join(' · ') + old;
         const rows = allRows();
         const totalLeft = rows.reduce((a, r) => a + (r.left || 0), 0);
-        kp.innerHTML = `<div class="main"><small>Tổng phiếu</small><b>${fmt(rows.length)}</b><small>Còn ${fmt(totalLeft)} xuất</small></div>` +
+        const nHet = rows.filter(r => r.het).length;
+        kp.innerHTML = `<div class="main"><small>Phiếu còn dùng được</small><b>${fmt(rows.length - nHet)}</b><small>Còn ${fmt(totalLeft)} xuất${nHet ? ` · ${nHet} phiếu ĐÃ HẾT` : ''}</small></div>` +
             d.kho.map(k => {
                 const g = new Set(k.items.map(i => i.group)).size, left = k.items.reduce((a, i) => a + (i.left || 0), 0);
                 return `<div class="${esc(k.nganh.toLowerCase())}"><small>${esc(k.nganh)} · kho ${esc(k.code)}</small><b>${fmt(k.items.length)} phiếu</b><small>${g} hãng/nhóm · còn ${fmt(left)} xuất</small></div>`;
@@ -561,7 +566,9 @@
             h += `<tr class="${firstG ? 'gstart' : ''}"><td class="n muted">${i + 1}</td>`
                 + (firstN ? `<td rowspan="${spanN}" class="ng"><span class="badge ${cls}">${esc(r.nganh)}</span><small>Kho ${esc(r.kho)}</small></td>` : '')
                 + (firstG ? `<td rowspan="${spanG}" class="grp">${esc(r.group)}<small>${spanG} phiếu</small></td>` : '')
-                + `<td>${esc(r.name)}</td><td class="n"><span class="left ${lvl(r.left)}">${r.left == null ? '—' : fmt(r.left)}</span></td></tr>`;
+                + (r.het
+                    ? `<td class="het">${esc(r.name)}</td><td class="n"><span class="left hetb">HẾT</span></td></tr>`
+                    : `<td>${esc(r.name)}</td><td class="n"><span class="left ${lvl(r.left)}">${r.left == null ? '—' : fmt(r.left)}</span></td></tr>`);
         });
         h += '</tbody></table>';
         box.innerHTML = `<div class="muted" style="margin-bottom:6px">Đang xem ${rows.length}/${allRows().length} phiếu</div>` + h;
@@ -579,18 +586,18 @@
     }
 
     async function copyZalo() {
-        const rows = filteredRows();
-        if (!rows.length) { status('Không có phiếu để copy', 'warn'); return; }
+        const tat = filteredRows(), rows = tat.filter(r => !r.het), boHet = tat.length - rows.length;
+        if (!rows.length) { status(boHet ? 'Các phiếu đang xem đều ĐÃ HẾT — không copy' : 'Không có phiếu để copy', 'warn'); return; }
         const d = new Date(view.data.time);
         let msg = `📢 PHIẾU MUA HÀNG HÔM NAY ${pad(d.getDate())}/${pad(d.getMonth() + 1)}\n`;
         let ng = null, gr = null;
         rows.forEach(r => {
             if (r.nganh !== ng) { ng = r.nganh; gr = null; msg += `\n━━━━━━━━━━\n🏬 ${r.nganh} (kho ${r.kho})\n`; }
             if (r.group !== gr) { gr = r.group; msg += `\n⚡ ${r.group}\n`; }
-            msg += `• ${r.name}\n`;
+            msg += `• ${r.name}${r.left != null ? ` (còn ${fmt(r.left)})` : ''}\n`;
         });
-        msg += `\n👉 Tổng ${rows.length} phiếu. Nhớ tư vấn KH dùng phiếu phù hợp!`;
-        await copyText(msg, `Đã copy ${rows.length} phiếu`);
+        msg += `\n👉 Tổng ${rows.length} phiếu CÒN DÙNG ĐƯỢC (lúc ${pad(d.getHours())}:${pad(d.getMinutes())}). Nhớ tư vấn KH dùng phiếu phù hợp!`;
+        await copyText(msg, `Đã copy ${rows.length} phiếu` + (boHet ? ` · bỏ ${boHet} phiếu đã hết` : ''));
     }
 
     /* ================= KHỞI ĐỘNG ================= */
