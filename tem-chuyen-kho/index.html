@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tem chuyển kho</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:#f1f3f5;color:#111}
+.ctl{background:#fff;padding:12px;position:sticky;top:0;z-index:5;border-bottom:1px solid #ddd}
+.ctl h1{margin:0 0 8px;font-size:16px;color:#0a58ca}
+.row{display:flex;gap:8px;margin-bottom:8px}
+.row>div{flex:1;min-width:0}
+label{display:block;font-size:11px;color:#555;margin-bottom:2px}
+input{width:100%;padding:9px;font-size:16px;border:1px solid #bbb;border-radius:8px}
+button{width:100%;padding:11px;font-size:16px;font-weight:700;border:0;border-radius:8px;background:#0a58ca;color:#fff}
+.hint{font-size:11px;color:#666;margin-top:6px}
+.sheet{padding:10px}
+.page{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-width:800px;margin:0 auto 10px}
+.tem{background:#fff;border:2px solid #000;border-radius:6px;padding:8px 10px;height:54mm;display:flex;flex-direction:column;justify-content:space-between;gap:4px;overflow:hidden}
+.tem .k{display:flex;align-items:center;gap:6px;border-bottom:1.5px dashed #888;padding-bottom:3px}
+.tem .k:nth-child(2){border-bottom:0}
+.tem .tag{flex:0 0 auto;font-size:11px;font-weight:800;color:#fff;background:#000;border-radius:3px;padding:3px 5px;min-width:42px;text-align:center}
+.tem .tag.den{background:#c00}
+.tem .kho{font-size:19px;font-weight:900;line-height:1.1;text-transform:uppercase;word-break:break-word}
+.tem .mid{display:flex;justify-content:space-between;align-items:flex-end}
+.tem .lenh{font-size:14px;font-weight:700}
+.tem .lenh b{font-size:17px}
+.tem .stt{font-size:46px;font-weight:900;line-height:1}
+.tem .stt small{font-size:26px;font-weight:800;color:#444}
+@media print{
+ @page{size:A4;margin:6mm}
+ body{background:#fff}
+ .ctl,.sheet>.none{display:none}
+ .sheet{padding:0}
+ .page{max-width:none;margin:0;gap:3mm;page-break-after:always;break-after:page}
+ .page:last-child{page-break-after:auto;break-after:auto}
+ .tem{height:53mm;border-radius:2mm}
+}
+</style>
+</head>
+<body>
+<div class="ctl">
+  <h1>🏷️ Tem chuyển kho</h1>
+  <div class="row">
+    <div><label>Kho ĐẾN</label><input id="kho" value="ĐMX HẢI HẬU" autocomplete="off"></div>
+    <div><label>MYC (mã yêu cầu)</label><input id="lenh" value="" placeholder="Nhập mã yêu cầu" autocomplete="off"></div>
+  </div>
+  <div class="row">
+    <div><label>Kho CHUYỂN (đi)</label><input id="tu" value="ĐMX HẢI ANH" autocomplete="off"></div>
+    <div><label>Tổng số kiện</label><input id="tong" type="number" inputmode="numeric" min="1" max="100" value="10"></div>
+    <div><label>Bắt đầu từ</label><input id="bd" type="number" inputmode="numeric" min="1" value="1"></div>
+  </div>
+  <button onclick="window.print()">🖨️ In tem (A4)</button>
+  <div class="hint">Mỗi tờ A4 có 10 tem (2 cột × 5 hàng). Cắt ra dán lên từng sản phẩm / kiện hàng.</div>
+</div>
+<div class="sheet" id="sheet"></div>
+<script>
+const $=id=>document.getElementById(id);
+function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function render(){
+  const kho=esc($('kho').value.trim()||'—');
+  const lenh=esc($('lenh').value.trim()||'—');
+  const tu=esc($('tu').value.trim()||'—');
+  const tong=Math.max(1,Math.min(100,parseInt($('tong').value)||1));
+  const bd=Math.max(1,Math.min(tong,parseInt($('bd').value)||1));
+  let tems=[];
+  for(let i=bd;i<=tong;i++){
+    tems.push(`<div class="tem">
+      <div class="k"><span class="tag">CHUYỂN</span><span class="kho">${tu}</span></div>
+      <div class="k"><span class="tag den">ĐẾN ▶</span><span class="kho">${kho}</span></div>
+      <div class="mid"><div class="lenh">MYC<br><b>${lenh}</b></div>
+      <div class="stt">${i}<small>/${tong}</small></div></div>
+    </div>`);
+  }
+  let html='';
+  for(let i=0;i<tems.length;i+=10){
+    html+='<div class="page">'+tems.slice(i,i+10).join('')+'</div>';
+  }
+  $('sheet').innerHTML=html;
+}
+['kho','lenh','tu','tong','bd'].forEach(id=>$(id).addEventListener('input',render));
+render();
+</script>
+</body>
+</html>
